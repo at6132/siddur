@@ -29,7 +29,7 @@ import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { HomePanelsService, HomePanel, PANEL_DEFINITIONS } from '../../src/storage/HomePanelsService';
 import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
-import { ZmanimService } from '../../src/core/calendar/ZmanimService';
+import { ZmanimService } from '../../src/core/zmanim/ZmanimService';
 import { DayInfo, CalendarContext } from '../../src/types/calendar';
 import { CustomReminder } from '../../src/types/preferences';
 
@@ -678,17 +678,17 @@ export const HomeScreen: React.FC = () => {
             <View style={styles.zmanimRow}>
               <View style={styles.zmanItem}>
                 <Text style={styles.zmanLabel}>Sunrise</Text>
-                <Text style={styles.zmanTime}>{formatTime(dayInfo.zmanim.sunrise)}</Text>
+                <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.sunrise)}</Text>
               </View>
               <View style={styles.zmanDivider} />
               <View style={styles.zmanItem}>
                 <Text style={styles.zmanLabel}>Sunset</Text>
-                <Text style={styles.zmanTime}>{formatTime(dayInfo.zmanim.sunset)}</Text>
+                <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.sunset)}</Text>
               </View>
               <View style={styles.zmanDivider} />
               <View style={styles.zmanItem}>
                 <Text style={styles.zmanLabel}>Shema</Text>
-                <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.sofZmanShma)}</Text>
+                <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.sofZmanShemaGRA)}</Text>
               </View>
             </View>
           );

@@ -46,6 +46,7 @@ export class CalendarEngine {
 
     // Calculate zmanim
     const zmanim = await ZmanimService.calculateZmanim(date, location);
+    const extendedZmanim = await ZmanimService.calculateExtendedZmanim(date, location);
 
     // Get all Jewish calendar info
     const jewishDate = JewishCalendarService.getJewishDateString(date);
@@ -120,6 +121,7 @@ export class CalendarEngine {
 
       // Zmanim and prayer changes
       zmanim,
+      extendedZmanim,
       daveningChanges,
       spiritualCue,
 

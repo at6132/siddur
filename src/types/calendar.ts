@@ -105,6 +105,7 @@ export interface DayInfo {
 
   // Zmanim and prayer changes
   zmanim: Zmanim;
+  extendedZmanim?: ExtendedZmanim;
   daveningChanges: DaveningChanges;
   spiritualCue?: SpiritualCue;
 
