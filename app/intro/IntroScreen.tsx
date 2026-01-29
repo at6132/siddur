@@ -277,14 +277,14 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
             },
           ]}
         >
-          Siddur
+          24/7
         </Animated.Text>
 
         {/* Subtitle */}
         <Animated.Text
           style={[styles.subtitle, { opacity: subtitleOpacity }]}
         >
-          Your spiritual companion
+          With you, when you choose.
         </Animated.Text>
 
         {/* Spacer */}

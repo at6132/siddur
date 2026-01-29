@@ -1,6 +1,6 @@
 /**
  * Liquid Glass Design System - Color Palette
- * Feminine, calm, modern palette for the Siddur app
+ * Feminine, calm, modern palette for the 24/7 app
  */
 
 export const colors = {

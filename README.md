@@ -1,4 +1,4 @@
-# Siddur - Modern Jewish Davening App
+# 24/7 - Modern Jewish Davening App
 
 A notifications-first, widget-driven spiritual companion for Jewish women, built with Expo and React Native.
 
