@@ -256,6 +256,18 @@ export class HomePanelsService {
   }
 
   /**
+   * Update panel size
+   */
+  static async updatePanelSize(panelId: string, size: 'small' | 'medium' | 'large'): Promise<void> {
+    const panels = await this.getPanels();
+    const panel = panels.find(p => p.id === panelId);
+    if (panel) {
+      panel.size = size;
+      await this.savePanels(panels);
+    }
+  }
+
+  /**
    * Reset to default panels
    */
   static async resetToDefault(): Promise<void> {

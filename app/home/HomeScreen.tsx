@@ -171,6 +171,7 @@ const DraggablePanel: React.FC<{
   children: React.ReactNode;
   isEditing: boolean;
   onRemove: () => void;
+  onResize?: (size: 'full' | 'half') => void;
   index: number;
   onDragStart: (index: number) => void;
   onDragEnd: (fromIndex: number, toIndex: number) => void;
@@ -182,7 +183,8 @@ const DraggablePanel: React.FC<{
 }> = ({ 
   children, 
   isEditing, 
-  onRemove, 
+  onRemove,
+  onResize,
   index, 
   onDragStart, 
   onDragEnd, 
@@ -284,40 +286,94 @@ const DraggablePanel: React.FC<{
   const isBeingDragged = isDragging && draggedIndex === index;
   const shouldDim = isDragging && draggedIndex !== index;
 
+  // Handle remove button press directly without panResponder interference
+  const handleRemovePress = () => {
+    onRemove();
+  };
+
   return (
-    <Animated.View
-      style={[
-        isFullWidth ? styles.gridItemFull : styles.gridItem,
-        {
-          transform: [
-            { translateX: pan.x },
-            { translateY: pan.y },
-            { scale: scale },
-          ],
-          zIndex: isBeingDragged ? 100 : 1,
-          opacity: shouldDim ? 0.5 : 1,
-        },
-      ]}
-      {...(isEditing ? panResponder.panHandlers : {})}
-    >
-      <JiggleView isEditing={isEditing && !isBeingDragged}>
-        <View style={styles.editablePanelContainer}>
-          {children}
-          
-          {isEditing && (
-            <TouchableOpacity
-              style={styles.removeButton}
-              onPress={onRemove}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <View style={styles.removeButtonInner}>
-                <Text style={styles.removeButtonText}>−</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-        </View>
-      </JiggleView>
-    </Animated.View>
+    <View style={[
+      isFullWidth ? styles.gridItemFull : styles.gridItem,
+      { zIndex: isBeingDragged ? 100 : 1 },
+    ]}>
+      <Animated.View
+        style={[
+          styles.panelAnimatedWrapper,
+          {
+            transform: [
+              { translateX: pan.x },
+              { translateY: pan.y },
+              { scale: scale },
+            ],
+            opacity: shouldDim ? 0.5 : 1,
+          },
+        ]}
+        {...(isEditing ? panResponder.panHandlers : {})}
+      >
+        <JiggleView isEditing={isEditing && !isBeingDragged}>
+          <View style={styles.editablePanelContainer}>
+            {children}
+          </View>
+        </JiggleView>
+      </Animated.View>
+      
+      {/* Remove button - outside of panResponder to ensure it works */}
+      {isEditing && (
+        <TouchableOpacity
+          style={styles.removeButton}
+          onPress={handleRemovePress}
+          activeOpacity={0.7}
+        >
+          <View style={styles.removeButtonInner}>
+            <Text style={styles.removeButtonText}>−</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+      
+      {/* Resize handle in bottom-right corner */}
+      {isEditing && !isFullWidth && (
+        <TouchableOpacity
+          style={styles.resizeHandle}
+          onPress={() => {
+            // Toggle between half and full width
+            Alert.alert(
+              'Resize Panel',
+              'Make this panel full width?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Full Width', onPress: () => onResize && onResize('full') },
+              ]
+            );
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.resizeHandleInner}>
+            <Text style={styles.resizeHandleText}>⤡</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+      
+      {isEditing && isFullWidth && (
+        <TouchableOpacity
+          style={styles.resizeHandle}
+          onPress={() => {
+            Alert.alert(
+              'Resize Panel',
+              'Make this panel half width?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Half Width', onPress: () => onResize && onResize('half') },
+              ]
+            );
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={styles.resizeHandleInner}>
+            <Text style={styles.resizeHandleText}>⤢</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+    </View>
   );
 };
 
@@ -570,6 +626,13 @@ export const HomeScreen: React.FC = () => {
         },
       ]
     );
+  };
+
+  const handleResizePanel = async (panelId: string, size: 'full' | 'half') => {
+    // Update panel size in storage
+    const newSize = size === 'full' ? 'large' : 'small';
+    await HomePanelsService.updatePanelSize(panelId, newSize);
+    loadPanels();
   };
 
   // Drag handlers
@@ -913,14 +976,16 @@ export const HomeScreen: React.FC = () => {
     const content = panelContent();
     if (!content) return null;
 
-    // Determine if panel should be full width
-    const isFullWidth = ['date', 'tehillim_progress', 'custom_reminders', 'inspiration_quote', 'fast_day_info', 'zmanim'].includes(panel.type);
+    // Determine if panel should be full width - check stored size first, then default types
+    const defaultFullWidthTypes = ['date', 'tehillim_progress', 'custom_reminders', 'inspiration_quote', 'fast_day_info', 'zmanim'];
+    const isFullWidth = panel.size === 'large' || (panel.size !== 'small' && defaultFullWidthTypes.includes(panel.type));
 
     return (
       <DraggablePanel
         key={panel.id}
         isEditing={isEditing}
         onRemove={() => handleRemovePanel(panel.id)}
+        onResize={(size) => handleResizePanel(panel.id, size)}
         index={index}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
@@ -1136,21 +1201,51 @@ const styles = StyleSheet.create({
   },
 
   // Editable Panel
+  panelAnimatedWrapper: {
+    flex: 1,
+  },
   editablePanelContainer: {
     position: 'relative',
     marginBottom: spacing.sm,
   },
   removeButton: {
     position: 'absolute',
-    top: -8,
-    left: -8,
-    zIndex: 10,
+    top: -6,
+    left: -6,
+    zIndex: 100,
   },
   removeButtonInner: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: colors.semantic.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 6,
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  removeButtonText: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: -2,
+  },
+  resizeHandle: {
+    position: 'absolute',
+    bottom: 4,
+    right: -6,
+    zIndex: 100,
+  },
+  resizeHandleInner: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.semantic.error,
+    backgroundColor: colors.primary.main,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -1158,12 +1253,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 3,
     elevation: 4,
+    borderWidth: 2,
+    borderColor: '#fff',
   },
-  removeButtonText: {
+  resizeHandleText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 12,
     fontWeight: 'bold',
-    marginTop: -2,
   },
   reorderButtons: {
     position: 'absolute',
