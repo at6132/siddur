@@ -138,7 +138,7 @@ export const NusachSelection: React.FC<NusachSelectionProps> = ({
               )}
               {onSkip && (
                 <TouchableOpacity onPress={onSkip} style={styles.skipButton}>
-                  <Text style={styles.skipText}>I'm not sure yet</Text>
+                  <Text style={styles.skipText}>Skip</Text>
                 </TouchableOpacity>
               )}
             </View>

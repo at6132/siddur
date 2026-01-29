@@ -180,7 +180,7 @@ export const SpiritualGoals: React.FC<SpiritualGoalsProps> = ({
               )}
               {onSkip && (
                 <TouchableOpacity onPress={onSkip} style={styles.skipButton}>
-                  <Text style={styles.skipText}>Skip for now</Text>
+                  <Text style={styles.skipText}>Skip</Text>
                 </TouchableOpacity>
               )}
             </View>

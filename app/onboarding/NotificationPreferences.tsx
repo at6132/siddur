@@ -163,7 +163,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
               />
               {onSkip && (
                 <TouchableOpacity onPress={onSkip} style={styles.skipButton}>
-                  <Text style={styles.skipText}>Skip notifications</Text>
+                  <Text style={styles.skipText}>Skip</Text>
                 </TouchableOpacity>
               )}
             </View>
