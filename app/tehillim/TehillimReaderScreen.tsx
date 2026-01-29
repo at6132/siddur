@@ -144,9 +144,11 @@ export const TehillimReaderScreen: React.FC = () => {
         ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        bounces={true}
+        nestedScrollEnabled={true}
       >
         {/* Daily Tehillim Badge */}
         {isDailyChapter && (
@@ -272,6 +274,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing['3xl'],
+    flexGrow: 1,
   },
   loadingContainer: {
     flex: 1,

@@ -110,7 +110,9 @@ export const PanelsMarketplace: React.FC = () => {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
+        bounces={true}
+        nestedScrollEnabled={true}
       >
         {/* Header */}
         <FadeIn delay={0}>
@@ -224,6 +226,7 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.lg,
     paddingTop: spacing.xl,
+    flexGrow: 1,
   },
 
   // Header
