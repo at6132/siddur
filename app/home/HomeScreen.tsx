@@ -773,6 +773,40 @@ export const HomeScreen: React.FC = () => {
             </GlassCard>
           );
 
+        case 'weekly_parsha':
+          if (!dayInfo?.parsha) return null;
+          return (
+            <GlassCard>
+              <View style={styles.parshaPanel}>
+                <Text style={styles.parshaLabel}>This Week's Parsha</Text>
+                <Text style={styles.parshaName}>{dayInfo.parsha}</Text>
+                {dayInfo.parshaHebrew && (
+                  <Text style={styles.parshaHebrew}>{dayInfo.parshaHebrew}</Text>
+                )}
+              </View>
+            </GlassCard>
+          );
+
+        case 'inspiration_quote':
+          const quotes = [
+            { text: "אִם אֵין אֲנִי לִי, מִי לִי", translation: "If I am not for myself, who will be for me?", source: "Hillel" },
+            { text: "בְּמָקוֹם שֶׁאֵין אֲנָשִׁים, הִשְׁתַּדֵּל לִהְיוֹת אִישׁ", translation: "In a place where there are no leaders, strive to be a leader.", source: "Pirkei Avos" },
+            { text: "הֱוֵי מְקַבֵּל אֶת כָּל הָאָדָם בְּסֵבֶר פָּנִים יָפוֹת", translation: "Greet everyone with a cheerful face.", source: "Shammai" },
+            { text: "אַל תִּסְתַּכֵּל בַּקַּנְקַן, אֶלָּא בְּמַה שֶּׁיֵּשׁ בּוֹ", translation: "Do not look at the vessel, but at what it contains.", source: "Pirkei Avos" },
+            { text: "וְאָהַבְתָּ לְרֵעֲךָ כָּמוֹךָ", translation: "Love your neighbor as yourself.", source: "Vayikra 19:18" },
+          ];
+          const todayQuote = quotes[new Date().getDay() % quotes.length];
+          return (
+            <GlassCard>
+              <View style={styles.inspirationPanel}>
+                <Text style={styles.inspirationIcon}>✨</Text>
+                <Text style={styles.inspirationHebrew}>{todayQuote.text}</Text>
+                <Text style={styles.inspirationTranslation}>{todayQuote.translation}</Text>
+                <Text style={styles.inspirationSource}>— {todayQuote.source}</Text>
+              </View>
+            </GlassCard>
+          );
+
         case 'fast_day_info':
           // Only show if it's a fast day
           if (!fastDayProgress?.isFastDay) {
@@ -860,7 +894,7 @@ export const HomeScreen: React.FC = () => {
     if (!content) return null;
 
     // Determine if panel should be full width
-    const isFullWidth = ['date', 'tehillim_progress', 'custom_reminders', 'inspiration_quote', 'fast_day_info'].includes(panel.type);
+    const isFullWidth = ['date', 'tehillim_progress', 'custom_reminders', 'inspiration_quote', 'fast_day_info', 'zmanim'].includes(panel.type);
 
     return (
       <DraggablePanel
@@ -1453,6 +1487,61 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     textAlign: 'center',
     marginTop: spacing.xs,
+  },
+
+  // Weekly Parsha Panel
+  parshaPanel: {
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  parshaLabel: {
+    fontFamily: fonts.body.regular,
+    fontSize: 11,
+    color: colors.text.tertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  parshaName: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 16,
+    color: colors.text.primary,
+  },
+  parshaHebrew: {
+    fontFamily: fonts.body.medium,
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginTop: 2,
+  },
+
+  // Inspiration Quote Panel
+  inspirationPanel: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  inspirationIcon: {
+    fontSize: 20,
+    marginBottom: spacing.xs,
+  },
+  inspirationHebrew: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 18,
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+  },
+  inspirationTranslation: {
+    fontFamily: fonts.body.regular,
+    fontSize: 14,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginBottom: spacing.xs,
+  },
+  inspirationSource: {
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
+    color: colors.text.tertiary,
   },
 
   // Fast Day Panel

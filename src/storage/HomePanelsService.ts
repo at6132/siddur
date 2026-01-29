@@ -150,10 +150,13 @@ export const PANEL_DEFINITIONS: PanelDefinition[] = [
 // Default panel configuration
 const DEFAULT_PANELS: HomePanel[] = [
   { id: 'date-1', type: 'date', order: 0, visible: true, size: 'medium' },
-  { id: 'tehillim-1', type: 'tehillim_progress', order: 1, visible: true, size: 'medium' },
-  { id: 'zmanim-1', type: 'zmanim', order: 2, visible: true, size: 'small' },
+  { id: 'zmanim-1', type: 'zmanim', order: 1, visible: true, size: 'medium' },
+  { id: 'tehillim-1', type: 'tehillim_progress', order: 2, visible: true, size: 'medium' },
   { id: 'quick-1', type: 'quick_actions', order: 3, visible: true, size: 'small' },
   { id: 'davening-1', type: 'davening_note', order: 4, visible: true, size: 'small' },
+  { id: 'parsha-1', type: 'weekly_parsha', order: 5, visible: true, size: 'small' },
+  { id: 'inspiration-1', type: 'inspiration_quote', order: 6, visible: true, size: 'medium' },
+  { id: 'fast-1', type: 'fast_day_info', order: 7, visible: true, size: 'medium' },
 ];
 
 const PANELS_STORAGE_KEY = '@home_panels';
