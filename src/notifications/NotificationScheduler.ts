@@ -3,6 +3,7 @@
  * Schedules notifications based on calendar and user preferences
  */
 
+import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { NotificationConfig, NotificationType } from './types';
 import { NotificationContentService } from './NotificationContent';
@@ -11,20 +12,26 @@ import { UserPreferences } from '../types/preferences';
 import { CalendarContext } from '../types/calendar';
 import { OmerCalculator } from '../core/omer/OmerCalculator';
 
-// Configure notification handler
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false, // No red badges per PRD
-  }),
-});
+// Check if we're on a native platform (not web)
+const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
+
+// Configure notification handler (only on native)
+if (isNative) {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false, // No red badges per PRD
+    }),
+  });
+}
 
 export class NotificationScheduler {
   /**
    * Cancel all existing notifications
    */
   static async cancelAllNotifications(): Promise<void> {
+    if (!isNative) return; // Skip on web
     await Notifications.cancelAllScheduledNotificationsAsync();
   }
 
@@ -35,6 +42,8 @@ export class NotificationScheduler {
     preferences: UserPreferences,
     context: CalendarContext
   ): Promise<void> {
+    if (!isNative) return; // Skip scheduling on web
+    
     // Cancel existing notifications first
     await this.cancelAllNotifications();
 
@@ -232,6 +241,8 @@ export class NotificationScheduler {
    * Request notification permissions
    */
   static async requestPermissions(): Promise<boolean> {
+    if (!isNative) return true; // Skip permission check on web
+    
     const { status: existingStatus } =
       await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
