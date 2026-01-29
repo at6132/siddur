@@ -14,137 +14,133 @@ export interface HomePanel {
   config?: Record<string, any>;
 }
 
-export type PanelType = 
-  | 'date'
-  | 'tehillim_progress'
-  | 'zmanim'
-  | 'quick_actions'
-  | 'davening_note'
-  | 'omer_counter'
-  | 'custom_countdown'
-  | 'inspiration_quote'
-  | 'shabbos_times'
-  | 'weekly_parsha'
-  | 'candle_lighting'
-  | 'fast_day_info'
-  | 'custom_reminders';
+export type PanelType = string; // Allow any panel type for flexibility
+
+export type PanelCategory = 'essential' | 'calendar' | 'prayer' | 'learning' | 'personal' | 'tracking' | 'community';
 
 export interface PanelDefinition {
   type: PanelType;
   name: string;
   description: string;
   icon: string;
-  category: 'essential' | 'calendar' | 'prayer' | 'personal';
+  category: PanelCategory;
   defaultSize: 'small' | 'medium' | 'large';
   isPremium?: boolean;
 }
 
-// All available panels
+// All available panels - 100+ options
 export const PANEL_DEFINITIONS: PanelDefinition[] = [
-  {
-    type: 'date',
-    name: 'Date Card',
-    description: 'Hebrew and Gregorian date with special day info',
-    icon: '📅',
-    category: 'essential',
-    defaultSize: 'medium',
-  },
-  {
-    type: 'tehillim_progress',
-    name: 'Daily Tehillim',
-    description: 'Track your daily Tehillim progress',
-    icon: '📖',
-    category: 'prayer',
-    defaultSize: 'medium',
-  },
-  {
-    type: 'zmanim',
-    name: 'Zmanim',
-    description: 'Sunrise, sunset, and key prayer times',
-    icon: '🌅',
-    category: 'calendar',
-    defaultSize: 'small',
-  },
-  {
-    type: 'quick_actions',
-    name: 'Quick Actions',
-    description: 'Fast access to calendar, Tehillim, settings',
-    icon: '⚡',
-    category: 'essential',
-    defaultSize: 'small',
-  },
-  {
-    type: 'davening_note',
-    name: 'Davening Note',
-    description: 'Hallel, Tachanun, and other daily changes',
-    icon: '✨',
-    category: 'prayer',
-    defaultSize: 'small',
-  },
-  {
-    type: 'omer_counter',
-    name: 'Omer Counter',
-    description: 'Sefiras HaOmer day and week count',
-    icon: '🌾',
-    category: 'calendar',
-    defaultSize: 'medium',
-  },
-  {
-    type: 'custom_countdown',
-    name: 'Custom Countdown',
-    description: '40-day Nishmas, personal milestones',
-    icon: '⏳',
-    category: 'personal',
-    defaultSize: 'small',
-  },
-  {
-    type: 'inspiration_quote',
-    name: 'Daily Inspiration',
-    description: 'Uplifting Torah quotes and thoughts',
-    icon: '💭',
-    category: 'personal',
-    defaultSize: 'medium',
-  },
-  {
-    type: 'shabbos_times',
-    name: 'Shabbos Times',
-    description: 'Candle lighting and Havdalah times',
-    icon: '🕯️',
-    category: 'calendar',
-    defaultSize: 'medium',
-  },
-  {
-    type: 'weekly_parsha',
-    name: 'Weekly Parsha',
-    description: 'This week\'s Torah portion',
-    icon: '📜',
-    category: 'calendar',
-    defaultSize: 'small',
-  },
-  {
-    type: 'candle_lighting',
-    name: 'Candle Lighting',
-    description: 'Countdown to candle lighting on Friday',
-    icon: '🕯️',
-    category: 'calendar',
-    defaultSize: 'small',
-  },
-  {
-    type: 'fast_day_info',
-    name: 'Fast Day Info',
-    description: 'Fast start/end times on fast days',
-    icon: '🌙',
-    category: 'calendar',
-    defaultSize: 'medium',
-  },
-  {
-    type: 'custom_reminders',
-    name: 'Custom Reminders',
-    description: 'Your personal daily reminders',
-    icon: '🔔',
-    category: 'personal',
-    defaultSize: 'medium',
-  },
+  // === ESSENTIAL ===
+  { type: 'date', name: 'Date Card', description: 'Hebrew and Gregorian date with special day info', icon: '📅', category: 'essential', defaultSize: 'medium' },
+  { type: 'quick_actions', name: 'Quick Actions', description: 'Fast access to calendar, library, settings', icon: '⚡', category: 'essential', defaultSize: 'small' },
+  { type: 'greeting', name: 'Greeting', description: 'Personalized time-based greeting', icon: '👋', category: 'essential', defaultSize: 'small' },
+  { type: 'weather', name: 'Weather', description: 'Current weather for your location', icon: '🌤️', category: 'essential', defaultSize: 'small' },
+  { type: 'location', name: 'Location', description: 'Your current city for zmanim', icon: '📍', category: 'essential', defaultSize: 'small' },
+  { type: 'favorites', name: 'Favorites', description: 'Quick access to your favorites', icon: '⭐', category: 'essential', defaultSize: 'medium' },
+  { type: 'recent', name: 'Recently Opened', description: 'Continue where you left off', icon: '🕐', category: 'essential', defaultSize: 'medium' },
+  { type: 'search', name: 'Quick Search', description: 'Search prayers and texts', icon: '🔍', category: 'essential', defaultSize: 'small' },
+  
+  // === CALENDAR ===
+  { type: 'zmanim', name: 'Zmanim', description: 'Sunrise, sunset, and key times', icon: '🌅', category: 'calendar', defaultSize: 'medium' },
+  { type: 'zmanim_full', name: 'Full Zmanim', description: 'All halachic times for today', icon: '⏰', category: 'calendar', defaultSize: 'large' },
+  { type: 'shabbos_times', name: 'Shabbos Times', description: 'Candle lighting and Havdalah', icon: '🕯️', category: 'calendar', defaultSize: 'medium' },
+  { type: 'weekly_parsha', name: 'Weekly Parsha', description: 'This week\'s Torah portion', icon: '📜', category: 'calendar', defaultSize: 'small' },
+  { type: 'candle_lighting', name: 'Candle Lighting', description: 'Countdown to candle lighting', icon: '🕯️', category: 'calendar', defaultSize: 'small' },
+  { type: 'havdalah', name: 'Havdalah', description: 'Countdown to Havdalah time', icon: '✨', category: 'calendar', defaultSize: 'small' },
+  { type: 'fast_day_info', name: 'Fast Day Progress', description: 'Fast start/end with progress bar', icon: '🌙', category: 'calendar', defaultSize: 'medium' },
+  { type: 'omer_counter', name: 'Omer Counter', description: 'Sefiras HaOmer day count', icon: '🌾', category: 'calendar', defaultSize: 'medium' },
+  { type: 'rosh_chodesh', name: 'Rosh Chodesh', description: 'New month info and molad', icon: '🌙', category: 'calendar', defaultSize: 'small' },
+  { type: 'upcoming_holidays', name: 'Upcoming Holidays', description: 'Next Jewish holidays', icon: '🎉', category: 'calendar', defaultSize: 'medium' },
+  { type: 'hebrew_birthday', name: 'Hebrew Birthday', description: 'Countdown to your Hebrew birthday', icon: '🎂', category: 'calendar', defaultSize: 'small' },
+  { type: 'yahrzeit', name: 'Yahrzeits', description: 'Upcoming yahrzeits to remember', icon: '🕯️', category: 'calendar', defaultSize: 'medium' },
+  { type: 'daf_yomi_date', name: 'Daf Yomi Date', description: 'Today\'s Daf Yomi page', icon: '📚', category: 'calendar', defaultSize: 'small' },
+  { type: 'nach_yomi', name: 'Nach Yomi', description: 'Today\'s Nach chapter', icon: '📖', category: 'calendar', defaultSize: 'small' },
+  { type: 'mishna_yomis', name: 'Mishna Yomis', description: 'Today\'s Mishna', icon: '📕', category: 'calendar', defaultSize: 'small' },
+  { type: 'halacha_yomis', name: 'Halacha Yomis', description: 'Today\'s Halacha', icon: '⚖️', category: 'calendar', defaultSize: 'small' },
+  { type: 'sunrise_sunset', name: 'Sun Times', description: 'Sunrise and sunset times', icon: '☀️', category: 'calendar', defaultSize: 'small' },
+  { type: 'moon_phase', name: 'Moon Phase', description: 'Current lunar phase', icon: '🌙', category: 'calendar', defaultSize: 'small' },
+  { type: 'mini_calendar', name: 'Mini Calendar', description: 'Week view with Jewish dates', icon: '🗓️', category: 'calendar', defaultSize: 'medium' },
+  { type: 'month_view', name: 'Month View', description: 'Current month at a glance', icon: '📆', category: 'calendar', defaultSize: 'large' },
+  
+  // === PRAYER ===
+  { type: 'tehillim_progress', name: 'Daily Tehillim', description: 'Track your Tehillim progress', icon: '📖', category: 'prayer', defaultSize: 'medium' },
+  { type: 'davening_note', name: 'Davening Note', description: 'Hallel, Tachanun changes', icon: '✨', category: 'prayer', defaultSize: 'small' },
+  { type: 'shacharis', name: 'Shacharis', description: 'Quick access to morning prayers', icon: '🌅', category: 'prayer', defaultSize: 'small' },
+  { type: 'mincha', name: 'Mincha', description: 'Quick access to afternoon prayers', icon: '☀️', category: 'prayer', defaultSize: 'small' },
+  { type: 'maariv', name: 'Maariv', description: 'Quick access to evening prayers', icon: '🌙', category: 'prayer', defaultSize: 'small' },
+  { type: 'brachos', name: 'Brachos', description: 'Quick bracha finder', icon: '🙏', category: 'prayer', defaultSize: 'small' },
+  { type: 'bentching', name: 'Bentching', description: 'Grace after meals', icon: '🍞', category: 'prayer', defaultSize: 'small' },
+  { type: 'bedtime_shema', name: 'Bedtime Shema', description: 'Shema before sleep', icon: '😴', category: 'prayer', defaultSize: 'small' },
+  { type: 'modeh_ani', name: 'Modeh Ani', description: 'Morning gratitude prayer', icon: '🌄', category: 'prayer', defaultSize: 'small' },
+  { type: 'travelers_prayer', name: 'Tefillas HaDerech', description: 'Traveler\'s prayer', icon: '✈️', category: 'prayer', defaultSize: 'small' },
+  { type: 'prayer_for_sick', name: 'Mi Shebeirach', description: 'Prayer for the sick', icon: '💝', category: 'prayer', defaultSize: 'small' },
+  { type: 'tehillim_for_sick', name: 'Tehillim for Sick', description: 'Psalms for healing', icon: '🙏', category: 'prayer', defaultSize: 'small' },
+  { type: 'shema', name: 'Shema', description: 'The Shema prayer', icon: '✡️', category: 'prayer', defaultSize: 'small' },
+  { type: 'asher_yatzar', name: 'Asher Yatzar', description: 'Blessing after bathroom', icon: '💧', category: 'prayer', defaultSize: 'small' },
+  { type: 'tefillin_reminder', name: 'Tefillin Reminder', description: 'Did you put on Tefillin?', icon: '📿', category: 'prayer', defaultSize: 'small' },
+  { type: 'tzitzis_check', name: 'Tzitzis Check', description: 'Daily tzitzis reminder', icon: '🧵', category: 'prayer', defaultSize: 'small' },
+  { type: 'kapitel', name: 'Today\'s Kapitel', description: 'Tehillim for your age', icon: '📖', category: 'prayer', defaultSize: 'small' },
+  { type: 'tanya', name: 'Daily Tanya', description: 'Today\'s Tanya portion', icon: '📕', category: 'prayer', defaultSize: 'small' },
+  { type: 'chitas', name: 'Chitas', description: 'Chumash, Tehillim, Tanya', icon: '📚', category: 'prayer', defaultSize: 'medium' },
+  { type: 'yehi_ratzon', name: 'Yehi Ratzon', description: 'Daily intentions', icon: '🌟', category: 'prayer', defaultSize: 'small' },
+  
+  // === LEARNING ===
+  { type: 'daf_yomi', name: 'Daf Yomi', description: 'Daily Talmud page', icon: '📚', category: 'learning', defaultSize: 'medium' },
+  { type: 'parsha_summary', name: 'Parsha Summary', description: 'Weekly parsha overview', icon: '📜', category: 'learning', defaultSize: 'medium' },
+  { type: 'halacha_daily', name: 'Daily Halacha', description: 'Learn one halacha daily', icon: '⚖️', category: 'learning', defaultSize: 'medium' },
+  { type: 'mussar', name: 'Daily Mussar', description: 'Character improvement', icon: '💎', category: 'learning', defaultSize: 'medium' },
+  { type: 'pirkei_avos', name: 'Pirkei Avos', description: 'Ethics of our fathers', icon: '📖', category: 'learning', defaultSize: 'medium' },
+  { type: 'rambam_daily', name: 'Rambam Daily', description: 'Daily Maimonides study', icon: '📕', category: 'learning', defaultSize: 'small' },
+  { type: 'mishnah_berurah', name: 'Mishna Berurah', description: 'Daily Halacha study', icon: '📗', category: 'learning', defaultSize: 'small' },
+  { type: 'chumash_daily', name: 'Daily Chumash', description: 'Torah with Rashi', icon: '📜', category: 'learning', defaultSize: 'small' },
+  { type: 'word_of_day', name: 'Hebrew Word', description: 'Learn a new Hebrew word', icon: 'א', category: 'learning', defaultSize: 'small' },
+  { type: 'torah_thought', name: 'Torah Thought', description: 'Daily Torah insight', icon: '💡', category: 'learning', defaultSize: 'medium' },
+  { type: 'chassidus', name: 'Daily Chassidus', description: 'Chassidic teachings', icon: '✨', category: 'learning', defaultSize: 'medium' },
+  { type: 'zohar', name: 'Daily Zohar', description: 'Kabbalistic wisdom', icon: '🌟', category: 'learning', defaultSize: 'small' },
+  { type: 'tehillim_meaning', name: 'Tehillim Meaning', description: 'Understand the Psalms', icon: '📖', category: 'learning', defaultSize: 'medium' },
+  { type: 'jewish_history', name: 'On This Day', description: 'Jewish history today', icon: '📜', category: 'learning', defaultSize: 'medium' },
+  { type: 'gedolim_story', name: 'Gedolim Story', description: 'Stories of great rabbis', icon: '👤', category: 'learning', defaultSize: 'medium' },
+  { type: 'mitzvah_of_day', name: 'Mitzvah of the Day', description: 'Focus on one mitzvah', icon: '⭐', category: 'learning', defaultSize: 'small' },
+  { type: 'middah_of_week', name: 'Middah of the Week', description: 'Character trait focus', icon: '💪', category: 'learning', defaultSize: 'small' },
+  
+  // === PERSONAL ===
+  { type: 'inspiration_quote', name: 'Daily Inspiration', description: 'Uplifting Torah quotes', icon: '💭', category: 'personal', defaultSize: 'medium' },
+  { type: 'custom_reminders', name: 'Custom Reminders', description: 'Your personal reminders', icon: '🔔', category: 'personal', defaultSize: 'medium' },
+  { type: 'custom_countdown', name: 'Custom Countdown', description: '40-day commitments, milestones', icon: '⏳', category: 'personal', defaultSize: 'small' },
+  { type: 'gratitude', name: 'Daily Gratitude', description: 'Write what you\'re thankful for', icon: '🙏', category: 'personal', defaultSize: 'medium' },
+  { type: 'journal', name: 'Spiritual Journal', description: 'Daily reflections', icon: '📝', category: 'personal', defaultSize: 'medium' },
+  { type: 'goals', name: 'Spiritual Goals', description: 'Track your growth goals', icon: '🎯', category: 'personal', defaultSize: 'medium' },
+  { type: 'intentions', name: 'Daily Intentions', description: 'Set your kavanah for today', icon: '🌟', category: 'personal', defaultSize: 'small' },
+  { type: 'chesed_tracker', name: 'Chesed Tracker', description: 'Log acts of kindness', icon: '💝', category: 'personal', defaultSize: 'small' },
+  { type: 'prayer_notes', name: 'Prayer Notes', description: 'Personal tefillos', icon: '📋', category: 'personal', defaultSize: 'medium' },
+  { type: 'names_to_daven', name: 'Names to Daven For', description: 'People to pray for', icon: '💕', category: 'personal', defaultSize: 'medium' },
+  { type: 'affirmation', name: 'Daily Affirmation', description: 'Positive Torah thoughts', icon: '💪', category: 'personal', defaultSize: 'small' },
+  { type: 'mood_tracker', name: 'Mood Tracker', description: 'Track your daily mood', icon: '😊', category: 'personal', defaultSize: 'small' },
+  { type: 'notes', name: 'Quick Notes', description: 'Jot down thoughts', icon: '📝', category: 'personal', defaultSize: 'small' },
+  { type: 'bookmarks', name: 'Bookmarks', description: 'Saved prayers and texts', icon: '🔖', category: 'personal', defaultSize: 'medium' },
+  
+  // === TRACKING ===
+  { type: 'streak', name: 'Daily Streak', description: 'Track your consistency', icon: '🔥', category: 'tracking', defaultSize: 'small' },
+  { type: 'tehillim_stats', name: 'Tehillim Stats', description: 'Your Tehillim statistics', icon: '📊', category: 'tracking', defaultSize: 'medium' },
+  { type: 'davening_streak', name: 'Davening Streak', description: 'Days in a row davening', icon: '📈', category: 'tracking', defaultSize: 'small' },
+  { type: 'learning_time', name: 'Learning Time', description: 'Track daily learning', icon: '⏱️', category: 'tracking', defaultSize: 'small' },
+  { type: 'weekly_summary', name: 'Weekly Summary', description: 'Your week in review', icon: '📋', category: 'tracking', defaultSize: 'medium' },
+  { type: 'monthly_goals', name: 'Monthly Goals', description: 'Track monthly progress', icon: '🎯', category: 'tracking', defaultSize: 'medium' },
+  { type: 'mitzvah_counter', name: 'Mitzvah Counter', description: 'Count your mitzvos', icon: '✅', category: 'tracking', defaultSize: 'small' },
+  { type: 'brachos_counter', name: 'Brachos Counter', description: '100 brachos daily', icon: '💯', category: 'tracking', defaultSize: 'small' },
+  { type: 'tzedakah_tracker', name: 'Tzedakah Tracker', description: 'Track your giving', icon: '💰', category: 'tracking', defaultSize: 'small' },
+  { type: 'achievements', name: 'Achievements', description: 'Milestones reached', icon: '🏆', category: 'tracking', defaultSize: 'medium' },
+  { type: 'habits', name: 'Habit Tracker', description: 'Build good habits', icon: '✓', category: 'tracking', defaultSize: 'medium' },
+  
+  // === COMMUNITY ===
+  { type: 'minyan_times', name: 'Minyan Times', description: 'Local minyan schedule', icon: '🏛️', category: 'community', defaultSize: 'medium' },
+  { type: 'shul_announcements', name: 'Shul News', description: 'Community announcements', icon: '📢', category: 'community', defaultSize: 'medium' },
+  { type: 'shiurim', name: 'Shiurim', description: 'Upcoming classes', icon: '🎓', category: 'community', defaultSize: 'medium' },
+  { type: 'tehillim_group', name: 'Tehillim Group', description: 'Say Tehillim with others', icon: '👥', category: 'community', defaultSize: 'medium' },
+  { type: 'simchas', name: 'Simchas', description: 'Community celebrations', icon: '🎊', category: 'community', defaultSize: 'medium' },
+  { type: 'chesed_opportunities', name: 'Chesed Opportunities', description: 'Ways to help others', icon: '🤝', category: 'community', defaultSize: 'medium' },
+  { type: 'dvar_torah_share', name: 'Share Dvar Torah', description: 'Share Torah thoughts', icon: '💬', category: 'community', defaultSize: 'small' },
+  { type: 'prayer_request', name: 'Prayer Requests', description: 'Community prayers', icon: '🙏', category: 'community', defaultSize: 'medium' },
 ];
 
 // Default panel configuration

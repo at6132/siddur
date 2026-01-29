@@ -59,7 +59,10 @@ const CATEGORIES = [
   { id: 'essential', name: 'Essential', icon: '⭐' },
   { id: 'calendar', name: 'Calendar', icon: '📅' },
   { id: 'prayer', name: 'Prayer', icon: '🙏' },
+  { id: 'learning', name: 'Learning', icon: '📚' },
   { id: 'personal', name: 'Personal', icon: '💫' },
+  { id: 'tracking', name: 'Tracking', icon: '📊' },
+  { id: 'community', name: 'Community', icon: '👥' },
 ];
 
 export const PanelsMarketplace: React.FC = () => {
@@ -171,7 +174,7 @@ export const PanelsMarketplace: React.FC = () => {
           {filteredPanels.map((panel, index) => {
             const isAdded = isPanelAdded(panel.type);
             return (
-              <FadeIn key={panel.type} delay={100 + index * 30}>
+              <View key={panel.type} style={styles.panelCardWrapper}>
                 <GlassCard
                   style={[styles.panelCard, isAdded && styles.panelCardAdded]}
                   onPress={() => !isAdded && handleAddPanel(panel)}
@@ -184,8 +187,8 @@ export const PanelsMarketplace: React.FC = () => {
                       </View>
                     )}
                   </View>
-                  <Text style={styles.panelName}>{panel.name}</Text>
-                  <Text style={styles.panelDescription}>{panel.description}</Text>
+                  <Text style={styles.panelName} numberOfLines={1}>{panel.name}</Text>
+                  <Text style={styles.panelDescription} numberOfLines={2}>{panel.description}</Text>
                   <View style={styles.panelFooter}>
                     <View style={styles.categoryBadge}>
                       <Text style={styles.categoryBadgeText}>{panel.category}</Text>
@@ -195,12 +198,12 @@ export const PanelsMarketplace: React.FC = () => {
                         style={styles.addButton}
                         onPress={() => handleAddPanel(panel)}
                       >
-                        <Text style={styles.addButtonText}>+ Add</Text>
+                        <Text style={styles.addButtonText}>+</Text>
                       </TouchableOpacity>
                     )}
                   </View>
                 </GlassCard>
-              </FadeIn>
+              </View>
             );
           })}
         </View>
@@ -287,12 +290,16 @@ const styles = StyleSheet.create({
   panelsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.md,
+    justifyContent: 'space-between',
+  },
+  panelCardWrapper: {
+    width: '48%',
+    marginBottom: spacing.sm,
   },
 
   // Glass Card
   glassCard: {
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.6)',
@@ -301,14 +308,13 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   glassInner: {
-    padding: spacing.md,
+    padding: spacing.sm,
     backgroundColor: 'rgba(255,255,255,0.3)',
   },
 
   // Panel Card
   panelCard: {
-    width: '47%',
-    minHeight: 160,
+    minHeight: 130,
   },
   panelCardAdded: {
     opacity: 0.7,
@@ -317,10 +323,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   panelIcon: {
-    fontSize: 28,
+    fontSize: 24,
   },
   addedBadge: {
     width: 24,
