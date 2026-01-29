@@ -1,9 +1,17 @@
 /**
  * Jewish Calendar Service
- * Wraps hebcal for Jewish date calculations
+ * Comprehensive Jewish calendar calculations using @hebcal/core
  */
 
-import { HDate, HebrewCalendar, flags } from '@hebcal/core';
+import { HDate, HebrewCalendar, flags, months, Locale } from '@hebcal/core';
+import { SpecialDay, DAYS_OF_WEEK_HEBREW } from '../../types/calendar';
+
+// Hebrew number conversion
+const HEBREW_NUMERALS: { [key: number]: string } = {
+  1: 'א', 2: 'ב', 3: 'ג', 4: 'ד', 5: 'ה', 6: 'ו', 7: 'ז', 8: 'ח', 9: 'ט',
+  10: 'י', 20: 'כ', 30: 'ל', 40: 'מ', 50: 'נ', 60: 'ס', 70: 'ע', 80: 'פ', 90: 'צ',
+  100: 'ק', 200: 'ר', 300: 'ש', 400: 'ת'
+};
 
 export class JewishCalendarService {
   /**
@@ -31,11 +39,98 @@ export class JewishCalendarService {
   }
 
   /**
+   * Get Hebrew date string (e.g., "ט״ו ניסן תשפ״ד")
+   */
+  static getHebrewDateString(date: Date = new Date()): string {
+    const hdate = this.getJewishDate(date);
+    try {
+      return hdate.render('he');
+    } catch {
+      // Fallback if Hebrew locale not available
+      const day = this.numberToHebrew(hdate.getDate());
+      const month = this.getHebrewMonthName(hdate.getMonth());
+      const year = this.numberToHebrewYear(hdate.getFullYear());
+      return `${day} ${month} ${year}`;
+    }
+  }
+
+  /**
+   * Get Hebrew day of week
+   */
+  static getDayOfWeekHebrew(date: Date = new Date()): string {
+    const dayIndex = date.getDay();
+    return DAYS_OF_WEEK_HEBREW[dayIndex];
+  }
+
+  /**
+   * Get Hebrew month name
+   */
+  static getHebrewMonthName(month: number): string {
+    const monthNames: { [key: number]: string } = {
+      [months.NISAN]: 'ניסן',
+      [months.IYYAR]: 'אייר',
+      [months.SIVAN]: 'סיון',
+      [months.TAMUZ]: 'תמוז',
+      [months.AV]: 'אב',
+      [months.ELUL]: 'אלול',
+      [months.TISHREI]: 'תשרי',
+      [months.CHESHVAN]: 'חשון',
+      [months.KISLEV]: 'כסלו',
+      [months.TEVET]: 'טבת',
+      [months.SHVAT]: 'שבט',
+      [months.ADAR_I]: 'אדר א׳',
+      [months.ADAR_II]: 'אדר ב׳',
+    };
+    return monthNames[month] || 'אדר';
+  }
+
+  /**
+   * Convert number to Hebrew numerals
+   */
+  static numberToHebrew(num: number): string {
+    if (num === 15) return 'ט״ו';
+    if (num === 16) return 'ט״ז';
+    
+    let result = '';
+    const values = [400, 300, 200, 100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+    
+    for (const value of values) {
+      while (num >= value) {
+        result += HEBREW_NUMERALS[value];
+        num -= value;
+      }
+    }
+    
+    // Add geresh/gershayim
+    if (result.length === 1) {
+      return result + '׳';
+    } else if (result.length > 1) {
+      return result.slice(0, -1) + '״' + result.slice(-1);
+    }
+    return result;
+  }
+
+  /**
+   * Convert year to Hebrew
+   */
+  static numberToHebrewYear(year: number): string {
+    // Remove the 5000
+    const shortYear = year % 1000;
+    return 'ה׳' + this.numberToHebrew(shortYear);
+  }
+
+  /**
    * Check if date is Shabbos
    */
   static isShabbos(date: Date = new Date()): boolean {
-    const hdate = this.getJewishDate(date);
-    return hdate.getDay() === 6; // 6 = Shabbos
+    return date.getDay() === 6;
+  }
+
+  /**
+   * Check if date is Erev Shabbos (Friday)
+   */
+  static isErevShabbos(date: Date = new Date()): boolean {
+    return date.getDay() === 5;
   }
 
   /**
@@ -53,6 +148,41 @@ export class JewishCalendarService {
   }
 
   /**
+   * Check if date is Rosh Chodesh
+   */
+  static isRoshChodesh(date: Date = new Date()): boolean {
+    const hdate = this.getJewishDate(date);
+    const day = hdate.getDate();
+    // Rosh Chodesh is the 1st of the month, and sometimes the 30th of the previous month
+    if (day === 1) return true;
+    if (day === 30) {
+      // Check if this month has 30 days (then 30th is also Rosh Chodesh)
+      const nextMonth = new HDate(hdate.abs() + 1);
+      return nextMonth.getDate() === 1;
+    }
+    return false;
+  }
+
+  /**
+   * Get Rosh Chodesh name
+   */
+  static getRoshChodeshName(date: Date = new Date()): string | undefined {
+    if (!this.isRoshChodesh(date)) return undefined;
+    const hdate = this.getJewishDate(date);
+    const day = hdate.getDate();
+    
+    let monthName: string;
+    if (day === 1) {
+      monthName = hdate.getMonthName();
+    } else {
+      // Day 30, Rosh Chodesh of next month
+      const nextMonth = new HDate(hdate.abs() + 1);
+      monthName = nextMonth.getMonthName();
+    }
+    return `Rosh Chodesh ${monthName}`;
+  }
+
+  /**
    * Check if date is Yom Tov
    */
   static isYomTov(date: Date = new Date()): boolean {
@@ -65,6 +195,18 @@ export class JewishCalendarService {
   }
 
   /**
+   * Check if date is Erev Yom Tov
+   */
+  static isErevYomTov(date: Date = new Date()): boolean {
+    const events = this.getHolidays(date);
+    if (!events || events.length === 0) return false;
+    return events.some((event) => {
+      const eventFlags = event.getFlags?.() || 0;
+      return eventFlags & flags.EREV;
+    });
+  }
+
+  /**
    * Check if date is a fast day
    */
   static isFastDay(date: Date = new Date()): boolean {
@@ -72,8 +214,24 @@ export class JewishCalendarService {
     if (!events || events.length === 0) return false;
     return events.some((event) => {
       const eventFlags = event.getFlags?.() || 0;
-      return eventFlags & flags.MINOR_FAST;
+      return (eventFlags & flags.MINOR_FAST) || (eventFlags & flags.MAJOR_FAST);
     });
+  }
+
+  /**
+   * Check if date is Tisha B'Av
+   */
+  static isTishaBAv(date: Date = new Date()): boolean {
+    const hdate = this.getJewishDate(date);
+    return hdate.getMonth() === months.AV && hdate.getDate() === 9;
+  }
+
+  /**
+   * Check if date is Yom Kippur
+   */
+  static isYomKippur(date: Date = new Date()): boolean {
+    const hdate = this.getJewishDate(date);
+    return hdate.getMonth() === months.TISHREI && hdate.getDate() === 10;
   }
 
   /**
@@ -86,6 +244,167 @@ export class JewishCalendarService {
       const eventFlags = event.getFlags?.() || 0;
       return eventFlags & flags.CHOL_HAMOED;
     });
+  }
+
+  /**
+   * Check if date is during Chanukah
+   */
+  static isChanukah(date: Date = new Date()): boolean {
+    const hdate = this.getJewishDate(date);
+    const month = hdate.getMonth();
+    const day = hdate.getDate();
+    
+    // Chanukah: 25 Kislev - 2/3 Teves
+    if (month === months.KISLEV && day >= 25) return true;
+    if (month === months.TEVET && day <= 3) return true;
+    return false;
+  }
+
+  /**
+   * Get Chanukah day number (1-8)
+   */
+  static getChanukahDay(date: Date = new Date()): number | undefined {
+    if (!this.isChanukah(date)) return undefined;
+    const hdate = this.getJewishDate(date);
+    const month = hdate.getMonth();
+    const day = hdate.getDate();
+    
+    if (month === months.KISLEV) {
+      return day - 24; // 25th = day 1
+    } else {
+      // Teves - depends on if Kislev had 29 or 30 days
+      const kislevDays = HDate.daysInMonth(months.KISLEV, hdate.getFullYear());
+      return (kislevDays - 24) + day;
+    }
+  }
+
+  /**
+   * Check if date is Purim or Shushan Purim
+   */
+  static isPurim(date: Date = new Date()): boolean {
+    const hdate = this.getJewishDate(date);
+    const month = hdate.getMonth();
+    const day = hdate.getDate();
+    
+    // In a leap year, Purim is in Adar II
+    const isLeapYear = HDate.isLeapYear(hdate.getFullYear());
+    const purimMonth = isLeapYear ? months.ADAR_II : months.ADAR_I;
+    
+    if (month === purimMonth && (day === 14 || day === 15)) return true;
+    return false;
+  }
+
+  /**
+   * Check if date is during the Omer period
+   */
+  static isOmerPeriod(date: Date = new Date()): boolean {
+    const hdate = this.getJewishDate(date);
+    const month = hdate.getMonth();
+    const day = hdate.getDate();
+    
+    // Omer: 16 Nisan - 5 Sivan (night before Shavuos)
+    if (month === months.NISAN && day >= 16) return true;
+    if (month === months.IYYAR) return true;
+    if (month === months.SIVAN && day <= 5) return true;
+    return false;
+  }
+
+  /**
+   * Check if Hallel is said (full or half)
+   */
+  static getHallelType(date: Date = new Date()): 'full' | 'half' | false {
+    const hdate = this.getJewishDate(date);
+    const month = hdate.getMonth();
+    const day = hdate.getDate();
+    
+    // Full Hallel days
+    // Shavuos, Sukkos (first 2 days), Shmini Atzeres/Simchas Torah, all 8 days of Chanukah
+    // First night of Pesach (at Seder only, not in davening)
+    
+    // First 2 days of Sukkos
+    if (month === months.TISHREI && (day === 15 || day === 16)) return 'full';
+    // Shmini Atzeres / Simchas Torah
+    if (month === months.TISHREI && (day === 22 || day === 23)) return 'full';
+    // Chanukah
+    if (this.isChanukah(date)) return 'full';
+    // Shavuos
+    if (month === months.SIVAN && (day === 6 || day === 7)) return 'full';
+    
+    // Half Hallel days
+    // Rosh Chodesh
+    if (this.isRoshChodesh(date)) return 'half';
+    // Last 6 days of Pesach
+    if (month === months.NISAN && day >= 17 && day <= 22) return 'half';
+    // Chol Hamoed Pesach
+    if (month === months.NISAN && day >= 16 && day <= 21) return 'half';
+    // First 2 days of Pesach (full in some communities)
+    if (month === months.NISAN && (day === 15 || day === 16)) return 'full';
+    // Chol Hamoed Sukkos
+    if (month === months.TISHREI && day >= 17 && day <= 21) return 'half';
+    
+    return false;
+  }
+
+  /**
+   * Check if Tachanun is said
+   */
+  static isTachanunSaid(date: Date = new Date()): boolean {
+    const hdate = this.getJewishDate(date);
+    const month = hdate.getMonth();
+    const day = hdate.getDate();
+    
+    // No Tachanun on Shabbos
+    if (this.isShabbos(date)) return false;
+    
+    // No Tachanun on Yom Tov, Chol Hamoed
+    if (this.isYomTov(date) || this.isCholHamoed(date)) return false;
+    
+    // No Tachanun on Rosh Chodesh
+    if (this.isRoshChodesh(date)) return false;
+    
+    // No Tachanun during Chanukah
+    if (this.isChanukah(date)) return false;
+    
+    // No Tachanun on Purim, Shushan Purim
+    if (this.isPurim(date)) return false;
+    
+    // No Tachanun on Tu B'Shvat
+    if (month === months.SHVAT && day === 15) return false;
+    
+    // No Tachanun on Lag B'Omer
+    if (month === months.IYYAR && day === 18) return false;
+    
+    // No Tachanun entire month of Nisan
+    if (month === months.NISAN) return false;
+    
+    // No Tachanun from Rosh Chodesh Sivan through Isru Chag Shavuos (12 Sivan)
+    if (month === months.SIVAN && day <= 12) return false;
+    
+    // No Tachanun on Tisha B'Av
+    if (month === months.AV && day === 9) return false;
+    
+    // No Tachanun on Tu B'Av
+    if (month === months.AV && day === 15) return false;
+    
+    // No Tachanun from Erev Yom Kippur through end of Tishrei
+    if (month === months.TISHREI && day >= 9) return false;
+    
+    // No Tachanun on Isru Chag (day after Yom Tov)
+    // 23 Nisan (after Pesach), 7 Sivan (after Shavuos), 23 Tishrei (after Sukkos)
+    if (month === months.NISAN && day === 23) return false;
+    if (month === months.SIVAN && day === 8) return false;
+    if (month === months.TISHREI && day === 24) return false;
+    
+    return true;
+  }
+
+  /**
+   * Check if Al Hanissim is said
+   */
+  static isAlHanissim(date: Date = new Date()): 'chanukah' | 'purim' | false {
+    if (this.isChanukah(date)) return 'chanukah';
+    if (this.isPurim(date)) return 'purim';
+    return false;
   }
 
   /**
@@ -102,15 +421,203 @@ export class JewishCalendarService {
   }
 
   /**
+   * Get Parsha in Hebrew
+   */
+  static getParshaHebrew(date: Date = new Date()): string | undefined {
+    const events = this.getHolidays(date);
+    if (!events || events.length === 0) return undefined;
+    const parsha = events.find((event) => {
+      const eventFlags = event.getFlags?.() || 0;
+      return eventFlags & flags.PARSHA_HASHAVUA;
+    });
+    if (!parsha) return undefined;
+    try {
+      return parsha.render('he');
+    } catch {
+      return parsha.getDesc?.('en');
+    }
+  }
+
+  /**
    * Get holiday name for a given date
    */
   static getHoliday(date: Date = new Date()): string | undefined {
     const events = this.getHolidays(date);
     if (!events || events.length === 0) return undefined;
+    
+    // Priority: Major holiday > Minor holiday > Rosh Chodesh
     const yomTov = events.find((event) => {
       const eventFlags = event.getFlags?.() || 0;
       return (eventFlags & flags.YOM_TOV_ENDS) || (eventFlags & flags.CHAG);
     });
-    return yomTov?.getDesc?.('en');
+    if (yomTov) return yomTov.getDesc?.('en');
+    
+    const minor = events.find((event) => {
+      const eventFlags = event.getFlags?.() || 0;
+      return eventFlags & flags.MINOR_HOLIDAY;
+    });
+    if (minor) return minor.getDesc?.('en');
+    
+    // Check Rosh Chodesh
+    if (this.isRoshChodesh(date)) {
+      return this.getRoshChodeshName(date);
+    }
+    
+    return undefined;
+  }
+
+  /**
+   * Get all special days for a given date
+   */
+  static getSpecialDays(date: Date = new Date()): SpecialDay[] {
+    const specialDays: SpecialDay[] = [];
+    const events = this.getHolidays(date);
+    
+    // Add Rosh Chodesh
+    if (this.isRoshChodesh(date)) {
+      const name = this.getRoshChodeshName(date) || 'Rosh Chodesh';
+      specialDays.push({
+        name,
+        hebrewName: 'ראש חודש',
+        type: 'roshChodesh',
+      });
+    }
+    
+    // Process hebcal events
+    for (const event of events) {
+      const eventFlags = event.getFlags?.() || 0;
+      const desc = event.getDesc?.('en') || '';
+      
+      if (eventFlags & flags.CHAG) {
+        specialDays.push({
+          name: desc,
+          hebrewName: event.render?.('he') || desc,
+          type: 'yomTov',
+        });
+      } else if (eventFlags & flags.CHOL_HAMOED) {
+        specialDays.push({
+          name: desc,
+          hebrewName: event.render?.('he') || desc,
+          type: 'cholHamoed',
+        });
+      } else if (eventFlags & flags.MINOR_FAST || eventFlags & flags.MAJOR_FAST) {
+        specialDays.push({
+          name: desc,
+          hebrewName: event.render?.('he') || desc,
+          type: 'fastDay',
+        });
+      }
+    }
+    
+    // Add Chanukah
+    const chanukahDay = this.getChanukahDay(date);
+    if (chanukahDay) {
+      specialDays.push({
+        name: `Chanukah - Day ${chanukahDay}`,
+        hebrewName: `חנוכה - נר ${this.numberToHebrew(chanukahDay)}`,
+        type: 'chanukah',
+      });
+    }
+    
+    // Add Purim
+    if (this.isPurim(date)) {
+      const hdate = this.getJewishDate(date);
+      const isPurimDay = hdate.getDate() === 14;
+      specialDays.push({
+        name: isPurimDay ? 'Purim' : 'Shushan Purim',
+        hebrewName: isPurimDay ? 'פורים' : 'שושן פורים',
+        type: 'purim',
+      });
+    }
+    
+    return specialDays;
+  }
+
+  /**
+   * Determine the current season for prayer changes
+   */
+  static getSeason(date: Date = new Date()): 'winter' | 'summer' {
+    const hdate = this.getJewishDate(date);
+    const month = hdate.getMonth();
+    const day = hdate.getDate();
+    
+    // Summer: From Musaf of first day of Pesach until Musaf of Shmini Atzeres
+    // Winter: From Musaf of Shmini Atzeres until Musaf of first day of Pesach
+    
+    // Simplified: Check if we're between Pesach and Shmini Atzeres
+    if (month === months.NISAN && day >= 15) return 'summer';
+    if (month >= months.IYYAR && month <= months.ELUL) return 'summer';
+    if (month === months.TISHREI && day < 22) return 'summer';
+    
+    return 'winter';
+  }
+
+  /**
+   * Check if we say Mashiv Haruach (after Shmini Atzeres Musaf until Pesach)
+   */
+  static isMashivHaruach(date: Date = new Date()): boolean {
+    return this.getSeason(date) === 'winter';
+  }
+
+  /**
+   * Check if we say V'ten Tal Umatar (in diaspora: Dec 4th until Pesach)
+   */
+  static isVtenTalUmatar(date: Date = new Date(), isIsrael: boolean = false): boolean {
+    const hdate = this.getJewishDate(date);
+    const month = hdate.getMonth();
+    const day = hdate.getDate();
+    
+    // Before Pesach
+    if (month === months.NISAN && day >= 15) return false;
+    
+    if (isIsrael) {
+      // In Israel: from 7 Cheshvan
+      if (month === months.CHESHVAN && day >= 7) return true;
+      if (month === months.KISLEV || month === months.TEVET || 
+          month === months.SHVAT || month === months.ADAR_I || 
+          month === months.ADAR_II) return true;
+      if (month === months.NISAN && day < 15) return true;
+    } else {
+      // In diaspora: from December 4th (or 5th in year before civil leap year)
+      const civilMonth = date.getMonth(); // 0-indexed
+      const civilDay = date.getDate();
+      const year = date.getFullYear();
+      
+      // Check if next year is a leap year
+      const startDay = ((year + 1) % 4 === 0) ? 5 : 4;
+      
+      if (civilMonth === 11 && civilDay >= startDay) return true; // December
+      if (civilMonth >= 0 && civilMonth <= 2) return true; // Jan-March
+      if (month === months.NISAN && day < 15) return true;
+    }
+    
+    return false;
+  }
+
+  /**
+   * Check if it's a day with Torah reading
+   */
+  static hasTorahReading(date: Date = new Date()): boolean {
+    const dayOfWeek = date.getDay();
+    
+    // Shabbos always has Torah reading
+    if (dayOfWeek === 6) return true;
+    
+    // Monday and Thursday
+    if (dayOfWeek === 1 || dayOfWeek === 4) return true;
+    
+    // Rosh Chodesh
+    if (this.isRoshChodesh(date)) return true;
+    
+    // Fast days
+    if (this.isFastDay(date)) return true;
+    
+    // Yom Tov and Chol Hamoed
+    if (this.isYomTov(date) || this.isCholHamoed(date)) return true;
+    
+    // Chanukah and Purim
+    if (this.isChanukah(date) || this.isPurim(date)) return true;
+    
+    return false;
   }
 }
