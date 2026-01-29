@@ -8,9 +8,11 @@ import {
   Animated,
   Dimensions,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import * as Location from 'expo-location';
 import { FadeIn } from '../../components/animations/FadeIn';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
@@ -48,7 +50,9 @@ export const CalendarScreen: React.FC = () => {
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
   const [selectedDayZmanim, setSelectedDayZmanim] = useState<ExtendedZmanim | null>(null);
   const [loading, setLoading] = useState(true);
+  const [zmanimLoading, setZmanimLoading] = useState(false);
   const [context, setContext] = useState<CalendarContext | null>(null);
+  const [currentLocation, setCurrentLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
   useEffect(() => {
     loadContext();
@@ -62,16 +66,48 @@ export const CalendarScreen: React.FC = () => {
 
   const loadContext = async () => {
     const preferences = await UserPreferencesService.getPreferences();
+    let currentLocation = preferences?.location;
+
+    // Get current GPS location for accurate zmanim
+    if (Platform.OS !== 'web') {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const location = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          currentLocation = {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+          };
+          
+          // Save location for future use
+          if (preferences) {
+            await UserPreferencesService.setLocation({
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              cityName: preferences.location?.cityName,
+            });
+          }
+        }
+      } catch (locError) {
+        console.log('Using stored location, GPS unavailable:', locError);
+      }
+    }
+
+    // Store location in state for zmanim calculations
+    setCurrentLocation(currentLocation || null);
+
     if (preferences) {
       setContext({
         nusach: preferences.nusach,
-        location: preferences.location,
-        isIsrael: false, // Default to diaspora
+        location: currentLocation,
+        isIsrael: false,
       });
     } else {
-      // Set default context if no preferences
       setContext({
         nusach: 'ashkenaz',
+        location: currentLocation,
         isIsrael: false,
       });
     }
@@ -150,31 +186,59 @@ export const CalendarScreen: React.FC = () => {
       setSelectedDayZmanim(null);
     } else {
       setSelectedDay(day);
+      setSelectedDayZmanim(null);
+      setZmanimLoading(true);
       
-      // Load zmanim for selected day
-      if (context?.location) {
-        // Create a LocationObject-like structure for ZmanimService
-        const locationObject = {
-          coords: {
-            latitude: context.location.latitude,
-            longitude: context.location.longitude,
-            altitude: null,
-            accuracy: null,
-            altitudeAccuracy: null,
-            heading: null,
-            speed: null,
-          },
-          timestamp: Date.now(),
-        };
-        const zmanim = await ZmanimService.calculateExtendedZmanim(
-          day.date,
-          locationObject as any
-        );
-        setSelectedDayZmanim(zmanim);
-      } else {
-        // Use defaults if no location
+      try {
+        // Get fresh GPS location for most accurate zmanim
+        let location = currentLocation;
+        
+        if (Platform.OS !== 'web') {
+          try {
+            const { status } = await Location.getForegroundPermissionsAsync();
+            if (status === 'granted') {
+              const gps = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.High,
+              });
+              location = {
+                latitude: gps.coords.latitude,
+                longitude: gps.coords.longitude,
+              };
+            }
+          } catch (e) {
+            // Use cached location if GPS fails
+          }
+        }
+
+        if (location) {
+          const locationObject = {
+            coords: {
+              latitude: location.latitude,
+              longitude: location.longitude,
+              altitude: null,
+              accuracy: null,
+              altitudeAccuracy: null,
+              heading: null,
+              speed: null,
+            },
+            timestamp: Date.now(),
+          };
+          const zmanim = await ZmanimService.calculateExtendedZmanim(
+            day.date,
+            locationObject as any
+          );
+          setSelectedDayZmanim(zmanim);
+        } else {
+          // Use defaults if no location available
+          const zmanim = await ZmanimService.calculateExtendedZmanim(day.date, null);
+          setSelectedDayZmanim(zmanim);
+        }
+      } catch (error) {
+        console.error('Error calculating zmanim:', error);
         const zmanim = await ZmanimService.calculateExtendedZmanim(day.date, null);
         setSelectedDayZmanim(zmanim);
+      } finally {
+        setZmanimLoading(false);
       }
     }
   };
@@ -399,7 +463,12 @@ export const CalendarScreen: React.FC = () => {
         </View>
 
         {/* Zmanim */}
-        {selectedDayZmanim && (
+        {zmanimLoading ? (
+          <View style={styles.zmanimLoading}>
+            <ActivityIndicator size="small" color={colors.primary.main} />
+            <Text style={styles.zmanimLoadingText}>Loading zmanim...</Text>
+          </View>
+        ) : selectedDayZmanim && (
           <View style={styles.zmanimSection}>
             <Text style={styles.zmanimTitle}>Zmanim</Text>
             <View style={styles.zmanimGrid}>
@@ -440,6 +509,11 @@ export const CalendarScreen: React.FC = () => {
                 <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.tzeis)}</Text>
               </View>
             </View>
+          </View>
+        )}
+        {!zmanimLoading && !selectedDayZmanim && selectedDay && (
+          <View style={styles.zmanimLoading}>
+            <Text style={styles.zmanimLoadingText}>Tap to load zmanim</Text>
           </View>
         )}
       </>
@@ -673,6 +747,17 @@ const styles = StyleSheet.create({
   },
   fastTag: {
     backgroundColor: '#8C4A4A',
+  },
+  zmanimLoading: {
+    marginTop: spacing.md,
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+  },
+  zmanimLoadingText: {
+    fontFamily: fonts.body.regular,
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginTop: spacing.sm,
   },
   zmanimSection: {
     marginTop: spacing.md,

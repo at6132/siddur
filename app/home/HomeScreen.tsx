@@ -11,6 +11,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import * as Location from 'expo-location';
 import { FadeIn } from '../../components/animations/FadeIn';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { ErrorView } from '../../components/ui/ErrorView';
@@ -145,9 +146,38 @@ export const HomeScreen: React.FC = () => {
         return;
       }
 
+      // Get current GPS location for accurate zmanim
+      let currentLocation = preferences.location;
+      
+      if (Platform.OS !== 'web') {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === 'granted') {
+            const location = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            });
+            currentLocation = {
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+            };
+            
+            // Save location for future use
+            await UserPreferencesService.setLocation({
+              latitude: location.coords.latitude,
+              longitude: location.coords.longitude,
+              cityName: preferences.location?.cityName,
+            });
+          }
+        } catch (locError) {
+          console.log('Using stored location, GPS unavailable:', locError);
+          // Continue with stored location if GPS fails
+        }
+      }
+
       const context: CalendarContext = {
         nusach: preferences.nusach,
-        location: preferences.location,
+        location: currentLocation,
+        isIsrael: false,
       };
 
       const info = await CalendarEngine.getTodayInfo(context);
