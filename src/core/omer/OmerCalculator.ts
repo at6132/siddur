@@ -3,7 +3,7 @@
  * Calculates the day of the Omer count
  */
 
-import { HDate } from 'hebcal';
+import { HDate } from '@hebcal/core';
 
 export class OmerCalculator {
   /**

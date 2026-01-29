@@ -3,7 +3,7 @@
  * Wraps hebcal for Jewish date calculations
  */
 
-import { HDate, HebrewCalendar, Event } from 'hebcal';
+import { HDate, HebrewCalendar, Event } from '@hebcal/core';
 
 export class JewishCalendarService {
   /**
