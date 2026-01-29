@@ -17,7 +17,8 @@ import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles, fonts } from '../../src/design/typography';
 import { CalendarEngine } from '../../src/core/calendar/CalendarEngine';
 import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
-import { ZmanimService, ExtendedZmanim } from '../../src/core/zmanim/ZmanimService';
+import { ZmanimService } from '../../src/core/zmanim/ZmanimService';
+import { ExtendedZmanim } from '../../src/types/calendar';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { DayInfo, CalendarContext } from '../../src/types/calendar';
 
@@ -145,7 +146,7 @@ export const CalendarScreen: React.FC = () => {
       
       // Load zmanim for selected day
       if (context?.location) {
-        const zmanim = ZmanimService.getExtendedZmanim(
+        const zmanim = await ZmanimService.calculateExtendedZmanim(
           day.date,
           context.location.latitude,
           context.location.longitude
@@ -319,7 +320,7 @@ export const CalendarScreen: React.FC = () => {
           </FadeIn>
         )}
 
-        <View style={{ height: 120 }} />
+        <View style={{ height: 140 }} />
       </ScrollView>
     </View>
   );

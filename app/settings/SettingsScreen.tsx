@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    paddingBottom: spacing['3xl'],
+    paddingBottom: 120,
   },
   loadingContainer: {
     flex: 1,
