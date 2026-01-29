@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, Switch, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -19,36 +19,76 @@ export const TehillimReaderScreen: React.FC = () => {
   const psalm = (route.params as any)?.psalm || 1;
   
   const [chapter, setChapter] = useState<TehillimChapter | null>(null);
+  const [loading, setLoading] = useState(true);
   const [showEnglish, setShowEnglish] = useState(true);
-  const [showTransliteration, setShowTransliteration] = useState(false);
+  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
 
   useEffect(() => {
-    const chapterData = TehillimService.getChapter(psalm);
-    setChapter(chapterData);
-    
-    navigation.setOptions({
-      title: `תהלים ${chapterData?.hebrewNumber || psalm}`,
-    });
-  }, [psalm, navigation]);
+    loadChapter(psalm);
+  }, [psalm]);
 
-  const renderVerse = (verse: TehillimVerse, index: number) => (
-    <FadeIn key={verse.number} delay={50 * index}>
-      <View style={styles.verseContainer}>
-        <View style={styles.verseNumberContainer}>
-          <Text style={styles.verseNumber}>{verse.number}</Text>
+  const loadChapter = async (num: number) => {
+    setLoading(true);
+    try {
+      const chapterData = await TehillimService.getChapter(num);
+      setChapter(chapterData);
+      
+      navigation.setOptions({
+        title: `תהלים ${chapterData?.hebrewNumber || num}`,
+      });
+    } catch (e) {
+      console.error('Error loading chapter:', e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getFontSize = () => {
+    switch (fontSize) {
+      case 'small': return { hebrew: 18, english: 14 };
+      case 'large': return { hebrew: 28, english: 18 };
+      default: return { hebrew: 22, english: 16 };
+    }
+  };
+
+  const renderVerse = (verse: TehillimVerse, index: number) => {
+    const sizes = getFontSize();
+    
+    return (
+      <FadeIn key={verse.number} delay={30 * index}>
+        <View style={styles.verseContainer}>
+          <View style={styles.verseNumberContainer}>
+            <Text style={styles.verseNumber}>{verse.number}</Text>
+          </View>
+          <View style={styles.verseTextContainer}>
+            <Text style={[styles.hebrewText, { fontSize: sizes.hebrew, lineHeight: sizes.hebrew * 1.6 }]}>
+              {verse.hebrew}
+            </Text>
+            {showEnglish && verse.english && (
+              <Text style={[styles.englishText, { fontSize: sizes.english, lineHeight: sizes.english * 1.5 }]}>
+                {verse.english}
+              </Text>
+            )}
+          </View>
         </View>
-        <View style={styles.verseTextContainer}>
-          <Text style={styles.hebrewText}>{verse.hebrew}</Text>
-          {showTransliteration && verse.transliteration && (
-            <Text style={styles.transliterationText}>{verse.transliteration}</Text>
-          )}
-          {showEnglish && verse.english && (
-            <Text style={styles.englishText}>{verse.english}</Text>
-          )}
+      </FadeIn>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary.main} />
+          <Text style={styles.loadingText}>Loading Tehillim...</Text>
         </View>
       </View>
-    </FadeIn>
-  );
+    );
+  }
 
   if (!chapter) {
     return (
@@ -58,7 +98,7 @@ export const TehillimReaderScreen: React.FC = () => {
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>Chapter not found</Text>
         </View>
       </View>
     );
@@ -109,13 +149,26 @@ export const TehillimReaderScreen: React.FC = () => {
               />
             </View>
             <View style={styles.controlRow}>
-              <Text style={styles.controlLabel}>Transliteration</Text>
-              <Switch
-                value={showTransliteration}
-                onValueChange={setShowTransliteration}
-                trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
-                thumbColor={showTransliteration ? colors.primary.main : colors.neutral[400]}
-              />
+              <Text style={styles.controlLabel}>Text Size</Text>
+              <View style={styles.sizeButtons}>
+                {(['small', 'medium', 'large'] as const).map((size) => (
+                  <TouchableOpacity
+                    key={size}
+                    style={[
+                      styles.sizeButton,
+                      fontSize === size && styles.sizeButtonActive,
+                    ]}
+                    onPress={() => setFontSize(size)}
+                  >
+                    <Text style={[
+                      styles.sizeButtonText,
+                      fontSize === size && styles.sizeButtonTextActive,
+                    ]}>
+                      {size === 'small' ? 'A' : size === 'medium' ? 'A' : 'A'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           </View>
         </FadeIn>
@@ -125,12 +178,23 @@ export const TehillimReaderScreen: React.FC = () => {
           {chapter.verses.map((verse, index) => renderVerse(verse, index))}
         </GlassPanel>
 
+        {/* Attribution */}
+        <View style={styles.attributionContainer}>
+          <Text style={styles.attributionText}>
+            Texts provided by{' '}
+            <Text style={styles.attributionLink}>Sefaria.org</Text>
+          </Text>
+        </View>
+
         {/* Navigation */}
         <View style={styles.navigationContainer}>
           {psalm > 1 && (
             <TouchableOpacity
               style={styles.navButton}
-              onPress={() => navigation.setParams({ psalm: psalm - 1 } as any)}
+              onPress={() => {
+                navigation.setParams({ psalm: psalm - 1 } as any);
+                loadChapter(psalm - 1);
+              }}
             >
               <Text style={styles.navButtonText}>← Previous</Text>
             </TouchableOpacity>
@@ -139,7 +203,10 @@ export const TehillimReaderScreen: React.FC = () => {
           {psalm < 150 && (
             <TouchableOpacity
               style={styles.navButton}
-              onPress={() => navigation.setParams({ psalm: psalm + 1 } as any)}
+              onPress={() => {
+                navigation.setParams({ psalm: psalm + 1 } as any);
+                loadChapter(psalm + 1);
+              }}
             >
               <Text style={styles.navButtonText}>Next →</Text>
             </TouchableOpacity>
@@ -167,6 +234,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: spacing.md,
   },
   loadingText: {
     ...textStyles.body,
@@ -226,6 +294,29 @@ const styles = StyleSheet.create({
     ...textStyles.body,
     color: colors.text.primary,
   },
+  sizeButtons: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  sizeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sizeButtonActive: {
+    backgroundColor: colors.primary.main,
+  },
+  sizeButtonText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 14,
+    color: colors.text.secondary,
+  },
+  sizeButtonTextActive: {
+    color: '#fff',
+  },
   versesPanel: {
     marginBottom: spacing.lg,
   },
@@ -251,23 +342,26 @@ const styles = StyleSheet.create({
   },
   hebrewText: {
     fontFamily: fonts.heading.regular,
-    fontSize: 22,
-    lineHeight: 36,
     textAlign: 'right',
     color: colors.text.primary,
     marginBottom: spacing.sm,
   },
-  transliterationText: {
-    fontFamily: fonts.body.italic,
-    fontSize: 14,
-    lineHeight: 22,
-    color: colors.text.tertiary,
-    marginBottom: spacing.xs,
-  },
   englishText: {
     ...textStyles.body,
     color: colors.text.secondary,
-    lineHeight: 24,
+  },
+  attributionContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  attributionText: {
+    ...textStyles.caption,
+    color: colors.text.tertiary,
+  },
+  attributionLink: {
+    color: colors.primary.main,
+    textDecorationLine: 'underline',
   },
   navigationContainer: {
     flexDirection: 'row',
