@@ -28,25 +28,27 @@ A notifications-first, widget-driven spiritual companion for Jewish women, built
 
 ```bash
 npm install
-npm start          # Starts Expo and opens iOS simulator (if Xcode installed)
-npm run start:dev  # Starts Expo with QR code menu (for Expo Go)
-npm run ios        # Explicitly start iOS simulator
-npm run android    # Start Android emulator
+npm start          # Starts Expo dev server (shows QR code for Expo Go)
+npm run android    # Start Android emulator (if Android Studio installed)
+npm run ios        # Start iOS simulator (Mac only, requires Xcode)
+npm run web        # Open in web browser
 ```
 
-### iOS Setup
+### Running on iOS (Windows/Linux)
 
-**For iOS Simulator (Mac only):**
-1. Install Xcode from App Store
-2. Install Xcode Command Line Tools: `xcode-select --install`
-3. Run `npm start` - it will automatically open iOS simulator
+**Using Expo Go (Recommended for Windows):**
+1. Install **Expo Go** app on your iPhone/iPad from App Store
+2. Run `npm start` - Metro bundler will start
+3. Scan the QR code shown in terminal/browser with Expo Go app
+4. Your app will load on your iOS device!
 
-**For Expo Go (any device):**
-1. Install Expo Go app on your iPhone/iPad
-2. Run `npm run start:dev`
-3. Scan QR code with Expo Go app
+**Benefits of Expo Go:**
+- ✅ Works on Windows/Linux (no Mac needed!)
+- ✅ Test on real iOS device
+- ✅ Hot reload and fast refresh
+- ✅ No build process needed
 
-**Note:** iOS simulator requires macOS and Xcode. On Windows/Linux, use Expo Go on a physical device.
+**Note:** iOS Simulator requires macOS and Xcode. On Windows, Expo Go is the way to go!
 
 ## Project Structure
 
