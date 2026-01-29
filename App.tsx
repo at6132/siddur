@@ -19,13 +19,11 @@ import {
 } from '@expo-google-fonts/nunito';
 import AppNavigator from './src/navigation/AppNavigator';
 import { NotificationService } from './src/notifications/NotificationService';
-import { AnimatedSplash } from './app/splash/AnimatedSplash';
 
 // Keep splash screen visible while loading fonts
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
-  const [showSplash, setShowSplash] = useState(true);
   const [appIsReady, setAppIsReady] = useState(false);
 
   // Load fonts
@@ -60,25 +58,13 @@ export default function App() {
     }
   }, [fontsLoaded, appIsReady]);
 
-  const handleSplashComplete = () => {
-    setShowSplash(false);
-  };
-
   // Wait for fonts and app to be ready
   if (!fontsLoaded || !appIsReady) {
     return null;
   }
 
-  if (showSplash) {
-    return (
-      <View style={styles.container} onLayout={onLayoutRootView}>
-        <AnimatedSplash onAnimationComplete={handleSplashComplete} />
-      </View>
-    );
-  }
-
   return (
-    <GestureHandlerRootView style={styles.container}>
+    <GestureHandlerRootView style={styles.container} onLayout={onLayoutRootView}>
       <NavigationContainer>
         <AppNavigator />
         <StatusBar style="auto" />

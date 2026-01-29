@@ -52,31 +52,45 @@ interface IntroScreenProps {
 
 export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
   const [currentFeature, setCurrentFeature] = useState(0);
-  
-  // Animation values
-  const logoScale = useRef(new Animated.Value(0)).current;
+  const [showContent, setShowContent] = useState(false);
+
+  // Logo animations - starts centered, moves up
+  const logoScale = useRef(new Animated.Value(0.3)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoPositionY = useRef(new Animated.Value(0)).current; // 0 = center, negative = up
+
+  // Glow animation
+  const glowScale = useRef(new Animated.Value(0.5)).current;
+  const glowOpacity = useRef(new Animated.Value(0)).current;
+
+  // Content animations (title, subtitle, features, button)
   const titleOpacity = useRef(new Animated.Value(0)).current;
-  const titleTranslateY = useRef(new Animated.Value(30)).current;
+  const titleTranslateY = useRef(new Animated.Value(20)).current;
   const subtitleOpacity = useRef(new Animated.Value(0)).current;
   const featuresOpacity = useRef(new Animated.Value(0)).current;
-  const featuresTranslateY = useRef(new Animated.Value(50)).current;
+  const featuresTranslateY = useRef(new Animated.Value(30)).current;
   const buttonOpacity = useRef(new Animated.Value(0)).current;
   const buttonScale = useRef(new Animated.Value(0.8)).current;
-  
-  // Floating orbs animations
+
+  // Floating orbs
   const orb1 = useRef(new Animated.Value(0)).current;
   const orb2 = useRef(new Animated.Value(0)).current;
   const orb3 = useRef(new Animated.Value(0)).current;
 
+  // Sparkles
+  const sparkle1 = useRef(new Animated.Value(0)).current;
+  const sparkle2 = useRef(new Animated.Value(0)).current;
+  const sparkle3 = useRef(new Animated.Value(0)).current;
+  const sparkle4 = useRef(new Animated.Value(0)).current;
+
   // Feature card animations
   const featureAnimations = FEATURES.map(() => ({
     opacity: useRef(new Animated.Value(0)).current,
-    translateX: useRef(new Animated.Value(-30)).current,
+    translateX: useRef(new Animated.Value(-20)).current,
   }));
 
   useEffect(() => {
-    // Start floating orbs animation
+    // Start floating orbs
     const createOrbAnimation = (orb: Animated.Value, duration: number) => {
       return Animated.loop(
         Animated.sequence([
@@ -100,14 +114,14 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
     createOrbAnimation(orb2, 5000).start();
     createOrbAnimation(orb3, 6000).start();
 
-    // Main entrance animation sequence
+    // Main animation sequence
     Animated.sequence([
-      // Logo appears with spring
+      // Phase 1: Logo appears in center with spring
       Animated.parallel([
         Animated.spring(logoScale, {
           toValue: 1,
-          tension: 50,
-          friction: 7,
+          tension: 40,
+          friction: 6,
           useNativeDriver: true,
         }),
         Animated.timing(logoOpacity, {
@@ -116,82 +130,147 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
           useNativeDriver: true,
         }),
       ]),
-      
-      // Title slides up
-      Animated.delay(200),
+
+      // Phase 2: Glow expands
       Animated.parallel([
-        Animated.timing(titleOpacity, {
-          toValue: 1,
-          duration: 500,
+        Animated.timing(glowOpacity, {
+          toValue: 0.5,
+          duration: 400,
           useNativeDriver: true,
         }),
-        Animated.spring(titleTranslateY, {
-          toValue: 0,
-          tension: 50,
-          friction: 8,
+        Animated.spring(glowScale, {
+          toValue: 1.3,
+          tension: 30,
+          friction: 7,
           useNativeDriver: true,
         }),
       ]),
-      
-      // Subtitle fades in
-      Animated.timing(subtitleOpacity, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      
-      // Features section
+
+      // Phase 3: Sparkles
+      Animated.stagger(80, [
+        Animated.sequence([
+          Animated.timing(sparkle1, { toValue: 1, duration: 250, useNativeDriver: true }),
+          Animated.timing(sparkle1, { toValue: 0, duration: 250, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.timing(sparkle2, { toValue: 1, duration: 250, useNativeDriver: true }),
+          Animated.timing(sparkle2, { toValue: 0, duration: 250, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.timing(sparkle3, { toValue: 1, duration: 250, useNativeDriver: true }),
+          Animated.timing(sparkle3, { toValue: 0, duration: 250, useNativeDriver: true }),
+        ]),
+        Animated.sequence([
+          Animated.timing(sparkle4, { toValue: 1, duration: 250, useNativeDriver: true }),
+          Animated.timing(sparkle4, { toValue: 0, duration: 250, useNativeDriver: true }),
+        ]),
+      ]),
+
+      // Phase 4: Logo drifts up smoothly while content fades in
       Animated.delay(300),
+    ]).start(() => {
+      setShowContent(true);
+      
+      // Logo moves up
       Animated.parallel([
-        Animated.timing(featuresOpacity, {
+        Animated.timing(logoPositionY, {
+          toValue: -height * 0.18,
+          duration: 800,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(logoScale, {
+          toValue: 0.7,
+          duration: 800,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowOpacity, {
+          toValue: 0.3,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(glowScale, {
+          toValue: 0.8,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      // Content appears
+      Animated.sequence([
+        Animated.delay(200),
+        // Title
+        Animated.parallel([
+          Animated.timing(titleOpacity, {
+            toValue: 1,
+            duration: 500,
+            useNativeDriver: true,
+          }),
+          Animated.spring(titleTranslateY, {
+            toValue: 0,
+            tension: 50,
+            friction: 8,
+            useNativeDriver: true,
+          }),
+        ]),
+        // Subtitle
+        Animated.timing(subtitleOpacity, {
           toValue: 1,
           duration: 400,
           useNativeDriver: true,
         }),
-        Animated.spring(featuresTranslateY, {
-          toValue: 0,
-          tension: 40,
-          friction: 8,
-          useNativeDriver: true,
-        }),
-      ]),
-      
-      // Stagger feature cards
-      Animated.stagger(
-        150,
-        featureAnimations.map(({ opacity, translateX }) =>
-          Animated.parallel([
-            Animated.timing(opacity, {
-              toValue: 1,
-              duration: 400,
-              useNativeDriver: true,
-            }),
-            Animated.spring(translateX, {
-              toValue: 0,
-              tension: 50,
-              friction: 8,
-              useNativeDriver: true,
-            }),
-          ])
-        )
-      ),
-      
-      // Button appears
-      Animated.delay(200),
-      Animated.parallel([
-        Animated.timing(buttonOpacity, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: true,
-        }),
-        Animated.spring(buttonScale, {
-          toValue: 1,
-          tension: 50,
-          friction: 6,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start();
+        // Features
+        Animated.delay(200),
+        Animated.parallel([
+          Animated.timing(featuresOpacity, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.spring(featuresTranslateY, {
+            toValue: 0,
+            tension: 40,
+            friction: 8,
+            useNativeDriver: true,
+          }),
+        ]),
+        // Stagger feature cards
+        Animated.stagger(
+          120,
+          featureAnimations.map(({ opacity, translateX }) =>
+            Animated.parallel([
+              Animated.timing(opacity, {
+                toValue: 1,
+                duration: 350,
+                useNativeDriver: true,
+              }),
+              Animated.spring(translateX, {
+                toValue: 0,
+                tension: 50,
+                friction: 8,
+                useNativeDriver: true,
+              }),
+            ])
+          )
+        ),
+        // Button
+        Animated.delay(100),
+        Animated.parallel([
+          Animated.timing(buttonOpacity, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+          }),
+          Animated.spring(buttonScale, {
+            toValue: 1,
+            tension: 50,
+            friction: 6,
+            useNativeDriver: true,
+          }),
+        ]),
+      ]).start();
+    });
 
     // Cycle through feature highlights
     const featureInterval = setInterval(() => {
@@ -248,18 +327,31 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
         ]}
       />
 
-      {/* Main content */}
-      <View style={styles.content}>
-        {/* Logo */}
+      {/* Logo Section - Animated position */}
+      <Animated.View
+        style={[
+          styles.logoSection,
+          {
+            transform: [
+              { translateY: logoPositionY },
+              { scale: logoScale },
+            ],
+          },
+        ]}
+      >
+        {/* Glow */}
         <Animated.View
           style={[
-            styles.logoContainer,
+            styles.glow,
             {
-              opacity: logoOpacity,
-              transform: [{ scale: logoScale }],
+              opacity: glowOpacity,
+              transform: [{ scale: glowScale }],
             },
           ]}
-        >
+        />
+
+        {/* Logo */}
+        <Animated.View style={{ opacity: logoOpacity }}>
           <Image
             source={require('../../assets/logo.png')}
             style={styles.logoImage}
@@ -267,87 +359,103 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
           />
         </Animated.View>
 
-        {/* Title */}
-        <Animated.Text
-          style={[
-            styles.title,
-            {
-              opacity: titleOpacity,
-              transform: [{ translateY: titleTranslateY }],
-            },
-          ]}
-        >
-          24/7
-        </Animated.Text>
-
-        {/* Subtitle */}
-        <Animated.Text
-          style={[styles.subtitle, { opacity: subtitleOpacity }]}
-        >
-          With you, when you choose.
-        </Animated.Text>
-
-        {/* Spacer */}
-        <View style={{ height: spacing.lg }} />
-
-        {/* Features */}
+        {/* Sparkles */}
         <Animated.View
-          style={[
-            styles.featuresContainer,
-            {
-              opacity: featuresOpacity,
-              transform: [{ translateY: featuresTranslateY }],
-            },
-          ]}
-        >
-          {FEATURES.map((feature, index) => (
-            <Animated.View
-              key={feature.title}
-              style={[
-                styles.featureCard,
-                currentFeature === index && styles.featureCardActive,
-                {
-                  opacity: featureAnimations[index].opacity,
-                  transform: [
-                    { translateX: featureAnimations[index].translateX },
-                  ],
-                },
-              ]}
-            >
-              <BlurView intensity={80} style={styles.featureBlur}>
-                <Text style={styles.featureIcon}>{feature.icon}</Text>
-                <View style={styles.featureText}>
-                  <Text style={styles.featureTitle}>{feature.title}</Text>
-                  <Text style={styles.featureDescription}>
-                    {feature.description}
-                  </Text>
-                </View>
-              </BlurView>
-            </Animated.View>
-          ))}
-        </Animated.View>
-
-        {/* Begin button */}
+          style={[styles.sparkle, styles.sparkle1, { opacity: sparkle1, transform: [{ scale: sparkle1 }] }]}
+        />
         <Animated.View
-          style={[
-            styles.buttonContainer,
-            {
-              opacity: buttonOpacity,
-              transform: [{ scale: buttonScale }],
-            },
-          ]}
-        >
-          <GlassButton
-            title="Begin Your Journey"
-            onPress={onBegin}
-            variant="primary"
-            size="large"
-          />
-          <Text style={styles.footerText}>
-            Designed for the modern Jewish woman
-          </Text>
-        </Animated.View>
-      </View>
+          style={[styles.sparkle, styles.sparkle2, { opacity: sparkle2, transform: [{ scale: sparkle2 }] }]}
+        />
+        <Animated.View
+          style={[styles.sparkle, styles.sparkle3, { opacity: sparkle3, transform: [{ scale: sparkle3 }] }]}
+        />
+        <Animated.View
+          style={[styles.sparkle, styles.sparkle4, { opacity: sparkle4, transform: [{ scale: sparkle4 }] }]}
+        />
+      </Animated.View>
+
+      {/* Content Section */}
+      {showContent && (
+        <View style={styles.contentSection}>
+          {/* Title */}
+          <Animated.Text
+            style={[
+              styles.title,
+              {
+                opacity: titleOpacity,
+                transform: [{ translateY: titleTranslateY }],
+              },
+            ]}
+          >
+            24/7
+          </Animated.Text>
+
+          {/* Subtitle */}
+          <Animated.Text
+            style={[styles.subtitle, { opacity: subtitleOpacity }]}
+          >
+            With you, when you choose.
+          </Animated.Text>
+
+          {/* Features */}
+          <Animated.View
+            style={[
+              styles.featuresContainer,
+              {
+                opacity: featuresOpacity,
+                transform: [{ translateY: featuresTranslateY }],
+              },
+            ]}
+          >
+            {FEATURES.map((feature, index) => (
+              <Animated.View
+                key={feature.title}
+                style={[
+                  styles.featureCard,
+                  currentFeature === index && styles.featureCardActive,
+                  {
+                    opacity: featureAnimations[index].opacity,
+                    transform: [
+                      { translateX: featureAnimations[index].translateX },
+                    ],
+                  },
+                ]}
+              >
+                <BlurView intensity={80} style={styles.featureBlur}>
+                  <Text style={styles.featureIcon}>{feature.icon}</Text>
+                  <View style={styles.featureText}>
+                    <Text style={styles.featureTitle}>{feature.title}</Text>
+                    <Text style={styles.featureDescription}>
+                      {feature.description}
+                    </Text>
+                  </View>
+                </BlurView>
+              </Animated.View>
+            ))}
+          </Animated.View>
+
+          {/* Begin button */}
+          <Animated.View
+            style={[
+              styles.buttonContainer,
+              {
+                opacity: buttonOpacity,
+                transform: [{ scale: buttonScale }],
+              },
+            ]}
+          >
+            <GlassButton
+              title="Begin Your Journey"
+              onPress={onBegin}
+              variant="primary"
+              size="large"
+            />
+            <Text style={styles.footerText}>
+              Designed for the modern Jewish woman
+            </Text>
+          </Animated.View>
+        </View>
+      )}
     </View>
   );
 };
@@ -384,34 +492,75 @@ const styles = StyleSheet.create({
     bottom: height * 0.15,
     left: width * 0.2,
   },
-  content: {
-    flex: 1,
+
+  // Logo section - centered initially
+  logoSection: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
   },
-  logoContainer: {
-    marginBottom: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
+  glow: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(212, 165, 184, 0.3)',
   },
   logoImage: {
-    width: 140,
-    height: 140,
+    width: 160,
+    height: 160,
+  },
+  sparkle: {
+    position: 'absolute',
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#E8D4A5',
+  },
+  sparkle1: {
+    top: -50,
+    left: -60,
+  },
+  sparkle2: {
+    top: -30,
+    right: -70,
+  },
+  sparkle3: {
+    bottom: -40,
+    left: -50,
+  },
+  sparkle4: {
+    bottom: -60,
+    right: -40,
+  },
+
+  // Content section
+  contentSection: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+    paddingTop: height * 0.38,
+    alignItems: 'center',
   },
   title: {
     ...textStyles.display,
     color: colors.text.primary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
+    textAlign: 'center',
   },
   subtitle: {
     ...textStyles.bodyLarge,
     color: colors.text.secondary,
     fontStyle: 'italic',
+    marginBottom: spacing.xl,
+    textAlign: 'center',
   },
   featuresContainer: {
     width: '100%',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
   featureCard: {
     marginBottom: spacing.sm,
@@ -431,7 +580,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
   },
   featureIcon: {
-    fontSize: 28,
+    fontSize: 26,
     marginRight: spacing.md,
   },
   featureText: {
@@ -449,6 +598,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     alignItems: 'center',
     width: '100%',
+    marginTop: spacing.sm,
   },
   footerText: {
     ...textStyles.caption,
