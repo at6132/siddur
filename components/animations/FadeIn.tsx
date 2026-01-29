@@ -52,7 +52,7 @@ export const FadeIn: React.FC<FadeInProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    // Don't use flex: 1 here - let content determine size
   },
 });
 
