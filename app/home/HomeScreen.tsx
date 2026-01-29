@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,10 @@ import {
   RefreshControl,
   Animated,
   Dimensions,
+  TouchableOpacity,
+  Platform,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { GlassButton } from '../../components/ui/GlassButton';
@@ -18,36 +20,15 @@ import { ErrorView } from '../../components/ui/ErrorView';
 import { NotificationBanner } from '../../components/ui/NotificationBanner';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
-import { textStyles } from '../../src/design/typography';
+import { textStyles, fonts } from '../../src/design/typography';
 import { CalendarEngine } from '../../src/core/calendar/CalendarEngine';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
+import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { DayInfo } from '../../src/types/calendar';
 import { CalendarContext } from '../../src/types/calendar';
 import { OmerCalculator } from '../../src/core/omer/OmerCalculator';
 
 const { width, height } = Dimensions.get('window');
-
-// Liquid Glass Card Component
-const GlassCard: React.FC<{
-  children: React.ReactNode;
-  style?: any;
-  intensity?: number;
-  gradient?: boolean;
-}> = ({ children, style, intensity = 60, gradient = false }) => (
-  <View style={[styles.glassCardOuter, style]}>
-    <BlurView intensity={intensity} style={styles.glassCardBlur}>
-      {gradient && (
-        <LinearGradient
-          colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.6)']}
-          style={StyleSheet.absoluteFill}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        />
-      )}
-      <View style={styles.glassCardInner}>{children}</View>
-    </BlurView>
-  </View>
-);
 
 // Floating Orb Component
 const FloatingOrb: React.FC<{
@@ -92,16 +73,73 @@ const FloatingOrb: React.FC<{
   );
 };
 
+// Glass Card Component
+const GlassCard: React.FC<{
+  children: React.ReactNode;
+  style?: any;
+  onPress?: () => void;
+}> = ({ children, style, onPress }) => {
+  const content = (
+    <View style={[styles.glassCard, style]}>
+      {Platform.OS !== 'web' ? (
+        <BlurView intensity={60} style={styles.glassBlur}>
+          <View style={styles.glassInner}>{children}</View>
+        </BlurView>
+      ) : (
+        <LinearGradient
+          colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
+          style={styles.glassBlur}
+        >
+          <View style={styles.glassInner}>{children}</View>
+        </LinearGradient>
+      )}
+    </View>
+  );
+
+  if (onPress) {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+        {content}
+      </TouchableOpacity>
+    );
+  }
+  return content;
+};
+
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation();
   const [dayInfo, setDayInfo] = useState<DayInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tehillimProgress, setTehillimProgress] = useState({
+    percentComplete: 0,
+    chaptersRemaining: [] as number[],
+    totalChapters: [] as number[],
+    message: '',
+  });
+
+  // Animation for progress bar
+  const progressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadDayInfo();
   }, []);
+
+  // Reload Tehillim progress when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      loadTehillimProgress();
+    }, [])
+  );
+
+  useEffect(() => {
+    Animated.timing(progressAnim, {
+      toValue: tehillimProgress.percentComplete,
+      duration: 800,
+      useNativeDriver: false,
+    }).start();
+  }, [tehillimProgress.percentComplete]);
 
   const loadDayInfo = async () => {
     setLoading(true);
@@ -120,6 +158,7 @@ export const HomeScreen: React.FC = () => {
 
       const info = await CalendarEngine.getTodayInfo(context);
       setDayInfo(info);
+      await loadTehillimProgress();
     } catch (err) {
       console.error('Error loading day info:', err);
       setError('Failed to load day information');
@@ -129,9 +168,34 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
+  const loadTehillimProgress = async () => {
+    const progress = await DailyTehillimTracker.getTodaysProgress();
+    const message = await DailyTehillimTracker.getMotivationalMessage();
+    setTehillimProgress({
+      percentComplete: progress.percentComplete,
+      chaptersRemaining: progress.chaptersRemaining,
+      totalChapters: progress.totalChapters,
+      message,
+    });
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
     loadDayInfo();
+  };
+
+  const handleTehillimPress = async () => {
+    const nextChapter = await DailyTehillimTracker.getNextChapter();
+    if (nextChapter) {
+      navigation.navigate('TehillimReader' as never, { psalm: nextChapter } as never);
+    } else {
+      navigation.navigate('Tehillim' as never);
+    }
+  };
+
+  const formatTime = (date: Date | undefined) => {
+    if (!date) return '--:--';
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
   if (loading) {
@@ -158,20 +222,17 @@ export const HomeScreen: React.FC = () => {
     );
   }
 
-  if (!dayInfo) {
-    return null;
-  }
-
-  const minchaTime = dayInfo.zmanim.mincha.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+  if (!dayInfo) return null;
 
   const greeting = getGreeting();
+  const progressWidth = progressAnim.interpolate({
+    inputRange: [0, 100],
+    outputRange: ['0%', '100%'],
+  });
 
   return (
     <View style={styles.container}>
-      {/* Background Gradient */}
+      {/* Background */}
       <LinearGradient
         colors={['#FAF9F7', '#F5E6E8', '#E8F0F5', '#FAF9F7']}
         style={StyleSheet.absoluteFill}
@@ -182,24 +243,18 @@ export const HomeScreen: React.FC = () => {
       {/* Floating Orbs */}
       <FloatingOrb
         size={180}
-        color="rgba(212, 165, 184, 0.25)"
-        style={{ top: height * 0.05, left: -60 }}
+        color="rgba(212, 165, 184, 0.2)"
+        style={{ top: height * 0.02, left: -60 }}
         duration={5000}
       />
       <FloatingOrb
         size={140}
-        color="rgba(165, 196, 212, 0.25)"
-        style={{ top: height * 0.25, right: -40 }}
+        color="rgba(165, 196, 212, 0.2)"
+        style={{ top: height * 0.2, right: -40 }}
         duration={6000}
       />
-      <FloatingOrb
-        size={100}
-        color="rgba(212, 196, 232, 0.2)"
-        style={{ bottom: height * 0.2, left: width * 0.1 }}
-        duration={4500}
-      />
 
-      {/* Notification Setup Banner */}
+      {/* Notification Banner */}
       <NotificationBanner onSetup={() => navigation.navigate('Settings' as never)} />
 
       <ScrollView
@@ -214,14 +269,14 @@ export const HomeScreen: React.FC = () => {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Header Greeting */}
-        <FadeIn delay={100}>
+        {/* Greeting */}
+        <FadeIn delay={0}>
           <Text style={styles.greeting}>{greeting}</Text>
         </FadeIn>
 
-        {/* Main Date Card */}
-        <FadeIn delay={200}>
-          <GlassCard gradient style={styles.mainCard}>
+        {/* Date Card */}
+        <FadeIn delay={100}>
+          <GlassCard style={styles.dateCard}>
             <Text style={styles.hebrewDate}>{dayInfo.jewishDateShort}</Text>
             <View style={styles.dateDivider} />
             <Text style={styles.gregorianDate}>
@@ -231,17 +286,98 @@ export const HomeScreen: React.FC = () => {
                 day: 'numeric',
               })}
             </Text>
-            {dayInfo.isShabbos && (
-              <View style={styles.shabbosTag}>
-                <Text style={styles.shabbosTagText}>✨ Shabbos Shalom</Text>
+            {dayInfo.specialDays && dayInfo.specialDays.length > 0 && (
+              <View style={styles.specialBadge}>
+                <Text style={styles.specialBadgeText}>
+                  {dayInfo.specialDays[0].name}
+                </Text>
               </View>
             )}
           </GlassCard>
         </FadeIn>
 
+        {/* Daily Tehillim Progress Card */}
+        <FadeIn delay={150}>
+          <GlassCard style={styles.tehillimCard} onPress={handleTehillimPress}>
+            <View style={styles.tehillimHeader}>
+              <View style={styles.tehillimIcon}>
+                <Text style={styles.tehillimIconText}>📖</Text>
+              </View>
+              <View style={styles.tehillimInfo}>
+                <Text style={styles.tehillimTitle}>Daily Tehillim</Text>
+                <Text style={styles.tehillimMessage}>{tehillimProgress.message}</Text>
+              </View>
+              <View style={styles.tehillimPercentContainer}>
+                <Text style={styles.tehillimPercent}>{tehillimProgress.percentComplete}%</Text>
+              </View>
+            </View>
+            
+            {/* Progress Bar */}
+            <View style={styles.progressBarContainer}>
+              <View style={styles.progressBarBg}>
+                <Animated.View 
+                  style={[
+                    styles.progressBarFill, 
+                    { width: progressWidth }
+                  ]} 
+                />
+              </View>
+            </View>
+            
+            {/* Chapter Info */}
+            <View style={styles.tehillimFooter}>
+              <Text style={styles.tehillimFooterText}>
+                {tehillimProgress.totalChapters.length - tehillimProgress.chaptersRemaining.length} of {tehillimProgress.totalChapters.length} chapters
+              </Text>
+              <Text style={styles.tehillimContinue}>
+                {tehillimProgress.percentComplete === 100 ? 'Complete ✓' : 'Continue →'}
+              </Text>
+            </View>
+          </GlassCard>
+        </FadeIn>
+
+        {/* Zmanim Card */}
+        <FadeIn delay={200}>
+          <GlassCard style={styles.zmanimCard}>
+            <Text style={styles.sectionTitle}>Today's Zmanim</Text>
+            <View style={styles.zmanimGrid}>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Sunrise</Text>
+                <Text style={styles.zmanTime}>{formatTime(dayInfo.zmanim.sunrise)}</Text>
+              </View>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Latest Shema</Text>
+                <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.sofZmanShma)}</Text>
+              </View>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Chatzos</Text>
+                <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.chatzos)}</Text>
+              </View>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Mincha</Text>
+                <Text style={styles.zmanTime}>{formatTime(dayInfo.zmanim.mincha)}</Text>
+              </View>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Sunset</Text>
+                <Text style={styles.zmanTime}>{formatTime(dayInfo.zmanim.sunset)}</Text>
+              </View>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Tzeis</Text>
+                <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.tzeis)}</Text>
+              </View>
+            </View>
+            <TouchableOpacity 
+              style={styles.seeAllButton}
+              onPress={() => navigation.navigate('Calendar' as never)}
+            >
+              <Text style={styles.seeAllText}>See all zmanim →</Text>
+            </TouchableOpacity>
+          </GlassCard>
+        </FadeIn>
+
         {/* Spiritual Cue */}
         {dayInfo.spiritualCue && (
-          <FadeIn delay={300}>
+          <FadeIn delay={250}>
             <GlassCard style={styles.cueCard}>
               <Text style={styles.cueEmoji}>💫</Text>
               <Text style={styles.cueText}>{dayInfo.spiritualCue.text}</Text>
@@ -249,88 +385,90 @@ export const HomeScreen: React.FC = () => {
           </FadeIn>
         )}
 
-        {/* Quick Info Row */}
-        <FadeIn delay={400}>
-          <View style={styles.infoRow}>
-            <GlassCard style={styles.infoCard}>
-              <Text style={styles.infoLabel}>Mincha</Text>
-              <Text style={styles.infoValue}>{minchaTime}</Text>
+        {/* Davening Changes */}
+        {(dayInfo.daveningChanges.hallel || !dayInfo.daveningChanges.tachanun || dayInfo.daveningChanges.yaalehVeyavo) && (
+          <FadeIn delay={300}>
+            <GlassCard style={styles.changesCard}>
+              <Text style={styles.sectionTitle}>Today's Davening</Text>
+              <View style={styles.changesList}>
+                {dayInfo.daveningChanges.hallel && (
+                  <View style={styles.changeItem}>
+                    <Text style={styles.changeIcon}>🎵</Text>
+                    <Text style={styles.changeText}>
+                      {dayInfo.daveningChanges.hallel === 'full' ? 'Full Hallel' : 'Half Hallel'}
+                    </Text>
+                  </View>
+                )}
+                {!dayInfo.daveningChanges.tachanun && (
+                  <View style={styles.changeItem}>
+                    <Text style={styles.changeIcon}>✨</Text>
+                    <Text style={styles.changeText}>No Tachanun</Text>
+                  </View>
+                )}
+                {dayInfo.daveningChanges.yaalehVeyavo && (
+                  <View style={styles.changeItem}>
+                    <Text style={styles.changeIcon}>📜</Text>
+                    <Text style={styles.changeText}>Ya'aleh V'Yavo</Text>
+                  </View>
+                )}
+                {dayInfo.daveningChanges.musaf && (
+                  <View style={styles.changeItem}>
+                    <Text style={styles.changeIcon}>🕊️</Text>
+                    <Text style={styles.changeText}>Musaf</Text>
+                  </View>
+                )}
+              </View>
             </GlassCard>
-
-            {dayInfo.daveningChanges.hallel && (
-              <GlassCard style={styles.infoCard}>
-                <Text style={styles.infoEmoji}>🎵</Text>
-                <Text style={styles.infoLabel}>Hallel Today</Text>
-              </GlassCard>
-            )}
-
-            {dayInfo.daveningChanges.anenu && (
-              <GlassCard style={styles.infoCard}>
-                <Text style={styles.infoEmoji}>🕯️</Text>
-                <Text style={styles.infoLabel}>Fast Day</Text>
-              </GlassCard>
-            )}
-          </View>
-        </FadeIn>
+          </FadeIn>
+        )}
 
         {/* Omer Card */}
         {dayInfo.omerDay && (
-          <FadeIn delay={500}>
-            <GlassCard gradient style={styles.omerCard}>
+          <FadeIn delay={350}>
+            <GlassCard style={styles.omerCard} onPress={() => navigation.navigate('Omer' as never)}>
               <View style={styles.omerHeader}>
                 <Text style={styles.omerEmoji}>✨</Text>
                 <Text style={styles.omerTitle}>Sefiras HaOmer</Text>
               </View>
               <Text style={styles.omerDay}>Day {dayInfo.omerDay}</Text>
-              <Text style={styles.omerSubtitle}>
+              <Text style={styles.omerDescription}>
                 {OmerCalculator.getOmerDescription(dayInfo.omerDay)}
               </Text>
-              <GlassButton
-                title="Count Tonight"
-                onPress={() => navigation.navigate('Omer' as never)}
-                variant="primary"
-                size="md"
-                style={styles.omerButton}
-              />
             </GlassCard>
           </FadeIn>
         )}
 
         {/* Quick Actions */}
-        <FadeIn delay={600}>
-          <View style={styles.actionsContainer}>
-            <Text style={styles.actionsTitle}>Quick Actions</Text>
-            <View style={styles.actionsRow}>
-              <GlassCard style={styles.actionCard}>
-                <GlassButton
-                  title="📖 Tehillim"
-                  onPress={() => navigation.navigate('Tehillim' as never)}
-                  variant="ghost"
-                  size="sm"
-                />
-              </GlassCard>
-              <GlassCard style={styles.actionCard}>
-                <GlassButton
-                  title="📅 Calendar"
-                  onPress={() => navigation.navigate('Calendar' as never)}
-                  variant="ghost"
-                  size="sm"
-                />
-              </GlassCard>
-              <GlassCard style={styles.actionCard}>
-                <GlassButton
-                  title="✓ Habits"
-                  onPress={() => navigation.navigate('Habits' as never)}
-                  variant="ghost"
-                  size="sm"
-                />
-              </GlassCard>
+        <FadeIn delay={400}>
+          <View style={styles.quickActions}>
+            <Text style={styles.quickActionsTitle}>Quick Actions</Text>
+            <View style={styles.quickActionsRow}>
+              <TouchableOpacity 
+                style={styles.quickAction}
+                onPress={() => navigation.navigate('Tehillim' as never)}
+              >
+                <Text style={styles.quickActionIcon}>📖</Text>
+                <Text style={styles.quickActionText}>Tehillim</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickAction}
+                onPress={() => navigation.navigate('Calendar' as never)}
+              >
+                <Text style={styles.quickActionIcon}>📅</Text>
+                <Text style={styles.quickActionText}>Calendar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickAction}
+                onPress={() => navigation.navigate('Habits' as never)}
+              >
+                <Text style={styles.quickActionIcon}>✓</Text>
+                <Text style={styles.quickActionText}>Habits</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </FadeIn>
 
-        {/* Bottom Spacer */}
-        <View style={{ height: spacing['2xl'] }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
     </View>
   );
@@ -353,168 +491,283 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    paddingTop: spacing['3xl'],
+    paddingTop: spacing['2xl'],
+    paddingBottom: 120,
   },
   greeting: {
-    ...textStyles.h2,
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 32,
     color: colors.text.primary,
     marginBottom: spacing.lg,
+    marginTop: spacing.sm,
   },
 
-  // Glass Card Styles
-  glassCardOuter: {
+  // Glass Card
+  glassCard: {
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.6)',
-    shadowColor: colors.primary.main,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 8,
+    borderColor: 'rgba(255,255,255,0.6)',
   },
-  glassCardBlur: {
+  glassBlur: {
     overflow: 'hidden',
   },
-  glassCardInner: {
+  glassInner: {
     padding: spacing.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
 
-  // Main Date Card
-  mainCard: {
-    marginBottom: spacing.lg,
-  },
+  // Date Card
+  dateCard: {},
   hebrewDate: {
-    ...textStyles.h2,
+    fontFamily: fonts.heading.bold,
+    fontSize: 28,
     color: colors.text.primary,
     textAlign: 'center',
-    letterSpacing: 1,
   },
   dateDivider: {
-    width: 60,
+    width: 50,
     height: 2,
     backgroundColor: colors.primary.main,
     alignSelf: 'center',
-    marginVertical: spacing.md,
+    marginVertical: spacing.sm,
     borderRadius: 1,
     opacity: 0.6,
   },
   gregorianDate: {
-    ...textStyles.body,
+    fontFamily: fonts.body.regular,
+    fontSize: 15,
     color: colors.text.secondary,
     textAlign: 'center',
   },
-  shabbosTag: {
-    backgroundColor: 'rgba(212, 165, 184, 0.3)',
+  specialBadge: {
+    backgroundColor: colors.primary.main,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
     alignSelf: 'center',
+    marginTop: spacing.sm,
+  },
+  specialBadgeText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 12,
+    color: '#fff',
+  },
+
+  // Tehillim Progress Card
+  tehillimCard: {},
+  tehillimHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tehillimIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(212, 165, 184, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tehillimIconText: {
+    fontSize: 20,
+  },
+  tehillimInfo: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  tehillimTitle: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 17,
+    color: colors.text.primary,
+  },
+  tehillimMessage: {
+    fontFamily: fonts.body.regular,
+    fontSize: 13,
+    color: colors.text.secondary,
+    marginTop: 2,
+  },
+  tehillimPercentContainer: {
+    backgroundColor: 'rgba(212, 165, 184, 0.2)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+  },
+  tehillimPercent: {
+    fontFamily: fonts.body.bold,
+    fontSize: 16,
+    color: colors.primary.dark,
+  },
+  progressBarContainer: {
     marginTop: spacing.md,
   },
-  shabbosTagText: {
-    ...textStyles.bodySmall,
-    color: colors.primary.dark,
-    fontWeight: '600',
+  progressBarBg: {
+    height: 8,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: colors.primary.main,
+    borderRadius: 4,
+  },
+  tehillimFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: spacing.sm,
+  },
+  tehillimFooterText: {
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    color: colors.text.tertiary,
+  },
+  tehillimContinue: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 13,
+    color: colors.primary.main,
+  },
+
+  // Zmanim Card
+  zmanimCard: {},
+  sectionTitle: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 16,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+  },
+  zmanimGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -spacing.xs,
+  },
+  zmanItem: {
+    width: '33.33%',
+    paddingHorizontal: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  zmanLabel: {
+    fontFamily: fonts.body.regular,
+    fontSize: 11,
+    color: colors.text.tertiary,
+    marginBottom: 2,
+  },
+  zmanTime: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 15,
+    color: colors.text.primary,
+  },
+  seeAllButton: {
+    marginTop: spacing.sm,
+    alignItems: 'center',
+  },
+  seeAllText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: colors.primary.main,
   },
 
   // Spiritual Cue Card
   cueCard: {
-    marginBottom: spacing.lg,
+    alignItems: 'center',
   },
   cueEmoji: {
     fontSize: 24,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   cueText: {
-    ...textStyles.bodyLarge,
+    fontFamily: fonts.body.regular,
+    fontSize: 15,
     color: colors.text.primary,
     textAlign: 'center',
     fontStyle: 'italic',
-    lineHeight: 26,
+    lineHeight: 22,
   },
 
-  // Info Row
-  infoRow: {
+  // Davening Changes Card
+  changesCard: {},
+  changesList: {
+    gap: spacing.sm,
+  },
+  changeItem: {
     flexDirection: 'row',
-    marginBottom: spacing.lg,
-    gap: spacing.md,
+    alignItems: 'center',
   },
-  infoCard: {
-    flex: 1,
-    minWidth: 100,
+  changeIcon: {
+    fontSize: 16,
+    width: 28,
   },
-  infoLabel: {
-    ...textStyles.caption,
-    color: colors.text.secondary,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-  },
-  infoValue: {
-    ...textStyles.h4,
-    color: colors.primary.main,
-    textAlign: 'center',
-  },
-  infoEmoji: {
-    fontSize: 20,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
+  changeText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 14,
+    color: colors.text.primary,
   },
 
   // Omer Card
   omerCard: {
-    marginBottom: spacing.lg,
+    alignItems: 'center',
   },
   omerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   omerEmoji: {
-    fontSize: 18,
+    fontSize: 16,
     marginRight: spacing.xs,
   },
   omerTitle: {
-    ...textStyles.label,
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
     color: colors.text.secondary,
     textTransform: 'uppercase',
-    letterSpacing: 2,
+    letterSpacing: 1,
   },
   omerDay: {
-    ...textStyles.h1,
+    fontFamily: fonts.heading.bold,
+    fontSize: 36,
     color: colors.primary.main,
-    textAlign: 'center',
-    marginBottom: spacing.xs,
   },
-  omerSubtitle: {
-    ...textStyles.body,
+  omerDescription: {
+    fontFamily: fonts.body.regular,
+    fontSize: 14,
     color: colors.text.secondary,
     textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  omerButton: {
-    alignSelf: 'center',
   },
 
   // Quick Actions
-  actionsContainer: {
+  quickActions: {
     marginTop: spacing.md,
   },
-  actionsTitle: {
-    ...textStyles.label,
+  quickActionsTitle: {
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
     color: colors.text.tertiary,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: spacing.md,
   },
-  actionsRow: {
+  quickActionsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
   },
-  actionCard: {
+  quickAction: {
     flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+  },
+  quickActionIcon: {
+    fontSize: 24,
+    marginBottom: spacing.xs,
+  },
+  quickActionText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: colors.text.secondary,
   },
 });

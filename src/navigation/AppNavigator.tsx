@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { View, StyleSheet } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { IntroScreen } from '../../app/intro/IntroScreen';
@@ -10,6 +11,7 @@ import { TehillimReaderScreen } from '../../app/tehillim/TehillimReaderScreen';
 import { OmerScreen } from '../../app/omer/OmerScreen';
 import { HabitsScreen } from '../../app/habits/HabitsScreen';
 import { SettingsScreen } from '../../app/settings/SettingsScreen';
+import { LiquidGlassTabBar } from '../../components/navigation/LiquidGlassTabBar';
 import { UserPreferencesService } from '../storage/UserPreferences';
 import { colors } from '../design/colors';
 import { textStyles } from '../design/typography';
@@ -20,53 +22,41 @@ const Tab = createBottomTabNavigator();
 function MainTabs() {
   return (
     <Tab.Navigator
+      tabBar={(props) => <LiquidGlassTabBar {...props} />}
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.background.glass,
-          borderTopWidth: 0,
-          elevation: 0,
-          shadowOpacity: 0,
-        },
-        tabBarActiveTintColor: colors.primary.main,
-        tabBarInactiveTintColor: colors.text.tertiary,
-        tabBarLabelStyle: {
-          ...textStyles.caption,
-          fontWeight: '500',
-        },
       }}
+      sceneContainerStyle={styles.sceneContainer}
     >
       <Tab.Screen
         name="Home"
         component={HomeScreen}
-        options={{
-          tabBarLabel: 'Home',
-        }}
+        options={{ tabBarLabel: 'Home' }}
       />
       <Tab.Screen
         name="Calendar"
         component={CalendarScreen}
-        options={{
-          tabBarLabel: 'Calendar',
-        }}
+        options={{ tabBarLabel: 'Calendar' }}
       />
       <Tab.Screen
         name="Tehillim"
         component={TehillimListScreen}
-        options={{
-          tabBarLabel: 'Tehillim',
-        }}
+        options={{ tabBarLabel: 'Tehillim' }}
       />
       <Tab.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{
-          tabBarLabel: 'Settings',
-        }}
+        options={{ tabBarLabel: 'Settings' }}
       />
     </Tab.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  sceneContainer: {
+    backgroundColor: 'transparent',
+  },
+});
 
 // Wrapper component to pass onComplete callback to OnboardingScreen
 function OnboardingWrapper({ onComplete }: { onComplete: () => void }) {

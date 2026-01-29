@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, Switch, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, Switch, ActivityIndicator, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,6 +10,7 @@ import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles, fonts } from '../../src/design/typography';
 import { TehillimService } from '../../src/content/tehillim/TehillimService';
 import { TehillimChapter, TehillimVerse } from '../../src/content/tehillim/types';
+import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -22,10 +23,38 @@ export const TehillimReaderScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showEnglish, setShowEnglish] = useState(true);
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [isMarkedComplete, setIsMarkedComplete] = useState(false);
+  const [isDailyChapter, setIsDailyChapter] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const hasReachedEnd = useRef(false);
 
   useEffect(() => {
     loadChapter(psalm);
+    checkIfDailyChapter(psalm);
   }, [psalm]);
+
+  const checkIfDailyChapter = async (chapterNum: number) => {
+    const progress = await DailyTehillimTracker.getTodaysProgress();
+    setIsDailyChapter(progress.totalChapters.includes(chapterNum));
+    setIsMarkedComplete(progress.chaptersCompleted?.includes(chapterNum) || false);
+  };
+
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 100;
+    
+    if (isCloseToBottom && !hasReachedEnd.current && isDailyChapter && !isMarkedComplete) {
+      hasReachedEnd.current = true;
+      markChapterComplete();
+    }
+  };
+
+  const markChapterComplete = async () => {
+    if (!isMarkedComplete && isDailyChapter) {
+      await DailyTehillimTracker.markChapterComplete(psalm);
+      setIsMarkedComplete(true);
+    }
+  };
 
   const loadChapter = async (num: number) => {
     setLoading(true);
@@ -112,10 +141,24 @@ export const TehillimReaderScreen: React.FC = () => {
       />
       
       <ScrollView
+        ref={scrollRef}
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
       >
+        {/* Daily Tehillim Badge */}
+        {isDailyChapter && (
+          <FadeIn delay={0}>
+            <View style={[styles.dailyBadge, isMarkedComplete && styles.dailyBadgeComplete]}>
+              <Text style={styles.dailyBadgeText}>
+                {isMarkedComplete ? '✓ Completed Today' : 'Today\'s Tehillim'}
+              </Text>
+            </View>
+          </FadeIn>
+        )}
+
         {/* Header */}
         <FadeIn delay={0}>
           <View style={styles.headerSection}>
@@ -380,5 +423,21 @@ const styles = StyleSheet.create({
   },
   navSpacer: {
     flex: 1,
+  },
+  dailyBadge: {
+    backgroundColor: 'rgba(212, 165, 184, 0.3)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    alignSelf: 'center',
+    marginBottom: spacing.md,
+  },
+  dailyBadgeComplete: {
+    backgroundColor: 'rgba(107, 140, 74, 0.3)',
+  },
+  dailyBadgeText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 13,
+    color: colors.text.primary,
   },
 });

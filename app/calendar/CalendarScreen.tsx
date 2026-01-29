@@ -1,79 +1,128 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { GlassPanel } from '../../components/ui/GlassPanel';
-import { ScalePress } from '../../components/animations/ScalePress';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Animated,
+  Dimensions,
+  Platform,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import { FadeIn } from '../../components/animations/FadeIn';
 import { colors } from '../../src/design/colors';
-import { spacing } from '../../src/design/spacing';
-import { textStyles } from '../../src/design/typography';
+import { spacing, borderRadius } from '../../src/design/spacing';
+import { textStyles, fonts } from '../../src/design/typography';
 import { CalendarEngine } from '../../src/core/calendar/CalendarEngine';
+import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
+import { ZmanimService, ExtendedZmanim } from '../../src/core/zmanim/ZmanimService';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
-import { DayInfo } from '../../src/types/calendar';
-import { CalendarContext } from '../../src/types/calendar';
-import { HabitTracker } from '../../src/storage/HabitTracker';
+import { DayInfo, CalendarContext } from '../../src/types/calendar';
+
+const { width } = Dimensions.get('window');
+const DAY_WIDTH = (width - spacing.lg * 2 - spacing.xs * 6) / 7;
 
 interface CalendarDay {
   date: Date;
-  dayInfo: DayInfo | null;
-  isMarked: boolean;
+  dayOfMonth: number;
+  hebrewDate: string;
   isToday: boolean;
+  isShabbos: boolean;
+  isYomTov: boolean;
+  isRoshChodesh: boolean;
+  isFastDay: boolean;
+  specialDay?: string;
+  dayInfo?: DayInfo;
 }
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 
+                'July', 'August', 'September', 'October', 'November', 'December'];
 
 export const CalendarScreen: React.FC = () => {
   const [days, setDays] = useState<CalendarDay[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
+  const [selectedDayZmanim, setSelectedDayZmanim] = useState<ExtendedZmanim | null>(null);
   const [loading, setLoading] = useState(true);
+  const [context, setContext] = useState<CalendarContext | null>(null);
 
   useEffect(() => {
-    loadCalendar();
-  }, [currentMonth]);
+    loadContext();
+  }, []);
 
-  const loadCalendar = async () => {
-    setLoading(true);
-    try {
-      const preferences = await UserPreferencesService.getPreferences();
-      if (!preferences) return;
+  useEffect(() => {
+    if (context) {
+      loadCalendar();
+    }
+  }, [currentMonth, context]);
 
-      const context: CalendarContext = {
+  const loadContext = async () => {
+    const preferences = await UserPreferencesService.getPreferences();
+    if (preferences) {
+      setContext({
         nusach: preferences.nusach,
         location: preferences.location,
-      };
+      });
+    }
+  };
 
-      // Get first day of month and number of days
+  const loadCalendar = async () => {
+    if (!context) return;
+    setLoading(true);
+
+    try {
       const year = currentMonth.getFullYear();
       const month = currentMonth.getMonth();
       const firstDay = new Date(year, month, 1);
       const lastDay = new Date(year, month + 1, 0);
       const daysInMonth = lastDay.getDate();
+      const startingDayOfWeek = firstDay.getDay();
 
-      // Get marked dates
-      const markedDates = await HabitTracker.getMarkedDates();
-
-      // Build calendar days
       const calendarDays: CalendarDay[] = [];
+
+      // Add empty slots for days before the 1st
+      for (let i = 0; i < startingDayOfWeek; i++) {
+        calendarDays.push({
+          date: new Date(year, month, -(startingDayOfWeek - i - 1)),
+          dayOfMonth: 0,
+          hebrewDate: '',
+          isToday: false,
+          isShabbos: false,
+          isYomTov: false,
+          isRoshChodesh: false,
+          isFastDay: false,
+        });
+      }
+
+      // Add actual days
       for (let day = 1; day <= daysInMonth; day++) {
         const date = new Date(year, month, day);
-        const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        const isMarked = markedDates.has(dateKey);
-        const isToday =
-          date.toDateString() === new Date().toDateString();
-
-        // Load day info (simplified - in production, batch load)
-        let dayInfo: DayInfo | null = null;
-        if (isToday || day <= 7) {
-          // Load info for today and first week
-          try {
-            dayInfo = await CalendarEngine.getDayInfo(date, context);
-          } catch (error) {
-            console.error('Error loading day info:', error);
-          }
-        }
+        const isToday = date.toDateString() === new Date().toDateString();
+        const dayOfWeek = date.getDay();
+        
+        // Get Jewish calendar info
+        const jewishDate = JewishCalendarService.getJewishDate(date);
+        const hebrewDate = `${jewishDate.day}`;
+        const isShabbos = dayOfWeek === 6;
+        const isYomTov = JewishCalendarService.isYomTov(date);
+        const isRoshChodesh = JewishCalendarService.isRoshChodesh(date);
+        const isFastDay = JewishCalendarService.isFastDay(date);
+        const holidays = JewishCalendarService.getHolidays(date);
+        const specialDay = holidays.length > 0 ? holidays[0] : undefined;
 
         calendarDays.push({
           date,
-          dayInfo,
-          isMarked,
+          dayOfMonth: day,
+          hebrewDate,
           isToday,
+          isShabbos,
+          isYomTov,
+          isRoshChodesh,
+          isFastDay,
+          specialDay,
         });
       }
 
@@ -85,132 +134,554 @@ export const CalendarScreen: React.FC = () => {
     }
   };
 
-  const toggleMark = async (date: Date) => {
-    const isMarked = await HabitTracker.isMarked(date);
-    await HabitTracker.mark(date, !isMarked);
-    loadCalendar(); // Reload to update UI
+  const handleDayPress = async (day: CalendarDay) => {
+    if (day.dayOfMonth === 0) return;
+    
+    if (selectedDay?.date.getTime() === day.date.getTime()) {
+      setSelectedDay(null);
+      setSelectedDayZmanim(null);
+    } else {
+      setSelectedDay(day);
+      
+      // Load zmanim for selected day
+      if (context?.location) {
+        const zmanim = ZmanimService.getExtendedZmanim(
+          day.date,
+          context.location.latitude,
+          context.location.longitude
+        );
+        setSelectedDayZmanim(zmanim);
+      }
+    }
   };
 
-  const monthName = currentMonth.toLocaleDateString('en-US', {
-    month: 'long',
-    year: 'numeric',
-  });
+  const navigateMonth = (direction: number) => {
+    setSelectedDay(null);
+    setSelectedDayZmanim(null);
+    setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + direction, 1));
+  };
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <Text style={[textStyles.body, { color: colors.text.secondary }]}>
-          Loading...
-        </Text>
-      </View>
-    );
-  }
+  const getDayStyle = (day: CalendarDay) => {
+    if (day.dayOfMonth === 0) return styles.emptyDay;
+    
+    const dayStyles = [styles.day];
+    if (day.isToday) dayStyles.push(styles.todayDay);
+    if (day.isShabbos) dayStyles.push(styles.shabbosDay);
+    if (day.isYomTov) dayStyles.push(styles.yomTovDay);
+    if (day.isFastDay) dayStyles.push(styles.fastDay);
+    if (day.isRoshChodesh) dayStyles.push(styles.roshChodeshDay);
+    if (selectedDay?.date.getTime() === day.date.getTime()) dayStyles.push(styles.selectedDay);
+    
+    return dayStyles;
+  };
+
+  const formatZmanTime = (date: Date | undefined) => {
+    if (!date) return '--:--';
+    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+
+  const hebrewMonthName = () => {
+    if (days.length === 0) return '';
+    const midMonth = days.find(d => d.dayOfMonth === 15);
+    if (midMonth) {
+      const jewishDate = JewishCalendarService.getJewishDate(midMonth.date);
+      return jewishDate.monthName;
+    }
+    return '';
+  };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <FadeIn delay={100}>
-        <Text style={[textStyles.h2, styles.monthTitle]}>{monthName}</Text>
-      </FadeIn>
+    <View style={styles.container}>
+      <LinearGradient
+        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
+        style={StyleSheet.absoluteFill}
+      />
+      
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Month Header */}
+        <FadeIn delay={0}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigateMonth(-1)} style={styles.navButton}>
+              <Text style={styles.navButtonText}>‹</Text>
+            </TouchableOpacity>
+            <View style={styles.monthContainer}>
+              <Text style={styles.monthTitle}>
+                {MONTHS[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+              </Text>
+              <Text style={styles.hebrewMonth}>{hebrewMonthName()}</Text>
+            </View>
+            <TouchableOpacity onPress={() => navigateMonth(1)} style={styles.navButton}>
+              <Text style={styles.navButtonText}>›</Text>
+            </TouchableOpacity>
+          </View>
+        </FadeIn>
 
-      <View style={styles.calendarGrid}>
-        {days.map((day, index) => (
-          <FadeIn key={index} delay={100 + index * 10}>
-            <ScalePress
-              onPress={() => toggleMark(day.date)}
-              style={styles.dayContainer}
-            >
-              <GlassPanel
-                padding="md"
-                borderRadius="lg"
-                style={[
-                  styles.dayCard,
-                  day.isToday && styles.todayCard,
-                  day.isMarked && styles.markedCard,
-                ]}
-              >
-                <Text
-                  style={[
-                    textStyles.bodySmall,
-                    day.isToday && styles.todayText,
-                    day.isMarked && styles.markedText,
-                  ]}
-                >
-                  {day.date.getDate()}
+        {/* Weekday Headers */}
+        <FadeIn delay={50}>
+          <View style={styles.weekdayHeader}>
+            {WEEKDAYS.map((day, index) => (
+              <View key={day} style={styles.weekdayCell}>
+                <Text style={[
+                  styles.weekdayText,
+                  index === 6 && styles.shabbosText
+                ]}>
+                  {day}
                 </Text>
-                {day.dayInfo?.spiritualCue && (
-                  <Text
-                    style={[textStyles.caption, styles.cue]}
-                    numberOfLines={1}
-                  >
-                    {day.dayInfo.spiritualCue.text}
-                  </Text>
+              </View>
+            ))}
+          </View>
+        </FadeIn>
+
+        {/* Calendar Grid */}
+        <FadeIn delay={100}>
+          <View style={styles.calendarGrid}>
+            {days.map((day, index) => (
+              <TouchableOpacity
+                key={index}
+                style={getDayStyle(day)}
+                onPress={() => handleDayPress(day)}
+                disabled={day.dayOfMonth === 0}
+                activeOpacity={0.7}
+              >
+                {day.dayOfMonth > 0 && (
+                  <>
+                    <Text style={[
+                      styles.dayNumber,
+                      day.isToday && styles.todayText,
+                      day.isShabbos && styles.shabbosText,
+                      day.isYomTov && styles.yomTovText,
+                      day.isFastDay && styles.fastDayText,
+                    ]}>
+                      {day.dayOfMonth}
+                    </Text>
+                    <Text style={styles.hebrewDay}>{day.hebrewDate}</Text>
+                    {day.specialDay && (
+                      <View style={styles.specialIndicator}>
+                        <Text style={styles.specialDot}>
+                          {day.isYomTov ? '✡' : day.isFastDay ? '◐' : day.isRoshChodesh ? '◑' : '•'}
+                        </Text>
+                      </View>
+                    )}
+                  </>
                 )}
-                {day.isMarked && (
-                  <View style={styles.markIndicator}>
-                    <Text style={styles.markEmoji}>🤍</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </FadeIn>
+
+        {/* Legend */}
+        <FadeIn delay={150}>
+          <View style={styles.legend}>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: colors.primary.main }]} />
+              <Text style={styles.legendText}>Today</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#E8D4A5' }]} />
+              <Text style={styles.legendText}>Shabbos</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#A5C4D4' }]} />
+              <Text style={styles.legendText}>Yom Tov</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: '#D4A5A5' }]} />
+              <Text style={styles.legendText}>Fast</Text>
+            </View>
+          </View>
+        </FadeIn>
+
+        {/* Selected Day Details */}
+        {selectedDay && (
+          <FadeIn delay={0}>
+            <View style={styles.detailsCard}>
+              {Platform.OS !== 'web' ? (
+                <BlurView intensity={80} style={styles.detailsBlur}>
+                  <View style={styles.detailsContent}>
+                    {renderDayDetails()}
                   </View>
-                )}
-              </GlassPanel>
-            </ScalePress>
+                </BlurView>
+              ) : (
+                <LinearGradient
+                  colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
+                  style={styles.detailsBlur}
+                >
+                  <View style={styles.detailsContent}>
+                    {renderDayDetails()}
+                  </View>
+                </LinearGradient>
+              )}
+            </View>
           </FadeIn>
-        ))}
-      </View>
-    </ScrollView>
+        )}
+
+        <View style={{ height: 120 }} />
+      </ScrollView>
+    </View>
   );
+
+  function renderDayDetails() {
+    if (!selectedDay) return null;
+
+    const jewishDate = JewishCalendarService.getJewishDate(selectedDay.date);
+    
+    return (
+      <>
+        {/* Day Header */}
+        <View style={styles.detailsHeader}>
+          <Text style={styles.detailsTitle}>
+            {selectedDay.date.toLocaleDateString('en-US', { 
+              weekday: 'long', 
+              month: 'long', 
+              day: 'numeric' 
+            })}
+          </Text>
+          <Text style={styles.detailsHebrewDate}>
+            {jewishDate.day} {jewishDate.monthName} {jewishDate.year}
+          </Text>
+          {selectedDay.specialDay && (
+            <View style={styles.specialBadge}>
+              <Text style={styles.specialBadgeText}>{selectedDay.specialDay}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Status Tags */}
+        <View style={styles.tagsRow}>
+          {selectedDay.isShabbos && (
+            <View style={[styles.tag, styles.shabbosTag]}>
+              <Text style={styles.tagText}>Shabbos</Text>
+            </View>
+          )}
+          {selectedDay.isYomTov && (
+            <View style={[styles.tag, styles.yomTovTag]}>
+              <Text style={styles.tagText}>Yom Tov</Text>
+            </View>
+          )}
+          {selectedDay.isRoshChodesh && (
+            <View style={[styles.tag, styles.roshChodeshTag]}>
+              <Text style={styles.tagText}>Rosh Chodesh</Text>
+            </View>
+          )}
+          {selectedDay.isFastDay && (
+            <View style={[styles.tag, styles.fastTag]}>
+              <Text style={styles.tagText}>Fast Day</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Zmanim */}
+        {selectedDayZmanim && (
+          <View style={styles.zmanimSection}>
+            <Text style={styles.zmanimTitle}>Zmanim</Text>
+            <View style={styles.zmanimGrid}>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Alos</Text>
+                <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.alosHashachar)}</Text>
+              </View>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Sunrise</Text>
+                <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.sunrise)}</Text>
+              </View>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Latest Shema</Text>
+                <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.sofZmanShma)}</Text>
+              </View>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Latest Shacharis</Text>
+                <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.sofZmanTfilla)}</Text>
+              </View>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Chatzos</Text>
+                <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.chatzos)}</Text>
+              </View>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Mincha Gedola</Text>
+                <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.minchaGedola)}</Text>
+              </View>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Plag</Text>
+                <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.plagHamincha)}</Text>
+              </View>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Sunset</Text>
+                <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.sunset)}</Text>
+              </View>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Tzeis</Text>
+                <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.tzeis)}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+      </>
+    );
+  }
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background.secondary,
+  },
+  scrollView: {
+    flex: 1,
   },
   content: {
     padding: spacing.lg,
+    paddingTop: spacing.xl,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  navButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navButtonText: {
+    fontSize: 28,
+    color: colors.text.secondary,
+    fontWeight: '300',
+  },
+  monthContainer: {
+    alignItems: 'center',
   },
   monthTitle: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 24,
     color: colors.text.primary,
-    marginBottom: spacing.lg,
-    textAlign: 'center',
+  },
+  hebrewMonth: {
+    fontFamily: fonts.body.regular,
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginTop: 2,
+  },
+  weekdayHeader: {
+    flexDirection: 'row',
+    marginBottom: spacing.sm,
+  },
+  weekdayCell: {
+    width: DAY_WIDTH,
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  weekdayText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
+    color: colors.text.tertiary,
+    textTransform: 'uppercase',
   },
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
   },
-  dayContainer: {
-    width: '14%',
-    marginBottom: spacing.sm,
-  },
-  dayCard: {
-    minHeight: 80,
+  day: {
+    width: DAY_WIDTH,
+    height: DAY_WIDTH + 8,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.xs,
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
   },
-  todayCard: {
+  emptyDay: {
+    width: DAY_WIDTH,
+    height: DAY_WIDTH + 8,
+    marginBottom: spacing.xs,
+  },
+  todayDay: {
     borderWidth: 2,
     borderColor: colors.primary.main,
+    backgroundColor: 'rgba(212, 165, 184, 0.15)',
   },
-  markedCard: {
-    backgroundColor: colors.primary.light,
+  shabbosDay: {
+    backgroundColor: 'rgba(232, 212, 165, 0.3)',
+  },
+  yomTovDay: {
+    backgroundColor: 'rgba(165, 196, 212, 0.4)',
+  },
+  fastDay: {
+    backgroundColor: 'rgba(212, 165, 165, 0.3)',
+  },
+  roshChodeshDay: {
+    backgroundColor: 'rgba(196, 212, 165, 0.3)',
+  },
+  selectedDay: {
+    borderWidth: 2,
+    borderColor: colors.primary.dark,
+    transform: [{ scale: 1.05 }],
+  },
+  dayNumber: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 16,
+    color: colors.text.primary,
+  },
+  hebrewDay: {
+    fontFamily: fonts.body.regular,
+    fontSize: 10,
+    color: colors.text.tertiary,
+    marginTop: 1,
   },
   todayText: {
     color: colors.primary.main,
-    fontWeight: '600',
   },
-  markedText: {
-    color: colors.primary.dark,
+  shabbosText: {
+    color: '#8B7355',
   },
-  cue: {
-    color: colors.text.tertiary,
-    marginTop: spacing.xs,
-    fontSize: 8,
+  yomTovText: {
+    color: '#4A7C8C',
   },
-  markIndicator: {
+  fastDayText: {
+    color: '#8C4A4A',
+  },
+  specialIndicator: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    bottom: 4,
   },
-  markEmoji: {
+  specialDot: {
+    fontSize: 8,
+    color: colors.text.tertiary,
+  },
+  legend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    borderRadius: borderRadius.lg,
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendText: {
+    fontFamily: fonts.body.regular,
     fontSize: 12,
+    color: colors.text.secondary,
+  },
+  detailsCard: {
+    marginTop: spacing.lg,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+  },
+  detailsBlur: {
+    overflow: 'hidden',
+  },
+  detailsContent: {
+    padding: spacing.lg,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  detailsHeader: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  detailsTitle: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 20,
+    color: colors.text.primary,
+  },
+  detailsHebrewDate: {
+    fontFamily: fonts.body.regular,
+    fontSize: 16,
+    color: colors.text.secondary,
+    marginTop: spacing.xs,
+  },
+  specialBadge: {
+    backgroundColor: colors.primary.main,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    marginTop: spacing.sm,
+  },
+  specialBadgeText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 12,
+    color: '#fff',
+  },
+  tagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  tag: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+  },
+  tagText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 11,
+    color: '#fff',
+  },
+  shabbosTag: {
+    backgroundColor: '#8B7355',
+  },
+  yomTovTag: {
+    backgroundColor: '#4A7C8C',
+  },
+  roshChodeshTag: {
+    backgroundColor: '#6B8C4A',
+  },
+  fastTag: {
+    backgroundColor: '#8C4A4A',
+  },
+  zmanimSection: {
+    marginTop: spacing.md,
+  },
+  zmanimTitle: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 16,
+    color: colors.text.primary,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  zmanimGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  zmanItem: {
+    width: '32%',
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.sm,
+    alignItems: 'center',
+  },
+  zmanLabel: {
+    fontFamily: fonts.body.regular,
+    fontSize: 10,
+    color: colors.text.tertiary,
+    marginBottom: 2,
+  },
+  zmanTime: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 14,
+    color: colors.text.primary,
   },
 });
