@@ -3,7 +3,7 @@
  * Wraps hebcal for Jewish date calculations
  */
 
-import { HDate, HebrewCalendar, Event } from '@hebcal/core';
+import { HDate, HebrewCalendar, flags } from '@hebcal/core';
 
 export class JewishCalendarService {
   /**
@@ -26,7 +26,7 @@ export class JewishCalendarService {
    */
   static getJewishDateShort(date: Date = new Date()): string {
     const hdate = this.getJewishDate(date);
-    const monthName = hdate.getMonthName('en');
+    const monthName = hdate.getMonthName();
     return `${hdate.getDate()} ${monthName}`;
   }
 
@@ -39,45 +39,78 @@ export class JewishCalendarService {
   }
 
   /**
+   * Get holidays on a given date (safely returns empty array)
+   */
+  private static getHolidays(date: Date): any[] {
+    try {
+      const hdate = this.getJewishDate(date);
+      const events = HebrewCalendar.getHolidaysOnDate(hdate);
+      return events || [];
+    } catch (e) {
+      console.warn('Error getting holidays:', e);
+      return [];
+    }
+  }
+
+  /**
    * Check if date is Yom Tov
    */
   static isYomTov(date: Date = new Date()): boolean {
-    const events = HebrewCalendar.getHolidaysOnDate(date);
-    return events.some((event) => event.getFlags() & Event.YOM_TOV);
+    const events = this.getHolidays(date);
+    if (!events || events.length === 0) return false;
+    return events.some((event) => {
+      const eventFlags = event.getFlags?.() || 0;
+      return (eventFlags & flags.YOM_TOV_ENDS) || (eventFlags & flags.CHAG);
+    });
   }
 
   /**
    * Check if date is a fast day
    */
   static isFastDay(date: Date = new Date()): boolean {
-    const events = HebrewCalendar.getHolidaysOnDate(date);
-    return events.some((event) => event.getFlags() & Event.MINOR_FAST);
+    const events = this.getHolidays(date);
+    if (!events || events.length === 0) return false;
+    return events.some((event) => {
+      const eventFlags = event.getFlags?.() || 0;
+      return eventFlags & flags.MINOR_FAST;
+    });
   }
 
   /**
    * Check if date is Chol Hamoed
    */
   static isCholHamoed(date: Date = new Date()): boolean {
-    const events = HebrewCalendar.getHolidaysOnDate(date);
-    return events.some((event) => event.getFlags() & Event.CHOL_HAMOED);
+    const events = this.getHolidays(date);
+    if (!events || events.length === 0) return false;
+    return events.some((event) => {
+      const eventFlags = event.getFlags?.() || 0;
+      return eventFlags & flags.CHOL_HAMOED;
+    });
   }
 
   /**
    * Get Parsha for a given date
    */
   static getParsha(date: Date = new Date()): string | undefined {
-    const events = HebrewCalendar.getHolidaysOnDate(date);
-    const parsha = events.find((event) => event.getFlags() & Event.SPECIAL_SHABBAT);
-    return parsha?.getDesc('en');
+    const events = this.getHolidays(date);
+    if (!events || events.length === 0) return undefined;
+    const parsha = events.find((event) => {
+      const eventFlags = event.getFlags?.() || 0;
+      return eventFlags & flags.PARSHA_HASHAVUA;
+    });
+    return parsha?.getDesc?.('en');
   }
 
   /**
    * Get holiday name for a given date
    */
   static getHoliday(date: Date = new Date()): string | undefined {
-    const events = HebrewCalendar.getHolidaysOnDate(date);
-    const yomTov = events.find((event) => event.getFlags() & Event.YOM_TOV);
-    return yomTov?.getDesc('en');
+    const events = this.getHolidays(date);
+    if (!events || events.length === 0) return undefined;
+    const yomTov = events.find((event) => {
+      const eventFlags = event.getFlags?.() || 0;
+      return (eventFlags & flags.YOM_TOV_ENDS) || (eventFlags & flags.CHAG);
+    });
+    return yomTov?.getDesc?.('en');
   }
 }
-
