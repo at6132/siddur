@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { NusachSelection } from './NusachSelection';
 import { SpiritualGoals } from './SpiritualGoals';
 import { NotificationPreferences } from './NotificationPreferences';
@@ -10,15 +11,10 @@ import { Nusach } from '../../src/types/nusach';
 import { SpiritualGoal, NotificationPreferences as NotificationPrefsType } from '../../src/types/preferences';
 import * as Location from 'expo-location';
 
-interface OnboardingScreenProps {
-  onComplete: () => void;
-}
-
 type OnboardingStep = 'nusach' | 'goals' | 'notifications' | 'welcome';
 
-export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({
-  onComplete,
-}) => {
+export const OnboardingScreen: React.FC = () => {
+  const navigation = useNavigation();
   const [step, setStep] = useState<OnboardingStep>('nusach');
   const [nusach, setNusach] = useState<Nusach | null>(null);
   const [goals, setGoals] = useState<SpiritualGoal[]>([]);
