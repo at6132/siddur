@@ -9,6 +9,9 @@ import {
   Platform,
   ScrollView,
   Alert,
+  PanResponder,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -28,7 +31,15 @@ import { HomePanelsService, HomePanel, PANEL_DEFINITIONS } from '../../src/stora
 import { DayInfo, CalendarContext } from '../../src/types/calendar';
 import { CustomReminder } from '../../src/types/preferences';
 
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 const { width, height } = Dimensions.get('window');
+const GRID_COLUMNS = 2;
+const GRID_GAP = spacing.sm;
+const PANEL_WIDTH = (width - spacing.lg * 2 - GRID_GAP) / GRID_COLUMNS;
 
 // Floating Orb Component
 const FloatingOrb: React.FC<{
@@ -73,7 +84,7 @@ const FloatingOrb: React.FC<{
   );
 };
 
-// Jiggle Animation Component for Edit Mode
+// Gentle Jiggle Animation Component for Edit Mode
 const JiggleView: React.FC<{
   children: React.ReactNode;
   isEditing: boolean;
@@ -83,21 +94,22 @@ const JiggleView: React.FC<{
 
   useEffect(() => {
     if (isEditing) {
+      // Much gentler shake - slower and smaller rotation
       Animated.loop(
         Animated.sequence([
           Animated.timing(rotation, {
             toValue: 1,
-            duration: 100,
+            duration: 200,
             useNativeDriver: true,
           }),
           Animated.timing(rotation, {
             toValue: -1,
-            duration: 100,
+            duration: 400,
             useNativeDriver: true,
           }),
           Animated.timing(rotation, {
             toValue: 0,
-            duration: 100,
+            duration: 200,
             useNativeDriver: true,
           }),
         ])
@@ -109,7 +121,7 @@ const JiggleView: React.FC<{
 
   const rotate = rotation.interpolate({
     inputRange: [-1, 0, 1],
-    outputRange: ['-1.5deg', '0deg', '1.5deg'],
+    outputRange: ['-0.5deg', '0deg', '0.5deg'], // Much smaller rotation
   });
 
   return (
@@ -152,24 +164,125 @@ const GlassCard: React.FC<{
   return content;
 };
 
-// Editable Panel Wrapper
-const EditablePanel: React.FC<{
+// Draggable Panel Wrapper for Edit Mode
+const DraggablePanel: React.FC<{
   children: React.ReactNode;
   isEditing: boolean;
   onRemove: () => void;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
-  canMoveUp?: boolean;
-  canMoveDown?: boolean;
-}> = ({ children, isEditing, onRemove, onMoveUp, onMoveDown, canMoveUp, canMoveDown }) => {
-  return (
-    <JiggleView isEditing={isEditing}>
-      <View style={styles.editablePanelContainer}>
-        {children}
+  index: number;
+  onDragStart: (index: number) => void;
+  onDragEnd: (fromIndex: number, toIndex: number) => void;
+  onDragMove: (index: number, y: number) => void;
+  isDragging: boolean;
+  draggedIndex: number | null;
+  panelCount: number;
+  isFullWidth?: boolean;
+}> = ({ 
+  children, 
+  isEditing, 
+  onRemove, 
+  index, 
+  onDragStart, 
+  onDragEnd, 
+  onDragMove,
+  isDragging,
+  draggedIndex,
+  panelCount,
+  isFullWidth,
+}) => {
+  const pan = useRef(new Animated.ValueXY()).current;
+  const scale = useRef(new Animated.Value(1)).current;
+  const zIndex = useRef(new Animated.Value(1)).current;
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressed = useRef(false);
+  const startY = useRef(0);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => isEditing,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return isEditing && isLongPressed.current && (Math.abs(gestureState.dy) > 5 || Math.abs(gestureState.dx) > 5);
+      },
+      onPanResponderGrant: (evt) => {
+        startY.current = evt.nativeEvent.pageY;
+        // Start long press timer
+        longPressTimer.current = setTimeout(() => {
+          isLongPressed.current = true;
+          onDragStart(index);
+          // Scale up and raise
+          Animated.parallel([
+            Animated.spring(scale, { toValue: 1.05, useNativeDriver: true }),
+            Animated.timing(zIndex, { toValue: 100, duration: 0, useNativeDriver: true }),
+          ]).start();
+        }, 200); // 200ms hold to start drag
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        if (isLongPressed.current) {
+          pan.setValue({ x: gestureState.dx, y: gestureState.dy });
+          onDragMove(index, evt.nativeEvent.pageY);
+        }
+      },
+      onPanResponderRelease: (evt) => {
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+        }
         
-        {isEditing && (
-          <>
-            {/* Remove Button */}
+        if (isLongPressed.current) {
+          // Calculate drop position
+          const dropY = evt.nativeEvent.pageY;
+          const rowHeight = 120; // Approximate panel height
+          const newIndex = Math.floor((dropY - 150) / rowHeight);
+          const clampedIndex = Math.max(0, Math.min(panelCount - 1, newIndex));
+          
+          onDragEnd(index, clampedIndex);
+        }
+        
+        isLongPressed.current = false;
+        
+        // Reset position
+        Animated.parallel([
+          Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: true }),
+          Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
+          Animated.timing(zIndex, { toValue: 1, duration: 0, useNativeDriver: true }),
+        ]).start();
+      },
+      onPanResponderTerminate: () => {
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current);
+        }
+        isLongPressed.current = false;
+        Animated.parallel([
+          Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: true }),
+          Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
+        ]).start();
+      },
+    })
+  ).current;
+
+  const isBeingDragged = isDragging && draggedIndex === index;
+  const shouldDim = isDragging && draggedIndex !== index;
+
+  return (
+    <Animated.View
+      style={[
+        isFullWidth ? styles.gridItemFull : styles.gridItem,
+        {
+          transform: [
+            { translateX: pan.x },
+            { translateY: pan.y },
+            { scale: scale },
+          ],
+          zIndex: isBeingDragged ? 100 : 1,
+          opacity: shouldDim ? 0.5 : 1,
+        },
+      ]}
+      {...(isEditing ? panResponder.panHandlers : {})}
+    >
+      <JiggleView isEditing={isEditing && !isBeingDragged}>
+        <View style={styles.editablePanelContainer}>
+          {children}
+          
+          {isEditing && (
             <TouchableOpacity
               style={styles.removeButton}
               onPress={onRemove}
@@ -179,24 +292,10 @@ const EditablePanel: React.FC<{
                 <Text style={styles.removeButtonText}>−</Text>
               </View>
             </TouchableOpacity>
-
-            {/* Reorder Buttons */}
-            <View style={styles.reorderButtons}>
-              {canMoveUp && (
-                <TouchableOpacity style={styles.reorderButton} onPress={onMoveUp}>
-                  <Text style={styles.reorderButtonText}>▲</Text>
-                </TouchableOpacity>
-              )}
-              {canMoveDown && (
-                <TouchableOpacity style={styles.reorderButton} onPress={onMoveDown}>
-                  <Text style={styles.reorderButtonText}>▼</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </>
-        )}
-      </View>
-    </JiggleView>
+          )}
+        </View>
+      </JiggleView>
+    </Animated.View>
   );
 };
 
@@ -208,6 +307,8 @@ export const HomeScreen: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [panels, setPanels] = useState<HomePanel[]>([]);
   const [customReminders, setCustomReminders] = useState<CustomReminder[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [tehillimProgress, setTehillimProgress] = useState({
     percentComplete: 0,
     chaptersRemaining: [] as number[],
@@ -344,17 +445,32 @@ export const HomeScreen: React.FC = () => {
     );
   };
 
-  const handleMovePanel = async (index: number, direction: 'up' | 'down') => {
-    const newPanels = [...panels];
-    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+  // Drag handlers
+  const handleDragStart = (index: number) => {
+    setIsDragging(true);
+    setDraggedIndex(index);
+  };
+
+  const handleDragMove = (index: number, y: number) => {
+    // Optional: could implement live preview of target position here
+  };
+
+  const handleDragEnd = async (fromIndex: number, toIndex: number) => {
+    if (fromIndex !== toIndex && toIndex >= 0 && toIndex < panels.length) {
+      // Animate the layout change
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      
+      const newPanels = [...panels];
+      const [movedPanel] = newPanels.splice(fromIndex, 1);
+      newPanels.splice(toIndex, 0, movedPanel);
+      newPanels.forEach((p, i) => p.order = i);
+      
+      setPanels(newPanels);
+      await HomePanelsService.reorderPanels(newPanels.map(p => p.id));
+    }
     
-    if (targetIndex < 0 || targetIndex >= panels.length) return;
-    
-    [newPanels[index], newPanels[targetIndex]] = [newPanels[targetIndex], newPanels[index]];
-    newPanels.forEach((p, i) => p.order = i);
-    
-    setPanels(newPanels);
-    await HomePanelsService.reorderPanels(newPanels.map(p => p.id));
+    setIsDragging(false);
+    setDraggedIndex(null);
   };
 
   const formatTime = (date: Date | undefined) => {
@@ -363,6 +479,11 @@ export const HomeScreen: React.FC = () => {
   };
 
   const toggleEditMode = () => {
+    if (isEditing) {
+      // Exiting edit mode - reset drag state
+      setIsDragging(false);
+      setDraggedIndex(null);
+    }
     setIsEditing(!isEditing);
   };
 
@@ -560,18 +681,25 @@ export const HomeScreen: React.FC = () => {
     const content = panelContent();
     if (!content) return null;
 
+    // Determine if panel should be full width
+    const isFullWidth = ['date', 'tehillim_progress', 'custom_reminders', 'inspiration_quote'].includes(panel.type);
+
     return (
-      <EditablePanel
+      <DraggablePanel
         key={panel.id}
         isEditing={isEditing}
         onRemove={() => handleRemovePanel(panel.id)}
-        onMoveUp={() => handleMovePanel(index, 'up')}
-        onMoveDown={() => handleMovePanel(index, 'down')}
-        canMoveUp={index > 0}
-        canMoveDown={index < panels.length - 1}
+        index={index}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragMove={handleDragMove}
+        isDragging={isDragging}
+        draggedIndex={draggedIndex}
+        panelCount={panels.length}
+        isFullWidth={isFullWidth}
       >
         {content}
-      </EditablePanel>
+      </DraggablePanel>
     );
   };
 
@@ -656,13 +784,15 @@ export const HomeScreen: React.FC = () => {
         {isEditing && (
           <View style={styles.editInstructions}>
             <Text style={styles.editInstructionsText}>
-              Tap − to remove • Use arrows to reorder
+              Tap − to remove • Hold & drag to reorder
             </Text>
           </View>
         )}
 
-        {/* Dynamic Panels */}
-        {panels.map((panel, index) => renderPanel(panel, index))}
+        {/* Dynamic Panels Grid */}
+        <View style={styles.panelsGrid}>
+          {panels.map((panel, index) => renderPanel(panel, index))}
+        </View>
 
         {/* Empty State */}
         {panels.length === 0 && (
@@ -759,10 +889,24 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  // Panels Grid
+  panelsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: GRID_GAP,
+  },
+  gridItem: {
+    width: PANEL_WIDTH,
+  },
+  gridItemFull: {
+    width: '100%',
+  },
+
   // Editable Panel
   editablePanelContainer: {
     position: 'relative',
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   removeButton: {
     position: 'absolute',
