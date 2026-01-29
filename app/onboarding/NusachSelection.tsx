@@ -6,6 +6,7 @@ import {
   Animated,
   Dimensions,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -21,6 +22,95 @@ interface NusachSelectionProps {
   onSelect: (nusach: Nusach) => void;
   onSkip?: () => void;
 }
+
+// Glass Card Component with proper liquid glass effect
+const GlassCard: React.FC<{ children: React.ReactNode; style?: any }> = ({
+  children,
+  style,
+}) => {
+  if (Platform.OS === 'web') {
+    return (
+      <View style={[styles.glassCardWeb, style]}>
+        <LinearGradient
+          colors={[
+            'rgba(255, 255, 255, 0.85)',
+            'rgba(255, 255, 255, 0.65)',
+            'rgba(255, 255, 255, 0.75)',
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        {children}
+      </View>
+    );
+  }
+
+  return (
+    <BlurView intensity={100} tint="light" style={[styles.glassCardNative, style]}>
+      <LinearGradient
+        colors={[
+          'rgba(255, 255, 255, 0.6)',
+          'rgba(255, 255, 255, 0.3)',
+          'rgba(255, 255, 255, 0.4)',
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      {children}
+    </BlurView>
+  );
+};
+
+// Glass Option Component
+const GlassOption: React.FC<{
+  children: React.ReactNode;
+  selected: boolean;
+  onPress: () => void;
+}> = ({ children, selected, onPress }) => {
+  if (Platform.OS === 'web') {
+    return (
+      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+        <View style={[styles.optionWeb, selected && styles.optionSelectedWeb]}>
+          <LinearGradient
+            colors={
+              selected
+                ? ['rgba(212, 165, 184, 0.35)', 'rgba(212, 165, 184, 0.2)']
+                : ['rgba(255, 255, 255, 0.7)', 'rgba(255, 255, 255, 0.5)']
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+          {children}
+        </View>
+      </TouchableOpacity>
+    );
+  }
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <BlurView
+        intensity={selected ? 80 : 50}
+        tint="light"
+        style={[styles.optionNative, selected && styles.optionSelectedNative]}
+      >
+        <LinearGradient
+          colors={
+            selected
+              ? ['rgba(212, 165, 184, 0.3)', 'rgba(212, 165, 184, 0.15)']
+              : ['rgba(255, 255, 255, 0.5)', 'rgba(255, 255, 255, 0.3)']
+          }
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+        {children}
+      </BlurView>
+    </TouchableOpacity>
+  );
+};
 
 export const NusachSelection: React.FC<NusachSelectionProps> = ({
   onSelect,
@@ -50,15 +140,29 @@ export const NusachSelection: React.FC<NusachSelectionProps> = ({
     <View style={styles.container}>
       {/* Background Gradient */}
       <LinearGradient
-        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
+        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5', '#FAF9F7']}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
 
-      {/* Floating Orbs */}
-      <View style={[styles.orb, styles.orb1]} />
-      <View style={[styles.orb, styles.orb2]} />
+      {/* Floating Orbs with gradient */}
+      <View style={styles.orb1}>
+        <LinearGradient
+          colors={['rgba(212, 165, 184, 0.5)', 'rgba(212, 165, 184, 0.2)']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+      </View>
+      <View style={styles.orb2}>
+        <LinearGradient
+          colors={['rgba(165, 196, 212, 0.5)', 'rgba(165, 196, 212, 0.2)']}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+      </View>
 
       {/* Progress Dots */}
       <View style={styles.progressContainer}>
@@ -77,8 +181,8 @@ export const NusachSelection: React.FC<NusachSelectionProps> = ({
           },
         ]}
       >
-        <BlurView intensity={100} tint="light" style={styles.glassCard}>
-          <View style={styles.glassOverlay}>
+        <GlassCard>
+          <View style={styles.cardContent}>
             <Text style={styles.emoji}>📿</Text>
             <Text style={styles.title}>Which nusach{'\n'}do you daven?</Text>
             <Text style={styles.subtitle}>
@@ -88,41 +192,32 @@ export const NusachSelection: React.FC<NusachSelectionProps> = ({
             {/* Options */}
             <View style={styles.optionsContainer}>
               {NUSACH_OPTIONS.map((option) => (
-                <TouchableOpacity
+                <GlassOption
                   key={option.value}
+                  selected={selected === option.value}
                   onPress={() => setSelected(option.value)}
-                  activeOpacity={0.7}
                 >
-                  <BlurView
-                    intensity={selected === option.value ? 80 : 40}
-                    tint="light"
-                    style={[
-                      styles.optionCard,
-                      selected === option.value && styles.optionCardSelected,
-                    ]}
-                  >
-                    <View style={styles.optionInner}>
-                      <View
-                        style={[
-                          styles.radio,
-                          selected === option.value && styles.radioSelected,
-                        ]}
-                      >
-                        {selected === option.value && (
-                          <View style={styles.radioInner} />
-                        )}
-                      </View>
-                      <Text
-                        style={[
-                          styles.optionText,
-                          selected === option.value && styles.optionTextSelected,
-                        ]}
-                      >
-                        {option.label}
-                      </Text>
+                  <View style={styles.optionInner}>
+                    <View
+                      style={[
+                        styles.radio,
+                        selected === option.value && styles.radioSelected,
+                      ]}
+                    >
+                      {selected === option.value && (
+                        <View style={styles.radioInner} />
+                      )}
                     </View>
-                  </BlurView>
-                </TouchableOpacity>
+                    <Text
+                      style={[
+                        styles.optionText,
+                        selected === option.value && styles.optionTextSelected,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                  </View>
+                </GlassOption>
               ))}
             </View>
 
@@ -143,7 +238,7 @@ export const NusachSelection: React.FC<NusachSelectionProps> = ({
               )}
             </View>
           </View>
-        </BlurView>
+        </GlassCard>
       </Animated.View>
     </View>
   );
@@ -156,23 +251,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     overflow: 'hidden',
   },
-  orb: {
-    position: 'absolute',
-    borderRadius: 999,
-  },
   orb1: {
-    width: 200,
-    height: 200,
-    backgroundColor: 'rgba(212, 165, 184, 0.35)',
-    top: height * 0.08,
-    left: -60,
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    top: height * 0.06,
+    left: -70,
+    overflow: 'hidden',
   },
   orb2: {
-    width: 160,
-    height: 160,
-    backgroundColor: 'rgba(165, 196, 212, 0.35)',
-    bottom: height * 0.1,
-    right: -50,
+    position: 'absolute',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    bottom: height * 0.08,
+    right: -60,
+    overflow: 'hidden',
   },
   progressContainer: {
     position: 'absolute',
@@ -191,22 +286,34 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.main,
   },
   cardContainer: {
-    width: width - spacing.xl * 2,
-    maxWidth: 400,
+    width: width - spacing.lg * 2,
+    maxWidth: 380,
   },
-  glassCard: {
+  // Web glass card
+  glassCardWeb: {
     borderRadius: borderRadius['2xl'],
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    shadowColor: 'rgba(212, 165, 184, 0.5)',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 1,
+    shadowRadius: 40,
+    elevation: 20,
+  },
+  // Native glass card
+  glassCardNative: {
+    borderRadius: borderRadius['2xl'],
+    overflow: 'hidden',
+    borderWidth: 1.5,
     borderColor: 'rgba(255, 255, 255, 0.6)',
   },
-  glassOverlay: {
+  cardContent: {
     padding: spacing.xl,
-    backgroundColor: 'rgba(255, 255, 255, 0.4)',
     alignItems: 'center',
   },
   emoji: {
-    fontSize: 44,
+    fontSize: 48,
     marginBottom: spacing.md,
   },
   title: {
@@ -223,30 +330,45 @@ const styles = StyleSheet.create({
   },
   optionsContainer: {
     width: '100%',
-    gap: spacing.sm,
+    gap: spacing.md,
     marginBottom: spacing.lg,
   },
-  optionCard: {
+  // Web option
+  optionWeb: {
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
-    borderWidth: 1.5,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+    shadowColor: 'rgba(0, 0, 0, 0.1)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+  },
+  optionSelectedWeb: {
+    borderColor: colors.primary.main,
+    shadowColor: 'rgba(212, 165, 184, 0.4)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 20,
+  },
+  // Native option
+  optionNative: {
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    borderWidth: 2,
     borderColor: 'rgba(255, 255, 255, 0.5)',
   },
-  optionCardSelected: {
+  optionSelectedNative: {
     borderColor: colors.primary.main,
-    borderWidth: 2,
   },
   optionInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    paddingVertical: spacing.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    padding: spacing.lg,
   },
   radio: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: colors.text.tertiary,
     marginRight: spacing.md,
@@ -257,13 +379,13 @@ const styles = StyleSheet.create({
     borderColor: colors.primary.main,
   },
   radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
     backgroundColor: colors.primary.main,
   },
   optionText: {
-    ...textStyles.body,
+    ...textStyles.bodyLarge,
     color: colors.text.primary,
   },
   optionTextSelected: {
