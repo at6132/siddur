@@ -3,22 +3,17 @@ import { View, StyleSheet } from 'react-native';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { NusachSelection } from './NusachSelection';
 import { SpiritualGoals } from './SpiritualGoals';
-import { NotificationPreferences } from './NotificationPreferences';
 import { WelcomeScreen } from './WelcomeScreen';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
-import { NotificationService } from '../../src/notifications/NotificationService';
 import { Nusach } from '../../src/types/nusach';
-import { SpiritualGoal, NotificationPreferences as NotificationPrefsType } from '../../src/types/preferences';
+import { SpiritualGoal } from '../../src/types/preferences';
 import * as Location from 'expo-location';
 
-type OnboardingStep = 'nusach' | 'goals' | 'notifications' | 'welcome';
+type OnboardingStep = 'nusach' | 'goals' | 'welcome';
 
 export const OnboardingScreen: React.FC = () => {
   const navigation = useNavigation();
   const [step, setStep] = useState<OnboardingStep>('nusach');
-  const [nusach, setNusach] = useState<Nusach | null>(null);
-  const [goals, setGoals] = useState<SpiritualGoal[]>([]);
-  const [notifications, setNotifications] = useState<NotificationPrefsType | null>(null);
 
   useEffect(() => {
     // Request location permission early
@@ -26,29 +21,25 @@ export const OnboardingScreen: React.FC = () => {
   }, []);
 
   const handleNusachSelect = async (selectedNusach: Nusach) => {
-    setNusach(selectedNusach);
     await UserPreferencesService.setNusach(selectedNusach);
     setStep('goals');
   };
 
   const handleGoalsSelect = async (selectedGoals: SpiritualGoal[]) => {
-    setGoals(selectedGoals);
     await UserPreferencesService.setSpiritualGoals(selectedGoals);
-    setStep('notifications');
-  };
-
-  const handleNotificationsComplete = async (prefs: NotificationPrefsType) => {
-    setNotifications(prefs);
-    await UserPreferencesService.setNotificationPreferences(prefs);
-
+    
     // Get location
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status === 'granted') {
-      const location = await Location.getCurrentPositionAsync({});
-      await UserPreferencesService.setLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({});
+        await UserPreferencesService.setLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+      }
+    } catch (e) {
+      console.warn('Location error:', e);
     }
 
     setStep('welcome');
@@ -57,9 +48,6 @@ export const OnboardingScreen: React.FC = () => {
   const handleStart = async () => {
     // Mark onboarding complete
     await UserPreferencesService.markOnboardingComplete();
-
-    // Initialize notifications
-    await NotificationService.initialize();
 
     // Navigate to main app (reset navigation stack)
     navigation.dispatch(
@@ -83,13 +71,6 @@ export const OnboardingScreen: React.FC = () => {
         return (
           <SpiritualGoals
             onSelect={handleGoalsSelect}
-            onSkip={() => setStep('notifications')}
-          />
-        );
-      case 'notifications':
-        return (
-          <NotificationPreferences
-            onComplete={handleNotificationsComplete}
             onSkip={() => setStep('welcome')}
           />
         );

@@ -15,6 +15,7 @@ import { GlassButton } from '../../components/ui/GlassButton';
 import { FadeIn } from '../../components/animations/FadeIn';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { ErrorView } from '../../components/ui/ErrorView';
+import { NotificationBanner } from '../../components/ui/NotificationBanner';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles } from '../../src/design/typography';
@@ -197,6 +198,9 @@ export const HomeScreen: React.FC = () => {
         style={{ bottom: height * 0.2, left: width * 0.1 }}
         duration={4500}
       />
+
+      {/* Notification Setup Banner */}
+      <NotificationBanner onSetup={() => navigation.navigate('Settings' as never)} />
 
       <ScrollView
         style={styles.scrollView}

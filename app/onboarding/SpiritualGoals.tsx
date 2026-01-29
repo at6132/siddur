@@ -129,7 +129,6 @@ export const SpiritualGoals: React.FC<SpiritualGoalsProps> = ({ onSelect, onSkip
       <View style={styles.progressContainer}>
         <View style={styles.progressDot} />
         <View style={[styles.progressDot, styles.progressDotActive]} />
-        <View style={styles.progressDot} />
       </View>
 
       <Animated.View style={[styles.cardContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>

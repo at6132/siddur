@@ -168,7 +168,6 @@ export const NusachSelection: React.FC<NusachSelectionProps> = ({
       <View style={styles.progressContainer}>
         <View style={[styles.progressDot, styles.progressDotActive]} />
         <View style={styles.progressDot} />
-        <View style={styles.progressDot} />
       </View>
 
       {/* Main Glass Card */}

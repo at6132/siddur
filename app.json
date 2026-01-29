@@ -17,7 +17,8 @@
       "bundleIdentifier": "com.siddur.app",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to calculate accurate prayer times (zmanim).",
-        "NSUserNotificationsUsageDescription": "We'll send gentle reminders to help you stay consistent with your davening."
+        "NSUserNotificationsUsageDescription": "We'll send gentle reminders to help you stay consistent with your davening.",
+        "UIBackgroundModes": ["fetch", "remote-notification"]
       }
     },
     "plugins": [
