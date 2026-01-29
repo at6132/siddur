@@ -149,13 +149,14 @@ export const CalendarScreen: React.FC = () => {
         
         // Get Jewish calendar info
         const jewishDate = JewishCalendarService.getJewishDate(date);
-        const hebrewDate = `${jewishDate.day}`;
+        const hebrewDayNum = jewishDate.getDate(); // Use getDate() method
+        const hebrewDate = JewishCalendarService.numberToHebrew(hebrewDayNum);
         const isShabbos = dayOfWeek === 6;
         const isYomTov = JewishCalendarService.isYomTov(date);
         const isRoshChodesh = JewishCalendarService.isRoshChodesh(date);
         const isFastDay = JewishCalendarService.isFastDay(date);
-        const holidays = JewishCalendarService.getHolidays(date);
-        const specialDay = holidays.length > 0 ? holidays[0] : undefined;
+        const holiday = JewishCalendarService.getHoliday(date);
+        const specialDay = holiday || undefined;
 
         calendarDays.push({
           date,
@@ -529,14 +530,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.lg,
-    paddingTop: spacing.xl,
+    padding: spacing.md,
+    paddingTop: spacing.md,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
   navButton: {
     width: 44,
@@ -567,16 +568,16 @@ const styles = StyleSheet.create({
   },
   weekdayHeader: {
     flexDirection: 'row',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   weekdayCell: {
     width: DAY_WIDTH,
     alignItems: 'center',
-    paddingVertical: spacing.xs,
+    paddingVertical: 4,
   },
   weekdayText: {
     fontFamily: fonts.body.medium,
-    fontSize: 12,
+    fontSize: 11,
     color: colors.text.tertiary,
     textTransform: 'uppercase',
   },
@@ -586,10 +587,10 @@ const styles = StyleSheet.create({
   },
   day: {
     width: DAY_WIDTH,
-    height: DAY_WIDTH + 8,
+    height: DAY_WIDTH + 4,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: 4,
     borderRadius: borderRadius.md,
     backgroundColor: 'rgba(255,255,255,0.5)',
     borderWidth: 1,
@@ -597,8 +598,8 @@ const styles = StyleSheet.create({
   },
   emptyDay: {
     width: DAY_WIDTH,
-    height: DAY_WIDTH + 8,
-    marginBottom: spacing.xs,
+    height: DAY_WIDTH + 4,
+    marginBottom: 4,
   },
   todayDay: {
     borderWidth: 2,
@@ -657,29 +658,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: spacing.md,
-    marginTop: spacing.lg,
-    paddingVertical: spacing.md,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
     backgroundColor: 'rgba(255,255,255,0.6)',
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.md,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 4,
   },
   legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   legendText: {
     fontFamily: fonts.body.regular,
-    fontSize: 12,
+    fontSize: 10,
     color: colors.text.secondary,
   },
   detailsCard: {
-    marginTop: spacing.lg,
+    marginTop: spacing.md,
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
     borderWidth: 1,
