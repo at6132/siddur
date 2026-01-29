@@ -172,10 +172,66 @@ export const CalendarScreen: React.FC = () => {
       }
 
       setDays(calendarDays);
+      
+      // Auto-select today if it's in the current month and nothing is selected yet
+      const today = calendarDays.find(d => d.isToday);
+      if (today && !selectedDay) {
+        setSelectedDay(today);
+        // Also load zmanim for today
+        loadZmanimForDay(today);
+      }
     } catch (error) {
       console.error('Error loading calendar:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Helper function to load zmanim for a day
+  const loadZmanimForDay = async (day: CalendarDay) => {
+    setZmanimLoading(true);
+    try {
+      let location = currentLocation;
+      
+      if (Platform.OS !== 'web' && !location) {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status === 'granted') {
+            const loc = await Location.getCurrentPositionAsync({
+              accuracy: Location.Accuracy.Balanced,
+            });
+            location = {
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+            };
+            setCurrentLocation(location);
+          }
+        } catch (e) {
+          console.log('GPS unavailable:', e);
+        }
+      }
+      
+      if (location) {
+        const locationObj = {
+          coords: {
+            latitude: location.latitude,
+            longitude: location.longitude,
+            altitude: null,
+            accuracy: null,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null,
+          },
+          timestamp: Date.now(),
+        };
+        
+        const zmanim = await ZmanimService.calculateExtendedZmanim(day.date, locationObj);
+        setSelectedDayZmanim(zmanim);
+      }
+    } catch (error) {
+      console.error('Error loading zmanim:', error);
+    } finally {
+      setZmanimLoading(false);
     }
   };
 
@@ -183,64 +239,14 @@ export const CalendarScreen: React.FC = () => {
     if (day.dayOfMonth === 0) return;
     
     if (selectedDay?.date.getTime() === day.date.getTime()) {
+      // Clicking same day - deselect
       setSelectedDay(null);
       setSelectedDayZmanim(null);
     } else {
+      // Select new day and load zmanim
       setSelectedDay(day);
       setSelectedDayZmanim(null);
-      setZmanimLoading(true);
-      
-      try {
-        // Get fresh GPS location for most accurate zmanim
-        let location = currentLocation;
-        
-        if (Platform.OS !== 'web') {
-          try {
-            const { status } = await Location.getForegroundPermissionsAsync();
-            if (status === 'granted') {
-              const gps = await Location.getCurrentPositionAsync({
-                accuracy: Location.Accuracy.High,
-              });
-              location = {
-                latitude: gps.coords.latitude,
-                longitude: gps.coords.longitude,
-              };
-            }
-          } catch (e) {
-            // Use cached location if GPS fails
-          }
-        }
-
-        if (location) {
-          const locationObject = {
-            coords: {
-              latitude: location.latitude,
-              longitude: location.longitude,
-              altitude: null,
-              accuracy: null,
-              altitudeAccuracy: null,
-              heading: null,
-              speed: null,
-            },
-            timestamp: Date.now(),
-          };
-          const zmanim = await ZmanimService.calculateExtendedZmanim(
-            day.date,
-            locationObject as any
-          );
-          setSelectedDayZmanim(zmanim);
-        } else {
-          // Use defaults if no location available
-          const zmanim = await ZmanimService.calculateExtendedZmanim(day.date, null);
-          setSelectedDayZmanim(zmanim);
-        }
-      } catch (error) {
-        console.error('Error calculating zmanim:', error);
-        const zmanim = await ZmanimService.calculateExtendedZmanim(day.date, null);
-        setSelectedDayZmanim(zmanim);
-      } finally {
-        setZmanimLoading(false);
-      }
+      loadZmanimForDay(day);
     }
   };
 
