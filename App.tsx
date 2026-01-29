@@ -2,9 +2,8 @@ import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet, AppState, AppStateStatus } from 'react-native';
+import { StyleSheet } from 'react-native';
 import AppNavigator from './src/navigation/AppNavigator';
-import { WidgetUpdateService } from './src/widgets/WidgetUpdateService';
 import { NotificationService } from './src/notifications/NotificationService';
 
 export default function App() {
@@ -12,22 +11,8 @@ export default function App() {
     // Initialize notifications
     NotificationService.initialize();
 
-    // Update widgets on app start
-    WidgetUpdateService.updateOnAppActive();
-
-    // Update widgets when app becomes active
-    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
-      if (nextAppState === 'active') {
-        WidgetUpdateService.updateOnAppActive();
-      }
-    });
-
-    // Schedule periodic widget updates
-    WidgetUpdateService.schedulePeriodicUpdates();
-
-    return () => {
-      subscription.remove();
-    };
+    // TODO: Widget support - See WIDGETS.md for implementation guide
+    // Widget updates will be added when iOS widgets are implemented
   }, []);
 
   return (

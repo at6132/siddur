@@ -7,17 +7,22 @@ A notifications-first, widget-driven spiritual companion for Jewish women, built
 - **Intelligent Notifications**: Gentle, context-aware reminders for davening, Tehillim, and spiritual practices
 - **Jewish Calendar Engine**: Offline-first calendar with zmanim calculations and spiritual cues
 - **Liquid Glass Design**: Beautiful, modern UI with smooth animations
-- **iOS Widgets**: Home screen widgets for quick access
+- **iOS Widgets**: Planned for future release (see WIDGETS.md)
 - **Zero Guilt UX**: Supportive, pressure-free experience
 
 ## Tech Stack
 
-- Expo (bare workflow)
+- Expo (managed workflow, Expo Go compatible)
 - TypeScript
 - React Navigation
 - hebcal (Jewish calendar)
 - react-native-reanimated + react-native-animatable
 - expo-notifications
+
+## Expo Go Compatibility
+
+✅ **Fully compatible with Expo Go** - All features work in Expo Go except:
+- iOS Widgets (planned, see WIDGETS.md)
 
 ## Development
 
