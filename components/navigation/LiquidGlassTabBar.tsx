@@ -111,6 +111,7 @@ const SettingsIcon = ({ color, size = 24 }: { color: string; size?: number }) =>
 const TAB_ICONS: { [key: string]: React.FC<{ color: string; size?: number }> } = {
   Home: HomeIcon,
   Calendar: CalendarIcon,
+  Library: BookIcon,
   Tehillim: BookIcon,
   Settings: SettingsIcon,
 };

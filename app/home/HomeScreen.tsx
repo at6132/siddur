@@ -279,9 +279,17 @@ export const HomeScreen: React.FC = () => {
 
       {/* Main Content - Fixed Layout */}
       <View style={styles.content}>
-        {/* Greeting */}
+        {/* Header Row with Greeting and Customize */}
         <FadeIn delay={0}>
-          <Text style={styles.greeting}>{greeting}</Text>
+          <View style={styles.headerRow}>
+            <Text style={styles.greeting}>{greeting}</Text>
+            <TouchableOpacity
+              style={styles.customizeButton}
+              onPress={() => navigation.navigate('CustomizeHome' as never)}
+            >
+              <Text style={styles.customizeIcon}>⚙️</Text>
+            </TouchableOpacity>
+          </View>
         </FadeIn>
 
         {/* Date Card */}
@@ -434,12 +442,30 @@ const styles = StyleSheet.create({
     paddingBottom: 100, // Space for tab bar
     justifyContent: 'flex-start',
   },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
   greeting: {
     fontFamily: fonts.heading.bold,
     fontSize: 36,
     color: colors.text.primary,
-    marginBottom: spacing.md,
     letterSpacing: 0.5,
+  },
+  customizeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+  },
+  customizeIcon: {
+    fontSize: 18,
   },
 
   // Glass Card

@@ -9,6 +9,9 @@ import { CalendarScreen } from '../../app/calendar/CalendarScreen';
 import { TehillimListScreen } from '../../app/tehillim/TehillimListScreen';
 import { TehillimReaderScreen } from '../../app/tehillim/TehillimReaderScreen';
 import { TehillimSettingsScreen } from '../../app/tehillim/TehillimSettingsScreen';
+import { LibraryScreen } from '../../app/library/LibraryScreen';
+import { CustomizeHome } from '../../app/home/CustomizeHome';
+import { PanelsMarketplace } from '../../app/home/PanelsMarketplace';
 import { OmerScreen } from '../../app/omer/OmerScreen';
 import { HabitsScreen } from '../../app/habits/HabitsScreen';
 import { SettingsScreen } from '../../app/settings/SettingsScreen';
@@ -40,9 +43,9 @@ function MainTabs() {
         options={{ tabBarLabel: 'Calendar' }}
       />
       <Tab.Screen
-        name="Tehillim"
-        component={TehillimListScreen}
-        options={{ tabBarLabel: 'Tehillim' }}
+        name="Library"
+        component={LibraryScreen}
+        options={{ tabBarLabel: 'Library' }}
       />
       <Tab.Screen
         name="Settings"
@@ -170,6 +173,27 @@ export default function AppNavigator() {
           <Stack.Screen
             name="TehillimSettings"
             component={TehillimSettingsScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="TehillimList"
+            component={TehillimListScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="CustomizeHome"
+            component={CustomizeHome}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="PanelsMarketplace"
+            component={PanelsMarketplace}
             options={{
               headerShown: false,
             }}
