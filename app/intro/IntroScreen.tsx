@@ -260,13 +260,11 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
             },
           ]}
         >
-          <View style={styles.logoInner}>
-            <Image
-              source={require('../../assets/logo.png')}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
-          </View>
+          <Image
+            source={require('../../assets/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </Animated.View>
 
         {/* Title */}
@@ -391,24 +389,12 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     marginBottom: spacing.lg,
-  },
-  logoInner: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary.main,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
-    overflow: 'hidden',
   },
   logoImage: {
-    width: 100,
-    height: 100,
+    width: 140,
+    height: 140,
   },
   title: {
     ...textStyles.h1,

@@ -363,20 +363,20 @@ const styles = StyleSheet.create({
   },
   glow: {
     position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(212, 165, 184, 0.4)',
+    width: 250,
+    height: 250,
+    borderRadius: 125,
+    backgroundColor: 'rgba(212, 165, 184, 0.25)',
   },
   logoContainer: {
-    width: 150,
-    height: 150,
+    width: 180,
+    height: 180,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logo: {
-    width: 150,
-    height: 150,
+    width: 180,
+    height: 180,
   },
   sparkle: {
     position: 'absolute',
