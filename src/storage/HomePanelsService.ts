@@ -26,7 +26,8 @@ export type PanelType =
   | 'shabbos_times'
   | 'weekly_parsha'
   | 'candle_lighting'
-  | 'fast_day_info';
+  | 'fast_day_info'
+  | 'custom_reminders';
 
 export interface PanelDefinition {
   type: PanelType;
@@ -134,6 +135,14 @@ export const PANEL_DEFINITIONS: PanelDefinition[] = [
     description: 'Fast start/end times on fast days',
     icon: '🌙',
     category: 'calendar',
+    defaultSize: 'medium',
+  },
+  {
+    type: 'custom_reminders',
+    name: 'Custom Reminders',
+    description: 'Your personal daily reminders',
+    icon: '🔔',
+    category: 'personal',
     defaultSize: 'medium',
   },
 ];

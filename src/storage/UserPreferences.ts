@@ -9,6 +9,7 @@ import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   DEFAULT_DISPLAY_PREFERENCES,
   CustomCountdown,
+  CustomReminder,
   DisplayPreferences,
 } from '../types/preferences';
 import { Nusach } from '../types/nusach';
@@ -32,6 +33,9 @@ export class UserPreferencesService {
       }
       if (!prefs.customCountdowns) {
         prefs.customCountdowns = [];
+      }
+      if (!prefs.customReminders) {
+        prefs.customReminders = [];
       }
     }
     
@@ -126,6 +130,36 @@ export class UserPreferencesService {
     const existing = await this.getPreferences();
     const countdowns = (existing?.customCountdowns || []).filter(c => c.id !== id);
     return this.savePreferences({ customCountdowns: countdowns });
+  }
+
+  // Custom Reminder Management
+  static async addCustomReminder(reminder: CustomReminder): Promise<boolean> {
+    const existing = await this.getPreferences();
+    const reminders = existing?.customReminders || [];
+    reminders.push(reminder);
+    return this.savePreferences({ customReminders: reminders });
+  }
+
+  static async updateCustomReminder(id: string, updates: Partial<CustomReminder>): Promise<boolean> {
+    const existing = await this.getPreferences();
+    const reminders = existing?.customReminders || [];
+    const index = reminders.findIndex(r => r.id === id);
+    if (index >= 0) {
+      reminders[index] = { ...reminders[index], ...updates };
+      return this.savePreferences({ customReminders: reminders });
+    }
+    return false;
+  }
+
+  static async deleteCustomReminder(id: string): Promise<boolean> {
+    const existing = await this.getPreferences();
+    const reminders = (existing?.customReminders || []).filter(r => r.id !== id);
+    return this.savePreferences({ customReminders: reminders });
+  }
+
+  static async getCustomReminders(): Promise<CustomReminder[]> {
+    const existing = await this.getPreferences();
+    return existing?.customReminders || [];
   }
 
   static async markOnboardingComplete(): Promise<boolean> {

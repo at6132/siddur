@@ -26,6 +26,7 @@ import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { HomePanelsService, HomePanel, PANEL_DEFINITIONS } from '../../src/storage/HomePanelsService';
 import { DayInfo, CalendarContext } from '../../src/types/calendar';
+import { CustomReminder } from '../../src/types/preferences';
 
 const { width, height } = Dimensions.get('window');
 
@@ -206,6 +207,7 @@ export const HomeScreen: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [panels, setPanels] = useState<HomePanel[]>([]);
+  const [customReminders, setCustomReminders] = useState<CustomReminder[]>([]);
   const [tehillimProgress, setTehillimProgress] = useState({
     percentComplete: 0,
     chaptersRemaining: [] as number[],
@@ -220,14 +222,21 @@ export const HomeScreen: React.FC = () => {
   useEffect(() => {
     loadDayInfo();
     loadPanels();
+    loadCustomReminders();
   }, []);
 
   useFocusEffect(
     useCallback(() => {
       loadTehillimProgress();
       loadPanels();
+      loadCustomReminders();
     }, [])
   );
+
+  const loadCustomReminders = async () => {
+    const reminders = await UserPreferencesService.getCustomReminders();
+    setCustomReminders(reminders);
+  };
 
   useEffect(() => {
     Animated.timing(progressAnim, {
@@ -498,6 +507,42 @@ export const HomeScreen: React.FC = () => {
                   : 'No Tachanun today'}
               </Text>
             </View>
+          );
+
+        case 'custom_reminders':
+          const enabledReminders = customReminders.filter(r => r.enabled);
+          return (
+            <GlassCard>
+              <View style={styles.customRemindersPanel}>
+                <View style={styles.customRemindersPanelHeader}>
+                  <Text style={styles.customRemindersPanelTitle}>🔔 My Reminders</Text>
+                  {!isEditing && (
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('AddCustomReminder' as never)}
+                    >
+                      <Text style={styles.customRemindersPanelAdd}>+ Add</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {enabledReminders.length > 0 ? (
+                  enabledReminders.slice(0, 3).map((reminder) => (
+                    <View key={reminder.id} style={styles.customReminderPanelItem}>
+                      <Text style={styles.customReminderPanelItemTitle}>{reminder.title}</Text>
+                      <Text style={styles.customReminderPanelItemTime}>{reminder.time}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.customRemindersPanelEmpty}>
+                    No active reminders
+                  </Text>
+                )}
+                {enabledReminders.length > 3 && (
+                  <Text style={styles.customRemindersPanelMore}>
+                    +{enabledReminders.length - 3} more
+                  </Text>
+                )}
+              </View>
+            </GlassCard>
           );
 
         default:
@@ -1034,5 +1079,57 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body.regular,
     fontSize: 14,
     color: colors.text.tertiary,
+  },
+
+  // Custom Reminders Panel
+  customRemindersPanel: {},
+  customRemindersPanelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  customRemindersPanelTitle: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 16,
+    color: colors.text.primary,
+  },
+  customRemindersPanelAdd: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 14,
+    color: colors.primary.main,
+  },
+  customReminderPanelItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.xs,
+  },
+  customReminderPanelItemTitle: {
+    fontFamily: fonts.body.medium,
+    fontSize: 14,
+    color: colors.text.primary,
+  },
+  customReminderPanelItemTime: {
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    color: colors.text.secondary,
+  },
+  customRemindersPanelEmpty: {
+    fontFamily: fonts.body.regular,
+    fontSize: 13,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+    paddingVertical: spacing.sm,
+  },
+  customRemindersPanelMore: {
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
+    color: colors.text.tertiary,
+    textAlign: 'center',
+    marginTop: spacing.xs,
   },
 });

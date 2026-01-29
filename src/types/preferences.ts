@@ -59,6 +59,15 @@ export interface CustomCountdown {
   isActive: boolean;
 }
 
+export interface CustomReminder {
+  id: string;
+  title: string;
+  message: string;
+  time: string; // HH:MM AM/PM format
+  enabled: boolean;
+  days: ('sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')[]; // Which days to remind
+}
+
 export interface DisplayPreferences {
   textSize: 'small' | 'medium' | 'large';
   showTransliteration: boolean;
@@ -72,6 +81,7 @@ export interface UserPreferences {
   notifications: NotificationPreferences;
   display: DisplayPreferences;
   customCountdowns: CustomCountdown[];
+  customReminders: CustomReminder[];
   location?: {
     latitude: number;
     longitude: number;

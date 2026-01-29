@@ -13,6 +13,7 @@ import { LibraryScreen } from '../../app/library/LibraryScreen';
 import { CustomizeHome } from '../../app/home/CustomizeHome';
 import { PanelsMarketplace } from '../../app/home/PanelsMarketplace';
 import { SiddurReaderScreen } from '../../app/siddur/SiddurReaderScreen';
+import { AddCustomReminderScreen } from '../../app/settings/AddCustomReminderScreen';
 import { OmerScreen } from '../../app/omer/OmerScreen';
 import { HabitsScreen } from '../../app/habits/HabitsScreen';
 import { SettingsScreen } from '../../app/settings/SettingsScreen';
@@ -202,6 +203,13 @@ export default function AppNavigator() {
           <Stack.Screen
             name="SiddurReader"
             component={SiddurReaderScreen}
+            options={{
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="AddCustomReminder"
+            component={AddCustomReminderScreen}
             options={{
               headerShown: false,
             }}

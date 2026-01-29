@@ -12,6 +12,7 @@ import {
   Platform,
   TextInput,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location';
@@ -52,6 +53,7 @@ const GlassCard: React.FC<{
 );
 
 export const SettingsScreen: React.FC = () => {
+  const navigation = useNavigation();
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloadingContent, setDownloadingContent] = useState(false);
@@ -425,79 +427,69 @@ export const SettingsScreen: React.FC = () => {
                       )}
                     </View>
 
-                    {/* Mincha Reminder */}
-                    <View style={styles.notifOption}>
-                      <View style={styles.notifOptionMain}>
-                        <Text style={styles.optionLabel}>Mincha Reminder</Text>
-                        <Switch
-                          value={preferences.notifications.minchaTime}
-                          onValueChange={(value) => updateNotificationPreference('minchaTime', value)}
-                          trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
-                          thumbColor={preferences.notifications.minchaTime ? colors.primary.main : colors.neutral[400]}
-                        />
-                      </View>
-                      {preferences.notifications.minchaTime && (
-                        <View style={styles.notifSubOption}>
-                          <Text style={styles.subOptionLabel}>Minutes before sunset</Text>
-                          <View style={styles.minuteSelector}>
-                            {[15, 30, 45, 60].map((mins) => (
-                              <TouchableOpacity
-                                key={mins}
-                                style={[
-                                  styles.minuteOption,
-                                  preferences.notifications.minchaMinutesBefore === mins && styles.minuteOptionActive,
-                                ]}
-                                onPress={() => updateNotificationPreference('minchaMinutesBefore', mins)}
-                              >
-                                <Text style={[
-                                  styles.minuteOptionText,
-                                  preferences.notifications.minchaMinutesBefore === mins && styles.minuteOptionTextActive,
-                                ]}>
-                                  {mins}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                        </View>
-                      )}
+                    {/* Custom Reminders Section */}
+                    <View style={styles.divider} />
+                    <View style={styles.customRemindersHeader}>
+                      <Text style={styles.subSectionTitle}>Custom Reminders</Text>
+                      <TouchableOpacity 
+                        style={styles.addReminderButton}
+                        onPress={() => navigation.navigate('AddCustomReminder' as never)}
+                      >
+                        <Text style={styles.addReminderButtonText}>+ Add</Text>
+                      </TouchableOpacity>
                     </View>
 
-                    {/* Shabbos Reminder */}
-                    <View style={styles.notifOption}>
-                      <View style={styles.notifOptionMain}>
-                        <Text style={styles.optionLabel}>Shabbos Reminder</Text>
-                        <Switch
-                          value={preferences.notifications.shabbosReminders}
-                          onValueChange={(value) => updateNotificationPreference('shabbosReminders', value)}
-                          trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
-                          thumbColor={preferences.notifications.shabbosReminders ? colors.primary.main : colors.neutral[400]}
-                        />
-                      </View>
-                      {preferences.notifications.shabbosReminders && (
-                        <View style={styles.notifSubOption}>
-                          <Text style={styles.subOptionLabel}>Minutes before candle lighting</Text>
-                          <View style={styles.minuteSelector}>
-                            {[10, 18, 30, 40].map((mins) => (
-                              <TouchableOpacity
-                                key={mins}
-                                style={[
-                                  styles.minuteOption,
-                                  preferences.notifications.shabbosMinutesBefore === mins && styles.minuteOptionActive,
-                                ]}
-                                onPress={() => updateNotificationPreference('shabbosMinutesBefore', mins)}
-                              >
-                                <Text style={[
-                                  styles.minuteOptionText,
-                                  preferences.notifications.shabbosMinutesBefore === mins && styles.minuteOptionTextActive,
-                                ]}>
-                                  {mins}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
+                    {/* Custom Reminders List */}
+                    {(preferences.customReminders || []).length > 0 ? (
+                      (preferences.customReminders || []).map((reminder) => (
+                        <View key={reminder.id} style={styles.customReminderItem}>
+                          <View style={styles.customReminderLeft}>
+                            <Text style={styles.customReminderTitle}>{reminder.title}</Text>
+                            <Text style={styles.customReminderTime}>{reminder.time}</Text>
+                          </View>
+                          <View style={styles.customReminderRight}>
+                            <Switch
+                              value={reminder.enabled}
+                              onValueChange={async (value) => {
+                                await UserPreferencesService.updateCustomReminder(reminder.id, { enabled: value });
+                                loadPreferences();
+                              }}
+                              trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
+                              thumbColor={reminder.enabled ? colors.primary.main : colors.neutral[400]}
+                            />
+                            <TouchableOpacity
+                              style={styles.deleteReminderButton}
+                              onPress={async () => {
+                                Alert.alert(
+                                  'Delete Reminder',
+                                  `Delete "${reminder.title}"?`,
+                                  [
+                                    { text: 'Cancel', style: 'cancel' },
+                                    {
+                                      text: 'Delete',
+                                      style: 'destructive',
+                                      onPress: async () => {
+                                        await UserPreferencesService.deleteCustomReminder(reminder.id);
+                                        loadPreferences();
+                                      },
+                                    },
+                                  ]
+                                );
+                              }}
+                            >
+                              <Text style={styles.deleteReminderText}>×</Text>
+                            </TouchableOpacity>
                           </View>
                         </View>
-                      )}
-                    </View>
+                      ))
+                    ) : (
+                      <View style={styles.noRemindersMessage}>
+                        <Text style={styles.noRemindersText}>No custom reminders yet</Text>
+                        <Text style={styles.noRemindersSubtext}>Tap + Add to create one</Text>
+                      </View>
+                    )}
+
+                    <View style={styles.divider} />
 
                     {/* Other Toggles - Grid Layout */}
                     <Text style={styles.subSectionTitle}>Additional Reminders</Text>
@@ -1070,6 +1062,82 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
+  },
+
+  // Custom Reminders
+  customRemindersHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  addReminderButton: {
+    backgroundColor: colors.primary.main,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+  },
+  addReminderButtonText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 13,
+    color: '#fff',
+  },
+  customReminderItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.sm,
+  },
+  customReminderLeft: {
+    flex: 1,
+  },
+  customReminderTitle: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 15,
+    color: colors.text.primary,
+  },
+  customReminderTime: {
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    color: colors.text.secondary,
+    marginTop: 2,
+  },
+  customReminderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  deleteReminderButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(212, 165, 165, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteReminderText: {
+    fontSize: 18,
+    color: colors.semantic.error,
+    fontWeight: 'bold',
+  },
+  noRemindersMessage: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    borderRadius: borderRadius.md,
+  },
+  noRemindersText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 14,
+    color: colors.text.secondary,
+  },
+  noRemindersSubtext: {
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    color: colors.text.tertiary,
+    marginTop: 4,
   },
 
   // Toggle Grid
