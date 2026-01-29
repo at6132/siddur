@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { IntroScreen } from '../../app/intro/IntroScreen';
 import { OnboardingScreen } from '../../app/onboarding/OnboardingScreen';
 import { HomeScreen } from '../../app/home/HomeScreen';
 import { CalendarScreen } from '../../app/calendar/CalendarScreen';
@@ -69,6 +70,7 @@ function MainTabs() {
 
 export default function AppNavigator() {
   const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean | null>(null);
+  const [showIntro, setShowIntro] = useState(true);
 
   useEffect(() => {
     checkOnboardingStatus();
@@ -77,11 +79,22 @@ export default function AppNavigator() {
   const checkOnboardingStatus = async () => {
     const completed = await UserPreferencesService.hasCompletedOnboarding();
     setIsOnboardingComplete(completed);
+    // Only show intro if onboarding not complete
+    setShowIntro(!completed);
+  };
+
+  const handleIntroComplete = () => {
+    setShowIntro(false);
   };
 
   if (isOnboardingComplete === null) {
     // Loading state - could add a splash screen here
     return null;
+  }
+
+  // Show intro screen first (before onboarding)
+  if (showIntro && !isOnboardingComplete) {
+    return <IntroScreen onBegin={handleIntroComplete} />;
   }
 
   return (
