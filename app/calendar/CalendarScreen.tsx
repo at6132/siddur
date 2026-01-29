@@ -66,6 +66,13 @@ export const CalendarScreen: React.FC = () => {
       setContext({
         nusach: preferences.nusach,
         location: preferences.location,
+        isIsrael: false, // Default to diaspora
+      });
+    } else {
+      // Set default context if no preferences
+      setContext({
+        nusach: 'ashkenaz',
+        isIsrael: false,
       });
     }
   };
@@ -146,11 +153,27 @@ export const CalendarScreen: React.FC = () => {
       
       // Load zmanim for selected day
       if (context?.location) {
+        // Create a LocationObject-like structure for ZmanimService
+        const locationObject = {
+          coords: {
+            latitude: context.location.latitude,
+            longitude: context.location.longitude,
+            altitude: null,
+            accuracy: null,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null,
+          },
+          timestamp: Date.now(),
+        };
         const zmanim = await ZmanimService.calculateExtendedZmanim(
           day.date,
-          context.location.latitude,
-          context.location.longitude
+          locationObject as any
         );
+        setSelectedDayZmanim(zmanim);
+      } else {
+        // Use defaults if no location
+        const zmanim = await ZmanimService.calculateExtendedZmanim(day.date, null);
         setSelectedDayZmanim(zmanim);
       }
     }
@@ -390,11 +413,11 @@ export const CalendarScreen: React.FC = () => {
               </View>
               <View style={styles.zmanItem}>
                 <Text style={styles.zmanLabel}>Latest Shema</Text>
-                <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.sofZmanShma)}</Text>
+                <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.sofZmanShemaGRA)}</Text>
               </View>
               <View style={styles.zmanItem}>
                 <Text style={styles.zmanLabel}>Latest Shacharis</Text>
-                <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.sofZmanTfilla)}</Text>
+                <Text style={styles.zmanTime}>{formatZmanTime(selectedDayZmanim.sofZmanShmoneEsreiGRA)}</Text>
               </View>
               <View style={styles.zmanItem}>
                 <Text style={styles.zmanLabel}>Chatzos</Text>

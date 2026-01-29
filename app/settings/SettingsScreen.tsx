@@ -275,12 +275,14 @@ export const SettingsScreen: React.FC = () => {
                       </View>
                       {preferences.notifications.dailyTehillim && (
                         <View style={styles.notifSubOption}>
-                          <Text style={styles.subOptionLabel}>Remind me at</Text>
-                          <TouchableOpacity style={styles.timeButton}>
-                            <Text style={styles.timeButtonText}>
-                              {preferences.notifications.dailyTehillimTime || '9:00 AM'}
-                            </Text>
-                          </TouchableOpacity>
+                          <View style={styles.notifSubOptionRow}>
+                            <Text style={styles.subOptionLabel}>Remind me at</Text>
+                            <TouchableOpacity style={styles.timeButton}>
+                              <Text style={styles.timeButtonText}>
+                                {preferences.notifications.dailyTehillimTime || '9:00 AM'}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
                         </View>
                       )}
                     </View>
@@ -359,45 +361,48 @@ export const SettingsScreen: React.FC = () => {
                       )}
                     </View>
 
-                    {/* Other Toggles */}
-                    <View style={styles.simpleToggle}>
-                      <Text style={styles.optionLabel}>Hallel / Special Days</Text>
-                      <Switch
-                        value={preferences.notifications.hallelAnenu}
-                        onValueChange={(value) => updateNotificationPreference('hallelAnenu', value)}
-                        trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
-                        thumbColor={preferences.notifications.hallelAnenu ? colors.primary.main : colors.neutral[400]}
-                      />
-                    </View>
+                    {/* Other Toggles - Grid Layout */}
+                    <Text style={styles.subSectionTitle}>Additional Reminders</Text>
+                    <View style={styles.toggleGrid}>
+                      <View style={styles.toggleGridItem}>
+                        <Text style={styles.toggleGridLabel}>Hallel / Special Days</Text>
+                        <Switch
+                          value={preferences.notifications.hallelAnenu}
+                          onValueChange={(value) => updateNotificationPreference('hallelAnenu', value)}
+                          trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
+                          thumbColor={preferences.notifications.hallelAnenu ? colors.primary.main : colors.neutral[400]}
+                        />
+                      </View>
 
-                    <View style={styles.simpleToggle}>
-                      <Text style={styles.optionLabel}>Rosh Chodesh</Text>
-                      <Switch
-                        value={preferences.notifications.roshChodesh}
-                        onValueChange={(value) => updateNotificationPreference('roshChodesh', value)}
-                        trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
-                        thumbColor={preferences.notifications.roshChodesh ? colors.primary.main : colors.neutral[400]}
-                      />
-                    </View>
+                      <View style={styles.toggleGridItem}>
+                        <Text style={styles.toggleGridLabel}>Rosh Chodesh</Text>
+                        <Switch
+                          value={preferences.notifications.roshChodesh}
+                          onValueChange={(value) => updateNotificationPreference('roshChodesh', value)}
+                          trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
+                          thumbColor={preferences.notifications.roshChodesh ? colors.primary.main : colors.neutral[400]}
+                        />
+                      </View>
 
-                    <View style={styles.simpleToggle}>
-                      <Text style={styles.optionLabel}>Fast Days</Text>
-                      <Switch
-                        value={preferences.notifications.fastDays}
-                        onValueChange={(value) => updateNotificationPreference('fastDays', value)}
-                        trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
-                        thumbColor={preferences.notifications.fastDays ? colors.primary.main : colors.neutral[400]}
-                      />
-                    </View>
+                      <View style={styles.toggleGridItem}>
+                        <Text style={styles.toggleGridLabel}>Fast Days</Text>
+                        <Switch
+                          value={preferences.notifications.fastDays}
+                          onValueChange={(value) => updateNotificationPreference('fastDays', value)}
+                          trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
+                          thumbColor={preferences.notifications.fastDays ? colors.primary.main : colors.neutral[400]}
+                        />
+                      </View>
 
-                    <View style={styles.simpleToggle}>
-                      <Text style={styles.optionLabel}>Sefiras HaOmer</Text>
-                      <Switch
-                        value={preferences.notifications.sefirasHaomer}
-                        onValueChange={(value) => updateNotificationPreference('sefirasHaomer', value)}
-                        trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
-                        thumbColor={preferences.notifications.sefirasHaomer ? colors.primary.main : colors.neutral[400]}
-                      />
+                      <View style={styles.toggleGridItem}>
+                        <Text style={styles.toggleGridLabel}>Sefiras HaOmer</Text>
+                        <Switch
+                          value={preferences.notifications.sefirasHaomer}
+                          onValueChange={(value) => updateNotificationPreference('sefirasHaomer', value)}
+                          trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
+                          thumbColor={preferences.notifications.sefirasHaomer ? colors.primary.main : colors.neutral[400]}
+                        />
+                      </View>
                     </View>
                   </>
                 )}
@@ -815,6 +820,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: 50,
   },
   divider: {
     height: 1,
@@ -823,30 +829,43 @@ const styles = StyleSheet.create({
   },
   notifOption: {
     marginBottom: spacing.md,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   notifOptionMain: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: 44,
   },
   notifSubOption: {
+    marginTop: spacing.sm,
+    paddingLeft: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.03)',
+  },
+  notifSubOptionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.sm,
-    paddingLeft: spacing.md,
+    flexWrap: 'wrap',
   },
   simpleToggle: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: spacing.sm,
+    minHeight: 44,
   },
   timeButton: {
     backgroundColor: 'rgba(212, 165, 184, 0.2)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.md,
+    minWidth: 80,
+    alignItems: 'center',
   },
   timeButtonText: {
     fontFamily: fonts.body.medium,
@@ -855,13 +874,17 @@ const styles = StyleSheet.create({
   },
   minuteSelector: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.xs,
+    marginTop: spacing.xs,
   },
   minuteOption: {
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.md,
     backgroundColor: 'rgba(0,0,0,0.03)',
+    minWidth: 40,
+    alignItems: 'center',
   },
   minuteOptionActive: {
     backgroundColor: colors.primary.main,
@@ -873,6 +896,41 @@ const styles = StyleSheet.create({
   },
   minuteOptionTextActive: {
     color: '#fff',
+  },
+
+  // Sub-section title
+  subSectionTitle: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 13,
+    color: colors.text.tertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+
+  // Toggle Grid
+  toggleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  toggleGridItem: {
+    width: '48%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
+    minHeight: 44,
+  },
+  toggleGridLabel: {
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: colors.text.primary,
+    flex: 1,
+    marginRight: spacing.xs,
   },
 
   // Nusach
