@@ -8,6 +8,7 @@ import { HomeScreen } from '../../app/home/HomeScreen';
 import { CalendarScreen } from '../../app/calendar/CalendarScreen';
 import { TehillimListScreen } from '../../app/tehillim/TehillimListScreen';
 import { TehillimReaderScreen } from '../../app/tehillim/TehillimReaderScreen';
+import { TehillimSettingsScreen } from '../../app/tehillim/TehillimSettingsScreen';
 import { OmerScreen } from '../../app/omer/OmerScreen';
 import { HabitsScreen } from '../../app/habits/HabitsScreen';
 import { SettingsScreen } from '../../app/settings/SettingsScreen';
@@ -164,6 +165,13 @@ export default function AppNavigator() {
               headerTitleStyle: {
                 ...textStyles.h4,
               },
+            }}
+          />
+          <Stack.Screen
+            name="TehillimSettings"
+            component={TehillimSettingsScreen}
+            options={{
+              headerShown: false,
             }}
           />
         </>

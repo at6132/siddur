@@ -78,3 +78,34 @@ export const DAY_OF_WEEK_TEHILLIM: { [day: number]: number } = {
   5: 93, // Friday
   6: 92, // Shabbos
 };
+
+// Traditional 7-day weekly Tehillim division (completes whole Tehillim each week)
+// This is the standard practice to say Tehillim divided by day of the week
+export const WEEKLY_TEHILLIM: { [dayOfWeek: number]: number[] } = {
+  0: Array.from({ length: 29 }, (_, i) => i + 1),     // Sunday: 1-29
+  1: Array.from({ length: 21 }, (_, i) => i + 30),    // Monday: 30-50
+  2: Array.from({ length: 22 }, (_, i) => i + 51),    // Tuesday: 51-72
+  3: Array.from({ length: 17 }, (_, i) => i + 73),    // Wednesday: 73-89
+  4: Array.from({ length: 17 }, (_, i) => i + 90),    // Thursday: 90-106
+  5: Array.from({ length: 13 }, (_, i) => i + 107),   // Friday: 107-119
+  6: Array.from({ length: 31 }, (_, i) => i + 120),   // Shabbos: 120-150
+};
+
+// Hebrew day names for display
+export const HEBREW_DAY_NAMES: { [dayOfWeek: number]: string } = {
+  0: 'Yom Rishon',
+  1: 'Yom Sheni',
+  2: 'Yom Shlishi',
+  3: 'Yom Revii',
+  4: 'Yom Chamishi',
+  5: 'Yom Shishi',
+  6: 'Shabbos',
+};
+
+// Tehillim goal types
+export type TehillimGoalType = 'weekly' | 'monthly' | 'custom';
+
+export interface TehillimSettings {
+  goalType: TehillimGoalType;
+  customChaptersPerDay?: number; // For custom goal (e.g., 5 chapters/day)
+}

@@ -1,12 +1,31 @@
 /**
  * Daily Tehillim Progress Tracker
- * Tracks which chapters have been read each day for the monthly Tehillim cycle
+ * Tracks which chapters have been read each day
+ * 
+ * Default: Traditional 7-day weekly cycle (complete whole Tehillim each week)
+ * - Yom Rishon (Sunday): 1-29
+ * - Yom Sheni (Monday): 30-50
+ * - Yom Shlishi (Tuesday): 51-72
+ * - Yom Revii (Wednesday): 73-89
+ * - Yom Chamishi (Thursday): 90-106
+ * - Yom Shishi (Friday): 107-119
+ * - Shabbos (Saturday): 120-150
+ * 
+ * Users can customize to set a smaller daily goal if needed.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DAILY_TEHILLIM } from '../content/tehillim/types';
+import { 
+  WEEKLY_TEHILLIM, 
+  DAILY_TEHILLIM, 
+  HEBREW_DAY_NAMES,
+  TehillimGoalType,
+  TehillimSettings 
+} from '../content/tehillim/types';
 
 const TEHILLIM_PROGRESS_KEY = '@tehillim_daily_progress';
+const TEHILLIM_SETTINGS_KEY = '@tehillim_settings';
+const TEHILLIM_CUSTOM_PROGRESS_KEY = '@tehillim_custom_progress';
 
 interface DailyProgress {
   date: string; // YYYY-MM-DD
@@ -14,6 +33,16 @@ interface DailyProgress {
   totalChapters: number[];
   lastUpdated: number;
 }
+
+interface CustomProgress {
+  currentChapter: number; // Where user is in the 150 chapters for custom mode
+  lastUpdated: number;
+}
+
+const DEFAULT_SETTINGS: TehillimSettings = {
+  goalType: 'weekly',
+  customChaptersPerDay: 5,
+};
 
 export class DailyTehillimTracker {
   /**
@@ -24,13 +53,92 @@ export class DailyTehillimTracker {
   }
 
   /**
-   * Get today's chapters based on day of month
+   * Get current settings
    */
-  static getTodaysChapters(date: Date = new Date()): number[] {
-    const dayOfMonth = date.getDate();
-    // If it's day 30 or 31, use day 30's chapters (last day gets remaining)
-    const effectiveDay = Math.min(dayOfMonth, 30);
-    return DAILY_TEHILLIM[effectiveDay] || [];
+  static async getSettings(): Promise<TehillimSettings> {
+    try {
+      const stored = await AsyncStorage.getItem(TEHILLIM_SETTINGS_KEY);
+      if (stored) {
+        return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+      }
+    } catch (e) {
+      console.warn('Error reading Tehillim settings:', e);
+    }
+    return DEFAULT_SETTINGS;
+  }
+
+  /**
+   * Save settings
+   */
+  static async saveSettings(settings: TehillimSettings): Promise<void> {
+    try {
+      await AsyncStorage.setItem(TEHILLIM_SETTINGS_KEY, JSON.stringify(settings));
+    } catch (e) {
+      console.warn('Error saving Tehillim settings:', e);
+    }
+  }
+
+  /**
+   * Get day name for display
+   */
+  static getDayName(date: Date = new Date()): string {
+    return HEBREW_DAY_NAMES[date.getDay()];
+  }
+
+  /**
+   * Get today's chapters based on goal type
+   */
+  static async getTodaysChapters(date: Date = new Date()): Promise<number[]> {
+    const settings = await this.getSettings();
+    
+    switch (settings.goalType) {
+      case 'weekly':
+        // Traditional 7-day cycle
+        return WEEKLY_TEHILLIM[date.getDay()] || [];
+      
+      case 'monthly':
+        // 30-day cycle based on day of month
+        const dayOfMonth = date.getDate();
+        const effectiveDay = Math.min(dayOfMonth, 30);
+        return DAILY_TEHILLIM[effectiveDay] || [];
+      
+      case 'custom':
+        // Custom number of chapters per day, continuing where user left off
+        return this.getCustomChaptersForToday(settings.customChaptersPerDay || 5);
+      
+      default:
+        return WEEKLY_TEHILLIM[date.getDay()] || [];
+    }
+  }
+
+  /**
+   * Get custom chapters for today (continuing cycle)
+   */
+  private static async getCustomChaptersForToday(chaptersPerDay: number): Promise<number[]> {
+    try {
+      const stored = await AsyncStorage.getItem(TEHILLIM_CUSTOM_PROGRESS_KEY);
+      let startChapter = 1;
+      
+      if (stored) {
+        const customProgress: CustomProgress = JSON.parse(stored);
+        startChapter = customProgress.currentChapter;
+        
+        // Check if it's a new day - if so, we continue from where we left off
+        // The currentChapter already points to where we should start today
+      }
+      
+      // Generate today's chapters
+      const chapters: number[] = [];
+      for (let i = 0; i < chaptersPerDay; i++) {
+        const chapter = ((startChapter - 1 + i) % 150) + 1; // Wrap around at 150
+        chapters.push(chapter);
+      }
+      
+      return chapters;
+    } catch (e) {
+      console.warn('Error getting custom chapters:', e);
+      return Array.from({ length: chaptersPerDay }, (_, i) => i + 1);
+    }
   }
 
   /**
@@ -41,9 +149,13 @@ export class DailyTehillimTracker {
     totalChapters: number[];
     percentComplete: number;
     chaptersRemaining: number[];
+    dayName: string;
+    goalType: TehillimGoalType;
   }> {
     const dateKey = this.getDateKey();
-    const totalChapters = this.getTodaysChapters();
+    const settings = await this.getSettings();
+    const totalChapters = await this.getTodaysChapters();
+    const dayName = this.getDayName();
     
     try {
       const stored = await AsyncStorage.getItem(TEHILLIM_PROGRESS_KEY);
@@ -56,14 +168,16 @@ export class DailyTehillimTracker {
             ch => !progress.chaptersCompleted.includes(ch)
           );
           const percentComplete = totalChapters.length > 0
-            ? Math.round((progress.chaptersCompleted.length / totalChapters.length) * 100)
+            ? Math.round((progress.chaptersCompleted.filter(ch => totalChapters.includes(ch)).length / totalChapters.length) * 100)
             : 0;
             
           return {
-            chaptersCompleted: progress.chaptersCompleted,
+            chaptersCompleted: progress.chaptersCompleted.filter(ch => totalChapters.includes(ch)),
             totalChapters,
             percentComplete,
             chaptersRemaining,
+            dayName,
+            goalType: settings.goalType,
           };
         }
       }
@@ -77,6 +191,8 @@ export class DailyTehillimTracker {
       totalChapters,
       percentComplete: 0,
       chaptersRemaining: totalChapters,
+      dayName,
+      goalType: settings.goalType,
     };
   }
 
@@ -85,7 +201,8 @@ export class DailyTehillimTracker {
    */
   static async markChapterComplete(chapter: number): Promise<void> {
     const dateKey = this.getDateKey();
-    const totalChapters = this.getTodaysChapters();
+    const totalChapters = await this.getTodaysChapters();
+    const settings = await this.getSettings();
     
     try {
       const stored = await AsyncStorage.getItem(TEHILLIM_PROGRESS_KEY);
@@ -117,10 +234,32 @@ export class DailyTehillimTracker {
         progress.chaptersCompleted.push(chapter);
         progress.lastUpdated = Date.now();
         await AsyncStorage.setItem(TEHILLIM_PROGRESS_KEY, JSON.stringify(progress));
+        
+        // For custom mode, update the current chapter pointer when all today's chapters are done
+        if (settings.goalType === 'custom') {
+          const remaining = totalChapters.filter(ch => !progress.chaptersCompleted.includes(ch));
+          if (remaining.length === 0) {
+            // All today's chapters completed, set next starting point
+            const maxChapter = Math.max(...totalChapters);
+            const nextChapter = (maxChapter % 150) + 1;
+            await this.saveCustomProgress(nextChapter);
+          }
+        }
       }
     } catch (e) {
       console.warn('Error saving Tehillim progress:', e);
     }
+  }
+
+  /**
+   * Save custom progress pointer
+   */
+  private static async saveCustomProgress(currentChapter: number): Promise<void> {
+    const customProgress: CustomProgress = {
+      currentChapter,
+      lastUpdated: Date.now(),
+    };
+    await AsyncStorage.setItem(TEHILLIM_CUSTOM_PROGRESS_KEY, JSON.stringify(customProgress));
   }
 
   /**
@@ -145,7 +284,7 @@ export class DailyTehillimTracker {
    */
   static async resetTodaysProgress(): Promise<void> {
     const dateKey = this.getDateKey();
-    const totalChapters = this.getTodaysChapters();
+    const totalChapters = await this.getTodaysChapters();
     
     const progress: DailyProgress = {
       date: dateKey,
@@ -173,18 +312,19 @@ export class DailyTehillimTracker {
     const hour = new Date().getHours();
     const percent = progress.percentComplete;
     const remaining = progress.chaptersRemaining.length;
+    const total = progress.totalChapters.length;
 
     if (percent === 100) {
-      return "You've completed today's Tehillim! ✨";
+      return `${progress.dayName}'s Tehillim complete! ✨`;
     }
 
     if (percent === 0) {
       if (hour < 12) {
-        return `Start your day with Tehillim • ${remaining} chapters`;
+        return `${progress.dayName}: ${total} chapters • Start your day`;
       } else if (hour < 18) {
-        return `${remaining} chapters waiting for you`;
+        return `${progress.dayName}: ${total} chapters waiting`;
       } else {
-        return `Still time to begin • ${remaining} chapters`;
+        return `${remaining} chapters left for ${progress.dayName}`;
       }
     }
 
@@ -197,10 +337,27 @@ export class DailyTehillimTracker {
     }
 
     if (percent >= 50) {
-      return `Halfway there • ${remaining} chapters remaining`;
+      return `Halfway through ${progress.dayName} • ${remaining} left`;
     }
 
-    return `Keep going • ${percent}% complete`;
+    return `${progress.dayName} • ${percent}% complete`;
+  }
+
+  /**
+   * Get goal description
+   */
+  static async getGoalDescription(): Promise<string> {
+    const settings = await this.getSettings();
+    switch (settings.goalType) {
+      case 'weekly':
+        return 'Complete Tehillim every week';
+      case 'monthly':
+        return 'Complete Tehillim every month';
+      case 'custom':
+        return `${settings.customChaptersPerDay} chapters per day`;
+      default:
+        return 'Weekly cycle';
+    }
   }
 
   /**

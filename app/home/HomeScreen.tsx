@@ -111,6 +111,8 @@ export const HomeScreen: React.FC = () => {
     chaptersRemaining: [] as number[],
     totalChapters: [] as number[],
     message: '',
+    dayName: '',
+    goalType: 'weekly' as string,
   });
 
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -167,6 +169,8 @@ export const HomeScreen: React.FC = () => {
       chaptersRemaining: progress.chaptersRemaining,
       totalChapters: progress.totalChapters,
       message,
+      dayName: progress.dayName,
+      goalType: progress.goalType,
     });
   };
 
@@ -280,7 +284,7 @@ export const HomeScreen: React.FC = () => {
                 <Text style={styles.tehillimIconText}>📖</Text>
               </View>
               <View style={styles.tehillimInfo}>
-                <Text style={styles.tehillimTitle}>Daily Tehillim</Text>
+                <Text style={styles.tehillimTitle}>{tehillimProgress.dayName || 'Daily'} Tehillim</Text>
                 <Text style={styles.tehillimMessage}>{tehillimProgress.message}</Text>
               </View>
               <View style={styles.tehillimPercentContainer}>
@@ -299,9 +303,17 @@ export const HomeScreen: React.FC = () => {
             
             {/* Chapter Info */}
             <View style={styles.tehillimFooter}>
-              <Text style={styles.tehillimFooterText}>
-                {tehillimProgress.totalChapters.length - tehillimProgress.chaptersRemaining.length} of {tehillimProgress.totalChapters.length} chapters
-              </Text>
+              <View style={styles.tehillimFooterLeft}>
+                <Text style={styles.tehillimFooterText}>
+                  {tehillimProgress.totalChapters.length - tehillimProgress.chaptersRemaining.length} of {tehillimProgress.totalChapters.length} chapters
+                </Text>
+                <TouchableOpacity 
+                  onPress={() => navigation.navigate('TehillimSettings' as never)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  <Text style={styles.tehillimEdit}>Edit</Text>
+                </TouchableOpacity>
+              </View>
               <Text style={styles.tehillimContinue}>
                 {tehillimProgress.percentComplete === 100 ? 'Complete ✓' : 'Continue →'}
               </Text>
@@ -515,10 +527,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.xs,
   },
+  tehillimFooterLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   tehillimFooterText: {
     fontFamily: fonts.body.regular,
     fontSize: 11,
     color: colors.text.tertiary,
+  },
+  tehillimEdit: {
+    fontFamily: fonts.body.medium,
+    fontSize: 11,
+    color: colors.secondary.dark,
+    textDecorationLine: 'underline',
   },
   tehillimContinue: {
     fontFamily: fonts.body.semiBold,
