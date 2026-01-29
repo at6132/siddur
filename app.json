@@ -27,7 +27,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "We need your location to calculate accurate prayer times."
         }
-      ]
+      ],
+      "expo-splash-screen"
     ],
     "extra": {
       "eas": {

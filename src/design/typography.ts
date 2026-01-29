@@ -1,17 +1,30 @@
 /**
  * Typography System
- * Clean, readable, feminine type scale
+ * Elegant, feminine type scale with custom fonts
+ * 
+ * Fonts:
+ * - Cormorant Garamond: Elegant serif for headings
+ * - Nunito: Soft, friendly sans-serif for body
  */
 
-export const typography = {
-  // Font families
-  fontFamily: {
-    regular: 'System', // Will use SF Pro on iOS
-    medium: 'System',
-    semibold: 'System',
-    bold: 'System',
+export const fonts = {
+  // Heading font - elegant serif
+  heading: {
+    regular: 'CormorantGaramond_400Regular',
+    medium: 'CormorantGaramond_500Medium',
+    semibold: 'CormorantGaramond_600SemiBold',
+    bold: 'CormorantGaramond_700Bold',
   },
+  // Body font - soft sans-serif
+  body: {
+    regular: 'Nunito_400Regular',
+    medium: 'Nunito_500Medium',
+    semibold: 'Nunito_600SemiBold',
+    bold: 'Nunito_700Bold',
+  },
+} as const;
 
+export const typography = {
   // Font sizes
   fontSize: {
     xs: 12,
@@ -28,8 +41,9 @@ export const typography = {
   // Line heights
   lineHeight: {
     tight: 1.2,
+    snug: 1.35,
     normal: 1.5,
-    relaxed: 1.75,
+    relaxed: 1.65,
     loose: 2,
   },
 
@@ -38,75 +52,82 @@ export const typography = {
     tighter: -0.5,
     tight: -0.25,
     normal: 0,
-    wide: 0.25,
-    wider: 0.5,
-  },
-
-  // Font weights
-  fontWeight: {
-    regular: '400' as const,
-    medium: '500' as const,
-    semibold: '600' as const,
-    bold: '700' as const,
+    wide: 0.5,
+    wider: 1,
+    widest: 2,
   },
 } as const;
 
 // Predefined text styles
 export const textStyles = {
-  // Headings
+  // Headings - using elegant serif font
   h1: {
-    fontSize: typography.fontSize['4xl'],
-    fontWeight: typography.fontWeight.bold,
-    lineHeight: typography.lineHeight.tight,
-    letterSpacing: typography.letterSpacing.tight,
+    fontFamily: fonts.heading.bold,
+    fontSize: typography.fontSize['5xl'],
+    lineHeight: typography.fontSize['5xl'] * typography.lineHeight.tight,
+    letterSpacing: typography.letterSpacing.wide,
   },
   h2: {
-    fontSize: typography.fontSize['3xl'],
-    fontWeight: typography.fontWeight.bold,
-    lineHeight: typography.lineHeight.tight,
-    letterSpacing: typography.letterSpacing.tight,
+    fontFamily: fonts.heading.semibold,
+    fontSize: typography.fontSize['4xl'],
+    lineHeight: typography.fontSize['4xl'] * typography.lineHeight.tight,
+    letterSpacing: typography.letterSpacing.normal,
   },
   h3: {
+    fontFamily: fonts.heading.semibold,
     fontSize: typography.fontSize['2xl'],
-    fontWeight: typography.fontWeight.semibold,
-    lineHeight: typography.lineHeight.normal,
+    lineHeight: typography.fontSize['2xl'] * typography.lineHeight.snug,
   },
   h4: {
+    fontFamily: fonts.heading.medium,
     fontSize: typography.fontSize.xl,
-    fontWeight: typography.fontWeight.semibold,
-    lineHeight: typography.lineHeight.normal,
+    lineHeight: typography.fontSize.xl * typography.lineHeight.normal,
   },
 
-  // Body text
+  // Body text - using soft sans-serif
   body: {
+    fontFamily: fonts.body.regular,
     fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.regular,
-    lineHeight: typography.lineHeight.relaxed,
+    lineHeight: typography.fontSize.base * typography.lineHeight.relaxed,
+  },
+  bodyBold: {
+    fontFamily: fonts.body.semibold,
+    fontSize: typography.fontSize.base,
+    lineHeight: typography.fontSize.base * typography.lineHeight.relaxed,
   },
   bodyLarge: {
+    fontFamily: fonts.body.regular,
     fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.regular,
-    lineHeight: typography.lineHeight.relaxed,
+    lineHeight: typography.fontSize.lg * typography.lineHeight.relaxed,
   },
   bodySmall: {
+    fontFamily: fonts.body.regular,
     fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.regular,
-    lineHeight: typography.lineHeight.normal,
+    lineHeight: typography.fontSize.sm * typography.lineHeight.normal,
   },
 
-  // Special
+  // Special text styles
   caption: {
+    fontFamily: fonts.body.regular,
     fontSize: typography.fontSize.xs,
-    fontWeight: typography.fontWeight.regular,
-    lineHeight: typography.lineHeight.normal,
+    lineHeight: typography.fontSize.xs * typography.lineHeight.normal,
   },
   label: {
+    fontFamily: fonts.body.medium,
     fontSize: typography.fontSize.sm,
-    fontWeight: typography.fontWeight.medium,
-    lineHeight: typography.lineHeight.normal,
+    lineHeight: typography.fontSize.sm * typography.lineHeight.normal,
+    letterSpacing: typography.letterSpacing.wide,
+  },
+
+  // Display text - for splash/intro
+  display: {
+    fontFamily: fonts.heading.bold,
+    fontSize: 52,
+    lineHeight: 52 * typography.lineHeight.tight,
+    letterSpacing: typography.letterSpacing.wider,
   },
 } as const;
 
+export type FontFamily = typeof fonts;
 export type TypographyKey = keyof typeof typography;
 export type TextStyleKey = keyof typeof textStyles;
-

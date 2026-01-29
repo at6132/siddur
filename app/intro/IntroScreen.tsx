@@ -287,6 +287,9 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
           Your spiritual companion
         </Animated.Text>
 
+        {/* Spacer */}
+        <View style={{ height: spacing.lg }} />
+
         {/* Features */}
         <Animated.View
           style={[
@@ -397,16 +400,14 @@ const styles = StyleSheet.create({
     height: 140,
   },
   title: {
-    ...textStyles.h1,
-    fontSize: 42,
+    ...textStyles.display,
     color: colors.text.primary,
-    marginBottom: spacing.xs,
-    letterSpacing: 2,
+    marginBottom: spacing.sm,
   },
   subtitle: {
-    ...textStyles.body,
+    ...textStyles.bodyLarge,
     color: colors.text.secondary,
-    marginBottom: spacing.xl,
+    fontStyle: 'italic',
   },
   featuresContainer: {
     width: '100%',
