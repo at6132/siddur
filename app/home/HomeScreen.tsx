@@ -199,13 +199,33 @@ const DraggablePanel: React.FC<{
   const isLongPressed = useRef(false);
   const startY = useRef(0);
 
+  // Check if touch is in the remove button area (top-left corner)
+  const isTouchOnRemoveButton = (evt: any) => {
+    const { locationX, locationY } = evt.nativeEvent;
+    // Remove button is in top-left, roughly 40x40 area from corner
+    return locationX < 40 && locationY < 40;
+  };
+
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => isEditing,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
+      onStartShouldSetPanResponder: (evt) => {
+        // Don't capture if touch is on the remove button
+        if (isTouchOnRemoveButton(evt)) {
+          return false;
+        }
+        return isEditing;
+      },
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        if (isTouchOnRemoveButton(evt)) {
+          return false;
+        }
         return isEditing && isLongPressed.current && (Math.abs(gestureState.dy) > 5 || Math.abs(gestureState.dx) > 5);
       },
       onPanResponderGrant: (evt) => {
+        // Don't start drag if on remove button
+        if (isTouchOnRemoveButton(evt)) {
+          return;
+        }
         startY.current = evt.nativeEvent.pageY;
         // Start long press timer
         longPressTimer.current = setTimeout(() => {
