@@ -174,25 +174,25 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
       // Logo moves up
       Animated.parallel([
         Animated.timing(logoPositionY, {
-          toValue: -height * 0.18,
-          duration: 800,
+          toValue: -height * 0.22,
+          duration: 700,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(logoScale, {
-          toValue: 0.7,
-          duration: 800,
+          toValue: 0.75,
+          duration: 700,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(glowOpacity, {
-          toValue: 0.3,
-          duration: 600,
+          toValue: 0.2,
+          duration: 500,
           useNativeDriver: true,
         }),
         Animated.timing(glowScale, {
-          toValue: 0.8,
-          duration: 800,
+          toValue: 0.7,
+          duration: 700,
           useNativeDriver: true,
         }),
       ]).start();
@@ -296,7 +296,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
   });
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} pointerEvents="box-none">
       <LinearGradient
         colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
         style={styles.gradient}
@@ -377,22 +377,15 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
       {/* Content Section */}
       {showContent && (
         <View style={styles.contentSection}>
-          {/* Title */}
+          {/* Subtitle / Tagline */}
           <Animated.Text
             style={[
-              styles.title,
+              styles.subtitle,
               {
-                opacity: titleOpacity,
+                opacity: subtitleOpacity,
                 transform: [{ translateY: titleTranslateY }],
               },
             ]}
-          >
-            24/7
-          </Animated.Text>
-
-          {/* Subtitle */}
-          <Animated.Text
-            style={[styles.subtitle, { opacity: subtitleOpacity }]}
           >
             With you, when you choose.
           </Animated.Text>
@@ -463,6 +456,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    overflow: 'hidden',
   },
   gradient: {
     ...StyleSheet.absoluteFillObject,
@@ -475,22 +469,22 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     backgroundColor: 'rgba(212, 165, 184, 0.3)',
-    top: height * 0.1,
+    top: height * 0.08,
     left: -50,
   },
   orb2: {
     width: 150,
     height: 150,
     backgroundColor: 'rgba(165, 196, 212, 0.3)',
-    top: height * 0.3,
+    top: height * 0.25,
     right: -30,
   },
   orb3: {
     width: 180,
     height: 180,
     backgroundColor: 'rgba(212, 196, 232, 0.25)',
-    bottom: height * 0.15,
-    left: width * 0.2,
+    bottom: height * 0.12,
+    left: width * 0.15,
   },
 
   // Logo section - centered initially
@@ -505,57 +499,54 @@ const styles = StyleSheet.create({
   },
   glow: {
     position: 'absolute',
-    width: 220,
-    height: 220,
-    borderRadius: 110,
-    backgroundColor: 'rgba(212, 165, 184, 0.3)',
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(212, 165, 184, 0.25)',
   },
   logoImage: {
-    width: 160,
-    height: 160,
+    width: 140,
+    height: 140,
   },
   sparkle: {
     position: 'absolute',
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#E8D4A5',
   },
   sparkle1: {
-    top: -50,
-    left: -60,
-  },
-  sparkle2: {
-    top: -30,
-    right: -70,
-  },
-  sparkle3: {
-    bottom: -40,
+    top: -40,
     left: -50,
   },
+  sparkle2: {
+    top: -25,
+    right: -55,
+  },
+  sparkle3: {
+    bottom: -35,
+    left: -40,
+  },
   sparkle4: {
-    bottom: -60,
-    right: -40,
+    bottom: -50,
+    right: -35,
   },
 
   // Content section
   contentSection: {
-    flex: 1,
+    position: 'absolute',
+    top: height * 0.32,
+    left: 0,
+    right: 0,
+    bottom: 0,
     paddingHorizontal: spacing.lg,
-    paddingTop: height * 0.38,
     alignItems: 'center',
-  },
-  title: {
-    ...textStyles.display,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-    textAlign: 'center',
   },
   subtitle: {
     ...textStyles.bodyLarge,
     color: colors.text.secondary,
     fontStyle: 'italic',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
     textAlign: 'center',
   },
   featuresContainer: {
