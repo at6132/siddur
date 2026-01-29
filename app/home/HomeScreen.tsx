@@ -28,6 +28,8 @@ import { CalendarEngine } from '../../src/core/calendar/CalendarEngine';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { HomePanelsService, HomePanel, PANEL_DEFINITIONS } from '../../src/storage/HomePanelsService';
+import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
+import { ZmanimService } from '../../src/core/calendar/ZmanimService';
 import { DayInfo, CalendarContext } from '../../src/types/calendar';
 import { CustomReminder } from '../../src/types/preferences';
 
@@ -309,6 +311,14 @@ export const HomeScreen: React.FC = () => {
   const [customReminders, setCustomReminders] = useState<CustomReminder[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [fastDayProgress, setFastDayProgress] = useState<{
+    isFastDay: boolean;
+    fastName: string;
+    startTime: Date | null;
+    endTime: Date | null;
+    percentComplete: number;
+    timeRemaining: string;
+  } | null>(null);
   const [tehillimProgress, setTehillimProgress] = useState({
     percentComplete: 0,
     chaptersRemaining: [] as number[],
@@ -319,11 +329,17 @@ export const HomeScreen: React.FC = () => {
   });
 
   const progressAnim = useRef(new Animated.Value(0)).current;
+  const fastProgressAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     loadDayInfo();
     loadPanels();
     loadCustomReminders();
+    loadFastDayProgress();
+    
+    // Update fast progress every minute
+    const interval = setInterval(loadFastDayProgress, 60000);
+    return () => clearInterval(interval);
   }, []);
 
   useFocusEffect(
@@ -337,6 +353,97 @@ export const HomeScreen: React.FC = () => {
   const loadCustomReminders = async () => {
     const reminders = await UserPreferencesService.getCustomReminders();
     setCustomReminders(reminders);
+  };
+
+  const loadFastDayProgress = async () => {
+    const today = new Date();
+    const isFastDay = JewishCalendarService.isFastDay(today);
+    
+    if (!isFastDay) {
+      setFastDayProgress(null);
+      return;
+    }
+
+    try {
+      // Get location for accurate zmanim
+      let locationObj = null;
+      const prefs = await UserPreferencesService.getPreferences();
+      
+      if (prefs?.location) {
+        locationObj = {
+          coords: {
+            latitude: prefs.location.latitude,
+            longitude: prefs.location.longitude,
+            altitude: null,
+            accuracy: null,
+            altitudeAccuracy: null,
+            heading: null,
+            speed: null,
+          },
+          timestamp: Date.now(),
+        };
+      }
+      
+      // Get zmanim for today
+      const zmanim = await ZmanimService.calculateExtendedZmanim(today, locationObj as any);
+      
+      // Fast start is alos hashachar (dawn), end is tzeis (nightfall)
+      const startTime = zmanim?.alosHashachar || null;
+      const endTime = zmanim?.tzeis || null;
+      
+      // Get fast name
+      const holiday = JewishCalendarService.getHoliday(today);
+      const fastName = holiday || 'Fast Day';
+      
+      if (startTime && endTime) {
+        const now = new Date();
+        const totalDuration = endTime.getTime() - startTime.getTime();
+        const elapsed = now.getTime() - startTime.getTime();
+        
+        let percentComplete = 0;
+        let timeRemaining = '';
+        
+        if (now < startTime) {
+          // Fast hasn't started yet
+          const minutesTillStart = Math.floor((startTime.getTime() - now.getTime()) / 60000);
+          const hours = Math.floor(minutesTillStart / 60);
+          const mins = minutesTillStart % 60;
+          timeRemaining = hours > 0 ? `Starts in ${hours}h ${mins}m` : `Starts in ${mins}m`;
+          percentComplete = 0;
+        } else if (now > endTime) {
+          // Fast is over
+          timeRemaining = 'Fast complete!';
+          percentComplete = 100;
+        } else {
+          // Fast in progress
+          percentComplete = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+          const remaining = endTime.getTime() - now.getTime();
+          const minutesRemaining = Math.floor(remaining / 60000);
+          const hours = Math.floor(minutesRemaining / 60);
+          const mins = minutesRemaining % 60;
+          timeRemaining = hours > 0 ? `${hours}h ${mins}m until you can eat` : `${mins}m until you can eat`;
+        }
+        
+        setFastDayProgress({
+          isFastDay: true,
+          fastName,
+          startTime,
+          endTime,
+          percentComplete,
+          timeRemaining,
+        });
+        
+        // Animate the progress bar
+        Animated.timing(fastProgressAnim, {
+          toValue: percentComplete,
+          duration: 800,
+          useNativeDriver: false,
+        }).start();
+      }
+    } catch (error) {
+      console.error('Error loading fast day progress:', error);
+      setFastDayProgress(null);
+    }
   };
 
   useEffect(() => {
@@ -666,6 +773,77 @@ export const HomeScreen: React.FC = () => {
             </GlassCard>
           );
 
+        case 'fast_day_info':
+          // Only show if it's a fast day
+          if (!fastDayProgress?.isFastDay) {
+            return null;
+          }
+          
+          const fastProgressWidth = fastProgressAnim.interpolate({
+            inputRange: [0, 100],
+            outputRange: ['0%', '100%'],
+          });
+          
+          const formatFastTime = (date: Date | null) => {
+            if (!date) return '--:--';
+            return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          };
+          
+          return (
+            <GlassCard>
+              <View style={styles.fastDayPanel}>
+                <View style={styles.fastDayHeader}>
+                  <Text style={styles.fastDayIcon}>🕯️</Text>
+                  <View style={styles.fastDayTitleContainer}>
+                    <Text style={styles.fastDayTitle}>{fastDayProgress.fastName}</Text>
+                    <Text style={styles.fastDaySubtitle}>
+                      {fastDayProgress.percentComplete >= 100 
+                        ? 'The fast is over - you may eat!' 
+                        : fastDayProgress.timeRemaining}
+                    </Text>
+                  </View>
+                </View>
+                
+                {/* Progress Bar */}
+                <View style={styles.fastProgressContainer}>
+                  <View style={styles.fastProgressBar}>
+                    <Animated.View 
+                      style={[
+                        styles.fastProgressFill,
+                        { width: fastProgressWidth }
+                      ]} 
+                    />
+                  </View>
+                  <Text style={styles.fastProgressPercent}>
+                    {Math.round(fastDayProgress.percentComplete)}%
+                  </Text>
+                </View>
+                
+                {/* Times */}
+                <View style={styles.fastTimesRow}>
+                  <View style={styles.fastTimeItem}>
+                    <Text style={styles.fastTimeLabel}>Fast began</Text>
+                    <Text style={styles.fastTimeValue}>
+                      {formatFastTime(fastDayProgress.startTime)}
+                    </Text>
+                  </View>
+                  <View style={styles.fastTimeItem}>
+                    <Text style={styles.fastTimeLabel}>Can eat at</Text>
+                    <Text style={styles.fastTimeValue}>
+                      {formatFastTime(fastDayProgress.endTime)}
+                    </Text>
+                  </View>
+                </View>
+                
+                {fastDayProgress.percentComplete >= 100 && (
+                  <View style={styles.fastCompleteMessage}>
+                    <Text style={styles.fastCompleteText}>✨ Tzom kal! May it be a meaningful fast ✨</Text>
+                  </View>
+                )}
+              </View>
+            </GlassCard>
+          );
+
         default:
           return (
             <GlassCard>
@@ -682,7 +860,7 @@ export const HomeScreen: React.FC = () => {
     if (!content) return null;
 
     // Determine if panel should be full width
-    const isFullWidth = ['date', 'tehillim_progress', 'custom_reminders', 'inspiration_quote'].includes(panel.type);
+    const isFullWidth = ['date', 'tehillim_progress', 'custom_reminders', 'inspiration_quote', 'fast_day_info'].includes(panel.type);
 
     return (
       <DraggablePanel
@@ -1275,5 +1453,86 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     textAlign: 'center',
     marginTop: spacing.xs,
+  },
+
+  // Fast Day Panel
+  fastDayPanel: {},
+  fastDayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  fastDayIcon: {
+    fontSize: 28,
+    marginRight: spacing.sm,
+  },
+  fastDayTitleContainer: {
+    flex: 1,
+  },
+  fastDayTitle: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 18,
+    color: colors.text.primary,
+  },
+  fastDaySubtitle: {
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: colors.primary.dark,
+    marginTop: 2,
+  },
+  fastProgressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  fastProgressBar: {
+    flex: 1,
+    height: 12,
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  fastProgressFill: {
+    height: '100%',
+    backgroundColor: colors.primary.main,
+    borderRadius: 6,
+  },
+  fastProgressPercent: {
+    fontFamily: fonts.body.bold,
+    fontSize: 14,
+    color: colors.primary.dark,
+    minWidth: 45,
+    textAlign: 'right',
+  },
+  fastTimesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  fastTimeItem: {
+    alignItems: 'center',
+  },
+  fastTimeLabel: {
+    fontFamily: fonts.body.regular,
+    fontSize: 11,
+    color: colors.text.tertiary,
+    marginBottom: 2,
+  },
+  fastTimeValue: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 15,
+    color: colors.text.primary,
+  },
+  fastCompleteMessage: {
+    marginTop: spacing.md,
+    backgroundColor: 'rgba(165, 212, 180, 0.2)',
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    alignItems: 'center',
+  },
+  fastCompleteText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: colors.semantic.success,
   },
 });
