@@ -26,23 +26,23 @@ interface Feature {
 const FEATURES: Feature[] = [
   {
     icon: '🕯️',
-    title: 'Gentle Reminders',
-    description: 'Notifications that guide, never guilt',
+    title: 'Custom Reminders',
+    description: 'Nudge you when you need',
   },
   {
     icon: '📅',
-    title: 'Jewish Calendar',
-    description: 'Zmanim, holidays & spiritual moments',
+    title: 'Zmanim Calendar',
+    description: 'Zmanim, Rosh Chodesh & more',
   },
   {
     icon: '✨',
-    title: 'Sefiras HaOmer',
-    description: 'Beautiful countdown with meaning',
+    title: 'Custom Countdowns',
+    description: '40 day Nishmas, Sefirah & more',
   },
   {
     icon: '📖',
     title: 'Tehillim',
-    description: 'Psalms for every moment',
+    description: '',
   },
 ];
 
@@ -418,9 +418,11 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
                   <Text style={styles.featureIcon}>{feature.icon}</Text>
                   <View style={styles.featureText}>
                     <Text style={styles.featureTitle}>{feature.title}</Text>
-                    <Text style={styles.featureDescription}>
-                      {feature.description}
-                    </Text>
+                    {feature.description ? (
+                      <Text style={styles.featureDescription}>
+                        {feature.description}
+                      </Text>
+                    ) : null}
                   </View>
                 </BlurView>
               </Animated.View>
