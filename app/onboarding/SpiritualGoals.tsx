@@ -3,14 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Animated,
   Dimensions,
+  TouchableOpacity,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { GlassButton } from '../../components/ui/GlassButton';
-import { ScalePress } from '../../components/animations/ScalePress';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles } from '../../src/design/typography';
@@ -18,7 +17,6 @@ import {
   SPIRITUAL_GOAL_OPTIONS,
   SpiritualGoal,
 } from '../../src/types/preferences';
-import { FadeIn } from '../../components/animations/FadeIn';
 import { OmerCalculator } from '../../src/core/omer/OmerCalculator';
 
 const { width, height } = Dimensions.get('window');
@@ -41,41 +39,25 @@ export const SpiritualGoals: React.FC<SpiritualGoalsProps> = ({
   onSkip,
 }) => {
   const [selected, setSelected] = useState<Set<SpiritualGoal>>(new Set());
-  const orb1 = useRef(new Animated.Value(0)).current;
-  const orb2 = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
 
   useEffect(() => {
-    const animateOrb = (orb: Animated.Value, duration: number) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(orb, {
-            toValue: 1,
-            duration,
-            useNativeDriver: true,
-          }),
-          Animated.timing(orb, {
-            toValue: 0,
-            duration,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start();
-    };
-    animateOrb(orb1, 5000);
-    animateOrb(orb2, 4500);
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        tension: 50,
+        friction: 8,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
-  const orb1Y = orb1.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, -20],
-  });
-
-  const orb2X = orb2.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 15],
-  });
-
-  // Auto-suggest Sefiras HaOmer if in Omer period
   const isOmerPeriod = OmerCalculator.isOmerPeriod();
   const availableGoals = isOmerPeriod
     ? SPIRITUAL_GOAL_OPTIONS
@@ -91,15 +73,9 @@ export const SpiritualGoals: React.FC<SpiritualGoalsProps> = ({
     setSelected(newSelected);
   };
 
-  const handleContinue = () => {
-    if (selected.size > 0) {
-      onSelect(Array.from(selected));
-    }
-  };
-
   return (
     <View style={styles.container}>
-      {/* Background */}
+      {/* Background Gradient */}
       <LinearGradient
         colors={['#FAF9F7', '#E8F0F5', '#F5E6E8']}
         style={StyleSheet.absoluteFill}
@@ -108,140 +84,109 @@ export const SpiritualGoals: React.FC<SpiritualGoalsProps> = ({
       />
 
       {/* Floating Orbs */}
-      <Animated.View
-        style={[
-          styles.orb,
-          styles.orb1,
-          { transform: [{ translateY: orb1Y }] },
-        ]}
-      />
-      <Animated.View
-        style={[
-          styles.orb,
-          styles.orb2,
-          { transform: [{ translateX: orb2X }] },
-        ]}
-      />
+      <View style={[styles.orb, styles.orb1]} />
+      <View style={[styles.orb, styles.orb2]} />
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
+      {/* Progress Dots */}
+      <View style={styles.progressContainer}>
+        <View style={styles.progressDot} />
+        <View style={[styles.progressDot, styles.progressDotActive]} />
+        <View style={styles.progressDot} />
+      </View>
+
+      {/* Main Glass Card */}
+      <Animated.View
+        style={[
+          styles.cardContainer,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }],
+          },
+        ]}
       >
-        {/* Progress Indicator */}
-        <FadeIn delay={100}>
-          <View style={styles.progress}>
-            <View style={styles.progressDot} />
-            <View style={[styles.progressDot, styles.progressDotActive]} />
-            <View style={styles.progressDot} />
-          </View>
-        </FadeIn>
+        <BlurView intensity={100} tint="light" style={styles.glassCard}>
+          <View style={styles.glassOverlay}>
+            <Text style={styles.emoji}>🌟</Text>
+            <Text style={styles.title}>What would you{'\n'}like help with?</Text>
+            <Text style={styles.subtitle}>
+              Choose up to 2 — we'll send gentle reminders
+            </Text>
 
-        {/* Main Card */}
-        <FadeIn delay={200}>
-          <View style={styles.mainCard}>
-            <BlurView intensity={80} style={styles.cardBlur}>
-              <LinearGradient
-                colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.8)']}
-                style={StyleSheet.absoluteFill}
-              />
-              <View style={styles.cardContent}>
-                <Text style={styles.emoji}>🌟</Text>
-                <Text style={styles.title}>
-                  What would you like help with?
-                </Text>
-                <Text style={styles.subtitle}>
-                  Choose up to 2 — we'll send gentle reminders
-                </Text>
+            {/* Options */}
+            <View style={styles.optionsContainer}>
+              {availableGoals.map((option) => {
+                const isSelected = selected.has(option.value);
+                const isDisabled = !isSelected && selected.size >= 2;
 
-                <View style={styles.options}>
-                  {availableGoals.map((option, index) => {
-                    const isSelected = selected.has(option.value);
-                    const isDisabled = !isSelected && selected.size >= 2;
-
-                    return (
-                      <FadeIn key={option.value} delay={300 + index * 80}>
-                        <ScalePress
-                          onPress={() => toggleGoal(option.value)}
-                          disabled={isDisabled}
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    onPress={() => toggleGoal(option.value)}
+                    disabled={isDisabled}
+                    activeOpacity={0.7}
+                    style={isDisabled && styles.optionDisabled}
+                  >
+                    <BlurView
+                      intensity={isSelected ? 80 : 40}
+                      tint="light"
+                      style={[
+                        styles.optionCard,
+                        isSelected && styles.optionCardSelected,
+                      ]}
+                    >
+                      <View style={styles.optionInner}>
+                        <View
                           style={[
-                            styles.optionWrapper,
-                            isDisabled && styles.optionDisabled,
+                            styles.checkbox,
+                            isSelected && styles.checkboxSelected,
                           ]}
                         >
-                          <View
-                            style={[
-                              styles.option,
-                              isSelected && styles.optionSelected,
-                            ]}
-                          >
-                            <BlurView
-                              intensity={40}
-                              style={StyleSheet.absoluteFill}
-                            />
-                            <View style={styles.optionInner}>
-                              <View
-                                style={[
-                                  styles.checkbox,
-                                  isSelected && styles.checkboxSelected,
-                                ]}
-                              >
-                                {isSelected && (
-                                  <Text style={styles.checkmark}>✓</Text>
-                                )}
-                              </View>
-                              <Text style={styles.optionEmoji}>
-                                {GOAL_EMOJIS[option.value]}
-                              </Text>
-                              <Text
-                                style={[
-                                  styles.optionText,
-                                  isSelected && styles.optionTextSelected,
-                                ]}
-                              >
-                                {option.label}
-                              </Text>
-                            </View>
-                          </View>
-                        </ScalePress>
-                      </FadeIn>
-                    );
-                  })}
-                </View>
+                          {isSelected && <Text style={styles.checkmark}>✓</Text>}
+                        </View>
+                        <Text style={styles.optionEmoji}>
+                          {GOAL_EMOJIS[option.value]}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.optionText,
+                            isSelected && styles.optionTextSelected,
+                          ]}
+                        >
+                          {option.label}
+                        </Text>
+                      </View>
+                    </BlurView>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
-                {selected.size > 0 && (
-                  <View style={styles.selectedBadge}>
-                    <Text style={styles.selectedBadgeText}>
-                      {selected.size} selected
-                    </Text>
-                  </View>
-                )}
-
-                <View style={styles.actions}>
-                  {selected.size > 0 && (
-                    <FadeIn delay={100}>
-                      <GlassButton
-                        title="Continue"
-                        onPress={handleContinue}
-                        variant="primary"
-                        size="large"
-                      />
-                    </FadeIn>
-                  )}
-                  {onSkip && (
-                    <GlassButton
-                      title="Skip for now"
-                      onPress={onSkip}
-                      variant="ghost"
-                      size="md"
-                      style={styles.skipButton}
-                    />
-                  )}
-                </View>
+            {/* Selected Badge */}
+            {selected.size > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{selected.size} selected</Text>
               </View>
-            </BlurView>
+            )}
+
+            {/* Actions */}
+            <View style={styles.actions}>
+              {selected.size > 0 && (
+                <GlassButton
+                  title="Continue"
+                  onPress={() => onSelect(Array.from(selected))}
+                  variant="primary"
+                  size="large"
+                />
+              )}
+              {onSkip && (
+                <TouchableOpacity onPress={onSkip} style={styles.skipButton}>
+                  <Text style={styles.skipText}>Skip for now</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
-        </FadeIn>
-      </ScrollView>
+        </BlurView>
+      </Animated.View>
     </View>
   );
 };
@@ -249,11 +194,9 @@ export const SpiritualGoals: React.FC<SpiritualGoalsProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: spacing.lg,
-    paddingTop: spacing['3xl'],
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
   orb: {
     position: 'absolute',
@@ -262,53 +205,50 @@ const styles = StyleSheet.create({
   orb1: {
     width: 180,
     height: 180,
-    backgroundColor: 'rgba(165, 196, 212, 0.3)',
+    backgroundColor: 'rgba(165, 196, 212, 0.35)',
     top: height * 0.1,
-    right: -70,
+    right: -60,
   },
   orb2: {
     width: 150,
     height: 150,
-    backgroundColor: 'rgba(212, 196, 232, 0.3)',
-    bottom: height * 0.2,
+    backgroundColor: 'rgba(212, 196, 232, 0.35)',
+    bottom: height * 0.12,
     left: -50,
   },
-  progress: {
+  progressContainer: {
+    position: 'absolute',
+    top: height * 0.08,
     flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: spacing.xl,
     gap: spacing.sm,
   },
   progressDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: 'rgba(212, 165, 184, 0.3)',
+    backgroundColor: 'rgba(212, 165, 184, 0.4)',
   },
   progressDotActive: {
-    backgroundColor: colors.primary.main,
-    width: 24,
+    width: 28,
+    backgroundColor: colors.secondary.main,
   },
-  mainCard: {
+  cardContainer: {
+    width: width - spacing.xl * 2,
+    maxWidth: 400,
+  },
+  glassCard: {
     borderRadius: borderRadius['2xl'],
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
-    shadowColor: colors.secondary.main,
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.2,
-    shadowRadius: 32,
-    elevation: 12,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
   },
-  cardBlur: {
-    overflow: 'hidden',
-  },
-  cardContent: {
+  glassOverlay: {
     padding: spacing.xl,
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
     alignItems: 'center',
   },
   emoji: {
-    fontSize: 48,
+    fontSize: 44,
     marginBottom: spacing.md,
   },
   title: {
@@ -321,44 +261,41 @@ const styles = StyleSheet.create({
     ...textStyles.body,
     color: colors.text.secondary,
     textAlign: 'center',
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
-  options: {
+  optionsContainer: {
     width: '100%',
+    gap: spacing.sm,
     marginBottom: spacing.md,
-  },
-  optionWrapper: {
-    marginBottom: spacing.sm,
   },
   optionDisabled: {
     opacity: 0.4,
   },
-  option: {
+  optionCard: {
     borderRadius: borderRadius.lg,
     overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'rgba(165, 196, 212, 0.3)',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
   },
-  optionSelected: {
+  optionCardSelected: {
     borderColor: colors.secondary.main,
-    backgroundColor: 'rgba(165, 196, 212, 0.15)',
+    borderWidth: 2,
   },
   optionInner: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
-    paddingVertical: spacing.lg,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: 22,
+    height: 22,
     borderRadius: borderRadius.sm,
     borderWidth: 2,
     borderColor: colors.text.tertiary,
+    marginRight: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
   },
   checkboxSelected: {
     borderColor: colors.secondary.main,
@@ -366,11 +303,11 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 'bold',
   },
   optionEmoji: {
-    fontSize: 22,
+    fontSize: 20,
     marginRight: spacing.sm,
   },
   optionText: {
@@ -379,26 +316,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTextSelected: {
+    ...textStyles.bodyBold,
     color: colors.secondary.dark,
-    fontWeight: '600',
   },
-  selectedBadge: {
-    backgroundColor: 'rgba(165, 196, 212, 0.2)',
+  badge: {
+    backgroundColor: 'rgba(165, 196, 212, 0.3)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
-  selectedBadgeText: {
+  badgeText: {
     ...textStyles.caption,
     color: colors.secondary.dark,
     fontWeight: '600',
   },
   actions: {
     width: '100%',
-    marginTop: spacing.md,
+    alignItems: 'center',
+    gap: spacing.md,
   },
   skipButton: {
-    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  skipText: {
+    ...textStyles.body,
+    color: colors.text.tertiary,
   },
 });
