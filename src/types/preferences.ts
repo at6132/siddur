@@ -7,9 +7,9 @@ import { Nusach } from './nusach';
 export type SpiritualGoal =
   | 'tehillim'
   | 'mincha'
-  | 'learning'
   | 'neshama'
-  | 'sefiras_haomer';
+  | 'sefiras_haomer'
+  | 'custom';
 
 export interface NotificationPreferences {
   dailyTehillim: boolean;
@@ -42,7 +42,6 @@ export const SPIRITUAL_GOAL_OPTIONS: { value: SpiritualGoal; label: string }[] =
   [
     { value: 'tehillim', label: 'Tehillim' },
     { value: 'mincha', label: 'Mincha' },
-    { value: 'learning', label: 'Learning' },
     { value: 'neshama', label: 'Neshama / 40-day commitment' },
     { value: 'sefiras_haomer', label: 'Sefiras HaOmer' },
   ];
