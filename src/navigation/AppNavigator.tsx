@@ -68,6 +68,11 @@ function MainTabs() {
   );
 }
 
+// Wrapper component to pass onComplete callback to OnboardingScreen
+function OnboardingWrapper({ onComplete }: { onComplete: () => void }) {
+  return <OnboardingScreen onComplete={onComplete} />;
+}
+
 export default function AppNavigator() {
   const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean | null>(null);
   const [showIntro, setShowIntro] = useState(true);
@@ -85,6 +90,10 @@ export default function AppNavigator() {
 
   const handleIntroComplete = () => {
     setShowIntro(false);
+  };
+
+  const handleOnboardingComplete = () => {
+    setIsOnboardingComplete(true);
   };
 
   if (isOnboardingComplete === null) {
@@ -105,7 +114,9 @@ export default function AppNavigator() {
       }}
     >
       {!isOnboardingComplete ? (
-        <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+        <Stack.Screen name="Onboarding">
+          {() => <OnboardingWrapper onComplete={handleOnboardingComplete} />}
+        </Stack.Screen>
       ) : (
         <>
           <Stack.Screen name="Main" component={MainTabs} />

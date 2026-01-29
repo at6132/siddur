@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { useNavigation, CommonActions } from '@react-navigation/native';
 import { NusachSelection } from './NusachSelection';
 import { SpiritualGoals } from './SpiritualGoals';
 import { WelcomeScreen } from './WelcomeScreen';
@@ -11,8 +10,11 @@ import * as Location from 'expo-location';
 
 type OnboardingStep = 'nusach' | 'goals' | 'welcome';
 
-export const OnboardingScreen: React.FC = () => {
-  const navigation = useNavigation();
+interface OnboardingScreenProps {
+  onComplete: () => void;
+}
+
+export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
   const [step, setStep] = useState<OnboardingStep>('nusach');
 
   useEffect(() => {
@@ -48,14 +50,9 @@ export const OnboardingScreen: React.FC = () => {
   const handleStart = async () => {
     // Mark onboarding complete
     await UserPreferencesService.markOnboardingComplete();
-
-    // Navigate to main app (reset navigation stack)
-    navigation.dispatch(
-      CommonActions.reset({
-        index: 0,
-        routes: [{ name: 'Main' }],
-      })
-    );
+    
+    // Call the onComplete callback to update navigator state
+    onComplete();
   };
 
   const renderStep = () => {
