@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Siddur",
+    "slug": "siddur",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.siddur.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "We need your location to calculate accurate prayer times (zmanim).",
+        "NSUserNotificationsUsageDescription": "We'll send gentle reminders to help you stay consistent with your davening."
+      }
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "We need your location to calculate accurate prayer times."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    }
+  }
+}
+
