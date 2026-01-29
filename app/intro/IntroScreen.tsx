@@ -443,9 +443,6 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
               variant="primary"
               size="large"
             />
-            <Text style={styles.footerText}>
-              Designed for the modern Jewish woman
-            </Text>
           </Animated.View>
         </View>
       )}
@@ -590,11 +587,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     marginTop: spacing.sm,
-  },
-  footerText: {
-    ...textStyles.caption,
-    color: colors.text.tertiary,
-    marginTop: spacing.md,
-    fontStyle: 'italic',
   },
 });
