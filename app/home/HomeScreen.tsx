@@ -7,6 +7,8 @@ import {
   Dimensions,
   TouchableOpacity,
   Platform,
+  ScrollView,
+  Alert,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,6 +24,7 @@ import { fonts } from '../../src/design/typography';
 import { CalendarEngine } from '../../src/core/calendar/CalendarEngine';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
+import { HomePanelsService, HomePanel, PANEL_DEFINITIONS } from '../../src/storage/HomePanelsService';
 import { DayInfo, CalendarContext } from '../../src/types/calendar';
 
 const { width, height } = Dimensions.get('window');
@@ -69,6 +72,52 @@ const FloatingOrb: React.FC<{
   );
 };
 
+// Jiggle Animation Component for Edit Mode
+const JiggleView: React.FC<{
+  children: React.ReactNode;
+  isEditing: boolean;
+  style?: any;
+}> = ({ children, isEditing, style }) => {
+  const rotation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (isEditing) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(rotation, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(rotation, {
+            toValue: -1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(rotation, {
+            toValue: 0,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      rotation.setValue(0);
+    }
+  }, [isEditing]);
+
+  const rotate = rotation.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: ['-1.5deg', '0deg', '1.5deg'],
+  });
+
+  return (
+    <Animated.View style={[style, isEditing && { transform: [{ rotate }] }]}>
+      {children}
+    </Animated.View>
+  );
+};
+
 // Glass Card Component
 const GlassCard: React.FC<{
   children: React.ReactNode;
@@ -102,11 +151,61 @@ const GlassCard: React.FC<{
   return content;
 };
 
+// Editable Panel Wrapper
+const EditablePanel: React.FC<{
+  children: React.ReactNode;
+  isEditing: boolean;
+  onRemove: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
+}> = ({ children, isEditing, onRemove, onMoveUp, onMoveDown, canMoveUp, canMoveDown }) => {
+  return (
+    <JiggleView isEditing={isEditing}>
+      <View style={styles.editablePanelContainer}>
+        {children}
+        
+        {isEditing && (
+          <>
+            {/* Remove Button */}
+            <TouchableOpacity
+              style={styles.removeButton}
+              onPress={onRemove}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <View style={styles.removeButtonInner}>
+                <Text style={styles.removeButtonText}>−</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Reorder Buttons */}
+            <View style={styles.reorderButtons}>
+              {canMoveUp && (
+                <TouchableOpacity style={styles.reorderButton} onPress={onMoveUp}>
+                  <Text style={styles.reorderButtonText}>▲</Text>
+                </TouchableOpacity>
+              )}
+              {canMoveDown && (
+                <TouchableOpacity style={styles.reorderButton} onPress={onMoveDown}>
+                  <Text style={styles.reorderButtonText}>▼</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </>
+        )}
+      </View>
+    </JiggleView>
+  );
+};
+
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation();
   const [dayInfo, setDayInfo] = useState<DayInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [panels, setPanels] = useState<HomePanel[]>([]);
   const [tehillimProgress, setTehillimProgress] = useState({
     percentComplete: 0,
     chaptersRemaining: [] as number[],
@@ -120,11 +219,13 @@ export const HomeScreen: React.FC = () => {
 
   useEffect(() => {
     loadDayInfo();
+    loadPanels();
   }, []);
 
   useFocusEffect(
     useCallback(() => {
       loadTehillimProgress();
+      loadPanels();
     }, [])
   );
 
@@ -136,6 +237,11 @@ export const HomeScreen: React.FC = () => {
     }).start();
   }, [tehillimProgress.percentComplete]);
 
+  const loadPanels = async () => {
+    const loadedPanels = await HomePanelsService.getPanels();
+    setPanels(loadedPanels.filter(p => p.visible).sort((a, b) => a.order - b.order));
+  };
+
   const loadDayInfo = async () => {
     setLoading(true);
     setError(null);
@@ -146,7 +252,6 @@ export const HomeScreen: React.FC = () => {
         return;
       }
 
-      // Get current GPS location for accurate zmanim
       let currentLocation = preferences.location;
       
       if (Platform.OS !== 'web') {
@@ -161,7 +266,6 @@ export const HomeScreen: React.FC = () => {
               longitude: location.coords.longitude,
             };
             
-            // Save location for future use
             await UserPreferencesService.setLocation({
               latitude: location.coords.latitude,
               longitude: location.coords.longitude,
@@ -170,7 +274,6 @@ export const HomeScreen: React.FC = () => {
           }
         } catch (locError) {
           console.log('Using stored location, GPS unavailable:', locError);
-          // Continue with stored location if GPS fails
         }
       }
 
@@ -205,17 +308,226 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleTehillimPress = async () => {
+    if (isEditing) return;
     const nextChapter = await DailyTehillimTracker.getNextChapter();
     if (nextChapter) {
       navigation.navigate('TehillimReader' as never, { psalm: nextChapter } as never);
     } else {
-      navigation.navigate('Tehillim' as never);
+      navigation.navigate('Library' as never);
     }
+  };
+
+  const handleRemovePanel = async (panelId: string) => {
+    Alert.alert(
+      'Remove Panel',
+      'Remove this panel from your home screen?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            await HomePanelsService.removePanel(panelId);
+            loadPanels();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleMovePanel = async (index: number, direction: 'up' | 'down') => {
+    const newPanels = [...panels];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    
+    if (targetIndex < 0 || targetIndex >= panels.length) return;
+    
+    [newPanels[index], newPanels[targetIndex]] = [newPanels[targetIndex], newPanels[index]];
+    newPanels.forEach((p, i) => p.order = i);
+    
+    setPanels(newPanels);
+    await HomePanelsService.reorderPanels(newPanels.map(p => p.id));
   };
 
   const formatTime = (date: Date | undefined) => {
     if (!date) return '--:--';
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+
+  const toggleEditMode = () => {
+    setIsEditing(!isEditing);
+  };
+
+  // Render individual panel based on type
+  const renderPanel = (panel: HomePanel, index: number) => {
+    const panelDef = PANEL_DEFINITIONS.find(p => p.type === panel.type);
+    
+    const panelContent = () => {
+      switch (panel.type) {
+        case 'date':
+          if (!dayInfo) return null;
+          return (
+            <GlassCard style={styles.dateCard}>
+              <Text style={styles.hebrewDate}>{dayInfo.jewishDateShort}</Text>
+              <View style={styles.dateDivider} />
+              <Text style={styles.gregorianDate}>
+                {dayInfo.gregorianDate.toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                })}
+              </Text>
+              {dayInfo.specialDays && dayInfo.specialDays.length > 0 && (
+                <View style={styles.specialBadge}>
+                  <Text style={styles.specialBadgeText}>
+                    {dayInfo.specialDays[0].name}
+                  </Text>
+                </View>
+              )}
+            </GlassCard>
+          );
+
+        case 'tehillim_progress':
+          const progressWidth = progressAnim.interpolate({
+            inputRange: [0, 100],
+            outputRange: ['0%', '100%'],
+          });
+          return (
+            <GlassCard style={styles.tehillimCard} onPress={handleTehillimPress}>
+              <View style={styles.tehillimHeader}>
+                <View style={styles.tehillimIcon}>
+                  <Text style={styles.tehillimIconText}>📖</Text>
+                </View>
+                <View style={styles.tehillimInfo}>
+                  <Text style={styles.tehillimTitle}>{tehillimProgress.dayName || 'Daily'} Tehillim</Text>
+                  <Text style={styles.tehillimMessage}>{tehillimProgress.message}</Text>
+                </View>
+                <View style={styles.tehillimPercentContainer}>
+                  <Text style={styles.tehillimPercent}>{tehillimProgress.percentComplete}%</Text>
+                </View>
+              </View>
+              
+              <View style={styles.progressBarContainer}>
+                <View style={styles.progressBarBg}>
+                  <Animated.View style={[styles.progressBarFill, { width: progressWidth }]} />
+                </View>
+              </View>
+              
+              <View style={styles.tehillimFooter}>
+                <View style={styles.tehillimFooterLeft}>
+                  <Text style={styles.tehillimFooterText}>
+                    {tehillimProgress.totalChapters.length - tehillimProgress.chaptersRemaining.length} of {tehillimProgress.totalChapters.length} chapters
+                  </Text>
+                  {!isEditing && (
+                    <TouchableOpacity 
+                      onPress={() => navigation.navigate('TehillimSettings' as never)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Text style={styles.tehillimEdit}>Edit</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {!isEditing && (
+                  <Text style={styles.tehillimContinue}>
+                    {tehillimProgress.percentComplete === 100 ? 'Complete ✓' : 'Continue →'}
+                  </Text>
+                )}
+              </View>
+            </GlassCard>
+          );
+
+        case 'zmanim':
+          if (!dayInfo) return null;
+          return (
+            <View style={styles.zmanimRow}>
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Sunrise</Text>
+                <Text style={styles.zmanTime}>{formatTime(dayInfo.zmanim.sunrise)}</Text>
+              </View>
+              <View style={styles.zmanDivider} />
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Sunset</Text>
+                <Text style={styles.zmanTime}>{formatTime(dayInfo.zmanim.sunset)}</Text>
+              </View>
+              <View style={styles.zmanDivider} />
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Shema</Text>
+                <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.sofZmanShma)}</Text>
+              </View>
+            </View>
+          );
+
+        case 'quick_actions':
+          return (
+            <View style={styles.quickActions}>
+              <TouchableOpacity 
+                style={styles.quickAction}
+                onPress={() => !isEditing && navigation.navigate('Calendar' as never)}
+                disabled={isEditing}
+              >
+                <Text style={styles.quickActionIcon}>📅</Text>
+                <Text style={styles.quickActionText}>Calendar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickAction}
+                onPress={() => !isEditing && navigation.navigate('Library' as never)}
+                disabled={isEditing}
+              >
+                <Text style={styles.quickActionIcon}>📖</Text>
+                <Text style={styles.quickActionText}>Library</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.quickAction}
+                onPress={() => !isEditing && navigation.navigate('Settings' as never)}
+                disabled={isEditing}
+              >
+                <Text style={styles.quickActionIcon}>⚙️</Text>
+                <Text style={styles.quickActionText}>Settings</Text>
+              </TouchableOpacity>
+            </View>
+          );
+
+        case 'davening_note':
+          if (!dayInfo || (!dayInfo.daveningChanges.hallel && dayInfo.daveningChanges.tachanun)) {
+            return null;
+          }
+          return (
+            <View style={styles.daveningNote}>
+              <Text style={styles.daveningNoteText}>
+                {dayInfo.daveningChanges.hallel 
+                  ? `${dayInfo.daveningChanges.hallel === 'full' ? 'Full' : 'Half'} Hallel today` 
+                  : 'No Tachanun today'}
+              </Text>
+            </View>
+          );
+
+        default:
+          return (
+            <GlassCard>
+              <View style={styles.placeholderPanel}>
+                <Text style={styles.placeholderIcon}>{panelDef?.icon || '📦'}</Text>
+                <Text style={styles.placeholderText}>{panelDef?.name || panel.type}</Text>
+              </View>
+            </GlassCard>
+          );
+      }
+    };
+
+    const content = panelContent();
+    if (!content) return null;
+
+    return (
+      <EditablePanel
+        key={panel.id}
+        isEditing={isEditing}
+        onRemove={() => handleRemovePanel(panel.id)}
+        onMoveUp={() => handleMovePanel(index, 'up')}
+        onMoveDown={() => handleMovePanel(index, 'down')}
+        canMoveUp={index > 0}
+        canMoveDown={index < panels.length - 1}
+      >
+        {content}
+      </EditablePanel>
+    );
   };
 
   if (loading) {
@@ -245,10 +557,6 @@ export const HomeScreen: React.FC = () => {
   if (!dayInfo) return null;
 
   const greeting = getGreeting();
-  const progressWidth = progressAnim.interpolate({
-    inputRange: [0, 100],
-    outputRange: ['0%', '100%'],
-  });
 
   return (
     <View style={styles.container}>
@@ -275,150 +583,66 @@ export const HomeScreen: React.FC = () => {
       />
 
       {/* Notification Banner */}
-      <NotificationBanner onSetup={() => navigation.navigate('Settings' as never)} />
+      {!isEditing && (
+        <NotificationBanner onSetup={() => navigation.navigate('Settings' as never)} />
+      )}
 
-      {/* Main Content - Fixed Layout */}
-      <View style={styles.content}>
-        {/* Header Row with Greeting and Customize */}
-        <FadeIn delay={0}>
-          <View style={styles.headerRow}>
-            <Text style={styles.greeting}>{greeting}</Text>
-            <TouchableOpacity
-              style={styles.customizeButton}
-              onPress={() => navigation.navigate('CustomizeHome' as never)}
-            >
-              <Text style={styles.customizeIcon}>⚙️</Text>
-            </TouchableOpacity>
-          </View>
-        </FadeIn>
-
-        {/* Date Card */}
-        <FadeIn delay={100}>
-          <GlassCard style={styles.dateCard}>
-            <Text style={styles.hebrewDate}>{dayInfo.jewishDateShort}</Text>
-            <View style={styles.dateDivider} />
-            <Text style={styles.gregorianDate}>
-              {dayInfo.gregorianDate.toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
+      {/* Scrollable Content */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        scrollEnabled={!isEditing || panels.length > 4}
+      >
+        {/* Header Row with Greeting and Edit Button */}
+        <View style={styles.headerRow}>
+          <Text style={styles.greeting}>{greeting}</Text>
+          <TouchableOpacity
+            style={[styles.editButton, isEditing && styles.editButtonActive]}
+            onPress={toggleEditMode}
+          >
+            <Text style={[styles.editButtonText, isEditing && styles.editButtonTextActive]}>
+              {isEditing ? 'Done' : 'Edit'}
             </Text>
-            {dayInfo.specialDays && dayInfo.specialDays.length > 0 && (
-              <View style={styles.specialBadge}>
-                <Text style={styles.specialBadgeText}>
-                  {dayInfo.specialDays[0].name}
-                </Text>
-              </View>
-            )}
-          </GlassCard>
-        </FadeIn>
+          </TouchableOpacity>
+        </View>
 
-        {/* Daily Tehillim Progress Card */}
-        <FadeIn delay={150}>
-          <GlassCard style={styles.tehillimCard} onPress={handleTehillimPress}>
-            <View style={styles.tehillimHeader}>
-              <View style={styles.tehillimIcon}>
-                <Text style={styles.tehillimIconText}>📖</Text>
-              </View>
-              <View style={styles.tehillimInfo}>
-                <Text style={styles.tehillimTitle}>{tehillimProgress.dayName || 'Daily'} Tehillim</Text>
-                <Text style={styles.tehillimMessage}>{tehillimProgress.message}</Text>
-              </View>
-              <View style={styles.tehillimPercentContainer}>
-                <Text style={styles.tehillimPercent}>{tehillimProgress.percentComplete}%</Text>
-              </View>
-            </View>
-            
-            {/* Progress Bar */}
-            <View style={styles.progressBarContainer}>
-              <View style={styles.progressBarBg}>
-                <Animated.View 
-                  style={[styles.progressBarFill, { width: progressWidth }]} 
-                />
-              </View>
-            </View>
-            
-            {/* Chapter Info */}
-            <View style={styles.tehillimFooter}>
-              <View style={styles.tehillimFooterLeft}>
-                <Text style={styles.tehillimFooterText}>
-                  {tehillimProgress.totalChapters.length - tehillimProgress.chaptersRemaining.length} of {tehillimProgress.totalChapters.length} chapters
-                </Text>
-                <TouchableOpacity 
-                  onPress={() => navigation.navigate('TehillimSettings' as never)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <Text style={styles.tehillimEdit}>Edit</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.tehillimContinue}>
-                {tehillimProgress.percentComplete === 100 ? 'Complete ✓' : 'Continue →'}
-              </Text>
-            </View>
-          </GlassCard>
-        </FadeIn>
-
-        {/* Zmanim Row */}
-        <FadeIn delay={200}>
-          <View style={styles.zmanimRow}>
-            <View style={styles.zmanItem}>
-              <Text style={styles.zmanLabel}>Sunrise</Text>
-              <Text style={styles.zmanTime}>{formatTime(dayInfo.zmanim.sunrise)}</Text>
-            </View>
-            <View style={styles.zmanDivider} />
-            <View style={styles.zmanItem}>
-              <Text style={styles.zmanLabel}>Sunset</Text>
-              <Text style={styles.zmanTime}>{formatTime(dayInfo.zmanim.sunset)}</Text>
-            </View>
-            <View style={styles.zmanDivider} />
-            <View style={styles.zmanItem}>
-              <Text style={styles.zmanLabel}>Shema</Text>
-              <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.sofZmanShma)}</Text>
-            </View>
+        {/* Edit Mode Instructions */}
+        {isEditing && (
+          <View style={styles.editInstructions}>
+            <Text style={styles.editInstructionsText}>
+              Tap − to remove • Use arrows to reorder
+            </Text>
           </View>
-        </FadeIn>
-
-        {/* Quick Actions */}
-        <FadeIn delay={250}>
-          <View style={styles.quickActions}>
-            <TouchableOpacity 
-              style={styles.quickAction}
-              onPress={() => navigation.navigate('Calendar' as never)}
-            >
-              <Text style={styles.quickActionIcon}>📅</Text>
-              <Text style={styles.quickActionText}>Calendar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.quickAction}
-              onPress={() => navigation.navigate('Tehillim' as never)}
-            >
-              <Text style={styles.quickActionIcon}>📖</Text>
-              <Text style={styles.quickActionText}>Tehillim</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.quickAction}
-              onPress={() => navigation.navigate('Settings' as never)}
-            >
-              <Text style={styles.quickActionIcon}>⚙️</Text>
-              <Text style={styles.quickActionText}>Settings</Text>
-            </TouchableOpacity>
-          </View>
-        </FadeIn>
-
-        {/* Davening Note - Only show if there's something special */}
-        {(dayInfo.daveningChanges.hallel || !dayInfo.daveningChanges.tachanun) && (
-          <FadeIn delay={300}>
-            <View style={styles.daveningNote}>
-              <Text style={styles.daveningNoteText}>
-                {dayInfo.daveningChanges.hallel 
-                  ? `${dayInfo.daveningChanges.hallel === 'full' ? 'Full' : 'Half'} Hallel today` 
-                  : 'No Tachanun today'}
-              </Text>
-            </View>
-          </FadeIn>
         )}
-      </View>
+
+        {/* Dynamic Panels */}
+        {panels.map((panel, index) => renderPanel(panel, index))}
+
+        {/* Empty State */}
+        {panels.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateIcon}>📦</Text>
+            <Text style={styles.emptyStateText}>No panels added yet</Text>
+            <Text style={styles.emptyStateSubtext}>Tap + to add some</Text>
+          </View>
+        )}
+
+        <View style={{ height: 140 }} />
+      </ScrollView>
+
+      {/* Floating Add Button - Always visible in edit mode */}
+      {isEditing && (
+        <TouchableOpacity
+          style={styles.floatingAddButton}
+          onPress={() => navigation.navigate('PanelsMarketplace' as never)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.floatingAddButtonInner}>
+            <Text style={styles.floatingAddButtonText}>+</Text>
+          </View>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -435,12 +659,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
     padding: spacing.lg,
     paddingTop: spacing['2xl'],
-    paddingBottom: 100, // Space for tab bar
-    justifyContent: 'flex-start',
+    paddingBottom: 100,
   },
   headerRow: {
     flexDirection: 'row',
@@ -450,29 +675,133 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontFamily: fonts.heading.bold,
-    fontSize: 36,
+    fontSize: 32,
     color: colors.text.primary,
     letterSpacing: 0.5,
   },
-  customizeButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  editButton: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
     backgroundColor: 'rgba(255,255,255,0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.8)',
   },
-  customizeIcon: {
+  editButtonActive: {
+    backgroundColor: colors.primary.main,
+    borderColor: colors.primary.main,
+  },
+  editButtonText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 14,
+    color: colors.text.secondary,
+  },
+  editButtonTextActive: {
+    color: '#fff',
+  },
+
+  // Edit Instructions
+  editInstructions: {
+    backgroundColor: 'rgba(212, 165, 184, 0.2)',
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  editInstructionsText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: colors.primary.dark,
+    textAlign: 'center',
+  },
+
+  // Editable Panel
+  editablePanelContainer: {
+    position: 'relative',
+    marginBottom: spacing.md,
+  },
+  removeButton: {
+    position: 'absolute',
+    top: -8,
+    left: -8,
+    zIndex: 10,
+  },
+  removeButtonInner: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.semantic.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  removeButtonText: {
+    color: '#fff',
     fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: -2,
+  },
+  reorderButtons: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    flexDirection: 'row',
+    gap: 4,
+    zIndex: 10,
+  },
+  reorderButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.primary.main,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
+  },
+  reorderButtonText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+
+  // Floating Add Button
+  floatingAddButton: {
+    position: 'absolute',
+    bottom: 120,
+    right: spacing.lg,
+    zIndex: 100,
+  },
+  floatingAddButtonInner: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary.main,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  floatingAddButtonText: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: '300',
+    marginTop: -2,
   },
 
   // Glass Card
   glassCard: {
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.6)',
   },
@@ -611,7 +940,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.6)',
     borderRadius: borderRadius.lg,
     padding: spacing.md,
-    marginBottom: spacing.md,
     alignItems: 'center',
   },
   zmanItem: {
@@ -661,7 +989,6 @@ const styles = StyleSheet.create({
 
   // Davening Note
   daveningNote: {
-    marginTop: spacing.md,
     backgroundColor: 'rgba(212, 165, 184, 0.15)',
     borderRadius: borderRadius.md,
     padding: spacing.sm,
@@ -671,5 +998,41 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body.medium,
     fontSize: 13,
     color: colors.primary.dark,
+  },
+
+  // Placeholder Panel
+  placeholderPanel: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  placeholderIcon: {
+    fontSize: 28,
+    marginBottom: spacing.xs,
+  },
+  placeholderText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 14,
+    color: colors.text.secondary,
+  },
+
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing['2xl'],
+  },
+  emptyStateIcon: {
+    fontSize: 48,
+    marginBottom: spacing.md,
+  },
+  emptyStateText: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 18,
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
+  },
+  emptyStateSubtext: {
+    fontFamily: fonts.body.regular,
+    fontSize: 14,
+    color: colors.text.tertiary,
   },
 });
