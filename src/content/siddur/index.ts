@@ -1,8 +1,7 @@
 /**
- * Siddur Content Exports
+ * Siddur Content Module
+ * All prayer content fetched from Sefaria API
  */
 
 export * from './types';
-export * from './amidah-insertions';
-export * from './shemoneh-esrei';
 export * from './SiddurService';

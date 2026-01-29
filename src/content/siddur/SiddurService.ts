@@ -1,19 +1,17 @@
 /**
  * Siddur Service
- * Main service for accessing prayer content with dynamic variations
+ * Main service for accessing prayer content - ALL content from Sefaria API
  * 
  * Attribution: Texts provided by Sefaria (sefaria.org)
  */
 
 import { Nusach } from '../../types/nusach';
 import { DaveningChanges } from '../../types/calendar';
-import { SefariaService, SefariaText } from '../../services/SefariaService';
-import { PrayerText, Prayer, PrayerSection, ServiceType } from './types';
-import { AMIDAH_INSERTIONS, YAALEH_VEYAVO_DAYS } from './amidah-insertions';
-import { SHEMONEH_ESREI_BRACHOS, AmidahBracha } from './shemoneh-esrei';
+import { SefariaService, PrayerTextData } from '../../services/SefariaService';
+import { ServiceType } from './types';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const SIDDUR_CACHE_KEY = '@siddur_content_cache';
+const INSERTIONS_CACHE_KEY = '@siddur_insertions_cache';
 
 export interface SiddurContext {
   nusach: Nusach;
@@ -22,257 +20,210 @@ export interface SiddurContext {
   service: ServiceType;
 }
 
-export interface SiddurSection {
-  id: string;
-  name: string;
-  nameHebrew: string;
-  content: PrayerText[];
+export interface PrayerSection {
+  key: string;
+  title: string;
+  hebrewTitle: string;
+  content?: PrayerTextData;
   instructions?: string;
+  skip?: boolean;
+  skipReason?: string;
+}
+
+interface AmidahInsertions {
+  mashivHaruach: PrayerTextData;
+  moridHatal: PrayerTextData;
+  vtenBracha: PrayerTextData;
+  vtenTalUmatar: PrayerTextData;
+  yaalehVeyavo: PrayerTextData;
+  alHanissimChanukah: PrayerTextData;
+  alHanissimPurim: PrayerTextData;
+  aneinu: PrayerTextData;
 }
 
 export class SiddurService {
-  private static cache: Map<string, SefariaText> = new Map();
+  private static insertionsCache: AmidahInsertions | null = null;
   private static isInitialized = false;
 
   /**
-   * Initialize the service
+   * Initialize and load cached insertions
    */
   static async initialize(): Promise<void> {
     if (this.isInitialized) return;
 
     try {
-      const cached = await AsyncStorage.getItem(SIDDUR_CACHE_KEY);
+      const cached = await AsyncStorage.getItem(INSERTIONS_CACHE_KEY);
       if (cached) {
-        const data = JSON.parse(cached);
-        this.cache = new Map(Object.entries(data));
+        this.insertionsCache = JSON.parse(cached);
       }
     } catch (e) {
-      console.warn('Error loading siddur cache:', e);
+      console.warn('Error loading insertions cache:', e);
+    }
+
+    // Pre-fetch insertions if not cached
+    if (!this.insertionsCache) {
+      await this.loadInsertions();
     }
 
     this.isInitialized = true;
   }
 
   /**
-   * Get a siddur section from Sefaria
+   * Load Amidah insertions from Sefaria
+   */
+  private static async loadInsertions(): Promise<void> {
+    try {
+      this.insertionsCache = await SefariaService.fetchAmidahInsertions();
+      await AsyncStorage.setItem(INSERTIONS_CACHE_KEY, JSON.stringify(this.insertionsCache));
+    } catch (e) {
+      console.warn('Error loading insertions:', e);
+    }
+  }
+
+  /**
+   * Get a prayer section content from Sefaria
    */
   static async getSection(
-    sectionId: string,
+    sectionKey: string,
     nusach: Nusach = 'ashkenaz'
-  ): Promise<SiddurSection | null> {
-    await this.initialize();
+  ): Promise<PrayerTextData | null> {
+    return SefariaService.fetchSiddurSection(sectionKey, nusach);
+  }
 
-    const cacheKey = `${nusach}_${sectionId}`;
+  /**
+   * Get complete davening structure for a service
+   */
+  static async getDaveningStructure(
+    service: ServiceType,
+    context: SiddurContext
+  ): Promise<PrayerSection[]> {
+    const isShabbos = context.daveningChanges.isShabbos || false;
+    const structure = await SefariaService.fetchDaveningService(service, isShabbos, context.nusach);
     
-    // Check cache
-    if (this.cache.has(cacheKey)) {
-      const cached = this.cache.get(cacheKey)!;
-      return this.formatSection(sectionId, cached);
-    }
+    // Add skip logic based on context
+    return structure.sections.map(section => {
+      const prayerSection: PrayerSection = {
+        key: section.key,
+        title: section.title,
+        hebrewTitle: section.hebrewTitle,
+      };
 
-    // Map section IDs to Sefaria refs
-    const sectionMap = this.getSectionMapping(nusach);
-    const sefariaRef = sectionMap[sectionId];
-    
-    if (!sefariaRef) {
-      return this.getBuiltInSection(sectionId, nusach);
-    }
-
-    try {
-      const data = await SefariaService.fetchText(sefariaRef);
-      if (data) {
-        this.cache.set(cacheKey, data);
-        await this.saveCache();
-        return this.formatSection(sectionId, data);
+      // Tachanun skip logic
+      if (section.key === 'tachanun' && !context.daveningChanges.tachanun) {
+        prayerSection.skip = true;
+        prayerSection.skipReason = context.daveningChanges.reason || 'No Tachanun today';
       }
-    } catch (e) {
-      console.warn(`Error fetching section ${sectionId}:`, e);
-    }
 
-    return this.getBuiltInSection(sectionId, nusach);
+      // Add Hallel if needed
+      if (section.key === 'hallel' && !context.daveningChanges.hallel) {
+        prayerSection.skip = true;
+      }
+
+      return prayerSection;
+    });
   }
 
   /**
-   * Get Sefaria reference mapping for sections
+   * Get the appropriate Gevuros insertion (2nd bracha)
    */
-  private static getSectionMapping(nusach: Nusach): { [key: string]: string } {
-    const base = nusach === 'ashkenaz' ? 'Siddur Ashkenaz' : 'Siddur Edot HaMizrach';
+  static async getGevurosInsertion(context: SiddurContext): Promise<PrayerTextData> {
+    await this.initialize();
     
-    return {
-      'modeh_ani': `${base}, Weekday, Shacharit, Preparatory Prayers, Modeh Ani`,
-      'birchos_hashachar': `${base}, Weekday, Shacharit, Preparatory Prayers, Birchot HaShachar`,
-      'pesukei_dezimra': `${base}, Weekday, Shacharit, Pesukei Dezimra`,
-      'baruch_sheamar': `${base}, Weekday, Shacharit, Pesukei Dezimra, Baruch She'amar`,
-      'ashrei': `${base}, Weekday, Shacharit, Pesukei Dezimra, Ashrei`,
-      'yishtabach': `${base}, Weekday, Shacharit, Pesukei Dezimra, Yishtabach`,
-      'shema': `${base}, Weekday, Shacharit, Shema`,
-      'shemoneh_esrei_shacharis': `${base}, Weekday, Shacharit, Amidah`,
-      'tachanun': `${base}, Weekday, Shacharit, Tachanun`,
-      'aleinu': `${base}, Weekday, Shacharit, Concluding Prayers, Aleinu`,
-      'shemoneh_esrei_mincha': `${base}, Weekday, Mincha, Amidah`,
-      'shemoneh_esrei_maariv': `${base}, Weekday, Maariv, Amidah`,
-      'krias_shema_al_hamita': `${base}, Weekday, Maariv, Bedtime Shema`,
-      'birchas_hamazon': `${base}, Birkat Hamazon`,
-      'hallel': `${base}, Festivals, Hallel`,
-    };
-  }
-
-  /**
-   * Format Sefaria data into our section format
-   */
-  private static formatSection(sectionId: string, data: SefariaText): SiddurSection {
-    const sectionInfo = this.getSectionInfo(sectionId);
-    
-    const hebrewContent = Array.isArray(data.hebrew) ? data.hebrew : [data.hebrew];
-    const englishContent = Array.isArray(data.english) ? data.english : [data.english];
-
-    const content: PrayerText[] = hebrewContent.map((heb, index) => ({
-      hebrew: this.cleanText(heb),
-      english: this.cleanText(englishContent[index] || ''),
-    }));
-
-    return {
-      id: sectionId,
-      name: sectionInfo.name,
-      nameHebrew: sectionInfo.nameHebrew,
-      content,
-      instructions: sectionInfo.instructions,
-    };
-  }
-
-  /**
-   * Get section metadata
-   */
-  private static getSectionInfo(sectionId: string): { name: string; nameHebrew: string; instructions?: string } {
-    const sections: { [key: string]: { name: string; nameHebrew: string; instructions?: string } } = {
-      'modeh_ani': { name: 'Modeh Ani', nameHebrew: 'מודה אני', instructions: 'Said immediately upon waking' },
-      'birchos_hashachar': { name: 'Morning Blessings', nameHebrew: 'ברכות השחר' },
-      'pesukei_dezimra': { name: 'Verses of Praise', nameHebrew: 'פסוקי דזמרה' },
-      'baruch_sheamar': { name: 'Baruch She\'amar', nameHebrew: 'ברוך שאמר', instructions: 'Stand while reciting' },
-      'ashrei': { name: 'Ashrei', nameHebrew: 'אשרי' },
-      'yishtabach': { name: 'Yishtabach', nameHebrew: 'ישתבח' },
-      'shema': { name: 'Shema', nameHebrew: 'קריאת שמע', instructions: 'Cover eyes for first verse' },
-      'shemoneh_esrei_shacharis': { name: 'Shemoneh Esrei - Shacharis', nameHebrew: 'שמונה עשרה - שחרית', instructions: 'Stand with feet together, face Jerusalem' },
-      'tachanun': { name: 'Tachanun', nameHebrew: 'תחנון', instructions: 'Lean head on arm' },
-      'aleinu': { name: 'Aleinu', nameHebrew: 'עלינו', instructions: 'Stand and bow' },
-      'shemoneh_esrei_mincha': { name: 'Shemoneh Esrei - Mincha', nameHebrew: 'שמונה עשרה - מנחה' },
-      'shemoneh_esrei_maariv': { name: 'Shemoneh Esrei - Maariv', nameHebrew: 'שמונה עשרה - מעריב' },
-      'krias_shema_al_hamita': { name: 'Bedtime Shema', nameHebrew: 'קריאת שמע על המטה' },
-      'birchas_hamazon': { name: 'Grace After Meals', nameHebrew: 'ברכת המזון' },
-      'hallel': { name: 'Hallel', nameHebrew: 'הלל' },
-    };
-    return sections[sectionId] || { name: sectionId, nameHebrew: sectionId };
-  }
-
-  /**
-   * Get built-in section when Sefaria unavailable
-   */
-  private static getBuiltInSection(sectionId: string, nusach: Nusach): SiddurSection {
-    const sectionInfo = this.getSectionInfo(sectionId);
-    
-    // Return placeholder with our built-in content
-    return {
-      id: sectionId,
-      name: sectionInfo.name,
-      nameHebrew: sectionInfo.nameHebrew,
-      content: [{
-        hebrew: this.getBuiltInHebrew(sectionId),
-        english: this.getBuiltInEnglish(sectionId),
-      }],
-      instructions: sectionInfo.instructions,
-    };
-  }
-
-  /**
-   * Get built-in Hebrew text for key prayers
-   */
-  private static getBuiltInHebrew(sectionId: string): string {
-    const texts: { [key: string]: string } = {
-      'modeh_ani': 'מוֹדֶה אֲנִי לְפָנֶיךָ מֶלֶךְ חַי וְקַיָּם, שֶׁהֶחֱזַרְתָּ בִּי נִשְׁמָתִי בְּחֶמְלָה. רַבָּה אֱמוּנָתֶךָ.',
-      'shema': 'שְׁמַע יִשְׂרָאֵל יְיָ אֱלֹהֵינוּ יְיָ אֶחָד.',
-      'ashrei': 'אַשְׁרֵי יוֹשְׁבֵי בֵיתֶךָ, עוֹד יְהַלְלוּךָ סֶּלָה.',
-    };
-    return texts[sectionId] || `[${sectionId}]`;
-  }
-
-  /**
-   * Get built-in English text for key prayers
-   */
-  private static getBuiltInEnglish(sectionId: string): string {
-    const texts: { [key: string]: string } = {
-      'modeh_ani': 'I give thanks before You, living and eternal King, that You have returned my soul within me with compassion. Great is Your faithfulness.',
-      'shema': 'Hear, O Israel, the Lord is our God, the Lord is One.',
-      'ashrei': 'Fortunate are those who dwell in Your house; they will continue to praise You, Selah.',
-    };
-    return texts[sectionId] || '';
-  }
-
-  /**
-   * Clean HTML and format text
-   */
-  private static cleanText(text: string): string {
-    if (!text) return '';
-    return text
-      .replace(/<[^>]*>/g, '')
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .trim();
-  }
-
-  /**
-   * Get the appropriate text for Gevuros (2nd bracha)
-   */
-  static getGevurosInsertion(context: SiddurContext): PrayerText {
     if (context.daveningChanges.mashivHaruach) {
-      return AMIDAH_INSERTIONS.mashivHaruach;
+      return this.insertionsCache?.mashivHaruach || {
+        hebrew: 'מַשִּׁיב הָרוּחַ וּמוֹרִיד הַגֶּשֶׁם',
+        english: 'Who causes the wind to blow and the rain to fall',
+      };
     }
-    if (context.nusach !== 'ashkenaz' && context.daveningChanges.moridHatal) {
-      return AMIDAH_INSERTIONS.moridHatal;
+    
+    if (context.nusach === 'sfard' && context.daveningChanges.moridHatal) {
+      return this.insertionsCache?.moridHatal || {
+        hebrew: 'מוֹרִיד הַטַּל',
+        english: 'Who causes the dew to fall',
+      };
     }
+    
     return { hebrew: '', english: '' };
   }
 
   /**
-   * Get the appropriate text for Birkas Hashanim (9th bracha)
+   * Get the appropriate Birkas Hashanim text (9th bracha)
    */
-  static getBirkasHashanimText(context: SiddurContext): PrayerText {
-    if (context.daveningChanges.vtenTalUmatar) {
-      return AMIDAH_INSERTIONS.vtenTalUmatar;
-    }
-    return AMIDAH_INSERTIONS.vtenBracha;
-  }
-
-  /**
-   * Get Ya'aleh V'Yavo with the appropriate day inserted
-   */
-  static getYaalehVeyavo(dayType: keyof typeof YAALEH_VEYAVO_DAYS): PrayerText {
-    const dayText = YAALEH_VEYAVO_DAYS[dayType];
-    const base = AMIDAH_INSERTIONS.yaalehVeyavo;
+  static async getBirkasHashanimText(context: SiddurContext): Promise<PrayerTextData> {
+    await this.initialize();
     
-    return {
-      ...base,
-      hebrew: base.hebrew.replace(/\[.*?\]/, dayText),
+    if (context.daveningChanges.vtenTalUmatar) {
+      return this.insertionsCache?.vtenTalUmatar || {
+        hebrew: 'וְתֵן טַל וּמָטָר לִבְרָכָה',
+        english: 'And bestow dew and rain for blessing',
+      };
+    }
+    
+    return this.insertionsCache?.vtenBracha || {
+      hebrew: 'וְתֵן בְּרָכָה',
+      english: 'And bestow blessing',
     };
   }
 
   /**
-   * Get Al Hanissim for the appropriate holiday
+   * Get Ya'aleh V'Yavo with day type
    */
-  static getAlHanissim(holiday: 'chanukah' | 'purim'): PrayerText {
-    if (holiday === 'chanukah') {
-      return AMIDAH_INSERTIONS.alHanissimChanukah;
-    }
-    return AMIDAH_INSERTIONS.alHanissimPurim;
+  static async getYaalehVeyavo(
+    dayType: 'rosh_chodesh' | 'pesach' | 'sukkos' | 'shavuos' | 'rosh_hashana' | 'yom_kippur'
+  ): Promise<PrayerTextData> {
+    await this.initialize();
+    
+    const dayNames: { [key: string]: { hebrew: string; english: string } } = {
+      rosh_chodesh: { hebrew: 'רֹאשׁ הַחֹדֶשׁ', english: 'Rosh Chodesh' },
+      pesach: { hebrew: 'חַג הַמַּצּוֹת', english: 'Passover' },
+      sukkos: { hebrew: 'חַג הַסֻּכּוֹת', english: 'Sukkot' },
+      shavuos: { hebrew: 'חַג הַשָּׁבֻעוֹת', english: 'Shavuot' },
+      rosh_hashana: { hebrew: 'יוֹם הַזִּכָּרוֹן', english: 'the Day of Remembrance' },
+      yom_kippur: { hebrew: 'יוֹם הַכִּפֻּרִים', english: 'the Day of Atonement' },
+    };
+
+    const base = this.insertionsCache?.yaalehVeyavo || {
+      hebrew: 'יַעֲלֶה וְיָבֹא...',
+      english: 'May there arise and come...',
+    };
+
+    const day = dayNames[dayType] || dayNames.rosh_chodesh;
+    
+    return {
+      hebrew: base.hebrew.replace('[DAY]', day.hebrew).replace(/\[.*?\]/, day.hebrew),
+      english: base.english.replace('[DAY]', day.english).replace(/\[.*?\]/, day.english),
+    };
   }
 
   /**
-   * Get complete Amidah structure with all insertions for current context
+   * Get Al Hanissim for Chanukah or Purim
    */
-  static getAmidah(context: SiddurContext): AmidahBracha[] {
-    return [...SHEMONEH_ESREI_BRACHOS];
+  static async getAlHanissim(holiday: 'chanukah' | 'purim'): Promise<PrayerTextData> {
+    await this.initialize();
+    
+    if (holiday === 'chanukah') {
+      return this.insertionsCache?.alHanissimChanukah || {
+        hebrew: 'עַל הַנִּסִּים... בִּימֵי מַתִּתְיָהוּ...',
+        english: 'For the miracles... In the days of Matityahu...',
+      };
+    }
+    
+    return this.insertionsCache?.alHanissimPurim || {
+      hebrew: 'עַל הַנִּסִּים... בִּימֵי מָרְדְּכַי וְאֶסְתֵּר...',
+      english: 'For the miracles... In the days of Mordechai and Esther...',
+    };
+  }
+
+  /**
+   * Get Aneinu for fast days
+   */
+  static async getAneinu(): Promise<PrayerTextData> {
+    await this.initialize();
+    
+    return this.insertionsCache?.aneinu || {
+      hebrew: 'עֲנֵנוּ יְיָ עֲנֵנוּ בְּיוֹם צוֹם תַּעֲנִיתֵנוּ...',
+      english: 'Answer us, Lord, answer us on this day of our fast...',
+    };
   }
 
   /**
@@ -283,40 +234,40 @@ export class SiddurService {
     const changes = context.daveningChanges;
 
     if (changes.mashivHaruach) {
-      instructions.push('Say "Mashiv haruach u\'morid hageshem" in the 2nd bracha');
-    } else if (changes.moridHatal && context.nusach !== 'ashkenaz') {
-      instructions.push('Say "Morid hatal" in the 2nd bracha');
+      instructions.push('Say "משיב הרוח ומוריד הגשם" in Gevuros (2nd bracha)');
+    } else if (changes.moridHatal && context.nusach === 'sfard') {
+      instructions.push('Say "מוריד הטל" in Gevuros (2nd bracha)');
     }
 
     if (changes.vtenTalUmatar) {
-      instructions.push('Say "V\'ten tal u\'matar livracha" in the 9th bracha');
+      instructions.push('Say "ותן טל ומטר לברכה" in Birkas Hashanim (9th bracha)');
     }
 
     if (changes.yaalehVeyavo) {
-      instructions.push(`Say Ya'aleh V'Yavo in the 17th bracha (${changes.reason || 'Rosh Chodesh/Yom Tov'})`);
+      instructions.push(`Say יעלה ויבא in R'tzei (17th bracha)`);
     }
 
     if (changes.alHanissim) {
       const holiday = changes.alHanissim === 'chanukah' ? 'Chanukah' : 'Purim';
-      instructions.push(`Say Al Hanissim for ${holiday} in the 18th bracha`);
+      instructions.push(`Say על הניסים for ${holiday} in Modim (18th bracha)`);
     }
 
     if (changes.aneinu) {
-      instructions.push('Say Aneinu (fast day insertion)');
+      instructions.push('Say עננו (fast day) - in Shomea Tefillah');
     }
 
     if (changes.hallel === 'full') {
-      instructions.push('Say full Hallel with a bracha');
+      instructions.push('Say full Hallel with brachos');
     } else if (changes.hallel === 'half') {
-      instructions.push('Say half Hallel (without bracha on Rosh Chodesh)');
+      instructions.push('Say half Hallel (skip certain paragraphs)');
     }
 
     if (!changes.tachanun) {
-      instructions.push('No Tachanun today');
+      instructions.push('Skip Tachanun');
     }
 
     if (changes.musaf) {
-      instructions.push(`Say Musaf (${changes.musaf})`);
+      instructions.push(`Say Musaf - ${changes.musaf}`);
     }
 
     return instructions;
@@ -329,15 +280,18 @@ export class SiddurService {
     title: string;
     highlights: string[];
     specialPrayers: string[];
+    insertions: string[];
   } {
     const changes = context.daveningChanges;
     const highlights: string[] = [];
     const specialPrayers: string[] = [];
+    const insertions: string[] = [];
 
     if (changes.reason) {
       highlights.push(changes.reason);
     }
 
+    // Special prayers
     if (changes.hallel === 'full') {
       specialPrayers.push('Full Hallel');
     } else if (changes.hallel === 'half') {
@@ -348,14 +302,24 @@ export class SiddurService {
       specialPrayers.push('Musaf');
     }
 
-    if (changes.alHanissim) {
-      specialPrayers.push('Al Hanissim');
+    // Insertions
+    if (changes.mashivHaruach) {
+      insertions.push('Mashiv Haruach');
     }
-
+    if (changes.vtenTalUmatar) {
+      insertions.push("V'ten Tal U'matar");
+    }
     if (changes.yaalehVeyavo) {
-      specialPrayers.push('Ya\'aleh V\'Yavo');
+      insertions.push("Ya'aleh V'Yavo");
+    }
+    if (changes.alHanissim) {
+      insertions.push('Al Hanissim');
+    }
+    if (changes.aneinu) {
+      insertions.push('Aneinu');
     }
 
+    // What's different
     if (!changes.tachanun) {
       highlights.push('No Tachanun');
     }
@@ -364,39 +328,12 @@ export class SiddurService {
       title: changes.reason || 'Regular Day',
       highlights,
       specialPrayers,
+      insertions,
     };
   }
 
   /**
-   * Get all available services for a day
-   */
-  static getAvailableServices(context: SiddurContext): ServiceType[] {
-    const services: ServiceType[] = ['shacharis', 'mincha', 'maariv'];
-    
-    if (context.daveningChanges.musaf) {
-      services.splice(1, 0, 'musaf');
-    }
-    
-    return services;
-  }
-
-  /**
-   * Save cache
-   */
-  private static async saveCache(): Promise<void> {
-    try {
-      const cacheObj: { [key: string]: SefariaText } = {};
-      for (const [key, value] of this.cache.entries()) {
-        cacheObj[key] = value;
-      }
-      await AsyncStorage.setItem(SIDDUR_CACHE_KEY, JSON.stringify(cacheObj));
-    } catch (e) {
-      console.warn('Error saving siddur cache:', e);
-    }
-  }
-
-  /**
-   * Get Sefaria attribution
+   * Get attribution
    */
   static getAttribution(): { text: string; url: string } {
     return SefariaService.getAttribution();

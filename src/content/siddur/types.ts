@@ -1,22 +1,20 @@
 /**
- * Siddur Content Types
- * Type definitions for prayer content
+ * Siddur Types
+ * Type definitions for prayer content structure
  */
-
-import { Nusach } from '../../types/nusach';
 
 export interface PrayerText {
   hebrew: string;
-  transliteration?: string;
   english?: string;
-  instructions?: string;
+  transliteration?: string;
 }
 
 export interface PrayerSection {
   id: string;
   name: string;
   nameHebrew: string;
-  prayers: Prayer[];
+  content: PrayerText[];
+  instructions?: string;
 }
 
 export interface Prayer {
@@ -24,120 +22,82 @@ export interface Prayer {
   name: string;
   nameHebrew: string;
   category: PrayerCategory;
-  text: PrayerText;
-  
-  // Variants for different nusachot
-  variants?: {
-    [key in Nusach]?: Partial<PrayerText>;
-  };
-  
-  // Conditional content
+  sections: PrayerSection[];
   conditions?: PrayerConditions;
-  
-  // Dynamic sections that change based on time/season
-  dynamicSections?: DynamicSection[];
-  
-  // Related prayers/additions
-  additions?: PrayerAddition[];
 }
 
 export interface PrayerConditions {
-  // When to say this prayer
   shabbos?: boolean;
   yomTov?: boolean;
   weekday?: boolean;
-  fastDay?: boolean;
   roshChodesh?: boolean;
-  cholHamoed?: boolean;
+  fastDay?: boolean;
   chanukah?: boolean;
   purim?: boolean;
-  
-  // Time of day
-  shacharis?: boolean;
-  mincha?: boolean;
-  maariv?: boolean;
-  
-  // Season
-  summer?: boolean;
-  winter?: boolean;
-  
-  // Special conditions
-  afterChatzos?: boolean;
-  beforeSunset?: boolean;
-}
-
-export interface DynamicSection {
-  id: string;
-  name: string;
-  
-  // Which version to use based on conditions
-  versions: {
-    condition: string;  // e.g., 'winter', 'summer', 'roshChodesh'
-    text: PrayerText;
-  }[];
-  
-  // Position in the prayer where this goes
-  insertAfter?: string;
-  insertBefore?: string;
-  replaces?: string;
-}
-
-export interface PrayerAddition {
-  id: string;
-  name: string;
-  nameHebrew: string;
-  text: PrayerText;
-  condition: string;  // When to add this
-  position: 'before' | 'after' | 'replace';
-  targetPrayerId?: string;
+  omer?: boolean;
+  elul?: boolean;
+  asereYemeiTeshuva?: boolean;
 }
 
 export type PrayerCategory = 
-  | 'birchos_hashachar'    // Morning blessings
-  | 'pesukei_dezimra'      // Verses of praise
-  | 'shema_uvirchoseha'    // Shema and its blessings
-  | 'shemoneh_esrei'       // Amidah
-  | 'tachanun'             // Supplications
-  | 'krias_hatorah'        // Torah reading
-  | 'hallel'               // Hallel
-  | 'musaf'                // Additional service
-  | 'concluding'           // Concluding prayers
-  | 'mincha'               // Afternoon service
-  | 'maariv'               // Evening service
-  | 'shabbos'              // Shabbos-specific
-  | 'yomtov'               // Holiday-specific
-  | 'birchas_hamazon'      // Grace after meals
-  | 'bedtime_shema'        // Bedtime Shema
-  | 'other';
+  | 'morning'
+  | 'afternoon'
+  | 'evening'
+  | 'shabbos'
+  | 'yomTov'
+  | 'special'
+  | 'blessings';
 
-export type ServiceType = 'shacharis' | 'mincha' | 'maariv' | 'musaf';
+export type ServiceType = 
+  | 'shacharis'
+  | 'mincha'
+  | 'maariv'
+  | 'musaf';
 
 export interface DaveningService {
   type: ServiceType;
+  sections: string[];
+  specialAdditions?: string[];
+}
+
+export interface SeasonalVariation {
+  id: string;
+  name: string;
+  startCondition: string;
+  endCondition: string;
+  affectedPrayers: string[];
+  insertionPoint: string;
+  text: PrayerText;
+}
+
+// Amidah-specific types
+export interface AmidahBracha {
+  number: number;
   name: string;
   nameHebrew: string;
-  sections: PrayerSection[];
+  theme: string;
+  hasInsertion?: boolean;
+  insertionType?: 'gevuros' | 'birkas_hashanim' | 'yaaleh_veyavo' | 'al_hanissim' | 'aneinu';
 }
 
-// Season-dependent text variations
-export interface SeasonalVariation {
-  winter: string;
-  summer: string;
-}
-
-export interface AmidahInsertions {
-  // Second bracha (Gevuros)
-  mashivHaruach: PrayerText;      // Winter: מַשִּׁיב הָרוּחַ וּמוֹרִיד הַגֶּשֶׁם
-  moridHatal: PrayerText;          // Summer: מוֹרִיד הַטָּל (Sefard/Edot Mizrach)
-  
-  // Ninth bracha (Birkas Hashanim)
-  vtenBracha: PrayerText;          // Summer: וְתֵן בְּרָכָה
-  vtenTalUmatar: PrayerText;       // Winter: וְתֵן טַל וּמָטָר לִבְרָכָה
-  
-  // Additions
-  yaalehVeyavo: PrayerText;        // Rosh Chodesh, Yom Tov, Chol Hamoed
-  alHanissimChanukah: PrayerText;  // Chanukah
-  alHanissimPurim: PrayerText;     // Purim
-  aneinu: PrayerText;              // Fast days
-  nachem: PrayerText;              // Tisha B'Av
-}
+export const AMIDAH_BRACHOS: AmidahBracha[] = [
+  { number: 1, name: 'Avos', nameHebrew: 'אבות', theme: 'Patriarchs' },
+  { number: 2, name: 'Gevuros', nameHebrew: 'גבורות', theme: 'Divine Might', hasInsertion: true, insertionType: 'gevuros' },
+  { number: 3, name: 'Kedushas Hashem', nameHebrew: 'קדושת השם', theme: 'Holiness of God' },
+  { number: 4, name: 'Binah', nameHebrew: 'בינה', theme: 'Knowledge' },
+  { number: 5, name: 'Teshuvah', nameHebrew: 'תשובה', theme: 'Repentance' },
+  { number: 6, name: 'Selichah', nameHebrew: 'סליחה', theme: 'Forgiveness' },
+  { number: 7, name: 'Geulah', nameHebrew: 'גאולה', theme: 'Redemption' },
+  { number: 8, name: 'Refuah', nameHebrew: 'רפואה', theme: 'Healing' },
+  { number: 9, name: 'Birkas Hashanim', nameHebrew: 'ברכת השנים', theme: 'Prosperity', hasInsertion: true, insertionType: 'birkas_hashanim' },
+  { number: 10, name: 'Kibbutz Galuyos', nameHebrew: 'קיבוץ גלויות', theme: 'Ingathering of Exiles' },
+  { number: 11, name: 'Din', nameHebrew: 'דין', theme: 'Justice' },
+  { number: 12, name: 'Birkas HaMinim', nameHebrew: 'ברכת המינים', theme: 'Against Heresy' },
+  { number: 13, name: 'Tzaddikim', nameHebrew: 'צדיקים', theme: 'The Righteous' },
+  { number: 14, name: 'Yerushalayim', nameHebrew: 'ירושלים', theme: 'Jerusalem' },
+  { number: 15, name: 'Malchus Beis David', nameHebrew: 'מלכות בית דוד', theme: 'Davidic Kingdom' },
+  { number: 16, name: 'Shomea Tefillah', nameHebrew: 'שומע תפילה', theme: 'Hearing Prayer', hasInsertion: true, insertionType: 'aneinu' },
+  { number: 17, name: 'Avodah', nameHebrew: 'עבודה', theme: 'Temple Service', hasInsertion: true, insertionType: 'yaaleh_veyavo' },
+  { number: 18, name: 'Hodaah', nameHebrew: 'הודאה', theme: 'Thanksgiving', hasInsertion: true, insertionType: 'al_hanissim' },
+  { number: 19, name: 'Birkas Kohanim/Shalom', nameHebrew: 'ברכת כהנים/שלום', theme: 'Peace' },
+];
