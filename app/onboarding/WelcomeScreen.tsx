@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { OnboardingCard } from '../../components/onboarding/OnboardingCard';
 import { GlassButton } from '../../components/ui/GlassButton';
-import { colors, spacing } from '../../src/design/colors';
+import { colors } from '../../src/design/colors';
+import { spacing } from '../../src/design/spacing';
 import { textStyles } from '../../src/design/typography';
 import { FadeIn } from '../../components/animations/FadeIn';
 

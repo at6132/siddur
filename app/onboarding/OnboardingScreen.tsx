@@ -61,8 +61,13 @@ export const OnboardingScreen: React.FC = () => {
     // Initialize notifications
     await NotificationService.initialize();
 
-    // Complete onboarding
-    onComplete();
+    // Navigate to main app (reset navigation stack)
+    navigation.dispatch(
+      CommonActions.reset({
+        index: 0,
+        routes: [{ name: 'Main' }],
+      })
+    );
   };
 
   const renderStep = () => {

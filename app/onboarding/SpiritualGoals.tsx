@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { OnboardingCard } from '../../components/onboarding/OnboardingCard';
 import { GlassButton } from '../../components/ui/GlassButton';
 import { ScalePress } from '../../components/animations/ScalePress';
-import { colors, spacing } from '../../src/design/colors';
+import { colors } from '../../src/design/colors';
+import { spacing } from '../../src/design/spacing';
 import { textStyles } from '../../src/design/typography';
 import {
   SPIRITUAL_GOAL_OPTIONS,

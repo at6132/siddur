@@ -4,7 +4,8 @@ import { useNavigation } from '@react-navigation/native';
 import { GlassPanel } from '../../components/ui/GlassPanel';
 import { ScalePress } from '../../components/animations/ScalePress';
 import { FadeIn } from '../../components/animations/FadeIn';
-import { colors, spacing } from '../../src/design/colors';
+import { colors } from '../../src/design/colors';
+import { spacing } from '../../src/design/spacing';
 import { textStyles } from '../../src/design/typography';
 
 // Hebrew letters for Tehillim numbering

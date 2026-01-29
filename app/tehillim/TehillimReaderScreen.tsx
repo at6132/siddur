@@ -4,7 +4,8 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { GlassPanel } from '../../components/ui/GlassPanel';
 import { FadeIn } from '../../components/animations/FadeIn';
-import { colors, spacing } from '../../src/design/colors';
+import { colors } from '../../src/design/colors';
+import { spacing } from '../../src/design/spacing';
 import { textStyles } from '../../src/design/typography';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
