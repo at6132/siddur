@@ -262,6 +262,144 @@ export const SettingsScreen: React.FC = () => {
                   <>
                     <View style={styles.divider} />
 
+                    {/* Prayer Reminders Section */}
+                    <Text style={styles.subSectionTitle}>Daily Prayer Reminders</Text>
+                    
+                    {/* Shacharis */}
+                    <View style={styles.notifOption}>
+                      <View style={styles.notifOptionMain}>
+                        <View style={styles.prayerLabelRow}>
+                          <Text style={styles.prayerIcon}>🌅</Text>
+                          <View>
+                            <Text style={styles.optionLabel}>Shacharis</Text>
+                            <Text style={styles.optionDescriptionSmall}>Morning prayers</Text>
+                          </View>
+                        </View>
+                        <Switch
+                          value={preferences.notifications.prayerReminders?.shacharis?.enabled || false}
+                          onValueChange={async (value) => {
+                            const updated = {
+                              ...preferences.notifications,
+                              prayerReminders: {
+                                ...preferences.notifications.prayerReminders,
+                                shacharis: {
+                                  ...preferences.notifications.prayerReminders?.shacharis,
+                                  enabled: value,
+                                },
+                              },
+                            };
+                            await UserPreferencesService.setNotificationPreferences(updated);
+                            loadPreferences();
+                          }}
+                          trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
+                          thumbColor={preferences.notifications.prayerReminders?.shacharis?.enabled ? colors.primary.main : colors.neutral[400]}
+                        />
+                      </View>
+                      {preferences.notifications.prayerReminders?.shacharis?.enabled && (
+                        <View style={styles.notifSubOption}>
+                          <View style={styles.notifSubOptionRow}>
+                            <Text style={styles.subOptionLabel}>Daily at</Text>
+                            <View style={styles.timeButton}>
+                              <Text style={styles.timeButtonText}>
+                                {preferences.notifications.prayerReminders?.shacharis?.time || '7:00 AM'}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Mincha */}
+                    <View style={styles.notifOption}>
+                      <View style={styles.notifOptionMain}>
+                        <View style={styles.prayerLabelRow}>
+                          <Text style={styles.prayerIcon}>☀️</Text>
+                          <View>
+                            <Text style={styles.optionLabel}>Mincha</Text>
+                            <Text style={styles.optionDescriptionSmall}>Afternoon prayers</Text>
+                          </View>
+                        </View>
+                        <Switch
+                          value={preferences.notifications.prayerReminders?.mincha?.enabled || false}
+                          onValueChange={async (value) => {
+                            const updated = {
+                              ...preferences.notifications,
+                              prayerReminders: {
+                                ...preferences.notifications.prayerReminders,
+                                mincha: {
+                                  ...preferences.notifications.prayerReminders?.mincha,
+                                  enabled: value,
+                                },
+                              },
+                            };
+                            await UserPreferencesService.setNotificationPreferences(updated);
+                            loadPreferences();
+                          }}
+                          trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
+                          thumbColor={preferences.notifications.prayerReminders?.mincha?.enabled ? colors.primary.main : colors.neutral[400]}
+                        />
+                      </View>
+                      {preferences.notifications.prayerReminders?.mincha?.enabled && (
+                        <View style={styles.notifSubOption}>
+                          <View style={styles.notifSubOptionRow}>
+                            <Text style={styles.subOptionLabel}>Daily at</Text>
+                            <View style={styles.timeButton}>
+                              <Text style={styles.timeButtonText}>
+                                {preferences.notifications.prayerReminders?.mincha?.time || '1:00 PM'}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Maariv */}
+                    <View style={styles.notifOption}>
+                      <View style={styles.notifOptionMain}>
+                        <View style={styles.prayerLabelRow}>
+                          <Text style={styles.prayerIcon}>🌙</Text>
+                          <View>
+                            <Text style={styles.optionLabel}>Maariv</Text>
+                            <Text style={styles.optionDescriptionSmall}>Evening prayers</Text>
+                          </View>
+                        </View>
+                        <Switch
+                          value={preferences.notifications.prayerReminders?.maariv?.enabled || false}
+                          onValueChange={async (value) => {
+                            const updated = {
+                              ...preferences.notifications,
+                              prayerReminders: {
+                                ...preferences.notifications.prayerReminders,
+                                maariv: {
+                                  ...preferences.notifications.prayerReminders?.maariv,
+                                  enabled: value,
+                                },
+                              },
+                            };
+                            await UserPreferencesService.setNotificationPreferences(updated);
+                            loadPreferences();
+                          }}
+                          trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
+                          thumbColor={preferences.notifications.prayerReminders?.maariv?.enabled ? colors.primary.main : colors.neutral[400]}
+                        />
+                      </View>
+                      {preferences.notifications.prayerReminders?.maariv?.enabled && (
+                        <View style={styles.notifSubOption}>
+                          <View style={styles.notifSubOptionRow}>
+                            <Text style={styles.subOptionLabel}>Daily at</Text>
+                            <View style={styles.timeButton}>
+                              <Text style={styles.timeButtonText}>
+                                {preferences.notifications.prayerReminders?.maariv?.time || '8:00 PM'}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.divider} />
+                    <Text style={styles.subSectionTitle}>Other Reminders</Text>
+
                     {/* Daily Tehillim */}
                     <View style={styles.notifOption}>
                       <View style={styles.notifOptionMain}>
@@ -809,10 +947,35 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     marginBottom: spacing.md,
   },
+  optionDescriptionSmall: {
+    fontFamily: fonts.body.regular,
+    fontSize: 11,
+    color: colors.text.tertiary,
+    marginTop: 1,
+  },
   subOptionLabel: {
     fontFamily: fonts.body.regular,
     fontSize: 13,
     color: colors.text.secondary,
+  },
+  
+  // Prayer Reminder Styles
+  prayerLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  prayerIcon: {
+    fontSize: 22,
+  },
+  subSectionTitle: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 13,
+    color: colors.text.tertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.md,
+    marginTop: spacing.sm,
   },
 
   // Notification Options

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,14 +6,28 @@ import {
   ScrollView,
   TouchableOpacity,
   Platform,
+  Alert,
+  Switch,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { FadeIn } from '../../components/animations/FadeIn';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
+import { UserPreferencesService } from '../../src/storage/UserPreferences';
+
+interface PrayerItem {
+  id: string;
+  title: string;
+  hebrewTitle: string;
+  subtitle: string;
+  icon: string;
+  service: 'shacharis' | 'mincha' | 'maariv';
+  color: string;
+  defaultTime: string;
+}
 
 interface LibraryItem {
   id: string;
@@ -24,6 +38,39 @@ interface LibraryItem {
   color: string;
 }
 
+const PRAYER_ITEMS: PrayerItem[] = [
+  {
+    id: 'shacharis',
+    title: 'Shacharis',
+    hebrewTitle: 'שחרית',
+    subtitle: 'Morning prayers',
+    icon: '🌅',
+    service: 'shacharis',
+    color: 'rgba(255, 200, 120, 0.3)',
+    defaultTime: '7:00 AM',
+  },
+  {
+    id: 'mincha',
+    title: 'Mincha',
+    hebrewTitle: 'מנחה',
+    subtitle: 'Afternoon prayers',
+    icon: '☀️',
+    service: 'mincha',
+    color: 'rgba(255, 180, 100, 0.3)',
+    defaultTime: '1:00 PM',
+  },
+  {
+    id: 'maariv',
+    title: 'Maariv',
+    hebrewTitle: 'מעריב',
+    subtitle: 'Evening prayers',
+    icon: '🌙',
+    service: 'maariv',
+    color: 'rgba(100, 120, 180, 0.3)',
+    defaultTime: '8:00 PM',
+  },
+];
+
 const LIBRARY_ITEMS: LibraryItem[] = [
   {
     id: 'tehillim',
@@ -32,14 +79,6 @@ const LIBRARY_ITEMS: LibraryItem[] = [
     icon: '📖',
     screen: 'TehillimList',
     color: 'rgba(212, 165, 184, 0.3)',
-  },
-  {
-    id: 'siddur',
-    title: 'Siddur',
-    subtitle: 'Daily prayers • Ashkenaz / Sfard',
-    icon: '🕯️',
-    screen: 'Siddur',
-    color: 'rgba(165, 196, 212, 0.3)',
   },
   {
     id: 'brachos',
@@ -69,7 +108,7 @@ const LIBRARY_ITEMS: LibraryItem[] = [
     id: 'bedtime',
     title: 'Bedtime Shema',
     subtitle: 'Kriyas Shema Al Hamita',
-    icon: '🌙',
+    icon: '😴',
     screen: 'BedtimeShema',
     color: 'rgba(165, 165, 212, 0.3)',
   },
@@ -113,16 +152,83 @@ const GlassCard: React.FC<{
   return content;
 };
 
+// Prayer Reminder State
+interface PrayerReminders {
+  shacharis: { enabled: boolean; time: string };
+  mincha: { enabled: boolean; time: string };
+  maariv: { enabled: boolean; time: string };
+}
+
 export const LibraryScreen: React.FC = () => {
   const navigation = useNavigation();
+  const [prayerReminders, setPrayerReminders] = useState<PrayerReminders>({
+    shacharis: { enabled: false, time: '7:00 AM' },
+    mincha: { enabled: false, time: '1:00 PM' },
+    maariv: { enabled: false, time: '8:00 PM' },
+  });
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadReminders();
+    }, [])
+  );
+
+  const loadReminders = async () => {
+    const prefs = await UserPreferencesService.getPreferences();
+    if (prefs?.notifications?.prayerReminders) {
+      setPrayerReminders(prefs.notifications.prayerReminders);
+    }
+  };
+
+  const toggleReminder = async (prayerId: 'shacharis' | 'mincha' | 'maariv') => {
+    const newReminders = {
+      ...prayerReminders,
+      [prayerId]: {
+        ...prayerReminders[prayerId],
+        enabled: !prayerReminders[prayerId].enabled,
+      },
+    };
+    setPrayerReminders(newReminders);
+    
+    // Save to preferences
+    const prefs = await UserPreferencesService.getPreferences();
+    if (prefs) {
+      await UserPreferencesService.savePreferences({
+        ...prefs,
+        notifications: {
+          ...prefs.notifications,
+          prayerReminders: newReminders,
+        },
+      });
+    }
+
+    const prayer = PRAYER_ITEMS.find(p => p.id === prayerId);
+    if (!prayerReminders[prayerId].enabled) {
+      Alert.alert(
+        'Reminder Set',
+        `You'll be reminded to daven ${prayer?.title} daily at ${prayerReminders[prayerId].time}. You can change the time in Settings.`,
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const handlePrayerPress = (item: PrayerItem) => {
+    navigation.navigate('SiddurReader' as never, { service: item.service } as never);
+  };
 
   const handleItemPress = (item: LibraryItem) => {
     if (item.id === 'tehillim') {
       navigation.navigate('TehillimList' as never);
+    } else if (item.id === 'brachos') {
+      navigation.navigate('SiddurReader' as never, { service: 'brachos' } as never);
+    } else if (item.id === 'shabbos') {
+      navigation.navigate('SiddurReader' as never, { service: 'shabbos' } as never);
+    } else if (item.id === 'bentching') {
+      navigation.navigate('SiddurReader' as never, { service: 'bentching' } as never);
+    } else if (item.id === 'bedtime') {
+      navigation.navigate('SiddurReader' as never, { service: 'bedtime' } as never);
     } else {
-      // For now, show coming soon for other items
-      // These screens can be implemented later
-      navigation.navigate('TehillimList' as never);
+      navigation.navigate('SiddurReader' as never, { service: item.id } as never);
     }
   };
 
@@ -144,10 +250,63 @@ export const LibraryScreen: React.FC = () => {
           <Text style={styles.subtitle}>Your spiritual texts</Text>
         </FadeIn>
 
-        {/* Main Items Grid */}
+        {/* Daily Prayers Section */}
+        <FadeIn delay={50}>
+          <Text style={styles.sectionTitle}>Daily Tefillos</Text>
+        </FadeIn>
+
+        <View style={styles.prayerCards}>
+          {PRAYER_ITEMS.map((item, index) => (
+            <FadeIn key={item.id} delay={100 + index * 50}>
+              <GlassCard style={styles.prayerCard} bgColor={item.color}>
+                <TouchableOpacity
+                  style={styles.prayerCardContent}
+                  onPress={() => handlePrayerPress(item)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.prayerCardLeft}>
+                    <Text style={styles.prayerIcon}>{item.icon}</Text>
+                    <View style={styles.prayerInfo}>
+                      <View style={styles.prayerTitleRow}>
+                        <Text style={styles.prayerTitle}>{item.title}</Text>
+                        <Text style={styles.prayerHebrew}>{item.hebrewTitle}</Text>
+                      </View>
+                      <Text style={styles.prayerSubtitle}>{item.subtitle}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.prayerArrow}>→</Text>
+                </TouchableOpacity>
+                
+                {/* Reminder Toggle */}
+                <View style={styles.reminderRow}>
+                  <View style={styles.reminderLeft}>
+                    <Text style={styles.reminderIcon}>🔔</Text>
+                    <Text style={styles.reminderText}>
+                      {prayerReminders[item.id as keyof PrayerReminders].enabled 
+                        ? `Daily at ${prayerReminders[item.id as keyof PrayerReminders].time}`
+                        : 'Set daily reminder'}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={prayerReminders[item.id as keyof PrayerReminders].enabled}
+                    onValueChange={() => toggleReminder(item.id as 'shacharis' | 'mincha' | 'maariv')}
+                    trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
+                    thumbColor={prayerReminders[item.id as keyof PrayerReminders].enabled ? colors.primary.main : '#f4f3f4'}
+                  />
+                </View>
+              </GlassCard>
+            </FadeIn>
+          ))}
+        </View>
+
+        {/* Other Texts Section */}
+        <FadeIn delay={300}>
+          <Text style={styles.sectionTitle}>More Texts</Text>
+        </FadeIn>
+
         <View style={styles.grid}>
           {LIBRARY_ITEMS.map((item, index) => (
-            <FadeIn key={item.id} delay={50 + index * 30}>
+            <FadeIn key={item.id} delay={350 + index * 30}>
               <GlassCard
                 style={styles.itemCard}
                 onPress={() => handleItemPress(item)}
@@ -156,18 +315,13 @@ export const LibraryScreen: React.FC = () => {
                 <Text style={styles.itemIcon}>{item.icon}</Text>
                 <Text style={styles.itemTitle}>{item.title}</Text>
                 <Text style={styles.itemSubtitle}>{item.subtitle}</Text>
-                {item.id !== 'tehillim' && (
-                  <View style={styles.comingSoonBadge}>
-                    <Text style={styles.comingSoonText}>Coming Soon</Text>
-                  </View>
-                )}
               </GlassCard>
             </FadeIn>
           ))}
         </View>
 
         {/* Quick Access Section */}
-        <FadeIn delay={250}>
+        <FadeIn delay={500}>
           <Text style={styles.sectionTitle}>Quick Access</Text>
           <View style={styles.quickAccessRow}>
             <TouchableOpacity
@@ -191,6 +345,15 @@ export const LibraryScreen: React.FC = () => {
               <Text style={styles.quickAccessIcon}>⛰️</Text>
               <Text style={styles.quickAccessText}>Tehillim 121</Text>
             </TouchableOpacity>
+          </View>
+        </FadeIn>
+
+        {/* Attribution */}
+        <FadeIn delay={550}>
+          <View style={styles.attribution}>
+            <Text style={styles.attributionText}>
+              Texts provided by Sefaria • sefaria.org
+            </Text>
           </View>
         </FadeIn>
 
@@ -221,15 +384,22 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body.regular,
     fontSize: 16,
     color: colors.text.secondary,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.lg,
   },
 
-  // Grid
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  // Section
+  sectionTitle: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 18,
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+    marginTop: spacing.md,
+  },
+
+  // Prayer Cards
+  prayerCards: {
     gap: spacing.md,
-    marginBottom: spacing.xl,
+    marginBottom: spacing.md,
   },
 
   // Glass Card
@@ -243,53 +413,108 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   glassInner: {
-    padding: spacing.lg,
+    padding: spacing.md,
     backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+
+  // Prayer Card
+  prayerCard: {},
+  prayerCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  prayerCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  prayerIcon: {
+    fontSize: 36,
+    marginRight: spacing.md,
+  },
+  prayerInfo: {
+    flex: 1,
+  },
+  prayerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  prayerTitle: {
+    fontFamily: fonts.heading.bold,
+    fontSize: 20,
+    color: colors.text.primary,
+  },
+  prayerHebrew: {
+    fontFamily: fonts.body.regular,
+    fontSize: 16,
+    color: colors.text.secondary,
+  },
+  prayerSubtitle: {
+    fontFamily: fonts.body.regular,
+    fontSize: 13,
+    color: colors.text.tertiary,
+    marginTop: 2,
+  },
+  prayerArrow: {
+    fontFamily: fonts.body.bold,
+    fontSize: 20,
+    color: colors.text.tertiary,
+  },
+
+  // Reminder Row
+  reminderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  reminderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  reminderIcon: {
+    fontSize: 14,
+  },
+  reminderText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: colors.text.secondary,
+  },
+
+  // Grid
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
 
   // Item Card
   itemCard: {
     width: '47%',
-    minHeight: 140,
+    minHeight: 120,
   },
   itemIcon: {
-    fontSize: 32,
+    fontSize: 28,
     marginBottom: spacing.sm,
   },
   itemTitle: {
     fontFamily: fonts.heading.semiBold,
-    fontSize: 18,
+    fontSize: 16,
     color: colors.text.primary,
     marginBottom: 4,
   },
   itemSubtitle: {
     fontFamily: fonts.body.regular,
-    fontSize: 12,
+    fontSize: 11,
     color: colors.text.secondary,
-    lineHeight: 16,
-  },
-  comingSoonBadge: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    paddingHorizontal: spacing.xs,
-    paddingVertical: 2,
-    borderRadius: borderRadius.sm,
-  },
-  comingSoonText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 9,
-    color: colors.text.tertiary,
-    textTransform: 'uppercase',
-  },
-
-  // Section
-  sectionTitle: {
-    fontFamily: fonts.heading.semiBold,
-    fontSize: 18,
-    color: colors.text.primary,
-    marginBottom: spacing.md,
+    lineHeight: 14,
   },
 
   // Quick Access
@@ -315,5 +540,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.text.secondary,
     textAlign: 'center',
+  },
+
+  // Attribution
+  attribution: {
+    marginTop: spacing.xl,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+  },
+  attributionText: {
+    fontFamily: fonts.body.regular,
+    fontSize: 11,
+    color: colors.text.tertiary,
   },
 });

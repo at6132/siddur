@@ -9,11 +9,25 @@ export type SpiritualGoal =
   | 'gratitude'
   | 'other';
 
+export interface PrayerReminder {
+  enabled: boolean;
+  time: string; // HH:MM AM/PM format
+}
+
+export interface PrayerReminders {
+  shacharis: PrayerReminder;
+  mincha: PrayerReminder;
+  maariv: PrayerReminder;
+}
+
 export interface NotificationPreferences {
   // Master switch
   enabled: boolean;
   
-  // Prayer reminders
+  // Daily Prayer Reminders
+  prayerReminders: PrayerReminders;
+  
+  // Tehillim
   dailyTehillim: boolean;
   dailyTehillimTime: string; // HH:MM format
   minchaTime: boolean;
@@ -66,8 +80,15 @@ export interface UserPreferences {
   hasCompletedOnboarding: boolean;
 }
 
+export const DEFAULT_PRAYER_REMINDERS: PrayerReminders = {
+  shacharis: { enabled: false, time: '7:00 AM' },
+  mincha: { enabled: false, time: '1:00 PM' },
+  maariv: { enabled: false, time: '8:00 PM' },
+};
+
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   enabled: true,
+  prayerReminders: DEFAULT_PRAYER_REMINDERS,
   dailyTehillim: true,
   dailyTehillimTime: '09:00',
   minchaTime: true,
