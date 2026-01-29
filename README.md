@@ -28,10 +28,12 @@ A notifications-first, widget-driven spiritual companion for Jewish women, built
 
 ```bash
 npm install
-npm start          # Starts Expo dev server (shows QR code for Expo Go)
-npm run android    # Start Android emulator (if Android Studio installed)
-npm run ios        # Start iOS simulator (Mac only, requires Xcode)
-npm run web        # Open in web browser
+npm start              # Starts Expo dev server (shows QR code for Expo Go)
+npm run start:tunnel   # Use tunnel mode if connection fails (Windows fix)
+npm run start:lan      # Force LAN mode
+npm run android        # Start Android emulator (if Android Studio installed)
+npm run ios            # Start iOS simulator (Mac only, requires Xcode)
+npm run web            # Open in web browser
 ```
 
 ### Running on iOS (Windows/Linux)
@@ -49,6 +51,10 @@ npm run web        # Open in web browser
 - ✅ No build process needed
 
 **Note:** iOS Simulator requires macOS and Xcode. On Windows, Expo Go is the way to go!
+
+**Connection Issues?** If you get "could not connect to server" error:
+- Try `npm run start:tunnel` (bypasses firewall/network issues)
+- See `WINDOWS_SETUP.md` for detailed troubleshooting
 
 ## Project Structure
 

@@ -42,24 +42,66 @@ This will:
 
 ## Troubleshooting
 
-### QR Code Not Scanning?
+### ❌ "Could not connect to server" Error
 
-**Option 1: Use Tunnel Mode**
+This is the most common issue on Windows. Try these solutions **in order**:
+
+#### Solution 1: Use Tunnel Mode (Easiest Fix) ⭐
+
+Stop your current `npm start` (Ctrl+C), then run:
+
 ```bash
 npm start -- --tunnel
 ```
-This uses Expo's tunnel (works even on different networks, but slower)
+
+**Why this works:** Tunnel mode routes through Expo's servers, bypassing local network/firewall issues.
+
+**Note:** First time may ask you to login to Expo account (free).
+
+#### Solution 2: Fix Windows Firewall
+
+1. Open **Windows Defender Firewall**
+2. Click **Allow an app through firewall**
+3. Find **Node.js** in the list
+4. Check both **Private** and **Public** boxes
+5. If Node.js isn't listed, click **Allow another app** → Browse → Find `node.exe` (usually in `C:\Program Files\nodejs\`)
+6. Restart `npm start`
+
+#### Solution 3: Check WiFi Network
+
+1. Make sure iPhone and Windows PC are on **exact same WiFi network**
+2. Some routers have "Guest Network" isolation - make sure both devices aren't on guest network
+3. Try disconnecting and reconnecting both devices to WiFi
+
+#### Solution 4: Manual URL Entry
+
+If QR code doesn't work:
+
+1. In Expo Go app, tap **"Enter URL manually"**
+2. Look at your terminal - you'll see something like:
+   ```
+   Metro waiting on exp://192.168.1.100:8081
+   ```
+3. Type that exact URL (e.g., `exp://192.168.1.100:8081`)
+
+#### Solution 5: Use LAN Mode Explicitly
+
+```bash
+npm start -- --lan
+```
+
+This forces LAN mode and shows your IP address clearly.
+
+### QR Code Not Scanning?
+
+**Option 1: Use Tunnel Mode** (Recommended)
+```bash
+npm start -- --tunnel
+```
 
 **Option 2: Type URL Manually**
 - In Expo Go app, tap "Enter URL manually"
 - Type the URL shown in terminal (e.g., `exp://192.168.1.100:8081`)
-
-### App Not Loading?
-
-1. **Check WiFi**: Both devices must be on same network
-2. **Check Firewall**: Windows Firewall might be blocking port 8081
-   - Allow Node.js through firewall
-3. **Try Tunnel Mode**: `npm start -- --tunnel`
 
 ### Hot Reload Not Working?
 
