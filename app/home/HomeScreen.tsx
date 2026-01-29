@@ -393,10 +393,11 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   greeting: {
-    fontFamily: fonts.heading.semiBold,
-    fontSize: 28,
+    fontFamily: fonts.heading.bold,
+    fontSize: 36,
     color: colors.text.primary,
     marginBottom: spacing.md,
+    letterSpacing: 0.5,
   },
 
   // Glass Card
