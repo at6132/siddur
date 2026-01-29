@@ -6,6 +6,7 @@ import {
   Dimensions,
   Animated,
   Easing,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -260,7 +261,11 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
           ]}
         >
           <View style={styles.logoInner}>
-            <Text style={styles.logoEmoji}>✡️</Text>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
         </Animated.View>
 
@@ -388,9 +393,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   logoInner: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -399,9 +404,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 10,
+    overflow: 'hidden',
   },
-  logoEmoji: {
-    fontSize: 48,
+  logoImage: {
+    width: 100,
+    height: 100,
   },
   title: {
     ...textStyles.h1,
