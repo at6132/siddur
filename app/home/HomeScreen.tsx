@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,11 @@ import {
   LayoutAnimation,
   UIManager,
 } from 'react-native';
+
+const DEBUG_PANELS = true; // set false when done debugging
+const log = (tag: string, ...args: any[]) => {
+  if (DEBUG_PANELS) console.log(`[Panels ${tag}]`, ...args);
+};
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -175,11 +180,12 @@ const DraggablePanel: React.FC<{
   index: number;
   onDragStart: (index: number) => void;
   onDragEnd: (fromIndex: number, toIndex: number) => void;
-  onDragMove: (index: number, y: number) => void;
+  onDragMove: (index: number, pageX: number, pageY: number) => void;
   isDragging: boolean;
   draggedIndex: number | null;
   panelCount: number;
   isFullWidth?: boolean;
+  dragPreviewToIndex?: number | null;
 }> = ({ 
   children, 
   isEditing, 
@@ -193,6 +199,7 @@ const DraggablePanel: React.FC<{
   draggedIndex,
   panelCount,
   isFullWidth,
+  dragPreviewToIndex,
 }) => {
   const pan = useRef(new Animated.ValueXY()).current;
   const scale = useRef(new Animated.Value(1)).current;
@@ -200,67 +207,71 @@ const DraggablePanel: React.FC<{
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const isLongPressed = useRef(false);
   const startY = useRef(0);
+  const isEditingRef = useRef(isEditing);
+  isEditingRef.current = isEditing;
 
   // Check if touch is in the remove button area (top-left corner)
   const isTouchOnRemoveButton = (evt: any) => {
     const { locationX, locationY } = evt.nativeEvent;
-    // Remove button is in top-left, roughly 40x40 area from corner
     return locationX < 40 && locationY < 40;
   };
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: (evt) => {
-        // Don't capture if touch is on the remove button
-        if (isTouchOnRemoveButton(evt)) {
+        const onRemove = isTouchOnRemoveButton(evt);
+        if (onRemove) {
+          log('drag', 'panResponder: not claiming (remove zone)', index);
           return false;
         }
-        return isEditing;
+        const claim = isEditingRef.current;
+        if (claim) log('drag', 'panResponder: claiming touch', index);
+        return claim;
       },
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        if (isTouchOnRemoveButton(evt)) {
-          return false;
-        }
-        return isEditing && isLongPressed.current && (Math.abs(gestureState.dy) > 5 || Math.abs(gestureState.dx) > 5);
+        if (isTouchOnRemoveButton(evt)) return false;
+        return isEditingRef.current && isLongPressed.current && (Math.abs(gestureState.dy) > 5 || Math.abs(gestureState.dx) > 5);
       },
       onPanResponderGrant: (evt) => {
-        // Don't start drag if on remove button
         if (isTouchOnRemoveButton(evt)) {
+          log('drag', 'grant ignored (remove zone)', index);
           return;
         }
+        log('drag', 'panResponderGrant', index);
         startY.current = evt.nativeEvent.pageY;
-        // Start long press timer
         longPressTimer.current = setTimeout(() => {
           isLongPressed.current = true;
+          log('drag', 'long press fired, starting drag', index);
           onDragStart(index);
-          // Scale up and raise
           Animated.parallel([
             Animated.spring(scale, { toValue: 1.05, useNativeDriver: true }),
             Animated.timing(zIndex, { toValue: 100, duration: 0, useNativeDriver: true }),
           ]).start();
-        }, 200); // 200ms hold to start drag
+        }, 200);
       },
       onPanResponderMove: (evt, gestureState) => {
         if (isLongPressed.current) {
           pan.setValue({ x: gestureState.dx, y: gestureState.dy });
-          onDragMove(index, evt.nativeEvent.pageY);
+          onDragMove(index, evt.nativeEvent.pageX, evt.nativeEvent.pageY);
         }
       },
       onPanResponderRelease: (evt) => {
         if (longPressTimer.current) {
           clearTimeout(longPressTimer.current);
         }
-        
         if (isLongPressed.current) {
-          // Calculate drop position
           const dropY = evt.nativeEvent.pageY;
-          const rowHeight = 120; // Approximate panel height
+          const rowHeight = 120;
           const newIndex = Math.floor((dropY - 150) / rowHeight);
-          const clampedIndex = Math.max(0, Math.min(panelCount - 1, newIndex));
-          
-          onDragEnd(index, clampedIndex);
+          const fallbackIndex = Math.max(0, Math.min(panelCount - 1, newIndex));
+          const toIndex = (dragPreviewToIndex != null && dragPreviewToIndex >= 0 && dragPreviewToIndex < panelCount)
+            ? dragPreviewToIndex
+            : fallbackIndex;
+          log('drag', 'panResponderRelease', { index, toIndex, dragPreviewToIndex });
+          onDragEnd(index, toIndex);
+        } else {
+          log('drag', 'panResponderRelease (no long press)', index);
         }
-        
         isLongPressed.current = false;
         
         // Reset position
@@ -288,14 +299,18 @@ const DraggablePanel: React.FC<{
 
   // Handle remove button press directly without panResponder interference
   const handleRemovePress = () => {
+    log('remove', 'minus button pressed, index=', index);
     onRemove();
   };
 
   return (
-    <View style={[
-      isFullWidth ? styles.gridItemFull : styles.gridItem,
-      { zIndex: isBeingDragged ? 100 : 1 },
-    ]}>
+    <View
+      style={[
+        isFullWidth ? styles.gridItemFull : styles.gridItem,
+        { zIndex: isBeingDragged ? 100 : 1, overflow: 'visible' as const },
+      ]}
+      pointerEvents="box-none"
+    >
       <Animated.View
         style={[
           styles.panelAnimatedWrapper,
@@ -323,6 +338,8 @@ const DraggablePanel: React.FC<{
           style={styles.removeButton}
           onPress={handleRemovePress}
           activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          onPressIn={() => log('remove', 'minus onPressIn', index)}
         >
           <View style={styles.removeButtonInner}>
             <Text style={styles.removeButtonText}>−</Text>
@@ -335,38 +352,26 @@ const DraggablePanel: React.FC<{
         <TouchableOpacity
           style={styles.resizeHandle}
           onPress={() => {
-            // Toggle between half and full width
-            Alert.alert(
-              'Resize Panel',
-              'Make this panel full width?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Full Width', onPress: () => onResize && onResize('full') },
-              ]
-            );
+            log('resize', 'resize (half->full)', index);
+            onResize && onResize('full');
           }}
           activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <View style={styles.resizeHandleInner}>
             <Text style={styles.resizeHandleText}>⤡</Text>
           </View>
         </TouchableOpacity>
       )}
-      
       {isEditing && isFullWidth && (
         <TouchableOpacity
           style={styles.resizeHandle}
           onPress={() => {
-            Alert.alert(
-              'Resize Panel',
-              'Make this panel half width?',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                { text: 'Half Width', onPress: () => onResize && onResize('half') },
-              ]
-            );
+            log('resize', 'resize (full->half)', index);
+            onResize && onResize('half');
           }}
           activeOpacity={0.7}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
           <View style={styles.resizeHandleInner}>
             <Text style={styles.resizeHandleText}>⤢</Text>
@@ -387,6 +392,9 @@ export const HomeScreen: React.FC = () => {
   const [customReminders, setCustomReminders] = useState<CustomReminder[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragPreviewToIndex, setDragPreviewToIndex] = useState<number | null>(null);
+  const panelLayoutsRef = useRef<Record<string, { x: number; y: number; w: number; h: number }>>({});
+  const panelRefsRef = useRef<(null | React.ComponentRef<typeof View>)[]>([]);
   const [fastDayProgress, setFastDayProgress] = useState<{
     isFastDay: boolean;
     fastName: string;
@@ -532,7 +540,9 @@ export const HomeScreen: React.FC = () => {
 
   const loadPanels = async () => {
     const loadedPanels = await HomePanelsService.getPanels();
-    setPanels(loadedPanels.filter(p => p.visible).sort((a, b) => a.order - b.order));
+    const filtered = loadedPanels.filter(p => p.visible).sort((a, b) => a.order - b.order);
+    log('loadPanels', 'loaded', loadedPanels.length, 'visible', filtered.length, 'ids', filtered.map(p => p.id));
+    setPanels(filtered);
   };
 
   const loadDayInfo = async () => {
@@ -611,56 +621,84 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleRemovePanel = async (panelId: string) => {
-    Alert.alert(
-      'Remove Panel',
-      'Remove this panel from your home screen?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            await HomePanelsService.removePanel(panelId);
-            loadPanels();
-          },
-        },
-      ]
-    );
+    log('remove', 'handleRemovePanel called', panelId);
+    try {
+      await HomePanelsService.removePanel(panelId);
+      log('remove', 'removePanel done, calling loadPanels');
+      await loadPanels();
+      log('remove', 'loadPanels done');
+    } catch (e) {
+      log('remove', 'error', e);
+    }
   };
 
   const handleResizePanel = async (panelId: string, size: 'full' | 'half') => {
-    // Update panel size in storage
+    log('resize', 'handleResizePanel', panelId, size);
     const newSize = size === 'full' ? 'large' : 'small';
     await HomePanelsService.updatePanelSize(panelId, newSize);
-    loadPanels();
+    await loadPanels();
+    log('resize', 'done');
   };
 
-  // Drag handlers
+  // Drag handlers - measure by current display order so ref index matches
+  const measureAllPanels = useCallback((order: HomePanel[]) => {
+    order.forEach((panel, i) => {
+      const ref = panelRefsRef.current[i];
+      if (ref && typeof (ref as any).measureInWindow === 'function') {
+        (ref as any).measureInWindow((x: number, y: number, w: number, h: number) => {
+          panelLayoutsRef.current[panel.id] = { x, y, w, h };
+        });
+      }
+    });
+  }, []);
+
   const handleDragStart = (index: number) => {
+    log('drag', 'handleDragStart', index);
     setIsDragging(true);
     setDraggedIndex(index);
+    setDragPreviewToIndex(index);
+    requestAnimationFrame(() => measureAllPanels(panels));
   };
 
-  const handleDragMove = (index: number, y: number) => {
-    // Optional: could implement live preview of target position here
-  };
+  const handleDragMove = useCallback((draggedIdx: number, pageX: number, pageY: number) => {
+    const layouts = panelLayoutsRef.current;
+    const draggedPanel = panels[draggedIdx];
+    if (!draggedPanel) return;
+    let found: number | null = null;
+    for (let i = 0; i < panels.length; i++) {
+      if (i === draggedIdx) continue;
+      const layout = layouts[panels[i].id];
+      if (!layout) continue;
+      const { x, y, w, h } = layout;
+      if (pageX >= x && pageX <= x + w && pageY >= y && pageY <= y + h) {
+        found = i;
+        break;
+      }
+    }
+    if (found !== null) {
+      setDragPreviewToIndex((prev) => {
+        if (prev === found) return prev;
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        return found;
+      });
+    }
+  }, [panels]);
 
   const handleDragEnd = async (fromIndex: number, toIndex: number) => {
+    log('drag', 'handleDragEnd', { fromIndex, toIndex, panelCount: panels.length });
     if (fromIndex !== toIndex && toIndex >= 0 && toIndex < panels.length) {
-      // Animate the layout change
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-      
       const newPanels = [...panels];
       const [movedPanel] = newPanels.splice(fromIndex, 1);
       newPanels.splice(toIndex, 0, movedPanel);
       newPanels.forEach((p, i) => p.order = i);
-      
       setPanels(newPanels);
       await HomePanelsService.reorderPanels(newPanels.map(p => p.id));
+      log('drag', 'reorder saved');
     }
-    
     setIsDragging(false);
     setDraggedIndex(null);
+    setDragPreviewToIndex(null);
   };
 
   const formatTime = (date: Date | undefined) => {
@@ -673,9 +711,38 @@ export const HomeScreen: React.FC = () => {
       // Exiting edit mode - reset drag state
       setIsDragging(false);
       setDraggedIndex(null);
+      setDragPreviewToIndex(null);
     }
     setIsEditing(!isEditing);
   };
+
+  // While dragging, show other panels in their "preview" order so they shift in real time
+  const displayOrder = useMemo(() => {
+    if (!isDragging || draggedIndex == null || dragPreviewToIndex == null || dragPreviewToIndex === draggedIndex) {
+      return panels;
+    }
+    const reordered = [...panels];
+    const [moved] = reordered.splice(draggedIndex, 1);
+    reordered.splice(dragPreviewToIndex, 0, moved);
+    return reordered;
+  }, [panels, isDragging, draggedIndex, dragPreviewToIndex]);
+
+  useEffect(() => {
+    if (!isDragging || draggedIndex == null) return;
+    const timer = setTimeout(() => measureAllPanels(displayOrder), 80);
+    return () => clearTimeout(timer);
+  }, [isDragging, draggedIndex, dragPreviewToIndex, displayOrder, measureAllPanels]);
+
+  const handlePanelLayout = useCallback((panelId: string, displayIndex: number) => {
+    return () => {
+      const ref = panelRefsRef.current[displayIndex];
+      if (ref && typeof (ref as any).measureInWindow === 'function') {
+        (ref as any).measureInWindow((x: number, y: number, w: number, h: number) => {
+          panelLayoutsRef.current[panelId] = { x, y, w, h };
+        });
+      }
+    };
+  }, []);
 
   // Render individual panel based on type
   const renderPanel = (panel: HomePanel, index: number) => {
@@ -2075,6 +2142,7 @@ export const HomeScreen: React.FC = () => {
         draggedIndex={draggedIndex}
         panelCount={panels.length}
         isFullWidth={isFullWidth}
+        dragPreviewToIndex={dragPreviewToIndex}
       >
         {content}
       </DraggablePanel>
@@ -2143,7 +2211,7 @@ export const HomeScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        scrollEnabled={!isEditing || panels.length > 4}
+        scrollEnabled={!isEditing}
       >
         {/* Header Row with Greeting and Edit Button */}
         <View style={styles.headerRow}>
@@ -2167,9 +2235,24 @@ export const HomeScreen: React.FC = () => {
           </View>
         )}
 
-        {/* Dynamic Panels Grid */}
+        {/* Dynamic Panels Grid - displayOrder so other panels shift in real time while dragging */}
         <View style={styles.panelsGrid}>
-          {panels.map((panel, index) => renderPanel(panel, index))}
+          {displayOrder.map((panel: HomePanel, displayIndex: number) => {
+            const realIndex = panels.indexOf(panel);
+            const defaultFullWidthTypes = ['date', 'tehillim_progress', 'custom_reminders', 'inspiration_quote', 'fast_day_info', 'zmanim'];
+            const isFullWidth = panel.size === 'large' || (panel.size !== 'small' && defaultFullWidthTypes.includes(panel.type));
+            return (
+              <View
+                key={panel.id}
+                ref={(r) => { panelRefsRef.current[displayIndex] = r; }}
+                onLayout={handlePanelLayout(panel.id, displayIndex)}
+                collapsable={false}
+                style={isFullWidth ? styles.gridItemFull : styles.gridItem}
+              >
+                {renderPanel(panel, realIndex)}
+              </View>
+            );
+          })}
         </View>
 
         {/* Empty State */}
@@ -2276,9 +2359,11 @@ const styles = StyleSheet.create({
   },
   gridItem: {
     width: PANEL_WIDTH,
+    overflow: 'visible',
   },
   gridItemFull: {
     width: '100%',
+    overflow: 'visible',
   },
 
   // Editable Panel

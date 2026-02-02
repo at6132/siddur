@@ -148,14 +148,17 @@ const DEFAULT_PANELS: HomePanel[] = [
   { id: 'date-1', type: 'date', order: 0, visible: true, size: 'medium' },
   { id: 'zmanim-1', type: 'zmanim', order: 1, visible: true, size: 'medium' },
   { id: 'tehillim-1', type: 'tehillim_progress', order: 2, visible: true, size: 'medium' },
-  { id: 'quick-1', type: 'quick_actions', order: 3, visible: true, size: 'small' },
-  { id: 'davening-1', type: 'davening_note', order: 4, visible: true, size: 'small' },
-  { id: 'parsha-1', type: 'weekly_parsha', order: 5, visible: true, size: 'small' },
-  { id: 'inspiration-1', type: 'inspiration_quote', order: 6, visible: true, size: 'medium' },
-  { id: 'fast-1', type: 'fast_day_info', order: 7, visible: true, size: 'medium' },
+  { id: 'davening-1', type: 'davening_note', order: 3, visible: true, size: 'small' },
+  { id: 'parsha-1', type: 'weekly_parsha', order: 4, visible: true, size: 'small' },
+  { id: 'inspiration-1', type: 'inspiration_quote', order: 5, visible: true, size: 'medium' },
+  { id: 'fast-1', type: 'fast_day_info', order: 6, visible: true, size: 'medium' },
 ];
 
 const PANELS_STORAGE_KEY = '@home_panels';
+const DEBUG_PANELS = true;
+const log = (tag: string, ...args: any[]) => {
+  if (DEBUG_PANELS) console.log(`[HomePanelsService ${tag}]`, ...args);
+};
 
 export class HomePanelsService {
   /**
@@ -165,8 +168,11 @@ export class HomePanelsService {
     try {
       const stored = await AsyncStorage.getItem(PANELS_STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        log('getPanels', 'from storage', parsed.length, parsed.map((p: HomePanel) => p.id));
+        return parsed;
       }
+      log('getPanels', 'no storage, using DEFAULT_PANELS');
     } catch (e) {
       console.warn('Error loading panels:', e);
     }
@@ -208,11 +214,14 @@ export class HomePanelsService {
    * Remove a panel
    */
   static async removePanel(panelId: string): Promise<void> {
+    log('removePanel', 'called', panelId);
     const panels = await this.getPanels();
+    log('removePanel', 'before filter', panels.length, panels.map(p => p.id));
     const filtered = panels.filter(p => p.id !== panelId);
-    // Reorder remaining panels
+    log('removePanel', 'after filter', filtered.length, filtered.map(p => p.id));
     filtered.forEach((p, i) => p.order = i);
     await this.savePanels(filtered);
+    log('removePanel', 'savePanels done');
   }
 
   /**
@@ -259,11 +268,15 @@ export class HomePanelsService {
    * Update panel size
    */
   static async updatePanelSize(panelId: string, size: 'small' | 'medium' | 'large'): Promise<void> {
+    log('updatePanelSize', panelId, size);
     const panels = await this.getPanels();
     const panel = panels.find(p => p.id === panelId);
     if (panel) {
       panel.size = size;
       await this.savePanels(panels);
+      log('updatePanelSize', 'done');
+    } else {
+      log('updatePanelSize', 'panel not found');
     }
   }
 
