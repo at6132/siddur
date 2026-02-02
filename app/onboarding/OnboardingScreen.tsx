@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { NusachSelection } from './NusachSelection';
 import { SpiritualGoals } from './SpiritualGoals';
 import { WelcomeScreen } from './WelcomeScreen';
@@ -78,12 +79,22 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
     }
   };
 
-  return <View style={styles.container}>{renderStep()}</View>;
+  return (
+    <View style={styles.container}>
+      {/* Enhanced background gradient with subtle animation feel */}
+      <LinearGradient
+        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5', '#FAF9F7']}
+        style={StyleSheet.absoluteFill}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
+      {renderStep()}
+    </View>
+  );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAF9F7',
   },
 });

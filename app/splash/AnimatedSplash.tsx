@@ -52,19 +52,22 @@ export const AnimatedSplash: React.FC<AnimatedSplashProps> = ({
       Animated.parallel([
         Animated.timing(orb1Opacity, {
           toValue: 1,
-          duration: 400,
+          duration: 500,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(orb2Opacity, {
           toValue: 1,
-          duration: 500,
+          duration: 600,
           delay: 100,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(orb3Opacity, {
           toValue: 1,
-          duration: 600,
+          duration: 700,
           delay: 200,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]),
@@ -73,20 +76,21 @@ export const AnimatedSplash: React.FC<AnimatedSplashProps> = ({
       Animated.parallel([
         Animated.spring(logoScale, {
           toValue: 1,
-          tension: 40,
-          friction: 5,
+          tension: 35,
+          friction: 7,
           useNativeDriver: true,
         }),
         Animated.timing(logoOpacity, {
           toValue: 1,
-          duration: 600,
+          duration: 700,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         // Subtle rotation
         Animated.timing(logoRotate, {
           toValue: 1,
-          duration: 800,
-          easing: Easing.out(Easing.back(1.5)),
+          duration: 900,
+          easing: Easing.out(Easing.back(1.2)),
           useNativeDriver: true,
         }),
       ]),
@@ -95,13 +99,14 @@ export const AnimatedSplash: React.FC<AnimatedSplashProps> = ({
       Animated.parallel([
         Animated.timing(glowOpacity, {
           toValue: 0.6,
-          duration: 400,
+          duration: 500,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.spring(glowScale, {
           toValue: 1.5,
-          tension: 30,
-          friction: 7,
+          tension: 25,
+          friction: 8,
           useNativeDriver: true,
         }),
       ]),
@@ -159,20 +164,20 @@ export const AnimatedSplash: React.FC<AnimatedSplashProps> = ({
       ]),
       
       // Hold for a moment
-      Animated.delay(400),
+      Animated.delay(500),
       
-      // Phase 5: Exit animation
+      // Phase 5: Exit animation - liquid fade out
       Animated.parallel([
         Animated.timing(containerOpacity, {
           toValue: 0,
-          duration: 500,
-          easing: Easing.out(Easing.ease),
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(containerScale, {
-          toValue: 1.1,
-          duration: 500,
-          easing: Easing.out(Easing.ease),
+          toValue: 1.15,
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]),

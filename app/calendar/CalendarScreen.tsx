@@ -270,6 +270,16 @@ export const CalendarScreen: React.FC = () => {
     return dayStyles;
   };
 
+  const [fadeAnim] = useState(new Animated.Value(0));
+  
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   const formatZmanTime = (date: Date | undefined) => {
     if (!date) return '--:--';
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
@@ -549,9 +559,16 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: 'rgba(255,255,255,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: colors.shadow.medium,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.95)',
   },
   navButtonText: {
     fontSize: 28,
@@ -598,9 +615,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 4,
     borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.65)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.8)',
+    borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: colors.shadow.light,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   emptyDay: {
     width: DAY_WIDTH,
@@ -628,6 +650,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.primary.dark,
     transform: [{ scale: 1.05 }],
+    shadowColor: colors.primary.main,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+    backgroundColor: 'rgba(255,255,255,0.9)',
   },
   dayNumber: {
     fontFamily: fonts.body.semiBold,
@@ -691,7 +719,12 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.8)',
+    borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: colors.shadow.medium,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
   },
   detailsBlur: {
     overflow: 'hidden',
@@ -784,11 +817,18 @@ const styles = StyleSheet.create({
   },
   zmanItem: {
     width: '32%',
-    backgroundColor: 'rgba(255,255,255,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.7)',
     padding: spacing.sm,
     borderRadius: borderRadius.md,
     marginBottom: spacing.sm,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.85)',
+    shadowColor: colors.shadow.light,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 1,
   },
   zmanLabel: {
     fontFamily: fonts.body.regular,

@@ -38,12 +38,12 @@ const GlassCard: React.FC<{
 }> = ({ children, style }) => (
   <View style={[styles.glassCard, style]}>
     {Platform.OS !== 'web' ? (
-      <BlurView intensity={60} style={styles.glassBlur}>
+      <BlurView intensity={80} tint="light" style={styles.glassBlur}>
         <View style={styles.glassInner}>{children}</View>
       </BlurView>
     ) : (
       <LinearGradient
-        colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
+        colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
         style={styles.glassBlur}
       >
         <View style={styles.glassInner}>{children}</View>
@@ -875,15 +875,20 @@ const styles = StyleSheet.create({
   glassCard: {
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
+    marginBottom: spacing.lg,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.8)',
+    shadowColor: colors.shadow.medium,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   glassBlur: {
     overflow: 'hidden',
   },
   glassInner: {
-    backgroundColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.5)',
   },
   card: {},
 
@@ -893,6 +898,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: spacing.lg,
+    minHeight: 60,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -1015,12 +1021,16 @@ const styles = StyleSheet.create({
     minHeight: 44,
   },
   timeButton: {
-    backgroundColor: 'rgba(212, 165, 184, 0.2)',
+    backgroundColor: 'rgba(212, 165, 184, 0.25)',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.md,
-    minWidth: 80,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    minWidth: 90,
+    minHeight: 36,
     alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(212, 165, 184, 0.3)',
   },
   timeButtonText: {
     fontFamily: fonts.body.medium,
@@ -1069,12 +1079,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    minHeight: 40,
   },
   addReminderButton: {
     backgroundColor: colors.primary.main,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
+    minHeight: 36,
+    justifyContent: 'center',
+    shadowColor: colors.primary.dark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   addReminderButtonText: {
     fontFamily: fonts.body.semiBold,
@@ -1085,10 +1103,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.02)',
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
     marginBottom: spacing.sm,
+    minHeight: 60,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   customReminderLeft: {
     flex: 1,
@@ -1167,19 +1188,29 @@ const styles = StyleSheet.create({
   // Nusach
   nusachContainer: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
     marginTop: spacing.sm,
   },
   nusachOption: {
     flex: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     backgroundColor: 'rgba(0, 0, 0, 0.03)',
     alignItems: 'center',
+    minHeight: 80,
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0, 0, 0, 0.05)',
   },
   nusachOptionActive: {
     backgroundColor: colors.primary.main,
+    borderColor: colors.primary.dark,
+    shadowColor: colors.primary.dark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   nusachText: {
     fontFamily: fonts.body.semiBold,
@@ -1217,8 +1248,15 @@ const styles = StyleSheet.create({
   updateButton: {
     backgroundColor: colors.primary.main,
     paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     alignItems: 'center',
+    minHeight: 50,
+    justifyContent: 'center',
+    shadowColor: colors.primary.dark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   updateButtonText: {
     fontFamily: fonts.body.semiBold,

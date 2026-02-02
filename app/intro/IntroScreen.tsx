@@ -120,13 +120,14 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
       Animated.parallel([
         Animated.spring(logoScale, {
           toValue: 1,
-          tension: 40,
-          friction: 6,
+          tension: 35,
+          friction: 7,
           useNativeDriver: true,
         }),
         Animated.timing(logoOpacity, {
           toValue: 1,
-          duration: 600,
+          duration: 700,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]),
@@ -135,137 +136,185 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
       Animated.parallel([
         Animated.timing(glowOpacity, {
           toValue: 0.5,
-          duration: 400,
+          duration: 500,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.spring(glowScale, {
           toValue: 1.3,
-          tension: 30,
-          friction: 7,
+          tension: 25,
+          friction: 8,
           useNativeDriver: true,
         }),
       ]),
 
       // Phase 3: Sparkles
-      Animated.stagger(80, [
+      Animated.stagger(90, [
         Animated.sequence([
-          Animated.timing(sparkle1, { toValue: 1, duration: 250, useNativeDriver: true }),
-          Animated.timing(sparkle1, { toValue: 0, duration: 250, useNativeDriver: true }),
+          Animated.timing(sparkle1, { 
+            toValue: 1, 
+            duration: 300, 
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true 
+          }),
+          Animated.timing(sparkle1, { 
+            toValue: 0, 
+            duration: 300, 
+            easing: Easing.in(Easing.cubic),
+            useNativeDriver: true 
+          }),
         ]),
         Animated.sequence([
-          Animated.timing(sparkle2, { toValue: 1, duration: 250, useNativeDriver: true }),
-          Animated.timing(sparkle2, { toValue: 0, duration: 250, useNativeDriver: true }),
+          Animated.timing(sparkle2, { 
+            toValue: 1, 
+            duration: 300, 
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true 
+          }),
+          Animated.timing(sparkle2, { 
+            toValue: 0, 
+            duration: 300, 
+            easing: Easing.in(Easing.cubic),
+            useNativeDriver: true 
+          }),
         ]),
         Animated.sequence([
-          Animated.timing(sparkle3, { toValue: 1, duration: 250, useNativeDriver: true }),
-          Animated.timing(sparkle3, { toValue: 0, duration: 250, useNativeDriver: true }),
+          Animated.timing(sparkle3, { 
+            toValue: 1, 
+            duration: 300, 
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true 
+          }),
+          Animated.timing(sparkle3, { 
+            toValue: 0, 
+            duration: 300, 
+            easing: Easing.in(Easing.cubic),
+            useNativeDriver: true 
+          }),
         ]),
         Animated.sequence([
-          Animated.timing(sparkle4, { toValue: 1, duration: 250, useNativeDriver: true }),
-          Animated.timing(sparkle4, { toValue: 0, duration: 250, useNativeDriver: true }),
+          Animated.timing(sparkle4, { 
+            toValue: 1, 
+            duration: 300, 
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true 
+          }),
+          Animated.timing(sparkle4, { 
+            toValue: 0, 
+            duration: 300, 
+            easing: Easing.in(Easing.cubic),
+            useNativeDriver: true 
+          }),
         ]),
       ]),
 
       // Phase 4: Logo drifts up smoothly while content fades in
-      Animated.delay(300),
+      Animated.delay(400),
     ]).start(() => {
       setShowContent(true);
       
-      // Logo moves up
+      // Logo moves up - liquid smooth
       Animated.parallel([
         Animated.timing(logoPositionY, {
           toValue: -height * 0.22,
-          duration: 700,
+          duration: 800,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(logoScale, {
           toValue: 0.75,
-          duration: 700,
+          duration: 800,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(glowOpacity, {
           toValue: 0.2,
-          duration: 500,
+          duration: 600,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(glowScale, {
           toValue: 0.7,
-          duration: 700,
+          duration: 800,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]).start();
 
-      // Content appears
+      // Content appears - smooth cascade
       Animated.sequence([
-        Animated.delay(200),
+        Animated.delay(250),
         // Title
         Animated.parallel([
           Animated.timing(titleOpacity, {
             toValue: 1,
-            duration: 500,
+            duration: 600,
+            easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
           Animated.spring(titleTranslateY, {
             toValue: 0,
-            tension: 50,
-            friction: 8,
+            tension: 45,
+            friction: 9,
             useNativeDriver: true,
           }),
         ]),
         // Subtitle
         Animated.timing(subtitleOpacity, {
           toValue: 1,
-          duration: 400,
+          duration: 500,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         // Features
-        Animated.delay(200),
+        Animated.delay(250),
         Animated.parallel([
           Animated.timing(featuresOpacity, {
             toValue: 1,
-            duration: 400,
+            duration: 500,
+            easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
           Animated.spring(featuresTranslateY, {
             toValue: 0,
             tension: 40,
-            friction: 8,
+            friction: 9,
             useNativeDriver: true,
           }),
         ]),
         // Stagger feature cards
         Animated.stagger(
-          120,
+          100,
           featureAnimations.map(({ opacity, translateX }) =>
             Animated.parallel([
               Animated.timing(opacity, {
                 toValue: 1,
-                duration: 350,
+                duration: 400,
+                easing: Easing.out(Easing.cubic),
                 useNativeDriver: true,
               }),
               Animated.spring(translateX, {
                 toValue: 0,
-                tension: 50,
-                friction: 8,
+                tension: 45,
+                friction: 9,
                 useNativeDriver: true,
               }),
             ])
           )
         ),
         // Button
-        Animated.delay(100),
+        Animated.delay(150),
         Animated.parallel([
           Animated.timing(buttonOpacity, {
             toValue: 1,
-            duration: 400,
+            duration: 500,
+            easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
           Animated.spring(buttonScale, {
             toValue: 1,
-            tension: 50,
-            friction: 6,
+            tension: 45,
+            friction: 7,
             useNativeDriver: true,
           }),
         ]),

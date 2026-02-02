@@ -142,12 +142,12 @@ const GlassCard: React.FC<{
   const content = (
     <View style={[styles.glassCard, style]}>
       {Platform.OS !== 'web' ? (
-        <BlurView intensity={60} style={styles.glassBlur}>
+        <BlurView intensity={80} tint="light" style={styles.glassBlur}>
           <View style={styles.glassInner}>{children}</View>
         </BlurView>
       ) : (
         <LinearGradient
-          colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
+          colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
           style={styles.glassBlur}
         >
           <View style={styles.glassInner}>{children}</View>
@@ -158,7 +158,7 @@ const GlassCard: React.FC<{
 
   if (onPress) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
         {content}
       </TouchableOpacity>
     );
@@ -1034,11 +1034,18 @@ const styles = StyleSheet.create({
   },
   editButton: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: colors.shadow.light,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 4,
+    elevation: 3,
+    minHeight: 36,
+    justifyContent: 'center',
   },
   editButtonActive: {
     backgroundColor: colors.primary.main,
@@ -1146,17 +1153,19 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   floatingAddButtonInner: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: colors.primary.main,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
+    shadowColor: colors.primary.dark,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   floatingAddButtonText: {
     color: '#fff',
@@ -1169,15 +1178,20 @@ const styles = StyleSheet.create({
   glassCard: {
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.8)',
+    shadowColor: colors.shadow.medium,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   glassBlur: {
     overflow: 'hidden',
   },
   glassInner: {
     padding: spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.5)',
   },
 
   // Date Card
