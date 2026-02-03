@@ -237,14 +237,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.lg,
+    padding: spacing.xl,
     paddingTop: spacing['2xl'],
-    paddingBottom: 120,
+    paddingBottom: 140,
   },
 
-  // Header
+  // Header - Enhanced spacing
   header: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing['2xl'],
   },
   backButton: {
     marginBottom: spacing.md,
@@ -272,44 +272,55 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
 
-  // Option Card
+  // Option Card - Enhanced glass effect
   optionCard: {
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius['2xl'],
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: 'rgba(255,255,255,0.6)',
+    shadowColor: colors.shadow.light,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   optionCardSelected: {
     borderColor: colors.primary.main,
+    shadowColor: colors.primary.main,
+    shadowOpacity: 0.15,
   },
   optionBlur: {
     overflow: 'hidden',
   },
   optionInner: {
-    padding: spacing.md,
+    padding: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
   optionInnerSelected: {
-    backgroundColor: 'rgba(212, 165, 184, 0.1)',
+    backgroundColor: 'rgba(212, 165, 184, 0.15)',
   },
   optionContent: {
     flex: 1,
   },
   optionTitle: {
     fontFamily: fonts.heading.semiBold,
-    fontSize: 16,
+    fontSize: 17,
     color: colors.text.primary,
-    marginBottom: 2,
+    marginBottom: spacing.xs,
+    letterSpacing: -0.2,
   },
   optionTitleSelected: {
     color: colors.primary.dark,
+    fontFamily: fonts.heading.bold,
   },
   optionSubtitle: {
     fontFamily: fonts.body.regular,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.text.secondary,
+    lineHeight: 20,
+    letterSpacing: 0.1,
   },
   radioOuter: {
     width: 24,
@@ -330,13 +341,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.main,
   },
 
-  // Custom Section
+  // Custom Section - Enhanced glass
   customSection: {
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
+    backgroundColor: colors.glass.light,
+    borderRadius: borderRadius['2xl'],
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.9)',
+    padding: spacing.xl,
     marginBottom: spacing.xl,
     alignItems: 'center',
+    shadowColor: colors.shadow.light,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 3,
   },
   customLabel: {
     fontFamily: fonts.body.semiBold,
@@ -391,16 +409,23 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   scheduleCard: {
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: borderRadius.xl,
-    padding: spacing.md,
+    backgroundColor: colors.glass.light,
+    borderRadius: borderRadius['2xl'],
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.8)',
+    padding: spacing.lg,
+    shadowColor: colors.shadow.light,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   scheduleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.xs,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
+    borderBottomColor: 'rgba(0,0,0,0.04)',
   },
   scheduleDay: {
     flex: 1,

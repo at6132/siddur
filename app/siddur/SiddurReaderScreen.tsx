@@ -282,13 +282,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.lg,
+    padding: spacing.xl,
     paddingTop: spacing.xl,
+    paddingBottom: 140,
   },
 
-  // Header
+  // Header - Enhanced spacing
   header: {
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
   backButton: {
     marginBottom: spacing.md,
@@ -301,18 +302,20 @@ const styles = StyleSheet.create({
   titleRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
   title: {
     fontFamily: fonts.heading.bold,
-    fontSize: 28,
+    fontSize: 32,
     color: colors.text.primary,
+    letterSpacing: -0.7,
   },
   titleHebrew: {
-    fontFamily: fonts.body.regular,
-    fontSize: 22,
+    fontFamily: fonts.heading.regular,
+    fontSize: 24,
     color: colors.text.secondary,
+    letterSpacing: 0.2,
   },
   toggleRow: {
     flexDirection: 'row',
@@ -362,82 +365,98 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
 
-  // Glass Card
+  // Glass Card - Enhanced depth
   glassCard: {
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius['2xl'],
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
+    borderColor: 'rgba(255,255,255,0.8)',
+    shadowColor: colors.shadow.light,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
   },
   glassBlur: {
     overflow: 'hidden',
   },
   glassInner: {
-    padding: spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.4)',
+    padding: spacing.lg,
+    backgroundColor: 'rgba(255,255,255,0.5)',
   },
 
-  // Sections
+  // Sections - Enhanced readability
   sectionsList: {
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   sectionCard: {},
   sectionCardExpanded: {
-    borderColor: colors.primary.light,
+    borderColor: colors.primary.main,
+    shadowColor: colors.primary.main,
+    shadowOpacity: 0.12,
+    borderWidth: 1.5,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  sectionTitleContainer: {},
+  sectionTitleContainer: {
+    flex: 1,
+  },
   sectionHebrewTitle: {
     fontFamily: fonts.heading.semiBold,
-    fontSize: 18,
+    fontSize: 20,
     color: colors.text.primary,
+    marginBottom: spacing.xs,
+    letterSpacing: 0.2,
   },
   sectionEnglishTitle: {
     fontFamily: fonts.body.regular,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.text.secondary,
+    letterSpacing: 0.2,
   },
   sectionArrow: {
     fontSize: 12,
     color: colors.text.tertiary,
   },
   sectionContent: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
+    borderTopColor: 'rgba(0,0,0,0.06)',
   },
   sectionLoading: {
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
   },
   sectionLoadingText: {
     fontFamily: fonts.body.regular,
-    fontSize: 12,
+    fontSize: 13,
     color: colors.text.tertiary,
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
   },
   hebrewText: {
-    fontFamily: fonts.body.regular,
-    fontSize: 20,
+    fontFamily: fonts.heading.regular,
+    fontSize: 22,
     color: colors.text.primary,
-    lineHeight: 36,
+    lineHeight: 40,
     textAlign: 'right',
     writingDirection: 'rtl',
+    letterSpacing: 0.3,
   },
   englishText: {
     fontFamily: fonts.body.regular,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text.secondary,
-    lineHeight: 22,
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
+    lineHeight: 24,
+    marginTop: spacing.lg,
+    paddingTop: spacing.lg,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
+    borderTopColor: 'rgba(0,0,0,0.06)',
+    letterSpacing: 0.2,
+    opacity: 0.9,
   },
   errorText: {
     fontFamily: fonts.body.regular,

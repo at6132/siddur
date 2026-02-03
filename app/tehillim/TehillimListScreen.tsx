@@ -247,17 +247,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   list: {
-    padding: spacing.md,
-    paddingBottom: 120,
+    padding: spacing.lg,
+    paddingBottom: 140,
   },
 
-  // Daily Card
+  // Daily Card - Enhanced with liquid glass
   dailyCardContainer: {
-    marginBottom: spacing.lg,
-    borderRadius: borderRadius.xl,
+    marginBottom: spacing.xl,
+    borderRadius: borderRadius['2xl'],
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
+    borderColor: 'rgba(255,255,255,0.8)',
+    shadowColor: colors.shadow.medium,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 3,
   },
   dailyCardBlur: {
     overflow: 'hidden',
@@ -266,7 +271,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   dailyCardInner: {
-    padding: spacing.lg,
+    padding: spacing.xl,
   },
   dailyCardHeader: {
     flexDirection: 'row',
@@ -276,14 +281,16 @@ const styles = StyleSheet.create({
   },
   dailyCardTitle: {
     fontFamily: fonts.heading.bold,
-    fontSize: 22,
+    fontSize: 24,
     color: colors.text.primary,
+    letterSpacing: -0.5,
   },
   dailyCardSubtitle: {
     fontFamily: fonts.body.regular,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text.secondary,
-    marginTop: 2,
+    marginTop: spacing.xs,
+    lineHeight: 20,
   },
   editButton: {
     paddingHorizontal: spacing.sm,
@@ -340,31 +347,39 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
 
-  // Grid
+  // Grid - Enhanced with subtle glass
   row: {
     justifyContent: 'space-between',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   itemContainer: {
     flex: 1,
     marginHorizontal: spacing.xs,
   },
   item: {
-    minHeight: 90,
+    minHeight: 96,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: colors.glass.light,
+    borderRadius: borderRadius.xl,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: colors.shadow.light,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
   itemToday: {
-    backgroundColor: 'rgba(212, 165, 184, 0.25)',
+    backgroundColor: 'rgba(212, 165, 184, 0.3)',
     borderColor: colors.primary.main,
     borderWidth: 2,
+    shadowColor: colors.primary.main,
+    shadowOpacity: 0.15,
   },
   itemCompleted: {
-    backgroundColor: 'rgba(165, 212, 184, 0.25)',
+    backgroundColor: 'rgba(165, 212, 184, 0.3)',
+    borderColor: colors.semantic.success,
   },
   itemContent: {
     alignItems: 'center',
@@ -372,9 +387,10 @@ const styles = StyleSheet.create({
   },
   hebrewNumber: {
     fontFamily: fonts.heading.bold,
-    fontSize: 22,
+    fontSize: 24,
     color: colors.text.primary,
-    marginBottom: 2,
+    marginBottom: 4,
+    letterSpacing: -0.5,
   },
   hebrewNumberToday: {
     color: colors.primary.dark,
@@ -383,12 +399,14 @@ const styles = StyleSheet.create({
     color: colors.semantic.success,
   },
   englishNumber: {
-    fontFamily: fonts.body.regular,
-    fontSize: 12,
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
     color: colors.text.secondary,
+    letterSpacing: 0.2,
   },
   englishNumberToday: {
     color: colors.primary.main,
+    fontFamily: fonts.body.semiBold,
   },
   completedBadge: {
     position: 'absolute',

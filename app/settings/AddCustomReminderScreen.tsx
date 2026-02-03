@@ -26,7 +26,7 @@ const GlassCard: React.FC<{
 }> = ({ children, style }) => (
   <View style={[styles.glassCard, style]}>
     {Platform.OS !== 'web' ? (
-      <BlurView intensity={60} style={styles.glassBlur}>
+      <BlurView intensity={80} tint="light" style={styles.glassBlur}>
         <View style={styles.glassInner}>{children}</View>
       </BlurView>
     ) : (
@@ -282,34 +282,41 @@ const styles = StyleSheet.create({
   glassCard: {
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
-    marginBottom: spacing.md,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.8)',
+    marginBottom: spacing.lg,
+    shadowColor: colors.shadow.medium,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 1,
+    shadowRadius: 12,
+    elevation: 6,
   },
   glassBlur: {
     overflow: 'hidden',
   },
   glassInner: {
     padding: spacing.lg,
-    backgroundColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.5)',
   },
 
   // Input
   inputLabel: {
     fontFamily: fonts.body.semiBold,
-    fontSize: 14,
+    fontSize: 15,
     color: colors.text.secondary,
     marginBottom: spacing.sm,
+    letterSpacing: 0.2,
   },
   textInput: {
     fontFamily: fonts.body.regular,
     fontSize: 16,
     color: colors.text.primary,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.08)',
+    minHeight: 50,
   },
   textInputMultiline: {
     minHeight: 80,
@@ -318,18 +325,28 @@ const styles = StyleSheet.create({
 
   // Time Selection
   timeScrollContent: {
-    gap: spacing.xs,
-    paddingVertical: spacing.xs,
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   timeOption: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    backgroundColor: 'rgba(0,0,0,0.03)',
+    backgroundColor: 'rgba(0,0,0,0.04)',
     marginRight: spacing.xs,
+    minHeight: 40,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
   },
   timeOptionSelected: {
     backgroundColor: colors.primary.main,
+    borderColor: colors.primary.dark,
+    shadowColor: colors.primary.dark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   timeOptionText: {
     fontFamily: fonts.body.medium,
@@ -344,18 +361,27 @@ const styles = StyleSheet.create({
   daysContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
+    gap: 4,
   },
   dayOption: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.03)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.04)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
   },
   dayOptionSelected: {
     backgroundColor: colors.primary.main,
+    borderColor: colors.primary.dark,
+    shadowColor: colors.primary.dark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   dayOptionText: {
     fontFamily: fonts.body.medium,
@@ -380,9 +406,16 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: colors.primary.main,
     borderRadius: borderRadius.full,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.lg,
     alignItems: 'center',
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
+    minHeight: 56,
+    justifyContent: 'center',
+    shadowColor: colors.primary.dark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
   },
   saveButtonDisabled: {
     opacity: 0.6,

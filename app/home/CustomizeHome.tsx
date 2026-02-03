@@ -29,12 +29,12 @@ const GlassCard: React.FC<{
   const content = (
     <View style={[styles.glassCard, style]}>
       {Platform.OS !== 'web' ? (
-        <BlurView intensity={50} style={styles.glassBlur}>
+        <BlurView intensity={75} tint="light" style={styles.glassBlur}>
           <View style={styles.glassInner}>{children}</View>
         </BlurView>
       ) : (
         <LinearGradient
-          colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
+          colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
           style={styles.glassBlur}
         >
           <View style={styles.glassInner}>{children}</View>
@@ -314,10 +314,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary.main,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     borderRadius: borderRadius.full,
     gap: spacing.xs,
+    minHeight: 44,
+    shadowColor: colors.primary.dark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
   },
   addPanelIcon: {
     fontSize: 20,
@@ -348,17 +354,22 @@ const styles = StyleSheet.create({
 
   // Glass Card
   glassCard: {
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.8)',
+    shadowColor: colors.shadow.medium,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   glassBlur: {
     overflow: 'hidden',
   },
   glassInner: {
-    padding: spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    padding: spacing.lg,
+    backgroundColor: 'rgba(255,255,255,0.5)',
   },
 
   // Panel Item
@@ -398,15 +409,17 @@ const styles = StyleSheet.create({
   // Panel Actions
   panelActions: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 6,
   },
   actionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.06)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
   },
   actionButtonDisabled: {
     opacity: 0.3,

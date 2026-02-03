@@ -407,14 +407,19 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
+    borderColor: 'rgba(255,255,255,0.8)',
+    shadowColor: colors.shadow.medium,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
   },
   glassBlur: {
     overflow: 'hidden',
   },
   glassInner: {
     padding: spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: 'rgba(255,255,255,0.4)',
   },
 
   // Prayer Card
@@ -524,12 +529,17 @@ const styles = StyleSheet.create({
   },
   quickAccessItem: {
     flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: 'rgba(255,255,255,0.75)',
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.8)',
+    borderColor: 'rgba(255,255,255,0.9)',
+    shadowColor: colors.shadow.light,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 2,
   },
   quickAccessIcon: {
     fontSize: 24,
