@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, Switch, ActivityIndicator, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -14,6 +14,15 @@ import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
+/** Strip HTML entities that may appear in Sefaria text (e.g. &thinsp;) so they don't show as literal text. */
+function cleanVerseText(text: string | undefined): string {
+  if (!text) return '';
+  return text
+    .replace(/&thinsp;/g, ' ')
+    .replace(/&#x2009;/g, ' ')
+    .replace(/\u2009/g, ' ');
+}
+
 export const TehillimReaderScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
@@ -21,38 +30,61 @@ export const TehillimReaderScreen: React.FC = () => {
   
   const [chapter, setChapter] = useState<TehillimChapter | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showEnglish, setShowEnglish] = useState(true);
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [isMarkedComplete, setIsMarkedComplete] = useState(false);
   const [isDailyChapter, setIsDailyChapter] = useState(false);
+  const [isWheneverMode, setIsWheneverMode] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const hasReachedEnd = useRef(false);
+  const readingStartTime = useRef<number | null>(null);
 
   useEffect(() => {
+    hasReachedEnd.current = false;
+    readingStartTime.current = Date.now();
     loadChapter(psalm);
     checkIfDailyChapter(psalm);
   }, [psalm]);
 
   const checkIfDailyChapter = async (chapterNum: number) => {
     const progress = await DailyTehillimTracker.getTodaysProgress();
-    setIsDailyChapter(progress.totalChapters.includes(chapterNum));
-    setIsMarkedComplete(progress.chaptersCompleted?.includes(chapterNum) || false);
+    const whenever = progress.goalType === 'whenever';
+    setIsWheneverMode(whenever);
+    setIsDailyChapter(whenever || progress.totalChapters.includes(chapterNum));
+    setIsMarkedComplete(progress.chaptersCompleted?.includes(chapterNum) ?? false);
   };
 
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
     const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 100;
-    
-    if (isCloseToBottom && !hasReachedEnd.current && isDailyChapter && !isMarkedComplete) {
+    if (isCloseToBottom && !hasReachedEnd.current) {
       hasReachedEnd.current = true;
       markChapterComplete();
     }
   };
 
+  const getWordCount = (): number => {
+    if (!chapter?.verses) return 0;
+    return chapter.verses.reduce(
+      (sum, v) => sum + (v.hebrew?.trim().split(/\s+/).filter(Boolean).length ?? 0),
+      0
+    );
+  };
+
   const markChapterComplete = async () => {
-    if (!isMarkedComplete && isDailyChapter) {
-      await DailyTehillimTracker.markChapterComplete(psalm);
+    const progress = await DailyTehillimTracker.getTodaysProgress();
+    const inSchedule = progress.goalType === 'whenever' || progress.totalChapters.includes(psalm);
+    const alreadyComplete = progress.chaptersCompleted?.includes(psalm) ?? false;
+    if (inSchedule && !alreadyComplete) {
+      const start = readingStartTime.current ?? Date.now();
+      const durationMs = Math.max(1000, Date.now() - start);
+      const durationMinutes = durationMs / 60000;
+      const wordCount = getWordCount() || 120;
+      await DailyTehillimTracker.markChapterComplete(psalm, {
+        durationMinutes,
+        wordCount,
+      });
       setIsMarkedComplete(true);
+      setIsDailyChapter(true);
     }
   };
 
@@ -72,17 +104,16 @@ export const TehillimReaderScreen: React.FC = () => {
     }
   };
 
-  const getFontSize = () => {
+  const getHebrewFontSize = () => {
     switch (fontSize) {
-      case 'small': return { hebrew: 18, english: 14 };
-      case 'large': return { hebrew: 28, english: 18 };
-      default: return { hebrew: 22, english: 16 };
+      case 'small': return 18;
+      case 'large': return 28;
+      default: return 22;
     }
   };
 
   const renderVerse = (verse: TehillimVerse, index: number) => {
-    const sizes = getFontSize();
-    
+    const size = getHebrewFontSize();
     return (
       <FadeIn key={verse.number} delay={30 * index}>
         <View style={styles.verseContainer}>
@@ -90,14 +121,9 @@ export const TehillimReaderScreen: React.FC = () => {
             <Text style={styles.verseNumber}>{verse.number}</Text>
           </View>
           <View style={styles.verseTextContainer}>
-            <Text style={[styles.hebrewText, { fontSize: sizes.hebrew, lineHeight: sizes.hebrew * 1.6 }]}>
-              {verse.hebrew}
+            <Text style={[styles.hebrewText, { fontSize: size, lineHeight: size * 1.6 }]}>
+              {cleanVerseText(verse.hebrew)}
             </Text>
-            {showEnglish && verse.english && (
-              <Text style={[styles.englishText, { fontSize: sizes.english, lineHeight: sizes.english * 1.5 }]}>
-                {verse.english}
-              </Text>
-            )}
           </View>
         </View>
       </FadeIn>
@@ -150,13 +176,28 @@ export const TehillimReaderScreen: React.FC = () => {
         bounces={true}
         nestedScrollEnabled={true}
       >
-        {/* Daily Tehillim Badge */}
+        {/* Daily / Whenever Tehillim Badge — show "Complete perek" in whenever mode on every perek */}
         {isDailyChapter && (
           <FadeIn delay={0}>
             <View style={[styles.dailyBadge, isMarkedComplete && styles.dailyBadgeComplete]}>
               <Text style={styles.dailyBadgeText}>
-                {isMarkedComplete ? '✓ Completed Today' : 'Today\'s Tehillim'}
+                {isMarkedComplete
+                  ? (isWheneverMode ? '✓ Perek complete' : '✓ Completed Today')
+                  : isWheneverMode
+                    ? 'Say this perek whenever you can'
+                    : 'Today\'s Tehillim'}
               </Text>
+              {!isMarkedComplete && (
+                <TouchableOpacity
+                  style={styles.markCompleteButton}
+                  onPress={markChapterComplete}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.markCompleteButtonText}>
+                    {isWheneverMode ? 'Complete perek' : 'Mark complete'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           </FadeIn>
         )}
@@ -184,15 +225,6 @@ export const TehillimReaderScreen: React.FC = () => {
         {/* Controls */}
         <FadeIn delay={50}>
           <View style={styles.controlsContainer}>
-            <View style={styles.controlRow}>
-              <Text style={styles.controlLabel}>English Translation</Text>
-              <Switch
-                value={showEnglish}
-                onValueChange={setShowEnglish}
-                trackColor={{ false: colors.neutral[300], true: colors.primary.light }}
-                thumbColor={showEnglish ? colors.primary.main : colors.neutral[400]}
-              />
-            </View>
             <View style={styles.controlRow}>
               <Text style={styles.controlLabel}>Text Size</Text>
               <View style={styles.sizeButtons}>
@@ -272,7 +304,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.xl,
-    paddingTop: spacing.lg,
+    paddingTop: spacing.lg + spacing.safeTopInset,
     paddingBottom: 160,
     flexGrow: 1,
   },
@@ -463,8 +495,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(212, 165, 184, 0.35)',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    alignSelf: 'center',
+    borderRadius: borderRadius.xl,
+    alignSelf: 'stretch',
     marginBottom: spacing.lg,
     borderWidth: 1,
     borderColor: 'rgba(212, 165, 184, 0.5)',
@@ -473,6 +505,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 1,
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   dailyBadgeComplete: {
     backgroundColor: 'rgba(165, 212, 184, 0.35)',
@@ -484,5 +519,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.text.primary,
     letterSpacing: 0.3,
+    textAlign: 'center',
+  },
+  markCompleteButton: {
+    backgroundColor: 'rgba(165, 212, 184, 0.6)',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(165, 212, 184, 0.8)',
+    alignSelf: 'center',
+  },
+  markCompleteButtonText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 12,
+    color: colors.text.primary,
   },
 });

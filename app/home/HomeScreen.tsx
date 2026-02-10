@@ -7,18 +7,22 @@ import {
   Dimensions,
   TouchableOpacity,
   Platform,
-  ScrollView,
   Alert,
   PanResponder,
   LayoutAnimation,
   UIManager,
+  ScrollView,
+  Modal,
+  Pressable,
+  TextInput,
 } from 'react-native';
 
 const DEBUG_PANELS = true; // set false when done debugging
 const log = (tag: string, ...args: any[]) => {
   if (DEBUG_PANELS) console.log(`[Panels ${tag}]`, ...args);
 };
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/core';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location';
@@ -26,7 +30,7 @@ import { FadeIn } from '../../components/animations/FadeIn';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { ErrorView } from '../../components/ui/ErrorView';
 import { NotificationBanner } from '../../components/ui/NotificationBanner';
-import { colors } from '../../src/design/colors';
+import { MoonPhaseAnimation } from '../../components/ui/MoonPhaseAnimation';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { CalendarEngine } from '../../src/core/calendar/CalendarEngine';
@@ -34,19 +38,64 @@ import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { HomePanelsService, HomePanel, PANEL_DEFINITIONS } from '../../src/storage/HomePanelsService';
 import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
+import { OmerCalculator } from '../../src/core/omer/OmerCalculator';
+import { recordAppOpen, getAppStreak } from '../../src/storage/StreakService';
+import { getDaveningStreak } from '../../src/storage/DaveningStreakService';
+import { getBrachosCount, addBrachos } from '../../src/storage/BrachosCounterService';
+import { HabitTracker } from '../../src/storage/HabitTracker';
+import { TzedakahTracker } from '../../src/storage/TzedakahTracker';
+import { StorageService } from '../../src/storage/StorageService';
 import { ZmanimService } from '../../src/core/zmanim/ZmanimService';
-import { DayInfo, CalendarContext } from '../../src/types/calendar';
+import { DayInfo, CalendarContext, DaveningChanges } from '../../src/types/calendar';
 import { CustomReminder } from '../../src/types/preferences';
-
+import { useTheme } from '../../src/design/theme';
+import type { AppTheme } from '../../src/design/theme';
+import {
+  HEBREW_WORDS,
+  INSPIRATION_QUOTES,
+  MUSSAR_QUOTES,
+  TORAH_THOUGHTS,
+  GEDOLIM_STORIES,
+  JEWISH_HISTORY_ON_THIS_DAY,
+  AFFIRMATIONS,
+  CHUMASH_DAILY,
+  ZOHAR_CHASSIDUS,
+  getByDay100,
+  getParshaSummary,
+} from '../../src/content/HomeWidgetContent';
+import { getGedolimForDate } from '../../src/content/GedolimYahrzeits';
+import { getTodayNachYomi } from '../../src/services/NachYomiService';
+import { getTodayMishnaYomi } from '../../src/services/MishnaYomiService';
+import { getTodayRambamYomi } from '../../src/services/RambamYomiService';
+import { getShneyimMikraData } from '../../src/services/ShneyimMikraService';
+import { ShneyimMikraTracker } from '../../src/storage/ShneyimMikraTracker';
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+/** True when today has different/special davening (Rosh Chodesh, Yom Tov, no Tachanun, Hallel, etc.). */
+function hasNotableDaveningChanges(dc: DaveningChanges | null | undefined): boolean {
+  if (!dc) return false;
+  return (
+    dc.hallel === 'full' ||
+    dc.hallel === 'half' ||
+    dc.tachanun === false ||
+    dc.yaalehVeyavo === true ||
+    dc.alHanissim === true ||
+    dc.aneinu === true ||
+    dc.nachem === true ||
+    dc.avinuMalkeinu === true ||
+    dc.selichos === true ||
+    dc.kinos === true ||
+    dc.musaf !== false
+  );
+}
+
 const { width, height } = Dimensions.get('window');
-const GRID_COLUMNS = 2;
 const GRID_GAP = spacing.sm;
-const PANEL_WIDTH = (width - spacing.lg * 2 - GRID_GAP) / GRID_COLUMNS;
+const PANEL_HEIGHT = 120; // Same height for every widget
+const PANEL_WIDTH_HALF = (width - spacing.lg * 2 - GRID_GAP) / 2; // Half width = 2 per row
 
 // Floating Orb Component
 const FloatingOrb: React.FC<{
@@ -101,22 +150,22 @@ const JiggleView: React.FC<{
 
   useEffect(() => {
     if (isEditing) {
-      // Much gentler shake - slower and smaller rotation
+      // Gentle, slow jiggle - feels bendable, not rigid
       Animated.loop(
         Animated.sequence([
           Animated.timing(rotation, {
             toValue: 1,
-            duration: 200,
+            duration: 280,
             useNativeDriver: true,
           }),
           Animated.timing(rotation, {
             toValue: -1,
-            duration: 400,
+            duration: 560,
             useNativeDriver: true,
           }),
           Animated.timing(rotation, {
             toValue: 0,
-            duration: 200,
+            duration: 280,
             useNativeDriver: true,
           }),
         ])
@@ -128,7 +177,7 @@ const JiggleView: React.FC<{
 
   const rotate = rotation.interpolate({
     inputRange: [-1, 0, 1],
-    outputRange: ['-0.5deg', '0deg', '0.5deg'], // Much smaller rotation
+    outputRange: ['-0.35deg', '0deg', '0.35deg'],
   });
 
   return (
@@ -144,15 +193,21 @@ const GlassCard: React.FC<{
   style?: any;
   onPress?: () => void;
 }> = ({ children, style, onPress }) => {
+  const styles = useHomeStyles();
+  const { theme } = useTheme();
+  const glassGradient = theme.isDark
+    ? ['rgba(16, 14, 24, 0.92)', 'rgba(18, 20, 34, 0.78)']
+    : ['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)'];
+
   const content = (
     <View style={[styles.glassCard, style]}>
       {Platform.OS !== 'web' ? (
-        <BlurView intensity={80} tint="light" style={styles.glassBlur}>
+        <BlurView intensity={80} tint={theme.isDark ? 'dark' : 'light'} style={styles.glassBlur}>
           <View style={styles.glassInner}>{children}</View>
         </BlurView>
       ) : (
         <LinearGradient
-          colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
+          colors={glassGradient}
           style={styles.glassBlur}
         >
           <View style={styles.glassInner}>{children}</View>
@@ -176,7 +231,6 @@ const DraggablePanel: React.FC<{
   children: React.ReactNode;
   isEditing: boolean;
   onRemove: () => void;
-  onResize?: (size: 'full' | 'half') => void;
   index: number;
   onDragStart: (index: number) => void;
   onDragEnd: (fromIndex: number, toIndex: number) => void;
@@ -186,11 +240,11 @@ const DraggablePanel: React.FC<{
   panelCount: number;
   isFullWidth?: boolean;
   dragPreviewToIndex?: number | null;
+  isAutoPanel?: boolean;
 }> = ({ 
   children, 
   isEditing, 
   onRemove,
-  onResize,
   index, 
   onDragStart, 
   onDragEnd, 
@@ -200,7 +254,9 @@ const DraggablePanel: React.FC<{
   panelCount,
   isFullWidth,
   dragPreviewToIndex,
+  isAutoPanel = false,
 }) => {
+  const styles = useHomeStyles();
   const pan = useRef(new Animated.ValueXY()).current;
   const scale = useRef(new Animated.Value(1)).current;
   const zIndex = useRef(new Animated.Value(1)).current;
@@ -228,6 +284,10 @@ const DraggablePanel: React.FC<{
         if (claim) log('drag', 'panResponder: claiming touch', index);
         return claim;
       },
+      onStartShouldSetPanResponderCapture: (evt) => {
+        if (isTouchOnRemoveButton(evt)) return false;
+        return isEditingRef.current;
+      },
       onMoveShouldSetPanResponder: (evt, gestureState) => {
         if (isTouchOnRemoveButton(evt)) return false;
         return isEditingRef.current && isLongPressed.current && (Math.abs(gestureState.dy) > 5 || Math.abs(gestureState.dx) > 5);
@@ -244,10 +304,10 @@ const DraggablePanel: React.FC<{
           log('drag', 'long press fired, starting drag', index);
           onDragStart(index);
           Animated.parallel([
-            Animated.spring(scale, { toValue: 1.05, useNativeDriver: true }),
+            Animated.spring(scale, { toValue: 1.05, tension: 80, friction: 12, useNativeDriver: true }),
             Animated.timing(zIndex, { toValue: 100, duration: 0, useNativeDriver: true }),
           ]).start();
-        }, 200);
+        }, 180);
       },
       onPanResponderMove: (evt, gestureState) => {
         if (isLongPressed.current) {
@@ -274,10 +334,10 @@ const DraggablePanel: React.FC<{
         }
         isLongPressed.current = false;
         
-        // Reset position
+        // Reset position - softer spring so drop feels bendable, not rigid
         Animated.parallel([
-          Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: true }),
-          Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
+          Animated.spring(pan, { toValue: { x: 0, y: 0 }, tension: 45, friction: 10, useNativeDriver: true }),
+          Animated.spring(scale, { toValue: 1, tension: 45, friction: 10, useNativeDriver: true }),
           Animated.timing(zIndex, { toValue: 1, duration: 0, useNativeDriver: true }),
         ]).start();
       },
@@ -287,8 +347,8 @@ const DraggablePanel: React.FC<{
         }
         isLongPressed.current = false;
         Animated.parallel([
-          Animated.spring(pan, { toValue: { x: 0, y: 0 }, useNativeDriver: true }),
-          Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
+          Animated.spring(pan, { toValue: { x: 0, y: 0 }, tension: 45, friction: 10, useNativeDriver: true }),
+          Animated.spring(scale, { toValue: 1, tension: 45, friction: 10, useNativeDriver: true }),
         ]).start();
       },
     })
@@ -323,17 +383,20 @@ const DraggablePanel: React.FC<{
             opacity: shouldDim ? 0.5 : 1,
           },
         ]}
-        {...(isEditing ? panResponder.panHandlers : {})}
+        {...(isEditing && !isAutoPanel ? panResponder.panHandlers : {})}
       >
         <JiggleView isEditing={isEditing && !isBeingDragged}>
-          <View style={styles.editablePanelContainer}>
+          <View
+            style={styles.editablePanelContainer}
+            pointerEvents={isEditing ? 'none' : 'auto'}
+          >
             {children}
           </View>
         </JiggleView>
       </Animated.View>
       
-      {/* Remove button - outside of panResponder to ensure it works */}
-      {isEditing && (
+      {/* Remove button - outside of panResponder to ensure it works (not for auto time-based panels) */}
+      {isEditing && !isAutoPanel && (
         <TouchableOpacity
           style={styles.removeButton}
           onPress={handleRemovePress}
@@ -346,44 +409,14 @@ const DraggablePanel: React.FC<{
           </View>
         </TouchableOpacity>
       )}
-      
-      {/* Resize handle in bottom-right corner */}
-      {isEditing && !isFullWidth && (
-        <TouchableOpacity
-          style={styles.resizeHandle}
-          onPress={() => {
-            log('resize', 'resize (half->full)', index);
-            onResize && onResize('full');
-          }}
-          activeOpacity={0.7}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <View style={styles.resizeHandleInner}>
-            <Text style={styles.resizeHandleText}>⤡</Text>
-          </View>
-        </TouchableOpacity>
-      )}
-      {isEditing && isFullWidth && (
-        <TouchableOpacity
-          style={styles.resizeHandle}
-          onPress={() => {
-            log('resize', 'resize (full->half)', index);
-            onResize && onResize('half');
-          }}
-          activeOpacity={0.7}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <View style={styles.resizeHandleInner}>
-            <Text style={styles.resizeHandleText}>⤢</Text>
-          </View>
-        </TouchableOpacity>
-      )}
     </View>
   );
 };
 
 export const HomeScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const styles = useHomeStyles();
   const [dayInfo, setDayInfo] = useState<DayInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -410,7 +443,47 @@ export const HomeScreen: React.FC = () => {
     message: '',
     dayName: '',
     goalType: 'weekly' as string,
+    overallCompleted: 0,
+    overallTotal: 150,
+    overallLabel: '',
+    overallPercent: 0,
   });
+  const [appStreak, setAppStreak] = useState(0);
+  const [daveningStreak, setDaveningStreak] = useState(0);
+  const [tehillimStreak, setTehillimStreak] = useState(0);
+  const [tehillimAverageWPM, setTehillimAverageWPM] = useState<number | null>(null);
+  const [brachosCount, setBrachosCount] = useState(0);
+  const [habitsTodayMarked, setHabitsTodayMarked] = useState(false);
+  const [dafYomiText, setDafYomiText] = useState<string | null>(null);
+  const [nachYomiText, setNachYomiText] = useState<string | null>(null);
+  const [mishnaYomiText, setMishnaYomiText] = useState<string | null>(null);
+  const [rambamYomiText, setRambamYomiText] = useState<string | null>(null);
+  const [shneyimMikraData, setShneyimMikraData] = useState<{
+    parsha: string;
+    parshaHebrew: string;
+    todayAliyah: number;
+    todayRef: string | null;
+    percentComplete: number;
+    aliyotCompleted: number;
+  } | null>(null);
+  const [tzedakahPastMonthTotal, setTzedakahPastMonthTotal] = useState<number>(0);
+  const [omerCountedToday, setOmerCountedToday] = useState(false);
+  const [hebrewBirthday, setHebrewBirthday] = useState<{ day: number; month: number } | null>(null);
+  const [hebrewBirthdayModalVisible, setHebrewBirthdayModalVisible] = useState(false);
+  const [birthdayForm, setBirthdayForm] = useState({ day: 15, month: 1 }); // 15 Nisan default
+
+  const gradientColors = useMemo(() => {
+    const base = theme.backgroundGradient;
+    return [base[0], base[1], base[2], base[0]];
+  }, [theme.mode]);
+
+  const orbPalette = useMemo(
+    () =>
+      theme.isDark
+        ? ['rgba(72, 65, 103, 0.35)', 'rgba(44, 68, 105, 0.28)']
+        : ['rgba(212, 165, 184, 0.2)', 'rgba(165, 196, 212, 0.2)'],
+    [theme.isDark]
+  );
 
   const progressAnim = useRef(new Animated.Value(0)).current;
   const fastProgressAnim = useRef(new Animated.Value(0)).current;
@@ -420,19 +493,71 @@ export const HomeScreen: React.FC = () => {
     loadPanels();
     loadCustomReminders();
     loadFastDayProgress();
-    
+
     // Update fast progress every minute
     const interval = setInterval(loadFastDayProgress, 60000);
     return () => clearInterval(interval);
   }, []);
 
+  const loadTzedakahTotal = useCallback(async () => {
+    const total = await TzedakahTracker.getTotalPastMonth();
+    setTzedakahPastMonthTotal(total);
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
+      recordAppOpen();
       loadTehillimProgress();
       loadPanels();
       loadCustomReminders();
-    }, [])
+      loadTrackingData();
+      loadOmerCounted();
+      loadHebrewBirthday();
+      loadShneyimMikra();
+      loadTzedakahTotal();
+    }, [loadTzedakahTotal])
   );
+
+  const loadHebrewBirthday = useCallback(async () => {
+    const prefs = await UserPreferencesService.getPreferences();
+    const bd = prefs?.hebrewBirthday ?? null;
+    setHebrewBirthday(bd);
+    if (bd) {
+      setBirthdayForm({ day: bd.day, month: bd.month });
+    }
+  }, []);
+
+  const loadOmerCounted = useCallback(async () => {
+    const day = OmerCalculator.getOmerDay();
+    if (day) {
+      const counts = await StorageService.getOmerCounts();
+      setOmerCountedToday(!!counts?.[day]);
+    } else {
+      setOmerCountedToday(false);
+    }
+  }, []);
+
+  const loadTrackingData = async () => {
+    const [streak, daven, tehillimStr, brachos, habitsToday] = await Promise.all([
+      getAppStreak(),
+      getDaveningStreak(),
+      DailyTehillimTracker.getStreak(),
+      getBrachosCount(),
+      HabitTracker.isMarkedToday(),
+    ]);
+    setAppStreak(streak);
+    setDaveningStreak(daven);
+    setTehillimStreak(tehillimStr);
+    setBrachosCount(brachos);
+    setHabitsTodayMarked(habitsToday);
+  };
+
+  // Hide bottom tab bar when in edit mode
+  useEffect(() => {
+    navigation.setOptions({
+      tabBarStyle: isEditing ? { display: 'none' } : undefined,
+    } as never);
+  }, [isEditing, navigation]);
 
   const loadCustomReminders = async () => {
     const reminders = await UserPreferencesService.getCustomReminders();
@@ -532,17 +657,88 @@ export const HomeScreen: React.FC = () => {
 
   useEffect(() => {
     Animated.timing(progressAnim, {
-      toValue: tehillimProgress.percentComplete,
+      toValue: tehillimProgress.overallPercent,
       duration: 800,
       useNativeDriver: false,
     }).start();
-  }, [tehillimProgress.percentComplete]);
+  }, [tehillimProgress.overallPercent]);
 
   const loadPanels = async () => {
     const loadedPanels = await HomePanelsService.getPanels();
     const filtered = loadedPanels.filter(p => p.visible).sort((a, b) => a.order - b.order);
     log('loadPanels', 'loaded', loadedPanels.length, 'visible', filtered.length, 'ids', filtered.map(p => p.id));
     setPanels(filtered);
+  };
+
+  const loadDafYomi = async () => {
+    try {
+      const d = new Date();
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      const dateStr = `${y}-${m}-${day}`;
+      const res = await fetch(`https://www.hebcal.com/hebcal?cfg=json&v=1&F=on&start=${dateStr}&end=${dateStr}`);
+      const data = await res.json();
+      const item = data?.items?.find((e: { category?: string }) => e.category === 'dafyomi');
+      setDafYomiText(item?.title?.trim() || null);
+    } catch {
+      setDafYomiText(null);
+    }
+  };
+
+  const loadNachYomi = () => {
+    const ch = getTodayNachYomi();
+    setNachYomiText(ch ? `${ch.book} ${ch.chapter}` : null);
+  };
+
+  const loadMishnaYomi = () => {
+    const p = getTodayMishnaYomi();
+    setMishnaYomiText(p ? `${p.tractate} ${p.perek}` : null);
+  };
+
+  const loadRambamYomi = async () => {
+    const r = await getTodayRambamYomi(3);
+    setRambamYomiText(r?.title ?? null);
+  };
+
+  const loadShneyimMikra = async () => {
+    const d = await getShneyimMikraData();
+    if (d?.parsha) {
+      const p = await ShneyimMikraTracker.getProgress(d.parsha);
+      setShneyimMikraData({
+        parsha: d.parsha,
+        parshaHebrew: d.parshaHebrew,
+        todayAliyah: d.todayAliyah,
+        todayRef: d.todayRef,
+        percentComplete: p.percentComplete,
+        aliyotCompleted: p.aliyotCompleted.length,
+      });
+    } else {
+      setShneyimMikraData(null);
+    }
+  };
+
+
+  const loadTehillimProgress = async () => {
+    const [progress, message, avgWpm, overall] = await Promise.all([
+      DailyTehillimTracker.getTodaysProgress(),
+      DailyTehillimTracker.getMotivationalMessage(),
+      DailyTehillimTracker.getAverageWPM(),
+      DailyTehillimTracker.getOverallTehillimProgress(),
+    ]);
+    setTehillimProgress({
+      percentComplete: progress.percentComplete,
+      chaptersRemaining: progress.chaptersRemaining,
+      totalChapters: progress.totalChapters,
+      message,
+      dayName: progress.dayName,
+      goalType: progress.goalType,
+      overallCompleted: overall.completed,
+      overallTotal: overall.total,
+      overallLabel: overall.label,
+      overallPercent: overall.percentComplete,
+    });
+    setTehillimAverageWPM(avgWpm);
   };
 
   const loadDayInfo = async () => {
@@ -589,25 +785,17 @@ export const HomeScreen: React.FC = () => {
       const info = await CalendarEngine.getTodayInfo(context);
       setDayInfo(info);
       await loadTehillimProgress();
+      loadDafYomi();
+      loadNachYomi();
+      loadMishnaYomi();
+      loadRambamYomi();
+      loadTzedakahTotal();
     } catch (err) {
       console.error('Error loading day info:', err);
       setError('Failed to load day information');
     } finally {
       setLoading(false);
     }
-  };
-
-  const loadTehillimProgress = async () => {
-    const progress = await DailyTehillimTracker.getTodaysProgress();
-    const message = await DailyTehillimTracker.getMotivationalMessage();
-    setTehillimProgress({
-      percentComplete: progress.percentComplete,
-      chaptersRemaining: progress.chaptersRemaining,
-      totalChapters: progress.totalChapters,
-      message,
-      dayName: progress.dayName,
-      goalType: progress.goalType,
-    });
   };
 
   const handleTehillimPress = async () => {
@@ -632,15 +820,6 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleResizePanel = async (panelId: string, size: 'full' | 'half') => {
-    log('resize', 'handleResizePanel', panelId, size);
-    const newSize = size === 'full' ? 'large' : 'small';
-    await HomePanelsService.updatePanelSize(panelId, newSize);
-    await loadPanels();
-    log('resize', 'done');
-  };
-
-  // Drag handlers - measure by current display order so ref index matches
   const measureAllPanels = useCallback((order: HomePanel[]) => {
     order.forEach((panel, i) => {
       const ref = panelRefsRef.current[i];
@@ -657,40 +836,45 @@ export const HomeScreen: React.FC = () => {
     setIsDragging(true);
     setDraggedIndex(index);
     setDragPreviewToIndex(index);
-    requestAnimationFrame(() => measureAllPanels(panels));
+    requestAnimationFrame(() => measureAllPanels(displayOrder));
   };
 
   const handleDragMove = useCallback((draggedIdx: number, pageX: number, pageY: number) => {
     const layouts = panelLayoutsRef.current;
     const draggedPanel = panels[draggedIdx];
     if (!draggedPanel) return;
+    // Find which slot contains the finger (half = left/right or full width)
     let found: number | null = null;
-    for (let i = 0; i < panels.length; i++) {
-      if (i === draggedIdx) continue;
-      const layout = layouts[panels[i].id];
-      if (!layout) continue;
+    for (const [panelId, layout] of Object.entries(layouts)) {
+      if (panelId === draggedPanel.id) continue;
       const { x, y, w, h } = layout;
       if (pageX >= x && pageX <= x + w && pageY >= y && pageY <= y + h) {
-        found = i;
-        break;
+        const idx = panels.findIndex((p) => p.id === panelId);
+        if (idx >= 0 && idx < panels.length) {
+          found = idx;
+          break;
+        }
       }
     }
     if (found !== null) {
-      setDragPreviewToIndex((prev) => {
-        if (prev === found) return prev;
-        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-        return found;
-      });
+      setDragPreviewToIndex((prev) => (prev === found ? prev : found));
     }
   }, [panels]);
 
   const handleDragEnd = async (fromIndex: number, toIndex: number) => {
-    log('drag', 'handleDragEnd', { fromIndex, toIndex, panelCount: panels.length });
-    if (fromIndex !== toIndex && toIndex >= 0 && toIndex < panels.length) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    // Clamp toIndex to user panels only (auto time-based panels are at the end and not reorderable)
+    const safeToIndex = Math.max(0, Math.min(toIndex, panels.length - 1));
+    log('drag', 'handleDragEnd', { fromIndex, toIndex: safeToIndex, panelCount: panels.length });
+    if (fromIndex !== safeToIndex && fromIndex >= 0 && fromIndex < panels.length) {
+      LayoutAnimation.configureNext({
+        duration: 380,
+        update: { type: 'easeInEaseOut' },
+        create: { type: 'easeInEaseOut', property: 'opacity' },
+        delete: { type: 'easeInEaseOut', property: 'opacity' },
+      });
       const newPanels = [...panels];
       const [movedPanel] = newPanels.splice(fromIndex, 1);
-      newPanels.splice(toIndex, 0, movedPanel);
+      newPanels.splice(safeToIndex, 0, movedPanel);
       newPanels.forEach((p, i) => p.order = i);
       setPanels(newPanels);
       await HomePanelsService.reorderPanels(newPanels.map(p => p.id));
@@ -706,32 +890,64 @@ export const HomeScreen: React.FC = () => {
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
+  const formatTimeUntil = (until: Date) => {
+    const now = new Date();
+    const ms = until.getTime() - now.getTime();
+    if (ms <= 0) return null;
+    const mins = Math.floor(ms / 60000);
+    const hours = Math.floor(mins / 60);
+    const remainderMins = mins % 60;
+    if (hours > 0 && remainderMins > 0) return `${hours}h ${remainderMins}m`;
+    if (hours > 0) return `${hours}h`;
+    return `${mins}m`;
+  };
+
   const toggleEditMode = () => {
     if (isEditing) {
-      // Exiting edit mode - reset drag state
       setIsDragging(false);
       setDraggedIndex(null);
       setDragPreviewToIndex(null);
+    } else {
+      // Entering edit mode - animate grid like Apple Home
+      LayoutAnimation.configureNext({
+        duration: 260,
+        update: { type: 'easeInEaseOut' },
+        create: { type: 'easeInEaseOut', property: 'opacity' },
+      });
     }
     setIsEditing(!isEditing);
   };
 
-  // While dragging, show other panels in their "preview" order so they shift in real time
-  const displayOrder = useMemo(() => {
-    if (!isDragging || draggedIndex == null || dragPreviewToIndex == null || dragPreviewToIndex === draggedIndex) {
-      return panels;
+  // Time-based panels: auto-added when the day applies (not in marketplace, not stored)
+  const autoPanelsForToday = useMemo((): HomePanel[] => {
+    if (!dayInfo) return [];
+    const list: HomePanel[] = [];
+    const userTypes = new Set(panels.map(p => p.type));
+    if (fastDayProgress?.isFastDay && !userTypes.has('fast_day_info')) {
+      list.push({ id: 'auto-fast', type: 'fast_day_info', order: 1000, visible: true, size: 'full' });
     }
-    const reordered = [...panels];
-    const [moved] = reordered.splice(draggedIndex, 1);
-    reordered.splice(dragPreviewToIndex, 0, moved);
-    return reordered;
-  }, [panels, isDragging, draggedIndex, dragPreviewToIndex]);
+    if (dayInfo.omerDay != null && dayInfo.omerDay >= 1 && dayInfo.omerDay <= 49 && !userTypes.has('omer_counter')) {
+      list.push({ id: 'auto-omer', type: 'omer_counter', order: 1001, visible: true, size: 'full' });
+    }
+    if (dayInfo.isRoshChodesh && !userTypes.has('rosh_chodesh')) {
+      list.push({ id: 'auto-rosh', type: 'rosh_chodesh', order: 1002, visible: true, size: 'half' });
+    }
+    if (hasNotableDaveningChanges(dayInfo.daveningChanges) && !userTypes.has('davening_note')) {
+      list.push({ id: 'auto-davening', type: 'davening_note', order: 999, visible: true, size: 'full' });
+    }
+    return list;
+  }, [dayInfo, fastDayProgress, panels]);
+
+  const displayOrder = useMemo(
+    () => [...panels, ...autoPanelsForToday],
+    [panels, autoPanelsForToday]
+  );
 
   useEffect(() => {
     if (!isDragging || draggedIndex == null) return;
-    const timer = setTimeout(() => measureAllPanels(displayOrder), 80);
-    return () => clearTimeout(timer);
-  }, [isDragging, draggedIndex, dragPreviewToIndex, displayOrder, measureAllPanels]);
+    const id = requestAnimationFrame(() => measureAllPanels(displayOrder));
+    return () => cancelAnimationFrame(id);
+  }, [isDragging, draggedIndex, displayOrder, measureAllPanels]);
 
   const handlePanelLayout = useCallback((panelId: string, displayIndex: number) => {
     return () => {
@@ -744,12 +960,10 @@ export const HomeScreen: React.FC = () => {
     };
   }, []);
 
-  // Render individual panel based on type
-  const renderPanel = (panel: HomePanel, index: number) => {
+  // Inner content for one panel (used by renderPanel and by drag overlay)
+  const getPanelContentNode = (panel: HomePanel, index: number): React.ReactNode => {
     const panelDef = PANEL_DEFINITIONS.find(p => p.type === panel.type);
-    
-    const panelContent = () => {
-      switch (panel.type) {
+    switch (panel.type) {
         case 'date':
           if (!dayInfo) return null;
           return (
@@ -785,11 +999,15 @@ export const HomeScreen: React.FC = () => {
                   <Text style={styles.tehillimIconText}>📖</Text>
                 </View>
                 <View style={styles.tehillimInfo}>
-                  <Text style={styles.tehillimTitle}>{tehillimProgress.dayName || 'Daily'} Tehillim</Text>
+                  <Text style={styles.tehillimTitle}>
+                    {tehillimProgress.goalType === 'whenever'
+                      ? 'Tehillim'
+                      : `${tehillimProgress.dayName || 'Daily'} Tehillim`}
+                  </Text>
                   <Text style={styles.tehillimMessage}>{tehillimProgress.message}</Text>
                 </View>
                 <View style={styles.tehillimPercentContainer}>
-                  <Text style={styles.tehillimPercent}>{tehillimProgress.percentComplete}%</Text>
+                  <Text style={styles.tehillimPercent}>{tehillimProgress.overallPercent}%</Text>
                 </View>
               </View>
               
@@ -801,9 +1019,18 @@ export const HomeScreen: React.FC = () => {
               
               <View style={styles.tehillimFooter}>
                 <View style={styles.tehillimFooterLeft}>
-                  <Text style={styles.tehillimFooterText}>
-                    {tehillimProgress.totalChapters.length - tehillimProgress.chaptersRemaining.length} of {tehillimProgress.totalChapters.length} chapters
-                  </Text>
+                  <View>
+                    <Text style={styles.tehillimFooterText}>
+                      {tehillimProgress.goalType === 'whenever'
+                        ? `${tehillimProgress.overallCompleted} of 150 perakim`
+                        : `${tehillimProgress.totalChapters.length - tehillimProgress.chaptersRemaining.length} of ${tehillimProgress.totalChapters.length} today`}
+                    </Text>
+                    {tehillimProgress.goalType !== 'whenever' && tehillimProgress.overallLabel ? (
+                      <Text style={styles.tehillimFooterSubtext}>
+                        {tehillimProgress.overallCompleted} of {tehillimProgress.overallTotal} {tehillimProgress.overallLabel}
+                      </Text>
+                    ) : null}
+                  </View>
                   {!isEditing && (
                     <TouchableOpacity 
                       onPress={() => navigation.navigate('TehillimSettings' as never)}
@@ -815,7 +1042,13 @@ export const HomeScreen: React.FC = () => {
                 </View>
                 {!isEditing && (
                   <Text style={styles.tehillimContinue}>
-                    {tehillimProgress.percentComplete === 100 ? 'Complete ✓' : 'Continue →'}
+                    {tehillimProgress.percentComplete === 100 && tehillimProgress.goalType !== 'whenever'
+                      ? 'Today done ✓'
+                      : tehillimProgress.overallPercent === 100
+                        ? 'Complete ✓'
+                        : tehillimProgress.goalType === 'whenever'
+                          ? 'Open any perek →'
+                          : 'Continue →'}
                   </Text>
                 )}
               </View>
@@ -825,6 +1058,7 @@ export const HomeScreen: React.FC = () => {
         case 'zmanim':
           if (!dayInfo) return null;
           return (
+            <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
             <View style={styles.zmanimRow}>
               <View style={styles.zmanItem}>
                 <Text style={styles.zmanLabel}>Sunrise</Text>
@@ -832,120 +1066,54 @@ export const HomeScreen: React.FC = () => {
               </View>
               <View style={styles.zmanDivider} />
               <View style={styles.zmanItem}>
-                <Text style={styles.zmanLabel}>Sunset</Text>
-                <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.sunset)}</Text>
-              </View>
-              <View style={styles.zmanDivider} />
-              <View style={styles.zmanItem}>
                 <Text style={styles.zmanLabel}>Shema</Text>
                 <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.sofZmanShemaGRA)}</Text>
               </View>
+              <View style={styles.zmanDivider} />
+              <View style={styles.zmanItem}>
+                <Text style={styles.zmanLabel}>Sunset</Text>
+                <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.sunset)}</Text>
+              </View>
             </View>
-          );
-
-        case 'quick_actions':
-          return (
-            <View style={styles.quickActions}>
-              <TouchableOpacity 
-                style={styles.quickAction}
-                onPress={() => !isEditing && navigation.navigate('Calendar' as never)}
-                disabled={isEditing}
-              >
-                <Text style={styles.quickActionIcon}>📅</Text>
-                <Text style={styles.quickActionText}>Calendar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.quickAction}
-                onPress={() => !isEditing && navigation.navigate('Library' as never)}
-                disabled={isEditing}
-              >
-                <Text style={styles.quickActionIcon}>📖</Text>
-                <Text style={styles.quickActionText}>Library</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.quickAction}
-                onPress={() => !isEditing && navigation.navigate('Settings' as never)}
-                disabled={isEditing}
-              >
-                <Text style={styles.quickActionIcon}>⚙️</Text>
-                <Text style={styles.quickActionText}>Settings</Text>
-              </TouchableOpacity>
-            </View>
+            </GlassCard>
           );
 
         case 'davening_note':
-          if (!dayInfo || (!dayInfo.daveningChanges.hallel && dayInfo.daveningChanges.tachanun)) {
-            return null;
-          }
+          if (!dayInfo || !hasNotableDaveningChanges(dayInfo.daveningChanges)) return null;
+          const hasHallel = !!dayInfo.daveningChanges?.hallel;
+          const noTachanun = dayInfo.daveningChanges?.tachanun === false;
+          const message = hasHallel
+            ? `${dayInfo.daveningChanges.hallel === 'full' ? 'Full' : 'Half'} Hallel today`
+            : noTachanun
+              ? 'No Tachanun today'
+              : dayInfo.daveningChanges?.reason || 'Special davening today';
           return (
-            <View style={styles.daveningNote}>
-              <Text style={styles.daveningNoteText}>
-                {dayInfo.daveningChanges.hallel 
-                  ? `${dayInfo.daveningChanges.hallel === 'full' ? 'Full' : 'Half'} Hallel today` 
-                  : 'No Tachanun today'}
-              </Text>
-            </View>
-          );
-
-        case 'custom_reminders':
-          const enabledReminders = customReminders.filter(r => r.enabled);
-          return (
-            <GlassCard>
-              <View style={styles.customRemindersPanel}>
-                <View style={styles.customRemindersPanelHeader}>
-                  <Text style={styles.customRemindersPanelTitle}>🔔 My Reminders</Text>
-                  {!isEditing && (
-                    <TouchableOpacity
-                      onPress={() => navigation.navigate('AddCustomReminder' as never)}
-                    >
-                      <Text style={styles.customRemindersPanelAdd}>+ Add</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-                {enabledReminders.length > 0 ? (
-                  enabledReminders.slice(0, 3).map((reminder) => (
-                    <View key={reminder.id} style={styles.customReminderPanelItem}>
-                      <Text style={styles.customReminderPanelItemTitle}>{reminder.title}</Text>
-                      <Text style={styles.customReminderPanelItemTime}>{reminder.time}</Text>
-                    </View>
-                  ))
-                ) : (
-                  <Text style={styles.customRemindersPanelEmpty}>
-                    No active reminders
-                  </Text>
-                )}
-                {enabledReminders.length > 3 && (
-                  <Text style={styles.customRemindersPanelMore}>
-                    +{enabledReminders.length - 3} more
-                  </Text>
-                )}
+            <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
+              <View style={styles.daveningNote}>
+                <Text style={styles.daveningNoteText}>{message}</Text>
               </View>
             </GlassCard>
           );
 
         case 'weekly_parsha':
-          if (!dayInfo?.parsha) return null;
           return (
-            <GlassCard>
+            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Parsha')}>
               <View style={styles.parshaPanel}>
                 <Text style={styles.parshaLabel}>This Week's Parsha</Text>
-                <Text style={styles.parshaName}>{dayInfo.parsha}</Text>
-                {dayInfo.parshaHebrew && (
+                <Text style={styles.parshaName} numberOfLines={2}>
+                  {dayInfo?.parsha || 'See calendar'}
+                </Text>
+                {dayInfo?.parshaHebrew ? (
                   <Text style={styles.parshaHebrew}>{dayInfo.parshaHebrew}</Text>
+                ) : dayInfo?.parsha ? null : (
+                  <Text style={styles.parshaSubtext}>Tap to open calendar</Text>
                 )}
               </View>
             </GlassCard>
           );
 
         case 'inspiration_quote':
-          const quotes = [
-            { text: "אִם אֵין אֲנִי לִי, מִי לִי", translation: "If I am not for myself, who will be for me?", source: "Hillel" },
-            { text: "בְּמָקוֹם שֶׁאֵין אֲנָשִׁים, הִשְׁתַּדֵּל לִהְיוֹת אִישׁ", translation: "In a place where there are no leaders, strive to be a leader.", source: "Pirkei Avos" },
-            { text: "הֱוֵי מְקַבֵּל אֶת כָּל הָאָדָם בְּסֵבֶר פָּנִים יָפוֹת", translation: "Greet everyone with a cheerful face.", source: "Shammai" },
-            { text: "אַל תִּסְתַּכֵּל בַּקַּנְקַן, אֶלָּא בְּמַה שֶּׁיֵּשׁ בּוֹ", translation: "Do not look at the vessel, but at what it contains.", source: "Pirkei Avos" },
-            { text: "וְאָהַבְתָּ לְרֵעֲךָ כָּמוֹךָ", translation: "Love your neighbor as yourself.", source: "Vayikra 19:18" },
-          ];
-          const todayQuote = quotes[new Date().getDay() % quotes.length];
+          const todayQuote = getByDay100(INSPIRATION_QUOTES);
           return (
             <GlassCard>
               <View style={styles.inspirationPanel}>
@@ -1042,109 +1210,7 @@ export const HomeScreen: React.FC = () => {
             </GlassCard>
           );
 
-        case 'weather':
-          return (
-            <GlassCard onPress={() => !isEditing && Alert.alert('Weather', 'Location-based weather coming soon!')}>
-              <View style={styles.weatherPanel}>
-                <Text style={styles.weatherIcon}>🌤️</Text>
-                <Text style={styles.weatherTemp}>--°</Text>
-                <Text style={styles.weatherDesc}>Tap to enable</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'location':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Settings' as never)}>
-              <View style={styles.locationPanel}>
-                <Text style={styles.locationIcon}>📍</Text>
-                <Text style={styles.locationText}>Your Location</Text>
-                <Text style={styles.locationSubtext}>For accurate zmanim</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'favorites':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Library' as never)}>
-              <View style={styles.favoritesPanel}>
-                <Text style={styles.favoritesIcon}>⭐</Text>
-                <Text style={styles.favoritesTitle}>Favorites</Text>
-                <Text style={styles.favoritesSubtext}>Quick access to saved items</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'recent':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Library' as never)}>
-              <View style={styles.recentPanel}>
-                <Text style={styles.recentIcon}>🕐</Text>
-                <Text style={styles.recentTitle}>Recently Opened</Text>
-                <Text style={styles.recentSubtext}>Continue where you left off</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'search':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Library' as never)}>
-              <View style={styles.searchPanel}>
-                <Text style={styles.searchIcon}>🔍</Text>
-                <Text style={styles.searchText}>Quick Search</Text>
-              </View>
-            </GlassCard>
-          );
-
         // === CALENDAR PANELS ===
-        case 'zmanim_full':
-          if (!dayInfo) return null;
-          return (
-            <GlassCard>
-              <View style={styles.zmanimFullPanel}>
-                <Text style={styles.zmanimFullTitle}>Today's Zmanim</Text>
-                <View style={styles.zmanimFullGrid}>
-                  <View style={styles.zmanimFullItem}>
-                    <Text style={styles.zmanimFullLabel}>Alos</Text>
-                    <Text style={styles.zmanimFullTime}>{formatTime(dayInfo.extendedZmanim?.alosHashachar)}</Text>
-                  </View>
-                  <View style={styles.zmanimFullItem}>
-                    <Text style={styles.zmanimFullLabel}>Sunrise</Text>
-                    <Text style={styles.zmanimFullTime}>{formatTime(dayInfo.extendedZmanim?.sunrise)}</Text>
-                  </View>
-                  <View style={styles.zmanimFullItem}>
-                    <Text style={styles.zmanimFullLabel}>Shema</Text>
-                    <Text style={styles.zmanimFullTime}>{formatTime(dayInfo.extendedZmanim?.sofZmanShemaGRA)}</Text>
-                  </View>
-                  <View style={styles.zmanimFullItem}>
-                    <Text style={styles.zmanimFullLabel}>Shacharis</Text>
-                    <Text style={styles.zmanimFullTime}>{formatTime(dayInfo.extendedZmanim?.sofZmanShmoneEsreiGRA)}</Text>
-                  </View>
-                  <View style={styles.zmanimFullItem}>
-                    <Text style={styles.zmanimFullLabel}>Chatzos</Text>
-                    <Text style={styles.zmanimFullTime}>{formatTime(dayInfo.extendedZmanim?.chatzos)}</Text>
-                  </View>
-                  <View style={styles.zmanimFullItem}>
-                    <Text style={styles.zmanimFullLabel}>Mincha Gedola</Text>
-                    <Text style={styles.zmanimFullTime}>{formatTime(dayInfo.extendedZmanim?.minchaGedola)}</Text>
-                  </View>
-                  <View style={styles.zmanimFullItem}>
-                    <Text style={styles.zmanimFullLabel}>Plag</Text>
-                    <Text style={styles.zmanimFullTime}>{formatTime(dayInfo.extendedZmanim?.plagHamincha)}</Text>
-                  </View>
-                  <View style={styles.zmanimFullItem}>
-                    <Text style={styles.zmanimFullLabel}>Sunset</Text>
-                    <Text style={styles.zmanimFullTime}>{formatTime(dayInfo.extendedZmanim?.sunset)}</Text>
-                  </View>
-                  <View style={styles.zmanimFullItem}>
-                    <Text style={styles.zmanimFullLabel}>Tzeis</Text>
-                    <Text style={styles.zmanimFullTime}>{formatTime(dayInfo.extendedZmanim?.tzeis)}</Text>
-                  </View>
-                </View>
-              </View>
-            </GlassCard>
-          );
-
         case 'shabbos_times':
           return (
             <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
@@ -1154,11 +1220,11 @@ export const HomeScreen: React.FC = () => {
                 <View style={styles.shabbosTimesRow}>
                   <View style={styles.shabbosTimeItem}>
                     <Text style={styles.shabbosTimeLabel}>Candles</Text>
-                    <Text style={styles.shabbosTimeValue}>{formatTime(dayInfo?.extendedZmanim?.sunset)}</Text>
+                    <Text style={styles.shabbosTimeValue}>{formatTime(dayInfo?.upcomingShabbos?.candleLighting ?? undefined)}</Text>
                   </View>
                   <View style={styles.shabbosTimeItem}>
                     <Text style={styles.shabbosTimeLabel}>Havdalah</Text>
-                    <Text style={styles.shabbosTimeValue}>{formatTime(dayInfo?.extendedZmanim?.tzeis)}</Text>
+                    <Text style={styles.shabbosTimeValue}>{formatTime(dayInfo?.upcomingShabbos?.havdalah ?? undefined)}</Text>
                   </View>
                 </View>
               </View>
@@ -1167,40 +1233,51 @@ export const HomeScreen: React.FC = () => {
 
         case 'candle_lighting':
           return (
-            <GlassCard>
+            <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
               <View style={styles.candlePanel}>
                 <Text style={styles.candleIcon}>🕯️</Text>
                 <Text style={styles.candleTitle}>Candle Lighting</Text>
-                <Text style={styles.candleTime}>{dayInfo?.extendedZmanim?.candleLighting ? formatTime(dayInfo.extendedZmanim.candleLighting) : 'Friday'}</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'havdalah':
-          return (
-            <GlassCard>
-              <View style={styles.havdalahPanel}>
-                <Text style={styles.havdalahIcon}>✨</Text>
-                <Text style={styles.havdalahTitle}>Havdalah</Text>
-                <Text style={styles.havdalahTime}>{formatTime(dayInfo?.extendedZmanim?.tzeis) || 'Motzei Shabbos'}</Text>
+                <Text style={styles.candleTime}>{dayInfo?.upcomingShabbos?.candleLighting ? formatTime(dayInfo.upcomingShabbos.candleLighting) : 'Friday'}</Text>
               </View>
             </GlassCard>
           );
 
         case 'omer_counter':
-          const omerDay = (dayInfo as any)?.omer;
+          const omerDay = dayInfo?.omerDay ?? null;
+          const tzeis = dayInfo?.extendedZmanim?.tzeis;
+          const now = new Date();
+          const afterTzeis = tzeis && now >= tzeis;
+          const waitUntil = tzeis && !afterTzeis ? formatTimeUntil(tzeis) : null;
+          const handleOmerPress = async () => {
+            if (isEditing || !omerDay) return;
+            if (!afterTzeis) return; // Can't count yet
+            if (omerCountedToday) {
+              (navigation as any).navigate('Omer');
+              return;
+            }
+            await StorageService.markOmerDay(omerDay, true);
+            setOmerCountedToday(true);
+            (navigation as any).navigate('Omer');
+          };
           return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
+            <GlassCard onPress={handleOmerPress}>
               <View style={styles.omerPanel}>
                 <Text style={styles.omerIcon}>🌾</Text>
-                <Text style={styles.omerTitle}>Sefiras HaOmer</Text>
-                {omerDay ? (
-                  <>
-                    <Text style={styles.omerDay}>Day {omerDay}</Text>
-                    <Text style={styles.omerWeek}>{Math.floor((omerDay - 1) / 7) + 1} weeks, {((omerDay - 1) % 7) + 1} days</Text>
-                  </>
+                <Text style={styles.omerTitle}>Day {omerDay} of Omer</Text>
+                {!afterTzeis && waitUntil && tzeis ? (
+                  <Text style={styles.omerWait}>You can't say it yet – wait {waitUntil} until {formatTime(tzeis)}</Text>
                 ) : (
-                  <Text style={styles.omerInactive}>Not during Omer period</Text>
+                  <TouchableOpacity
+                    style={styles.omerCheckRow}
+                    onPress={handleOmerPress}
+                    activeOpacity={0.7}
+                    disabled={isEditing}
+                  >
+                    <View style={[styles.omerCheckbox, omerCountedToday && styles.omerCheckboxChecked]}>
+                      {omerCountedToday && <Text style={styles.omerCheckmark}>✓</Text>}
+                    </View>
+                    <Text style={styles.omerCheckLabel}>Have you counted Omer yet?</Text>
+                  </TouchableOpacity>
                 )}
               </View>
             </GlassCard>
@@ -1208,55 +1285,46 @@ export const HomeScreen: React.FC = () => {
 
         case 'rosh_chodesh':
           return (
-            <GlassCard>
+            <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
               <View style={styles.roshChodeshPanel}>
                 <Text style={styles.roshChodeshIcon}>🌙</Text>
                 <Text style={styles.roshChodeshTitle}>Rosh Chodesh</Text>
-                <Text style={styles.roshChodeshText}>{dayInfo?.isRoshChodesh ? 'Today!' : 'Coming soon'}</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'upcoming_holidays':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
-              <View style={styles.holidaysPanel}>
-                <Text style={styles.holidaysIcon}>🎉</Text>
-                <Text style={styles.holidaysTitle}>Upcoming</Text>
-                <Text style={styles.holidaysText}>View in calendar</Text>
+                <Text style={styles.roshChodeshText}>{dayInfo?.isRoshChodesh ? 'Today!' : 'View calendar'}</Text>
               </View>
             </GlassCard>
           );
 
         case 'hebrew_birthday':
+          const daysUntil = hebrewBirthday ? JewishCalendarService.daysUntilHebrewDate(hebrewBirthday.day, hebrewBirthday.month) : null;
+          const birthdayDisplay = hebrewBirthday
+            ? daysUntil === 0
+              ? "Today! 🎂"
+              : daysUntil === 1
+                ? "Tomorrow!"
+                : `${daysUntil} days`
+            : "Add your birthday";
           return (
-            <GlassCard>
+            <GlassCard onPress={() => !isEditing && setHebrewBirthdayModalVisible(true)}>
               <View style={styles.birthdayPanel}>
                 <Text style={styles.birthdayIcon}>🎂</Text>
                 <Text style={styles.birthdayTitle}>Hebrew Birthday</Text>
-                <Text style={styles.birthdayText}>Set in settings</Text>
+                <Text style={styles.birthdayText}>{birthdayDisplay}</Text>
               </View>
             </GlassCard>
           );
 
         case 'yahrzeit':
+          const hdate = dayInfo ? JewishCalendarService.getJewishDate(dayInfo.gregorianDate) : null;
+          const gedolimRabbi = hdate ? getGedolimForDate(hdate.getDate(), hdate.getMonth(), hdate.getFullYear()) : null;
+          const yahrzeitDisplay = gedolimRabbi
+            ? `Yahrzeit: ${gedolimRabbi}`
+            : 'No gedolim yahrzeit today';
           return (
-            <GlassCard>
+            <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
               <View style={styles.yahrzeitPanel}>
                 <Text style={styles.yahrzeitIcon}>🕯️</Text>
-                <Text style={styles.yahrzeitTitle}>Yahrzeits</Text>
-                <Text style={styles.yahrzeitText}>Add in settings</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'daf_yomi_date':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Library' as never)}>
-              <View style={styles.dafPanel}>
-                <Text style={styles.dafIcon}>📚</Text>
-                <Text style={styles.dafTitle}>Daf Yomi</Text>
-                <Text style={styles.dafText}>{(dayInfo as any)?.dafYomi || 'Loading...'}</Text>
+                <Text style={styles.yahrzeitTitle}>Yahrzeit</Text>
+                <Text style={styles.yahrzeitText} numberOfLines={3}>{yahrzeitDisplay}</Text>
               </View>
             </GlassCard>
           );
@@ -1264,287 +1332,42 @@ export const HomeScreen: React.FC = () => {
         case 'nach_yomi':
           return (
             <GlassCard>
-              <View style={styles.nachPanel}>
-                <Text style={styles.nachIcon}>📖</Text>
-                <Text style={styles.nachTitle}>Nach Yomi</Text>
-                <Text style={styles.nachText}>Daily Nach</Text>
-              </View>
+              <TouchableOpacity
+                onPress={() => !isEditing && (navigation as any).navigate('NachReader', { nachYomi: true })}
+                activeOpacity={0.75}
+                style={styles.dafYomiButton}
+              >
+                <Text style={styles.dafButtonIcon}>📖</Text>
+                <Text style={styles.dafButtonTitle}>Nach Yomi</Text>
+                <Text style={styles.dafButtonSubtext} numberOfLines={2} adjustsFontSizeToFit>{nachYomiText ?? "Today's chapter"}</Text>
+              </TouchableOpacity>
             </GlassCard>
           );
 
         case 'mishna_yomis':
           return (
             <GlassCard>
-              <View style={styles.mishnaPanel}>
-                <Text style={styles.mishnaIcon}>📕</Text>
-                <Text style={styles.mishnaTitle}>Mishna Yomis</Text>
-                <Text style={styles.mishnaText}>Daily Mishna</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'halacha_yomis':
-          return (
-            <GlassCard>
-              <View style={styles.halachaPanel}>
-                <Text style={styles.halachaIcon}>⚖️</Text>
-                <Text style={styles.halachaTitle}>Halacha Yomis</Text>
-                <Text style={styles.halachaText}>Daily Halacha</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'sunrise_sunset':
-          return (
-            <GlassCard>
-              <View style={styles.sunTimesPanel}>
-                <View style={styles.sunTimeItem}>
-                  <Text style={styles.sunIcon}>🌅</Text>
-                  <Text style={styles.sunLabel}>Sunrise</Text>
-                  <Text style={styles.sunTime}>{formatTime(dayInfo?.extendedZmanim?.sunrise)}</Text>
-                </View>
-                <View style={styles.sunTimeItem}>
-                  <Text style={styles.sunIcon}>🌇</Text>
-                  <Text style={styles.sunLabel}>Sunset</Text>
-                  <Text style={styles.sunTime}>{formatTime(dayInfo?.extendedZmanim?.sunset)}</Text>
-                </View>
-              </View>
+              <TouchableOpacity
+                onPress={() => !isEditing && (navigation as any).navigate('MishnaReader', { mishnaYomi: true })}
+                activeOpacity={0.75}
+                style={styles.dafYomiButton}
+              >
+                <Text style={styles.dafButtonIcon}>📕</Text>
+                <Text style={styles.dafButtonTitle}>Mishna Yomi</Text>
+                <Text style={styles.dafButtonSubtext} numberOfLines={2} adjustsFontSizeToFit>{mishnaYomiText ?? "Today's perek"}</Text>
+              </TouchableOpacity>
             </GlassCard>
           );
 
         case 'moon_phase':
-          // Extract day number from jewishDateShort (e.g., "15 Nisan" -> 15)
           const jewishDayMatch = dayInfo?.jewishDateShort?.match(/^\d+/);
           const jewishDay = jewishDayMatch ? parseInt(jewishDayMatch[0], 10) : 15;
-          const moonEmoji = jewishDay <= 7 ? '🌒' : jewishDay <= 14 ? '🌓' : jewishDay <= 21 ? '🌖' : '🌘';
           return (
-            <GlassCard>
+            <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
               <View style={styles.moonPanel}>
-                <Text style={styles.moonIcon}>{moonEmoji}</Text>
+                <MoonPhaseAnimation jewishDay={jewishDay} isDark={theme.isDark} />
                 <Text style={styles.moonTitle}>Moon Phase</Text>
                 <Text style={styles.moonText}>Day {jewishDay} of month</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'mini_calendar':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
-              <View style={styles.miniCalPanel}>
-                <Text style={styles.miniCalIcon}>🗓️</Text>
-                <Text style={styles.miniCalTitle}>This Week</Text>
-                <Text style={styles.miniCalText}>View Calendar →</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'month_view':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
-              <View style={styles.monthViewPanel}>
-                <Text style={styles.monthViewIcon}>📆</Text>
-                <Text style={styles.monthViewTitle}>{dayInfo?.jewishDateShort?.split(' ')[1] || 'Month'}</Text>
-                <Text style={styles.monthViewText}>Full Month View →</Text>
-              </View>
-            </GlassCard>
-          );
-
-        // === PRAYER PANELS ===
-        case 'shacharis':
-          return (
-            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('SiddurReader', { service: 'shacharis' })}>
-              <View style={styles.prayerPanel}>
-                <Text style={styles.prayerIcon}>🌅</Text>
-                <Text style={styles.prayerTitle}>Shacharis</Text>
-                <Text style={styles.prayerSubtext}>Morning Prayers</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'mincha':
-          return (
-            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('SiddurReader', { service: 'mincha' })}>
-              <View style={styles.prayerPanel}>
-                <Text style={styles.prayerIcon}>☀️</Text>
-                <Text style={styles.prayerTitle}>Mincha</Text>
-                <Text style={styles.prayerSubtext}>Afternoon Prayers</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'maariv':
-          return (
-            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('SiddurReader', { service: 'maariv' })}>
-              <View style={styles.prayerPanel}>
-                <Text style={styles.prayerIcon}>🌙</Text>
-                <Text style={styles.prayerTitle}>Maariv</Text>
-                <Text style={styles.prayerSubtext}>Evening Prayers</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'brachos':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Library' as never)}>
-              <View style={styles.prayerPanel}>
-                <Text style={styles.prayerIcon}>🙏</Text>
-                <Text style={styles.prayerTitle}>Brachos</Text>
-                <Text style={styles.prayerSubtext}>Blessings Guide</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'bentching':
-          return (
-            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('SiddurReader', { service: 'bentching' })}>
-              <View style={styles.prayerPanel}>
-                <Text style={styles.prayerIcon}>🍞</Text>
-                <Text style={styles.prayerTitle}>Bentching</Text>
-                <Text style={styles.prayerSubtext}>Grace After Meals</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'bedtime_shema':
-          return (
-            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('SiddurReader', { service: 'bedtime_shema' })}>
-              <View style={styles.prayerPanel}>
-                <Text style={styles.prayerIcon}>😴</Text>
-                <Text style={styles.prayerTitle}>Bedtime Shema</Text>
-                <Text style={styles.prayerSubtext}>Before Sleep</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'modeh_ani':
-          return (
-            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('SiddurReader', { service: 'modeh_ani' })}>
-              <View style={styles.prayerPanel}>
-                <Text style={styles.prayerIcon}>🌄</Text>
-                <Text style={styles.prayerTitle}>Modeh Ani</Text>
-                <Text style={styles.prayerSubtext}>Morning Gratitude</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'travelers_prayer':
-          return (
-            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('SiddurReader', { service: 'tefilas_haderech' })}>
-              <View style={styles.prayerPanel}>
-                <Text style={styles.prayerIcon}>✈️</Text>
-                <Text style={styles.prayerTitle}>Tefillas HaDerech</Text>
-                <Text style={styles.prayerSubtext}>Traveler's Prayer</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'prayer_for_sick':
-          return (
-            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('SiddurReader', { service: 'mi_shebeirach' })}>
-              <View style={styles.prayerPanel}>
-                <Text style={styles.prayerIcon}>💝</Text>
-                <Text style={styles.prayerTitle}>Mi Shebeirach</Text>
-                <Text style={styles.prayerSubtext}>Prayer for Healing</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'tehillim_for_sick':
-          return (
-            <GlassCard onPress={() => !isEditing && handleTehillimPress()}>
-              <View style={styles.prayerPanel}>
-                <Text style={styles.prayerIcon}>🙏</Text>
-                <Text style={styles.prayerTitle}>Tehillim for Sick</Text>
-                <Text style={styles.prayerSubtext}>Psalms for Healing</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'shema':
-          return (
-            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('SiddurReader', { service: 'shema' })}>
-              <View style={styles.prayerPanel}>
-                <Text style={styles.prayerIcon}>✡️</Text>
-                <Text style={styles.prayerTitle}>Shema</Text>
-                <Text style={styles.prayerSubtext}>Hear O Israel</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'asher_yatzar':
-          return (
-            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('SiddurReader', { service: 'asher_yatzar' })}>
-              <View style={styles.prayerPanel}>
-                <Text style={styles.prayerIcon}>💧</Text>
-                <Text style={styles.prayerTitle}>Asher Yatzar</Text>
-                <Text style={styles.prayerSubtext}>Bathroom Blessing</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'tefillin_reminder':
-          return (
-            <GlassCard>
-              <View style={styles.reminderPanel}>
-                <Text style={styles.reminderIcon}>📿</Text>
-                <Text style={styles.reminderTitle}>Tefillin</Text>
-                <Text style={styles.reminderText}>Daily Reminder</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'tzitzis_check':
-          return (
-            <GlassCard>
-              <View style={styles.reminderPanel}>
-                <Text style={styles.reminderIcon}>🧵</Text>
-                <Text style={styles.reminderTitle}>Tzitzis Check</Text>
-                <Text style={styles.reminderText}>Daily Reminder</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'kapitel':
-          const userAge = 25; // TODO: Get from settings
-          return (
-            <GlassCard onPress={() => !isEditing && handleTehillimPress()}>
-              <View style={styles.kapitelPanel}>
-                <Text style={styles.kapitelIcon}>📖</Text>
-                <Text style={styles.kapitelTitle}>Today's Kapitel</Text>
-                <Text style={styles.kapitelNumber}>Tehillim {userAge}</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'tanya':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Library' as never)}>
-              <View style={styles.learningPanel}>
-                <Text style={styles.learningIcon}>📕</Text>
-                <Text style={styles.learningTitle}>Daily Tanya</Text>
-                <Text style={styles.learningText}>Chassidic Wisdom</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'chitas':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Library' as never)}>
-              <View style={styles.chitasPanel}>
-                <Text style={styles.chitasIcon}>📚</Text>
-                <Text style={styles.chitasTitle}>Chitas</Text>
-                <Text style={styles.chitasText}>Chumash • Tehillim • Tanya</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'yehi_ratzon':
-          return (
-            <GlassCard>
-              <View style={styles.intentionPanel}>
-                <Text style={styles.intentionIcon}>🌟</Text>
-                <Text style={styles.intentionTitle}>Yehi Ratzon</Text>
-                <Text style={styles.intentionText}>Daily Intentions</Text>
               </View>
             </GlassCard>
           );
@@ -1552,62 +1375,38 @@ export const HomeScreen: React.FC = () => {
         // === LEARNING PANELS ===
         case 'daf_yomi':
           return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Library' as never)}>
-              <View style={styles.learningPanel}>
-                <Text style={styles.learningIcon}>📚</Text>
-                <Text style={styles.learningTitle}>Daf Yomi</Text>
-                <Text style={styles.learningText}>{(dayInfo as any)?.dafYomi || 'Daily Talmud'}</Text>
-              </View>
+            <GlassCard>
+              <TouchableOpacity
+                onPress={() => !isEditing && (navigation as any).navigate('GemaraReader', { dafYomi: true })}
+                activeOpacity={0.75}
+                style={styles.dafYomiButton}
+              >
+                <Text style={styles.dafButtonIcon}>📚</Text>
+                <Text style={styles.dafButtonTitle}>Daf Yomi</Text>
+                <Text style={styles.dafButtonSubtext} numberOfLines={2} adjustsFontSizeToFit>{dafYomiText ?? "Today's daf"}</Text>
+              </TouchableOpacity>
             </GlassCard>
           );
 
         case 'parsha_summary':
+          const parshaSummaryLine = getParshaSummary(dayInfo?.parsha);
           return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Library' as never)}>
+            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Parsha')}>
               <View style={styles.learningPanel}>
                 <Text style={styles.learningIcon}>📜</Text>
-                <Text style={styles.learningTitle}>Parsha Summary</Text>
-                <Text style={styles.learningText}>{dayInfo?.parsha || 'This Week'}</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'halacha_daily':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Library' as never)}>
-              <View style={styles.learningPanel}>
-                <Text style={styles.learningIcon}>⚖️</Text>
-                <Text style={styles.learningTitle}>Daily Halacha</Text>
-                <Text style={styles.learningText}>Learn one halacha</Text>
+                <Text style={styles.learningTitle}>{dayInfo?.parsha || 'Parsha'}</Text>
+                <Text style={styles.learningText} numberOfLines={3}>{parshaSummaryLine}</Text>
               </View>
             </GlassCard>
           );
 
         case 'mussar':
-          const mussarQuotes = [
-            "Work on yourself first",
-            "Guard your tongue",
-            "Judge favorably",
-            "Be humble",
-            "Trust in Hashem",
-          ];
           return (
             <GlassCard>
               <View style={styles.mussarPanel}>
                 <Text style={styles.mussarIcon}>💎</Text>
                 <Text style={styles.mussarTitle}>Daily Mussar</Text>
-                <Text style={styles.mussarText}>{mussarQuotes[new Date().getDay() % mussarQuotes.length]}</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'pirkei_avos':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Library' as never)}>
-              <View style={styles.learningPanel}>
-                <Text style={styles.learningIcon}>📖</Text>
-                <Text style={styles.learningTitle}>Pirkei Avos</Text>
-                <Text style={styles.learningText}>Ethics of the Fathers</Text>
+                <Text style={styles.mussarText}>{getByDay100(MUSSAR_QUOTES)}</Text>
               </View>
             </GlassCard>
           );
@@ -1615,47 +1414,41 @@ export const HomeScreen: React.FC = () => {
         case 'rambam_daily':
           return (
             <GlassCard>
-              <View style={styles.learningPanel}>
-                <Text style={styles.learningIcon}>📕</Text>
-                <Text style={styles.learningTitle}>Rambam Daily</Text>
-                <Text style={styles.learningText}>Maimonides Study</Text>
-              </View>
+              <TouchableOpacity
+                onPress={() => !isEditing && (navigation as any).navigate('RambamReader', { rambamYomi: true })}
+                activeOpacity={0.75}
+                style={styles.dafYomiButton}
+              >
+                <Text style={styles.dafButtonIcon}>📕</Text>
+                <Text style={styles.dafButtonTitle}>Rambam Daily</Text>
+                <Text style={styles.dafButtonSubtext} numberOfLines={2} adjustsFontSizeToFit>{rambamYomiText ?? "Today's 3 chapters"}</Text>
+              </TouchableOpacity>
             </GlassCard>
           );
 
-        case 'mishnah_berurah':
+        case 'chumash_daily': {
+          const sm = shneyimMikraData;
+          const smPercent = sm?.percentComplete ?? 0;
           return (
-            <GlassCard>
-              <View style={styles.learningPanel}>
-                <Text style={styles.learningIcon}>📗</Text>
-                <Text style={styles.learningTitle}>Mishna Berurah</Text>
-                <Text style={styles.learningText}>Halacha Study</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'chumash_daily':
-          return (
-            <GlassCard>
-              <View style={styles.learningPanel}>
+            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Chumash')}>
+              <View style={styles.chumashPanelCompact}>
                 <Text style={styles.learningIcon}>📜</Text>
-                <Text style={styles.learningTitle}>Daily Chumash</Text>
-                <Text style={styles.learningText}>Torah with Rashi</Text>
+                <Text style={styles.learningTitle}>Shneyim Mikra</Text>
+                <Text style={styles.learningText} numberOfLines={1}>
+                  {sm ? `${sm.parshaHebrew} • Aliyah ${sm.todayAliyah} (${sm.aliyotCompleted}/7)` : 'Loading...'}
+                </Text>
+                <View style={styles.progressBarContainer}>
+                  <View style={styles.progressBarBg}>
+                    <View style={[styles.progressBarFill, { width: `${smPercent}%` }]} />
+                  </View>
+                </View>
               </View>
             </GlassCard>
           );
+        }
 
         case 'word_of_day':
-          const hebrewWords = [
-            { word: 'שָׁלוֹם', meaning: 'Peace' },
-            { word: 'תּוֹדָה', meaning: 'Thanks' },
-            { word: 'אֱמֶת', meaning: 'Truth' },
-            { word: 'חֶסֶד', meaning: 'Kindness' },
-            { word: 'אֲהָבָה', meaning: 'Love' },
-            { word: 'בִּטָּחוֹן', meaning: 'Trust' },
-            { word: 'שִׂמְחָה', meaning: 'Joy' },
-          ];
-          const todayWord = hebrewWords[new Date().getDay()];
+          const todayWord = getByDay100(HEBREW_WORDS);
           return (
             <GlassCard>
               <View style={styles.wordPanel}>
@@ -1671,18 +1464,7 @@ export const HomeScreen: React.FC = () => {
               <View style={styles.thoughtPanel}>
                 <Text style={styles.thoughtIcon}>💡</Text>
                 <Text style={styles.thoughtTitle}>Torah Thought</Text>
-                <Text style={styles.thoughtText}>Daily insight</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'chassidus':
-          return (
-            <GlassCard>
-              <View style={styles.learningPanel}>
-                <Text style={styles.learningIcon}>✨</Text>
-                <Text style={styles.learningTitle}>Daily Chassidus</Text>
-                <Text style={styles.learningText}>Inner teachings</Text>
+                <Text style={styles.thoughtText}>{getByDay100(TORAH_THOUGHTS)}</Text>
               </View>
             </GlassCard>
           );
@@ -1693,18 +1475,7 @@ export const HomeScreen: React.FC = () => {
               <View style={styles.learningPanel}>
                 <Text style={styles.learningIcon}>🌟</Text>
                 <Text style={styles.learningTitle}>Daily Zohar</Text>
-                <Text style={styles.learningText}>Mystical wisdom</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'tehillim_meaning':
-          return (
-            <GlassCard onPress={() => !isEditing && handleTehillimPress()}>
-              <View style={styles.learningPanel}>
-                <Text style={styles.learningIcon}>📖</Text>
-                <Text style={styles.learningTitle}>Tehillim Meaning</Text>
-                <Text style={styles.learningText}>Understand the Psalms</Text>
+                <Text style={styles.learningText} numberOfLines={3}>{getByDay100(ZOHAR_CHASSIDUS)}</Text>
               </View>
             </GlassCard>
           );
@@ -1715,7 +1486,7 @@ export const HomeScreen: React.FC = () => {
               <View style={styles.historyPanel}>
                 <Text style={styles.historyIcon}>📜</Text>
                 <Text style={styles.historyTitle}>On This Day</Text>
-                <Text style={styles.historyText}>Jewish History</Text>
+                <Text style={styles.historyText} numberOfLines={3}>{getByDay100(JEWISH_HISTORY_ON_THIS_DAY)}</Text>
               </View>
             </GlassCard>
           );
@@ -1726,26 +1497,26 @@ export const HomeScreen: React.FC = () => {
               <View style={styles.storyPanel}>
                 <Text style={styles.storyIcon}>👤</Text>
                 <Text style={styles.storyTitle}>Gedolim Story</Text>
-                <Text style={styles.storyText}>Stories of Great Rabbis</Text>
+                <Text style={styles.storyText} numberOfLines={4}>{getByDay100(GEDOLIM_STORIES)}</Text>
               </View>
             </GlassCard>
           );
 
         case 'mitzvah_of_day':
           return (
-            <GlassCard>
+            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
               <View style={styles.mitzvahPanel}>
                 <Text style={styles.mitzvahIcon}>⭐</Text>
                 <Text style={styles.mitzvahTitle}>Mitzvah of the Day</Text>
-                <Text style={styles.mitzvahText}>Focus on one mitzvah</Text>
+                <Text style={styles.mitzvahText}>Give tzedakah today—even a small amount. "Tzedakah tatzil mimaves."</Text>
               </View>
             </GlassCard>
           );
 
         case 'middah_of_week':
-          const middos = ['Chesed', 'Gevurah', 'Tiferes', 'Netzach', 'Hod', 'Yesod', 'Malchus'];
+          const middos = ['Chesed (Kindness)', 'Gevurah (Strength)', 'Tiferes (Beauty)', 'Netzach (Endurance)', 'Hod (Splendor)', 'Yesod (Foundation)', 'Malchus (Kingship)'];
           return (
-            <GlassCard>
+            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
               <View style={styles.middahPanel}>
                 <Text style={styles.middahIcon}>💪</Text>
                 <Text style={styles.middahTitle}>Middah of the Week</Text>
@@ -1755,20 +1526,9 @@ export const HomeScreen: React.FC = () => {
           );
 
         // === PERSONAL PANELS ===
-        case 'custom_countdown':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Settings' as never)}>
-              <View style={styles.countdownPanel}>
-                <Text style={styles.countdownIcon}>⏳</Text>
-                <Text style={styles.countdownTitle}>Custom Countdown</Text>
-                <Text style={styles.countdownText}>Set up in settings</Text>
-              </View>
-            </GlassCard>
-          );
-
         case 'gratitude':
           return (
-            <GlassCard>
+            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub', { screen: 'Gratitude' })}>
               <View style={styles.gratitudePanel}>
                 <Text style={styles.gratitudeIcon}>🙏</Text>
                 <Text style={styles.gratitudeTitle}>Daily Gratitude</Text>
@@ -1777,334 +1537,76 @@ export const HomeScreen: React.FC = () => {
             </GlassCard>
           );
 
-        case 'journal':
-          return (
-            <GlassCard>
-              <View style={styles.journalPanel}>
-                <Text style={styles.journalIcon}>📝</Text>
-                <Text style={styles.journalTitle}>Spiritual Journal</Text>
-                <Text style={styles.journalText}>Daily reflections</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'goals':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Settings' as never)}>
-              <View style={styles.goalsPanel}>
-                <Text style={styles.goalsIcon}>🎯</Text>
-                <Text style={styles.goalsTitle}>Spiritual Goals</Text>
-                <Text style={styles.goalsText}>Track your growth</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'intentions':
-          return (
-            <GlassCard>
-              <View style={styles.intentionsPanel}>
-                <Text style={styles.intentionsIcon}>🌟</Text>
-                <Text style={styles.intentionsTitle}>Daily Intentions</Text>
-                <Text style={styles.intentionsText}>Set your kavanah</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'chesed_tracker':
-          return (
-            <GlassCard>
-              <View style={styles.chesedPanel}>
-                <Text style={styles.chesedIcon}>💝</Text>
-                <Text style={styles.chesedTitle}>Chesed Tracker</Text>
-                <Text style={styles.chesedText}>Log acts of kindness</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'prayer_notes':
-          return (
-            <GlassCard>
-              <View style={styles.notesPanel}>
-                <Text style={styles.notesIcon}>📋</Text>
-                <Text style={styles.notesTitle}>Prayer Notes</Text>
-                <Text style={styles.notesText}>Personal tefillos</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'names_to_daven':
-          return (
-            <GlassCard>
-              <View style={styles.namesPanel}>
-                <Text style={styles.namesIcon}>💕</Text>
-                <Text style={styles.namesTitle}>Names to Daven For</Text>
-                <Text style={styles.namesText}>People to pray for</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'affirmation':
-          const affirmations = [
-            "I am blessed",
-            "Today I grow",
-            "Hashem is with me",
-            "I can do hard things",
-            "I am worthy of love",
-          ];
-          return (
-            <GlassCard>
-              <View style={styles.affirmationPanel}>
-                <Text style={styles.affirmationIcon}>💪</Text>
-                <Text style={styles.affirmationTitle}>Daily Affirmation</Text>
-                <Text style={styles.affirmationText}>{affirmations[new Date().getDay() % affirmations.length]}</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'mood_tracker':
-          return (
-            <GlassCard>
-              <View style={styles.moodPanel}>
-                <Text style={styles.moodIcon}>😊</Text>
-                <Text style={styles.moodTitle}>How are you feeling?</Text>
-                <View style={styles.moodOptions}>
-                  <Text style={styles.moodOption}>😊</Text>
-                  <Text style={styles.moodOption}>😐</Text>
-                  <Text style={styles.moodOption}>😔</Text>
-                </View>
-              </View>
-            </GlassCard>
-          );
-
-        case 'notes':
-          return (
-            <GlassCard>
-              <View style={styles.quickNotesPanel}>
-                <Text style={styles.quickNotesIcon}>📝</Text>
-                <Text style={styles.quickNotesTitle}>Quick Notes</Text>
-                <Text style={styles.quickNotesText}>Jot down thoughts</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'bookmarks':
-          return (
-            <GlassCard onPress={() => !isEditing && navigation.navigate('Library' as never)}>
-              <View style={styles.bookmarksPanel}>
-                <Text style={styles.bookmarksIcon}>🔖</Text>
-                <Text style={styles.bookmarksTitle}>Bookmarks</Text>
-                <Text style={styles.bookmarksText}>Saved items</Text>
-              </View>
-            </GlassCard>
-          );
-
         // === TRACKING PANELS ===
-        case 'streak':
-          return (
-            <GlassCard>
-              <View style={styles.streakPanel}>
-                <Text style={styles.streakIcon}>🔥</Text>
-                <Text style={styles.streakNumber}>0</Text>
-                <Text style={styles.streakText}>Day Streak</Text>
-              </View>
-            </GlassCard>
-          );
-
         case 'tehillim_stats':
           return (
-            <GlassCard onPress={() => !isEditing && handleTehillimPress()}>
+            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
               <View style={styles.statsPanel}>
                 <Text style={styles.statsIcon}>📊</Text>
                 <Text style={styles.statsTitle}>Tehillim Stats</Text>
-                <Text style={styles.statsText}>{tehillimProgress.percentComplete}% today</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'davening_streak':
-          return (
-            <GlassCard>
-              <View style={styles.streakPanel}>
-                <Text style={styles.streakIcon}>📈</Text>
-                <Text style={styles.streakNumber}>0</Text>
-                <Text style={styles.streakText}>Davening Streak</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'learning_time':
-          return (
-            <GlassCard>
-              <View style={styles.timePanel}>
-                <Text style={styles.timeIcon}>⏱️</Text>
-                <Text style={styles.timeTitle}>Learning Time</Text>
-                <Text style={styles.timeText}>0 min today</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'weekly_summary':
-          return (
-            <GlassCard>
-              <View style={styles.summaryPanel}>
-                <Text style={styles.summaryIcon}>📋</Text>
-                <Text style={styles.summaryTitle}>Weekly Summary</Text>
-                <Text style={styles.summaryText}>View your progress</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'monthly_goals':
-          return (
-            <GlassCard>
-              <View style={styles.monthlyPanel}>
-                <Text style={styles.monthlyIcon}>🎯</Text>
-                <Text style={styles.monthlyTitle}>Monthly Goals</Text>
-                <Text style={styles.monthlyText}>Track progress</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'mitzvah_counter':
-          return (
-            <GlassCard>
-              <View style={styles.counterPanel}>
-                <Text style={styles.counterIcon}>✅</Text>
-                <Text style={styles.counterNumber}>0</Text>
-                <Text style={styles.counterText}>Mitzvos Today</Text>
+                <Text style={styles.statsText}>{tehillimProgress.overallPercent}% {tehillimProgress.overallLabel || 'today'}</Text>
+                {tehillimStreak > 0 && (
+                  <Text style={styles.statsSubtext}>{tehillimStreak} day streak</Text>
+                )}
+                {tehillimAverageWPM != null && (
+                  <Text style={styles.statsSubtext}>Avg {tehillimAverageWPM} WPM</Text>
+                )}
               </View>
             </GlassCard>
           );
 
         case 'brachos_counter':
           return (
-            <GlassCard>
+            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
               <View style={styles.counterPanel}>
                 <Text style={styles.counterIcon}>💯</Text>
-                <Text style={styles.counterNumber}>0/100</Text>
-                <Text style={styles.counterText}>Brachos</Text>
+                <Text style={styles.counterNumber}>{brachosCount}/100</Text>
+                <Text style={styles.counterText}>Brachos • Tap for today</Text>
               </View>
             </GlassCard>
           );
 
         case 'tzedakah_tracker':
           return (
-            <GlassCard>
+            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
               <View style={styles.tzedakahPanel}>
                 <Text style={styles.tzedakahIcon}>💰</Text>
                 <Text style={styles.tzedakahTitle}>Tzedakah</Text>
-                <Text style={styles.tzedakahText}>Track giving</Text>
-              </View>
-            </GlassCard>
-          );
-
-        case 'achievements':
-          return (
-            <GlassCard>
-              <View style={styles.achievementsPanel}>
-                <Text style={styles.achievementsIcon}>🏆</Text>
-                <Text style={styles.achievementsTitle}>Achievements</Text>
-                <Text style={styles.achievementsText}>View milestones</Text>
+                <Text style={styles.tzedakahText}>
+                  Past month: {tzedakahPastMonthTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2, style: 'currency', currency: 'USD' })}
+                </Text>
               </View>
             </GlassCard>
           );
 
         case 'habits':
           return (
-            <GlassCard>
+            <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub', { screen: 'DailyGoals' })}>
               <View style={styles.habitsPanel}>
                 <Text style={styles.habitsIcon}>✓</Text>
                 <Text style={styles.habitsTitle}>Habit Tracker</Text>
-                <Text style={styles.habitsText}>Build good habits</Text>
+                <Text style={styles.habitsText}>
+                  {habitsTodayMarked ? 'Done today ✓' : 'Tap to mark today'}
+                </Text>
               </View>
             </GlassCard>
           );
 
-        // === COMMUNITY PANELS ===
+        // === COMMUNITY PANELS (Coming soon) ===
         case 'minyan_times':
-          return (
-            <GlassCard>
-              <View style={styles.communityPanel}>
-                <Text style={styles.communityIcon}>🏛️</Text>
-                <Text style={styles.communityTitle}>Minyan Times</Text>
-                <Text style={styles.communityText}>Local schedule</Text>
-              </View>
-            </GlassCard>
-          );
-
         case 'shul_announcements':
-          return (
-            <GlassCard>
-              <View style={styles.communityPanel}>
-                <Text style={styles.communityIcon}>📢</Text>
-                <Text style={styles.communityTitle}>Shul News</Text>
-                <Text style={styles.communityText}>Announcements</Text>
-              </View>
-            </GlassCard>
-          );
-
         case 'shiurim':
-          return (
-            <GlassCard>
-              <View style={styles.communityPanel}>
-                <Text style={styles.communityIcon}>🎓</Text>
-                <Text style={styles.communityTitle}>Shiurim</Text>
-                <Text style={styles.communityText}>Upcoming classes</Text>
-              </View>
-            </GlassCard>
-          );
-
         case 'tehillim_group':
-          return (
-            <GlassCard>
-              <View style={styles.communityPanel}>
-                <Text style={styles.communityIcon}>👥</Text>
-                <Text style={styles.communityTitle}>Tehillim Group</Text>
-                <Text style={styles.communityText}>Say together</Text>
-              </View>
-            </GlassCard>
-          );
-
         case 'simchas':
-          return (
-            <GlassCard>
-              <View style={styles.communityPanel}>
-                <Text style={styles.communityIcon}>🎊</Text>
-                <Text style={styles.communityTitle}>Simchas</Text>
-                <Text style={styles.communityText}>Celebrations</Text>
-              </View>
-            </GlassCard>
-          );
-
         case 'chesed_opportunities':
-          return (
-            <GlassCard>
-              <View style={styles.communityPanel}>
-                <Text style={styles.communityIcon}>🤝</Text>
-                <Text style={styles.communityTitle}>Chesed Opportunities</Text>
-                <Text style={styles.communityText}>Ways to help</Text>
-              </View>
-            </GlassCard>
-          );
-
         case 'dvar_torah_share':
-          return (
-            <GlassCard>
-              <View style={styles.communityPanel}>
-                <Text style={styles.communityIcon}>💬</Text>
-                <Text style={styles.communityTitle}>Share Dvar Torah</Text>
-                <Text style={styles.communityText}>Share insights</Text>
-              </View>
-            </GlassCard>
-          );
-
         case 'prayer_request':
           return (
             <GlassCard>
               <View style={styles.communityPanel}>
-                <Text style={styles.communityIcon}>🙏</Text>
-                <Text style={styles.communityTitle}>Prayer Requests</Text>
-                <Text style={styles.communityText}>Community prayers</Text>
+                <Text style={styles.communityIcon}>{panelDef?.icon || '👥'}</Text>
+                <Text style={styles.communityTitle}>{panelDef?.name || 'Community'}</Text>
+                <Text style={styles.communityText}>Coming soon</Text>
               </View>
             </GlassCard>
           );
@@ -2119,21 +1621,21 @@ export const HomeScreen: React.FC = () => {
             </GlassCard>
           );
       }
-    };
+  };
 
-    const content = panelContent();
+  const renderPanel = (panel: HomePanel, index: number) => {
+    const content = getPanelContentNode(panel, index);
     if (!content) return null;
 
-    // Determine if panel should be full width - check stored size first, then default types
-    const defaultFullWidthTypes = ['date', 'tehillim_progress', 'custom_reminders', 'inspiration_quote', 'fast_day_info', 'zmanim'];
-    const isFullWidth = panel.size === 'large' || (panel.size !== 'small' && defaultFullWidthTypes.includes(panel.type));
+    const isFullWidth = panel.size === 'full'; // full = 1 per row, half = 2 per row; same height for all
 
+    const isAutoPanel = panel.id.startsWith('auto-');
+    const isUnremovable = isAutoPanel || HomePanelsService.UNREMOVABLE_TYPES.includes(panel.type as any);
     return (
       <DraggablePanel
         key={panel.id}
         isEditing={isEditing}
-        onRemove={() => handleRemovePanel(panel.id)}
-        onResize={(size) => handleResizePanel(panel.id, size)}
+        onRemove={isUnremovable ? () => {} : () => handleRemovePanel(panel.id)}
         index={index}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
@@ -2143,6 +1645,7 @@ export const HomeScreen: React.FC = () => {
         panelCount={panels.length}
         isFullWidth={isFullWidth}
         dragPreviewToIndex={dragPreviewToIndex}
+        isAutoPanel={isUnremovable}
       >
         {content}
       </DraggablePanel>
@@ -2153,7 +1656,7 @@ export const HomeScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
+          colors={gradientColors}
           style={StyleSheet.absoluteFill}
         />
         <LoadingSpinner />
@@ -2165,7 +1668,7 @@ export const HomeScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
+          colors={gradientColors}
           style={StyleSheet.absoluteFill}
         />
         <ErrorView message={error} onRetry={loadDayInfo} />
@@ -2181,7 +1684,7 @@ export const HomeScreen: React.FC = () => {
     <View style={styles.container}>
       {/* Background */}
       <LinearGradient
-        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5', '#FAF9F7']}
+        colors={gradientColors}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -2190,13 +1693,13 @@ export const HomeScreen: React.FC = () => {
       {/* Floating Orbs */}
       <FloatingOrb
         size={180}
-        color="rgba(212, 165, 184, 0.2)"
+        color={orbPalette[0]}
         style={{ top: height * 0.02, left: -60 }}
         duration={5000}
       />
       <FloatingOrb
         size={140}
-        color="rgba(165, 196, 212, 0.2)"
+        color={orbPalette[1]}
         style={{ top: height * 0.15, right: -40 }}
         duration={6000}
       />
@@ -2206,66 +1709,83 @@ export const HomeScreen: React.FC = () => {
         <NotificationBanner onSetup={() => navigation.navigate('Settings' as never)} />
       )}
 
-      {/* Scrollable Content */}
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        scrollEnabled={!isEditing}
-      >
-        {/* Header Row with Greeting and Edit Button */}
-        <View style={styles.headerRow}>
-          <Text style={styles.greeting}>{greeting}</Text>
-          <TouchableOpacity
-            style={[styles.editButton, isEditing && styles.editButtonActive]}
-            onPress={toggleEditMode}
-          >
-            <Text style={[styles.editButtonText, isEditing && styles.editButtonTextActive]}>
-              {isEditing ? 'Done' : 'Edit'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Edit Mode Instructions */}
-        {isEditing && (
-          <View style={styles.editInstructions}>
-            <Text style={styles.editInstructionsText}>
-              Tap − to remove • Hold & drag to reorder
-            </Text>
+      {/* Content - scrollable when many widgets */}
+      <View style={styles.contentWrapper}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={true}
+          bounces={true}
+          scrollEnabled={!isEditing}
+        >
+          {/* Header Row with Greeting and Edit Button */}
+          <View style={styles.headerRow}>
+            <Text style={styles.greeting}>{greeting}</Text>
+            <TouchableOpacity
+              style={[styles.editButton, isEditing && styles.editButtonActive]}
+              onPress={toggleEditMode}
+            >
+              <Text style={[styles.editButtonText, isEditing && styles.editButtonTextActive]}>
+                {isEditing ? 'Done' : 'Edit'}
+              </Text>
+            </TouchableOpacity>
           </View>
-        )}
 
-        {/* Dynamic Panels Grid - displayOrder so other panels shift in real time while dragging */}
-        <View style={styles.panelsGrid}>
-          {displayOrder.map((panel: HomePanel, displayIndex: number) => {
-            const realIndex = panels.indexOf(panel);
-            const defaultFullWidthTypes = ['date', 'tehillim_progress', 'custom_reminders', 'inspiration_quote', 'fast_day_info', 'zmanim'];
-            const isFullWidth = panel.size === 'large' || (panel.size !== 'small' && defaultFullWidthTypes.includes(panel.type));
-            return (
-              <View
-                key={panel.id}
-                ref={(r) => { panelRefsRef.current[displayIndex] = r; }}
-                onLayout={handlePanelLayout(panel.id, displayIndex)}
-                collapsable={false}
-                style={isFullWidth ? styles.gridItemFull : styles.gridItem}
+          {/* Edit Mode Instructions */}
+          {isEditing && (
+            <View style={styles.editInstructions}>
+              <Text style={styles.editInstructionsText}>
+                Long-press and drag to move • Drop to reorder
+              </Text>
+              <Text style={[styles.editInstructionsText, styles.editInstructionsSubtext]}>
+                Tap − to remove a panel
+              </Text>
+              <TouchableOpacity
+                style={styles.resetButton}
+                onPress={async () => {
+                  await HomePanelsService.resetToDefault();
+                  await loadPanels();
+                }}
+                activeOpacity={0.7}
               >
-                {renderPanel(panel, realIndex)}
-              </View>
-            );
-          })}
-        </View>
+                <Text style={styles.resetButtonText}>Reset to default</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-        {/* Empty State */}
-        {panels.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateIcon}>📦</Text>
-            <Text style={styles.emptyStateText}>No panels added yet</Text>
-            <Text style={styles.emptyStateSubtext}>Tap + to add some</Text>
+          {/* Dynamic Panels Grid - displayOrder so other panels shift in real time while dragging */}
+          <View style={styles.panelsGrid}>
+            {displayOrder.map((panel: HomePanel, displayIndex: number) => {
+              const realIndex = panels.findIndex((p) => p.id === panel.id);
+              const isFullWidth = panel.size === 'full';
+              const panelContent = renderPanel(panel, realIndex >= 0 ? realIndex : displayIndex);
+              if (!panelContent) return null;
+              return (
+                <View
+                  key={panel.id}
+                  ref={(r) => { panelRefsRef.current[displayIndex] = r; }}
+                  onLayout={handlePanelLayout(panel.id, displayIndex)}
+                  collapsable={false}
+                  style={isFullWidth ? styles.gridItemFull : styles.gridItem}
+                >
+                  {panelContent}
+                </View>
+              );
+            })}
           </View>
-        )}
 
-        <View style={{ height: 140 }} />
-      </ScrollView>
+          {/* Empty State */}
+          {panels.length === 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateIcon}>📦</Text>
+              <Text style={styles.emptyStateText}>No panels added yet</Text>
+              <Text style={styles.emptyStateSubtext}>Tap + to add some</Text>
+            </View>
+          )}
+
+          <View style={{ height: 24 }} />
+        </ScrollView>
+      </View>
 
       {/* Floating Add Button - Always visible in edit mode */}
       {isEditing && (
@@ -2279,6 +1799,74 @@ export const HomeScreen: React.FC = () => {
           </View>
         </TouchableOpacity>
       )}
+
+      {/* Hebrew Birthday Modal */}
+      <Modal
+        visible={hebrewBirthdayModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setHebrewBirthdayModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setHebrewBirthdayModalVisible(false)}>
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalIcon}>🎂</Text>
+              <Text style={styles.modalTitle}>Hebrew Birthday</Text>
+            </View>
+            <Text style={styles.modalSubtitle}>Set your Hebrew date (day and month)</Text>
+            <View style={styles.birthdayFormRow}>
+              <TextInput
+                style={styles.birthdayInput}
+                placeholder="Day (1-30)"
+                placeholderTextColor={theme.colors.text.tertiary}
+                keyboardType="number-pad"
+                value={birthdayForm.day ? String(birthdayForm.day) : ''}
+                onChangeText={(t) => setBirthdayForm((f) => ({ ...f, day: Math.min(30, Math.max(1, parseInt(t, 10) || 1)) }))}
+              />
+              <View style={styles.birthdayMonthPicker}>
+                <ScrollView style={styles.birthdayMonthScroll} showsVerticalScrollIndicator={false}>
+                  {JewishCalendarService.HEBREW_MONTH_NAMES.map((m) => (
+                    <TouchableOpacity
+                      key={m.value}
+                      style={[styles.birthdayMonthOption, birthdayForm.month === m.value && styles.birthdayMonthOptionActive]}
+                      onPress={() => setBirthdayForm((f) => ({ ...f, month: m.value }))}
+                    >
+                      <Text style={[styles.birthdayMonthText, birthdayForm.month === m.value && styles.birthdayMonthTextActive]}>{m.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalSecondaryButton} onPress={() => setHebrewBirthdayModalVisible(false)}>
+                <Text style={styles.modalSecondaryText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalPrimaryButton}
+                onPress={async () => {
+                  await UserPreferencesService.setHebrewBirthday(birthdayForm);
+                  setHebrewBirthday(birthdayForm);
+                  setHebrewBirthdayModalVisible(false);
+                }}
+              >
+                <Text style={styles.modalPrimaryText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+            {hebrewBirthday && (
+              <TouchableOpacity
+                style={styles.modalClearButton}
+                onPress={async () => {
+                  await UserPreferencesService.setHebrewBirthday(null);
+                  setHebrewBirthday(null);
+                  setHebrewBirthdayModalVisible(false);
+                }}
+              >
+                <Text style={styles.modalClearText}>Clear birthday</Text>
+              </TouchableOpacity>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -2291,8 +1879,12 @@ function getGreeting(): string {
   return 'Good Night';
 }
 
-const styles = StyleSheet.create({
+function createHomeStyles(theme: AppTheme) {
+  return {
   container: {
+    flex: 1,
+  },
+  contentWrapper: {
     flex: 1,
   },
   scrollView: {
@@ -2300,7 +1892,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
-    paddingTop: spacing['2xl'],
+    paddingTop: spacing['2xl'] + spacing.safeTopInset,
     paddingBottom: 100,
   },
   headerRow: {
@@ -2312,7 +1904,7 @@ const styles = StyleSheet.create({
   greeting: {
     fontFamily: fonts.heading.bold,
     fontSize: 32,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     letterSpacing: 0.5,
   },
   editButton: {
@@ -2322,7 +1914,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.9)',
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.9)',
-    shadowColor: colors.shadow.light,
+    shadowColor: theme.colors.shadow.light,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
     shadowRadius: 4,
@@ -2331,13 +1923,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   editButtonActive: {
-    backgroundColor: colors.primary.main,
-    borderColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.main,
+    borderColor: theme.colors.primary.main,
   },
   editButtonText: {
     fontFamily: fonts.body.semibold,
     fontSize: 14,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   editButtonTextActive: {
     color: '#fff',
@@ -2353,11 +1945,31 @@ const styles = StyleSheet.create({
   editInstructionsText: {
     fontFamily: fonts.body.medium,
     fontSize: 13,
-    color: colors.primary.dark,
+    color: theme.colors.primary.dark,
     textAlign: 'center',
   },
+  editInstructionsSubtext: {
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    marginTop: 2,
+  },
+  resetButton: {
+    alignSelf: 'center',
+    marginTop: spacing.sm,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.primary.main,
+  },
+  resetButtonText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: theme.colors.primary.dark,
+  },
 
-  // Panels Grid
+  // Panels Grid - evenly spaced widgets
   panelsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -2365,17 +1977,18 @@ const styles = StyleSheet.create({
     gap: GRID_GAP,
   },
   gridItem: {
-    width: PANEL_WIDTH,
+    width: PANEL_WIDTH_HALF,
+    minHeight: PANEL_HEIGHT,
     overflow: 'visible',
   },
   gridItemFull: {
     width: '100%',
+    minHeight: PANEL_HEIGHT,
     overflow: 'visible',
   },
-
-  // Editable Panel
+  // Editable Panel - no flex:1 so height comes from content (GlassCard), not collapsed
   panelAnimatedWrapper: {
-    flex: 1,
+    alignSelf: 'stretch',
   },
   editablePanelContainer: {
     position: 'relative',
@@ -2391,7 +2004,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: colors.semantic.error,
+    backgroundColor: theme.colors.semantic.error,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -2408,32 +2021,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: -2,
   },
-  resizeHandle: {
-    position: 'absolute',
-    bottom: 4,
-    right: -6,
-    zIndex: 100,
-  },
-  resizeHandleInner: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.primary.main,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
-    borderWidth: 2,
-    borderColor: '#fff',
-  },
-  resizeHandleText: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
   reorderButtons: {
     position: 'absolute',
     top: -8,
@@ -2446,7 +2033,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.main,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -2464,7 +2051,7 @@ const styles = StyleSheet.create({
   // Floating Add Button
   floatingAddButton: {
     position: 'absolute',
-    bottom: 120,
+    bottom: 160,
     right: spacing.lg,
     zIndex: 100,
   },
@@ -2472,10 +2059,10 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.main,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.primary.dark,
+    shadowColor: theme.colors.primary.dark,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.4,
     shadowRadius: 10,
@@ -2496,11 +2083,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.8)',
-    shadowColor: colors.shadow.medium,
+    shadowColor: theme.colors.shadow.medium,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 12,
     elevation: 6,
+    minHeight: 88,
   },
   glassBlur: {
     overflow: 'hidden',
@@ -2515,13 +2103,13 @@ const styles = StyleSheet.create({
   hebrewDate: {
     fontFamily: fonts.heading.bold,
     fontSize: 26,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     textAlign: 'center',
   },
   dateDivider: {
     width: 40,
     height: 2,
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.main,
     alignSelf: 'center',
     marginVertical: spacing.xs,
     borderRadius: 1,
@@ -2530,11 +2118,11 @@ const styles = StyleSheet.create({
   gregorianDate: {
     fontFamily: fonts.body.regular,
     fontSize: 14,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     textAlign: 'center',
   },
   specialBadge: {
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.main,
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: borderRadius.full,
@@ -2571,12 +2159,12 @@ const styles = StyleSheet.create({
   tehillimTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 15,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   tehillimMessage: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   tehillimPercentContainer: {
     backgroundColor: 'rgba(212, 165, 184, 0.2)',
@@ -2587,7 +2175,7 @@ const styles = StyleSheet.create({
   tehillimPercent: {
     fontFamily: fonts.body.bold,
     fontSize: 14,
-    color: colors.primary.dark,
+    color: theme.colors.primary.dark,
   },
   progressBarContainer: {
     marginTop: spacing.sm,
@@ -2600,7 +2188,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.main,
     borderRadius: 3,
   },
   tehillimFooter: {
@@ -2617,18 +2205,24 @@ const styles = StyleSheet.create({
   tehillimFooterText: {
     fontFamily: fonts.body.regular,
     fontSize: 11,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
+  },
+  tehillimFooterSubtext: {
+    fontFamily: fonts.body.medium,
+    fontSize: 10,
+    color: theme.colors.text.secondary,
+    marginTop: 2,
   },
   tehillimEdit: {
     fontFamily: fonts.body.medium,
     fontSize: 11,
-    color: colors.secondary.dark,
+    color: theme.colors.secondary.dark,
     textDecorationLine: 'underline',
   },
   tehillimContinue: {
     fontFamily: fonts.body.semibold,
     fontSize: 12,
-    color: colors.primary.main,
+    color: theme.colors.primary.main,
   },
 
   // Zmanim Row
@@ -2651,37 +2245,13 @@ const styles = StyleSheet.create({
   zmanLabel: {
     fontFamily: fonts.body.regular,
     fontSize: 11,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginBottom: 2,
   },
   zmanTime: {
     fontFamily: fonts.body.semibold,
     fontSize: 15,
-    color: colors.text.primary,
-  },
-
-  // Quick Actions
-  quickActions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  quickAction: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.8)',
-  },
-  quickActionIcon: {
-    fontSize: 22,
-    marginBottom: 4,
-  },
-  quickActionText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.primary,
   },
 
   // Davening Note
@@ -2694,7 +2264,7 @@ const styles = StyleSheet.create({
   daveningNoteText: {
     fontFamily: fonts.body.medium,
     fontSize: 13,
-    color: colors.primary.dark,
+    color: theme.colors.primary.dark,
   },
 
   // Placeholder Panel
@@ -2709,7 +2279,7 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontFamily: fonts.body.medium,
     fontSize: 14,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
 
   // Empty State
@@ -2724,13 +2294,13 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontFamily: fonts.heading.semibold,
     fontSize: 18,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginBottom: spacing.xs,
   },
   emptyStateSubtext: {
     fontFamily: fonts.body.regular,
     fontSize: 14,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
   },
 
   // Custom Reminders Panel
@@ -2744,12 +2314,12 @@ const styles = StyleSheet.create({
   customRemindersPanelTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 16,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   customRemindersPanelAdd: {
     fontFamily: fonts.body.semibold,
     fontSize: 14,
-    color: colors.primary.main,
+    color: theme.colors.primary.main,
   },
   customReminderPanelItem: {
     flexDirection: 'row',
@@ -2763,24 +2333,24 @@ const styles = StyleSheet.create({
   customReminderPanelItemTitle: {
     fontFamily: fonts.body.medium,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   customReminderPanelItemTime: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   customRemindersPanelEmpty: {
     fontFamily: fonts.body.regular,
     fontSize: 13,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     textAlign: 'center',
     paddingVertical: spacing.sm,
   },
   customRemindersPanelMore: {
     fontFamily: fonts.body.medium,
     fontSize: 12,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     textAlign: 'center',
     marginTop: spacing.xs,
   },
@@ -2793,7 +2363,7 @@ const styles = StyleSheet.create({
   parshaLabel: {
     fontFamily: fonts.body.regular,
     fontSize: 11,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
@@ -2801,13 +2371,19 @@ const styles = StyleSheet.create({
   parshaName: {
     fontFamily: fonts.heading.semibold,
     fontSize: 16,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   parshaHebrew: {
     fontFamily: fonts.body.medium,
     fontSize: 14,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
+  },
+  parshaSubtext: {
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+    marginTop: 4,
   },
 
   // Inspiration Quote Panel
@@ -2822,14 +2398,14 @@ const styles = StyleSheet.create({
   inspirationHebrew: {
     fontFamily: fonts.heading.semibold,
     fontSize: 18,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     textAlign: 'center',
     marginBottom: spacing.xs,
   },
   inspirationTranslation: {
     fontFamily: fonts.body.regular,
     fontSize: 14,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     textAlign: 'center',
     fontStyle: 'italic',
     marginBottom: spacing.xs,
@@ -2837,7 +2413,7 @@ const styles = StyleSheet.create({
   inspirationSource: {
     fontFamily: fonts.body.medium,
     fontSize: 12,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
   },
 
   // Fast Day Panel
@@ -2857,12 +2433,12 @@ const styles = StyleSheet.create({
   fastDayTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 18,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   fastDaySubtitle: {
     fontFamily: fonts.body.medium,
     fontSize: 13,
-    color: colors.primary.dark,
+    color: theme.colors.primary.dark,
     marginTop: 2,
   },
   fastProgressContainer: {
@@ -2880,13 +2456,13 @@ const styles = StyleSheet.create({
   },
   fastProgressFill: {
     height: '100%',
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.main,
     borderRadius: 6,
   },
   fastProgressPercent: {
     fontFamily: fonts.body.bold,
     fontSize: 14,
-    color: colors.primary.dark,
+    color: theme.colors.primary.dark,
     minWidth: 45,
     textAlign: 'right',
   },
@@ -2900,13 +2476,13 @@ const styles = StyleSheet.create({
   fastTimeLabel: {
     fontFamily: fonts.body.regular,
     fontSize: 11,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginBottom: 2,
   },
   fastTimeValue: {
     fontFamily: fonts.body.semibold,
     fontSize: 15,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   fastCompleteMessage: {
     marginTop: spacing.md,
@@ -2918,7 +2494,7 @@ const styles = StyleSheet.create({
   fastCompleteText: {
     fontFamily: fonts.body.medium,
     fontSize: 13,
-    color: colors.semantic.success,
+    color: theme.colors.semantic.success,
   },
 
   // === REUSABLE PANEL STYLES ===
@@ -2934,13 +2510,13 @@ const styles = StyleSheet.create({
   genericTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     textAlign: 'center',
   },
   genericText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     textAlign: 'center',
     marginTop: 2,
   },
@@ -2957,144 +2533,13 @@ const styles = StyleSheet.create({
   greetingText: {
     fontFamily: fonts.heading.semibold,
     fontSize: 16,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   greetingSubtext: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginTop: 2,
-  },
-
-  // Weather Panel
-  weatherPanel: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  weatherIcon: {
-    fontSize: 28,
-    marginBottom: spacing.xs,
-  },
-  weatherTemp: {
-    fontFamily: fonts.heading.bold,
-    fontSize: 22,
-    color: colors.text.primary,
-  },
-  weatherDesc: {
-    fontFamily: fonts.body.regular,
-    fontSize: 11,
-    color: colors.text.tertiary,
-  },
-
-  // Location Panel
-  locationPanel: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  locationIcon: {
-    fontSize: 22,
-    marginBottom: spacing.xs,
-  },
-  locationText: {
-    fontFamily: fonts.heading.semibold,
-    fontSize: 14,
-    color: colors.text.primary,
-  },
-  locationSubtext: {
-    fontFamily: fonts.body.regular,
-    fontSize: 11,
-    color: colors.text.tertiary,
-    marginTop: 2,
-  },
-
-  // Favorites Panel
-  favoritesPanel: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  favoritesIcon: {
-    fontSize: 24,
-    marginBottom: spacing.xs,
-  },
-  favoritesTitle: {
-    fontFamily: fonts.heading.semibold,
-    fontSize: 14,
-    color: colors.text.primary,
-  },
-  favoritesSubtext: {
-    fontFamily: fonts.body.regular,
-    fontSize: 11,
-    color: colors.text.tertiary,
-    marginTop: 2,
-  },
-
-  // Recent Panel
-  recentPanel: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  recentIcon: {
-    fontSize: 24,
-    marginBottom: spacing.xs,
-  },
-  recentTitle: {
-    fontFamily: fonts.heading.semibold,
-    fontSize: 14,
-    color: colors.text.primary,
-  },
-  recentSubtext: {
-    fontFamily: fonts.body.regular,
-    fontSize: 11,
-    color: colors.text.tertiary,
-    marginTop: 2,
-  },
-
-  // Search Panel
-  searchPanel: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  searchIcon: {
-    fontSize: 22,
-    marginBottom: spacing.xs,
-  },
-  searchText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 13,
-    color: colors.text.secondary,
-  },
-
-  // Full Zmanim Panel
-  zmanimFullPanel: {
-    paddingVertical: spacing.xs,
-  },
-  zmanimFullTitle: {
-    fontFamily: fonts.heading.semibold,
-    fontSize: 16,
-    color: colors.text.primary,
-    textAlign: 'center',
-    marginBottom: spacing.sm,
-  },
-  zmanimFullGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  zmanimFullItem: {
-    width: '30%',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  zmanimFullLabel: {
-    fontFamily: fonts.body.regular,
-    fontSize: 10,
-    color: colors.text.tertiary,
-    marginBottom: 2,
-  },
-  zmanimFullTime: {
-    fontFamily: fonts.body.semibold,
-    fontSize: 13,
-    color: colors.text.primary,
   },
 
   // Shabbos Times Panel
@@ -3109,7 +2554,7 @@ const styles = StyleSheet.create({
   shabbosTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 15,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginBottom: spacing.sm,
   },
   shabbosTimesRow: {
@@ -3123,13 +2568,13 @@ const styles = StyleSheet.create({
   shabbosTimeLabel: {
     fontFamily: fonts.body.regular,
     fontSize: 11,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginBottom: 2,
   },
   shabbosTimeValue: {
     fontFamily: fonts.body.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
 
   // Candle Lighting Panel
@@ -3144,33 +2589,12 @@ const styles = StyleSheet.create({
   candleTitle: {
     fontFamily: fonts.body.medium,
     fontSize: 12,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
   },
   candleTime: {
     fontFamily: fonts.heading.semibold,
     fontSize: 16,
-    color: colors.text.primary,
-    marginTop: 2,
-  },
-
-  // Havdalah Panel
-  havdalahPanel: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  havdalahIcon: {
-    fontSize: 24,
-    marginBottom: spacing.xs,
-  },
-  havdalahTitle: {
-    fontFamily: fonts.body.medium,
-    fontSize: 12,
-    color: colors.text.tertiary,
-  },
-  havdalahTime: {
-    fontFamily: fonts.heading.semibold,
-    fontSize: 16,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginTop: 2,
   },
 
@@ -3186,24 +2610,49 @@ const styles = StyleSheet.create({
   omerTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
-  omerDay: {
-    fontFamily: fonts.heading.bold,
-    fontSize: 22,
-    color: colors.primary.dark,
-    marginTop: 4,
-  },
-  omerWeek: {
+  omerWait: {
     fontFamily: fonts.body.regular,
-    fontSize: 11,
-    color: colors.text.tertiary,
-    marginTop: 2,
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+  omerCheckRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
+  omerCheckbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: theme.colors.text.tertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  omerCheckboxChecked: {
+    backgroundColor: theme.colors.primary.main,
+    borderColor: theme.colors.primary.main,
+  },
+  omerCheckmark: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  omerCheckLabel: {
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: theme.colors.text.primary,
   },
   omerInactive: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginTop: 4,
   },
 
@@ -3219,33 +2668,12 @@ const styles = StyleSheet.create({
   roshChodeshTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   roshChodeshText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
-    marginTop: 2,
-  },
-
-  // Upcoming Holidays Panel
-  holidaysPanel: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  holidaysIcon: {
-    fontSize: 24,
-    marginBottom: spacing.xs,
-  },
-  holidaysTitle: {
-    fontFamily: fonts.heading.semibold,
-    fontSize: 14,
-    color: colors.text.primary,
-  },
-  holidaysText: {
-    fontFamily: fonts.body.regular,
-    fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3261,12 +2689,12 @@ const styles = StyleSheet.create({
   birthdayTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   birthdayText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3282,12 +2710,12 @@ const styles = StyleSheet.create({
   yahrzeitTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   yahrzeitText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3303,13 +2731,57 @@ const styles = StyleSheet.create({
   dafTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   dafText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
+  },
+  dafButton: {
+    marginTop: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+    alignSelf: 'center',
+  },
+  dafButtonText: {
+    fontFamily: fonts.body.semibold,
+    fontSize: 14,
+    color: theme.colors.primary?.main || theme.colors.text.primary,
+  },
+  dafYomiButton: {
+    alignSelf: 'stretch',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg + 4,
+    borderRadius: borderRadius.xl,
+    backgroundColor: theme.isDark ? 'rgba(80,100,160,0.5)' : 'rgba(80,100,160,0.35)',
+    borderWidth: 1.5,
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.25)' : 'rgba(80,100,160,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 72,
+  },
+  dafButtonIcon: {
+    fontSize: 22,
+    marginBottom: spacing.xs,
+    color: theme.colors.text.primary,
+  },
+  dafButtonTitle: {
+    fontFamily: fonts.heading.semibold,
+    fontSize: 16,
+    color: theme.colors.text.primary,
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  dafButtonSubtext: {
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    flexShrink: 1,
   },
 
   // Nach Panel
@@ -3324,12 +2796,12 @@ const styles = StyleSheet.create({
   nachTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   nachText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3345,12 +2817,12 @@ const styles = StyleSheet.create({
   mishnaTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   mishnaText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3366,12 +2838,12 @@ const styles = StyleSheet.create({
   halachaTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   halachaText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3391,13 +2863,13 @@ const styles = StyleSheet.create({
   sunLabel: {
     fontFamily: fonts.body.regular,
     fontSize: 11,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginBottom: 2,
   },
   sunTime: {
     fontFamily: fonts.body.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
 
   // Moon Phase Panel
@@ -3412,12 +2884,12 @@ const styles = StyleSheet.create({
   moonTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   moonText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3433,12 +2905,12 @@ const styles = StyleSheet.create({
   miniCalTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   miniCalText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.primary.main,
+    color: theme.colors.primary.main,
     marginTop: 2,
   },
 
@@ -3454,12 +2926,12 @@ const styles = StyleSheet.create({
   monthViewTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 16,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   monthViewText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.primary.main,
+    color: theme.colors.primary.main,
     marginTop: 2,
   },
 
@@ -3475,12 +2947,12 @@ const styles = StyleSheet.create({
   prayerTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   prayerSubtext: {
     fontFamily: fonts.body.regular,
     fontSize: 11,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginTop: 2,
   },
 
@@ -3496,12 +2968,12 @@ const styles = StyleSheet.create({
   reminderTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   reminderText: {
     fontFamily: fonts.body.regular,
     fontSize: 11,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginTop: 2,
   },
 
@@ -3517,12 +2989,12 @@ const styles = StyleSheet.create({
   kapitelTitle: {
     fontFamily: fonts.body.medium,
     fontSize: 12,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
   },
   kapitelNumber: {
     fontFamily: fonts.heading.semibold,
     fontSize: 16,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginTop: 2,
   },
 
@@ -3531,6 +3003,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: spacing.sm,
   },
+  chumashPanelCompact: {
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
   learningIcon: {
     fontSize: 24,
     marginBottom: spacing.xs,
@@ -3538,56 +3014,14 @@ const styles = StyleSheet.create({
   learningTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   learningText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
     textAlign: 'center',
-  },
-
-  // Chitas Panel
-  chitasPanel: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  chitasIcon: {
-    fontSize: 24,
-    marginBottom: spacing.xs,
-  },
-  chitasTitle: {
-    fontFamily: fonts.heading.semibold,
-    fontSize: 15,
-    color: colors.text.primary,
-  },
-  chitasText: {
-    fontFamily: fonts.body.regular,
-    fontSize: 11,
-    color: colors.text.tertiary,
-    marginTop: 2,
-  },
-
-  // Intention Panel
-  intentionPanel: {
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  intentionIcon: {
-    fontSize: 24,
-    marginBottom: spacing.xs,
-  },
-  intentionTitle: {
-    fontFamily: fonts.heading.semibold,
-    fontSize: 14,
-    color: colors.text.primary,
-  },
-  intentionText: {
-    fontFamily: fonts.body.regular,
-    fontSize: 12,
-    color: colors.text.secondary,
-    marginTop: 2,
   },
 
   // Mussar Panel
@@ -3602,12 +3036,12 @@ const styles = StyleSheet.create({
   mussarTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   mussarText: {
     fontFamily: fonts.body.medium,
     fontSize: 13,
-    color: colors.primary.dark,
+    color: theme.colors.primary.dark,
     marginTop: spacing.xs,
     fontStyle: 'italic',
     textAlign: 'center',
@@ -3621,13 +3055,13 @@ const styles = StyleSheet.create({
   wordHebrew: {
     fontFamily: fonts.heading.bold,
     fontSize: 24,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginBottom: spacing.xs,
   },
   wordMeaning: {
     fontFamily: fonts.body.medium,
     fontSize: 14,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
 
   // Torah Thought Panel
@@ -3642,12 +3076,12 @@ const styles = StyleSheet.create({
   thoughtTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   thoughtText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3663,12 +3097,12 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   historyText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3684,12 +3118,12 @@ const styles = StyleSheet.create({
   storyTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   storyText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
     textAlign: 'center',
   },
@@ -3706,13 +3140,13 @@ const styles = StyleSheet.create({
   mitzvahTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     textAlign: 'center',
   },
   mitzvahText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3728,12 +3162,12 @@ const styles = StyleSheet.create({
   middahTitle: {
     fontFamily: fonts.body.medium,
     fontSize: 12,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
   },
   middahText: {
     fontFamily: fonts.heading.semibold,
     fontSize: 16,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginTop: 2,
   },
 
@@ -3749,12 +3183,12 @@ const styles = StyleSheet.create({
   countdownTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   countdownText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3770,12 +3204,12 @@ const styles = StyleSheet.create({
   gratitudeTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   gratitudeText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
     textAlign: 'center',
   },
@@ -3792,12 +3226,12 @@ const styles = StyleSheet.create({
   journalTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   journalText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3813,12 +3247,12 @@ const styles = StyleSheet.create({
   goalsTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   goalsText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3834,12 +3268,12 @@ const styles = StyleSheet.create({
   intentionsTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   intentionsText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3855,12 +3289,12 @@ const styles = StyleSheet.create({
   chesedTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   chesedText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3876,12 +3310,12 @@ const styles = StyleSheet.create({
   notesTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   notesText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3897,13 +3331,13 @@ const styles = StyleSheet.create({
   namesTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     textAlign: 'center',
   },
   namesText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3919,12 +3353,12 @@ const styles = StyleSheet.create({
   affirmationTitle: {
     fontFamily: fonts.body.medium,
     fontSize: 12,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
   },
   affirmationText: {
     fontFamily: fonts.heading.semibold,
     fontSize: 15,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginTop: spacing.xs,
     textAlign: 'center',
   },
@@ -3941,7 +3375,7 @@ const styles = StyleSheet.create({
   moodTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     textAlign: 'center',
   },
   moodOptions: {
@@ -3965,12 +3399,12 @@ const styles = StyleSheet.create({
   quickNotesTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   quickNotesText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -3986,12 +3420,12 @@ const styles = StyleSheet.create({
   bookmarksTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   bookmarksText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -4007,12 +3441,12 @@ const styles = StyleSheet.create({
   streakNumber: {
     fontFamily: fonts.heading.bold,
     fontSize: 28,
-    color: colors.primary.dark,
+    color: theme.colors.primary.dark,
   },
   streakText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginTop: 2,
   },
 
@@ -4028,12 +3462,18 @@ const styles = StyleSheet.create({
   statsTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   statsText: {
     fontFamily: fonts.body.medium,
     fontSize: 13,
-    color: colors.primary.main,
+    color: theme.colors.primary.main,
+    marginTop: 2,
+  },
+  statsSubtext: {
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -4049,12 +3489,12 @@ const styles = StyleSheet.create({
   timeTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   timeText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -4070,12 +3510,12 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   summaryText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -4091,12 +3531,12 @@ const styles = StyleSheet.create({
   monthlyTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   monthlyText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -4112,12 +3552,12 @@ const styles = StyleSheet.create({
   counterNumber: {
     fontFamily: fonts.heading.bold,
     fontSize: 22,
-    color: colors.primary.dark,
+    color: theme.colors.primary.dark,
   },
   counterText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginTop: 2,
   },
 
@@ -4133,12 +3573,12 @@ const styles = StyleSheet.create({
   tzedakahTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   tzedakahText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -4154,12 +3594,12 @@ const styles = StyleSheet.create({
   achievementsTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   achievementsText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -4175,12 +3615,12 @@ const styles = StyleSheet.create({
   habitsTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   habitsText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
 
@@ -4196,13 +3636,146 @@ const styles = StyleSheet.create({
   communityTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     textAlign: 'center',
   },
   communityText: {
     fontFamily: fonts.body.regular,
     fontSize: 12,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
-});
+
+  // Hebrew Birthday Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 340,
+    backgroundColor: theme.colors.background.secondary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  modalIcon: {
+    fontSize: 28,
+  },
+  modalTitle: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 18,
+    color: theme.colors.text.primary,
+    flex: 1,
+  },
+  modalSubtitle: {
+    fontFamily: fonts.body.regular,
+    fontSize: 14,
+    color: theme.colors.text.tertiary,
+    marginBottom: spacing.md,
+  },
+  birthdayFormRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  birthdayInput: {
+    width: 80,
+    height: 44,
+    borderWidth: 1,
+    borderColor: theme.colors.border?.default ?? theme.colors.text.tertiary,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.sm,
+    fontFamily: fonts.body.medium,
+    fontSize: 16,
+    color: theme.colors.text.primary,
+  },
+  birthdayMonthPicker: {
+    flex: 1,
+    maxHeight: 160,
+  },
+  birthdayMonthScroll: {
+    flexGrow: 0,
+  },
+  birthdayMonthOption: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.sm,
+    marginBottom: 2,
+  },
+  birthdayMonthOptionActive: {
+    backgroundColor: theme.colors.primary.light ?? theme.colors.primary.main,
+  },
+  birthdayMonthText: {
+    fontFamily: fonts.body.regular,
+    fontSize: 14,
+    color: theme.colors.text.secondary,
+  },
+  birthdayMonthTextActive: {
+    fontFamily: fonts.body.semibold,
+    color: theme.colors.primary.dark ?? theme.colors.text.primary,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    justifyContent: 'flex-end',
+  },
+  modalSecondaryButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    backgroundColor: theme.colors.neutral?.[300] ?? 'rgba(0,0,0,0.1)',
+  },
+  modalSecondaryText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 15,
+    color: theme.colors.text.secondary,
+  },
+  modalPrimaryButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    backgroundColor: theme.colors.primary.main,
+  },
+  modalPrimaryText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 15,
+    color: '#fff',
+  },
+  modalClearButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+  },
+  modalClearText: {
+    fontFamily: fonts.body.regular,
+    fontSize: 13,
+    color: theme.colors.text.tertiary,
+  },
+};
+}
+
+function useHomeStyles() {
+  const { theme } = useTheme();
+  return useMemo(() => {
+    try {
+      return StyleSheet.create(createHomeStyles(theme));
+    } catch (e) {
+      console.warn('HomeScreen styles error:', e);
+      return StyleSheet.create({ container: { flex: 1 } });
+    }
+  }, [theme]);
+}

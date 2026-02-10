@@ -1,5 +1,7 @@
 import { Nusach } from './nusach';
 
+export type ThemePreference = 'system' | 'light' | 'dark';
+
 export type SpiritualGoal = 
   | 'tehillim' 
   | 'mincha' 
@@ -69,10 +71,10 @@ export interface CustomReminder {
 }
 
 export interface DisplayPreferences {
-  textSize: 'small' | 'medium' | 'large';
+  textSize: 'xsmall' | 'small' | 'medium' | 'large';
   showTransliteration: boolean;
-  showEnglish: boolean;
   hebrewFont: 'default' | 'traditional';
+  themePreference: ThemePreference;
 }
 
 export interface UserPreferences {
@@ -88,6 +90,10 @@ export interface UserPreferences {
     cityName?: string;
   };
   hasCompletedOnboarding: boolean;
+  /** Autoscroll speed multiplier (0.5–2) for siddur reader */
+  autoscrollSpeed?: number;
+  /** Hebrew birthday for countdown widget: day (1-30) and month (1-13 hebcal) */
+  hebrewBirthday?: { day: number; month: number };
 }
 
 export const DEFAULT_PRAYER_REMINDERS: PrayerReminders = {
@@ -116,8 +122,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
 export const DEFAULT_DISPLAY_PREFERENCES: DisplayPreferences = {
   textSize: 'medium',
   showTransliteration: false,
-  showEnglish: true,
   hebrewFont: 'default',
+  themePreference: 'system',
 };
 
 export const SPIRITUAL_GOAL_OPTIONS: { value: SpiritualGoal; label: string }[] = [

@@ -161,6 +161,13 @@ export const TehillimSettingsScreen: React.FC = () => {
             selected={settings.goalType === 'custom'}
             onPress={() => handleGoalTypeChange('custom')}
           />
+
+          <GlassOption
+            title="Whenever you can"
+            subtitle="No daily goal. Say Tehillim whenever you have time. Complete any perek in any order; progress = % of all 150."
+            selected={settings.goalType === 'whenever'}
+            onPress={() => handleGoalTypeChange('whenever')}
+          />
         </View>
 
         {/* Custom Input */}
@@ -238,7 +245,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.xl,
-    paddingTop: spacing['2xl'],
+    paddingTop: spacing['2xl'] + spacing.safeTopInset,
     paddingBottom: 140,
   },
 

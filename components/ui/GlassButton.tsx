@@ -13,7 +13,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { colors } from '../../src/design/colors';
+import { useTheme } from '../../src/design/theme';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles } from '../../src/design/typography';
 import { BlurView } from 'expo-blur';
@@ -42,6 +42,7 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
   style,
   textStyle,
 }) => {
+  const { theme } = useTheme();
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
 
@@ -64,23 +65,23 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
     switch (variant) {
       case 'primary':
         return {
-          backgroundColor: colors.primary.main,
-          textColor: colors.text.inverse,
+          backgroundColor: theme.colors.primary.main,
+          textColor: theme.colors.text.inverse,
         };
       case 'secondary':
         return {
-          backgroundColor: colors.secondary.main,
-          textColor: colors.text.inverse,
+          backgroundColor: theme.colors.secondary.main,
+          textColor: theme.colors.text.inverse,
         };
       case 'ghost':
         return {
           backgroundColor: 'transparent',
-          textColor: colors.primary.main,
+          textColor: theme.colors.primary.main,
         };
       default:
         return {
-          backgroundColor: colors.primary.main,
-          textColor: colors.text.inverse,
+          backgroundColor: theme.colors.primary.main,
+          textColor: theme.colors.text.inverse,
         };
     }
   };

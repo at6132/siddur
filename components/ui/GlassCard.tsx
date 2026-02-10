@@ -2,7 +2,7 @@ import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../../src/design/colors';
+import { useTheme } from '../../src/design/theme';
 import { borderRadius as borderRadiusValues, shadows, spacing } from '../../src/design/spacing';
 
 interface GlassCardProps {
@@ -22,13 +22,14 @@ export const GlassCard: React.FC<GlassCardProps> = ({
   shadow = 'md',
   borderRadius: borderRadiusProp = 'lg',
 }) => {
-  const glassColor = colors.glass[variant];
+  const { theme } = useTheme();
+  const glassColor = theme.colors.glass[variant];
 
   return (
     <View style={[styles.container, shadows[shadow], style]}>
       <BlurView intensity={intensity} style={styles.blur}>
         <LinearGradient
-          colors={[glassColor, colors.glass.blur]}
+          colors={[glassColor, theme.colors.glass.blur]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[

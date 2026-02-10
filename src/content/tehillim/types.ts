@@ -103,7 +103,7 @@ export const HEBREW_DAY_NAMES: { [dayOfWeek: number]: string } = {
 };
 
 // Tehillim goal types
-export type TehillimGoalType = 'weekly' | 'monthly' | 'custom';
+export type TehillimGoalType = 'weekly' | 'monthly' | 'custom' | 'whenever';
 
 export interface TehillimSettings {
   goalType: TehillimGoalType;

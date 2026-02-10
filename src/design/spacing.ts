@@ -12,6 +12,8 @@ export const spacing = {
   '2xl': 48,
   '3xl': 64,
   '4xl': 96,
+  /** Extra top padding to clear iPhone Dynamic Island / status bar */
+  safeTopInset: 52,
 } as const;
 
 export const borderRadius = {

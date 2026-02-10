@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "24/7",
+    "name": "Siddur",
     "slug": "siddur",
-    "version": "1.0.0",
+    "version": "1.01.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
@@ -15,10 +15,19 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.siddur.app",
+      "buildNumber": "2",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to calculate accurate prayer times (zmanim).",
         "NSUserNotificationsUsageDescription": "We'll send gentle reminders to help you stay consistent with your davening.",
-        "UIBackgroundModes": ["fetch", "remote-notification"]
+        "UIBackgroundModes": [
+          "fetch",
+          "remote-notification",
+          "fetch",
+          "remote-notification",
+          "fetch",
+          "remote-notification"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "plugins": [
@@ -29,12 +38,27 @@
           "locationAlwaysAndWhenInUsePermission": "We need your location to calculate accurate prayer times."
         }
       ],
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
-      }
+        "projectId": "44bb4af8-f301-486a-9a3a-d43ea10755dc"
+      },
+      "analyticsUrl": "https://analytics-api-production-cb55.up.railway.app"
+    },
+    "owner": "avitaub",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/44bb4af8-f301-486a-9a3a-d43ea10755dc"
+    },
+    "android": {
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     }
   }
 }

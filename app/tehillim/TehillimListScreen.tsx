@@ -1,22 +1,26 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
   FlatList, 
   TouchableOpacity, 
+  TextInput,
   Platform,
   Animated,
+  Dimensions,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/core';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { GlassPanel } from '../../components/ui/GlassPanel';
 import { ScalePress } from '../../components/animations/ScalePress';
 import { FadeIn } from '../../components/animations/FadeIn';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
-import { fonts, textStyles } from '../../src/design/typography';
+import { fonts } from '../../src/design/typography';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 
 // Hebrew letters for Tehillim numbering
@@ -39,6 +43,11 @@ const HEBREW_LETTERS = [
 ];
 
 const TEHILLIM_COUNT = 150;
+const GRID_PADDING = spacing.lg * 2;
+const GRID_GAP = spacing.md;
+const COLS = 3;
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const ITEM_WIDTH = (SCREEN_WIDTH - GRID_PADDING - GRID_GAP * (COLS - 1)) / COLS;
 
 interface TehillimItem {
   number: number;
@@ -51,11 +60,21 @@ interface DailyProgress {
   chaptersCompleted: number[];
   chaptersRemaining: number[];
   percentComplete: number;
+  goalType: 'weekly' | 'monthly' | 'custom' | 'whenever';
+}
+
+interface OverallProgress {
+  completed: number;
+  total: number;
+  label: string;
+  percentComplete: number;
 }
 
 export const TehillimListScreen: React.FC = () => {
   const navigation = useNavigation();
   const [dailyProgress, setDailyProgress] = useState<DailyProgress | null>(null);
+  const [overallProgress, setOverallProgress] = useState<OverallProgress | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useFocusEffect(
     useCallback(() => {
@@ -64,26 +83,44 @@ export const TehillimListScreen: React.FC = () => {
   );
 
   const loadProgress = async () => {
-    const progress = await DailyTehillimTracker.getTodaysProgress();
+    const [progress, overall] = await Promise.all([
+      DailyTehillimTracker.getTodaysProgress(),
+      DailyTehillimTracker.getOverallTehillimProgress(),
+    ]);
     setDailyProgress({
       dayName: progress.dayName,
       totalChapters: progress.totalChapters,
       chaptersCompleted: progress.chaptersCompleted,
       chaptersRemaining: progress.chaptersRemaining,
       percentComplete: progress.percentComplete,
+      goalType: progress.goalType,
     });
+    setOverallProgress(overall);
   };
 
-  const tehillimList: TehillimItem[] = Array.from(
-    { length: TEHILLIM_COUNT },
-    (_, i) => ({
-      number: i + 1,
-      hebrew: HEBREW_LETTERS[i] || String(i + 1),
-    })
+  const allTehillim: TehillimItem[] = useMemo(
+    () =>
+      Array.from({ length: TEHILLIM_COUNT }, (_, i) => ({
+        number: i + 1,
+        hebrew: HEBREW_LETTERS[i] || String(i + 1),
+      })),
+    []
   );
 
-  const isToday = (chapterNum: number) => 
-    dailyProgress?.totalChapters.includes(chapterNum) || false;
+  const tehillimList = useMemo(() => {
+    if (!searchQuery.trim()) return allTehillim;
+    const q = searchQuery.trim().toLowerCase();
+    return allTehillim.filter((item) => {
+      const numStr = String(item.number);
+      const hebrewMatch = item.hebrew.includes(q) || item.hebrew === q;
+      const numMatch = numStr.includes(q) || numStr.startsWith(q);
+      return hebrewMatch || numMatch;
+    });
+  }, [allTehillim, searchQuery]);
+
+  const isToday = (chapterNum: number) =>
+    dailyProgress?.goalType !== 'whenever' &&
+    (dailyProgress?.totalChapters.includes(chapterNum) ?? false);
 
   const isCompleted = (chapterNum: number) =>
     dailyProgress?.chaptersCompleted.includes(chapterNum) || false;
@@ -98,9 +135,11 @@ export const TehillimListScreen: React.FC = () => {
   const renderDailyCard = () => {
     if (!dailyProgress) return null;
 
-    const { dayName, totalChapters, percentComplete, chaptersRemaining } = dailyProgress;
+    const { dayName, totalChapters, percentComplete, chaptersRemaining, goalType } = dailyProgress;
+    const isWhenever = goalType === 'whenever';
     const startChapter = totalChapters[0];
     const endChapter = totalChapters[totalChapters.length - 1];
+    const completedCount = totalChapters.length - chaptersRemaining.length;
 
     return (
       <FadeIn delay={0}>
@@ -135,9 +174,15 @@ export const TehillimListScreen: React.FC = () => {
         <View style={styles.dailyCardInner}>
           <View style={styles.dailyCardHeader}>
             <View>
-              <Text style={styles.dailyCardTitle}>{dayName}'s Tehillim</Text>
+              <Text style={styles.dailyCardTitle}>
+                {isWhenever ? 'Tehillim whenever you can' : `${dayName}'s Tehillim`}
+              </Text>
               <Text style={styles.dailyCardSubtitle}>
-                Chapters {startChapter}–{endChapter} • {totalChapters.length} total
+                {isWhenever
+                  ? `${completedCount} of 150 perakim • Open any perek`
+                  : overallProgress
+                    ? `${completedCount} of ${totalChapters.length} today • ${overallProgress.completed} of ${overallProgress.total} ${overallProgress.label}`
+                    : `Chapters ${startChapter}–${endChapter} • ${totalChapters.length} total`}
               </Text>
             </View>
             <TouchableOpacity
@@ -151,13 +196,31 @@ export const TehillimListScreen: React.FC = () => {
           {/* Progress Bar */}
           <View style={styles.progressContainer}>
             <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: `${percentComplete}%` }]} />
+              <View
+                style={[
+                  styles.progressBarFill,
+                  {
+                    width: `${overallProgress ? overallProgress.percentComplete : percentComplete}%`,
+                  },
+                ]}
+              />
             </View>
-            <Text style={styles.progressText}>{percentComplete}% complete</Text>
+            <Text style={styles.progressText}>
+              {overallProgress
+                ? `${overallProgress.completed} of ${overallProgress.total} (${overallProgress.percentComplete}%)`
+                : `${percentComplete}% complete`}
+            </Text>
           </View>
 
-          {/* Continue Button */}
-          {chaptersRemaining.length > 0 ? (
+          {isWhenever ? (
+            <View style={styles.wheneverCta}>
+              <Text style={styles.wheneverCtaText}>
+                {chaptersRemaining.length === 0
+                  ? '✓ All 150 perakim complete!'
+                  : 'Open any perek below and tap "Complete perek" when done'}
+              </Text>
+            </View>
+          ) : chaptersRemaining.length > 0 ? (
             <TouchableOpacity
               style={styles.continueButton}
               onPress={handleContinueDaily}
@@ -228,6 +291,21 @@ export const TehillimListScreen: React.FC = () => {
         colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
         style={StyleSheet.absoluteFill}
       />
+      <View style={styles.header}>
+        <View style={styles.searchBar}>
+          <Ionicons name="search" size={20} color={colors.text.tertiary} style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search perek (e.g. 90 or צ)"
+            placeholderTextColor={colors.text.tertiary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+        </View>
+      </View>
       <FlatList
         data={tehillimList}
         renderItem={renderItem}
@@ -237,6 +315,7 @@ export const TehillimListScreen: React.FC = () => {
         columnWrapperStyle={styles.row}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={renderDailyCard}
+        keyboardShouldPersistTaps="handled"
       />
     </View>
   );
@@ -246,9 +325,39 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg + spacing.safeTopInset,
+    paddingBottom: spacing.md,
+  },
   list: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: 0,
     paddingBottom: 140,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    shadowColor: colors.shadow.light,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  searchIcon: {
+    marginLeft: spacing.md,
+  },
+  searchInput: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    fontSize: 16,
+    fontFamily: fonts.body.regular,
+    color: colors.text.primary,
   },
 
   // Daily Card - Enhanced with liquid glass
@@ -346,28 +455,42 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text.primary,
   },
+  wheneverCta: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+  },
+  wheneverCtaText: {
+    fontFamily: fonts.body.regular,
+    fontSize: 13,
+    color: colors.text.secondary,
+    textAlign: 'center',
+  },
 
-  // Grid - Enhanced with subtle glass
+  // Grid - 3 per row, equal size, full width (explicit widths to avoid RTL/flex issues)
   row: {
+    flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: GRID_GAP,
     marginBottom: spacing.md,
+    width: SCREEN_WIDTH - GRID_PADDING,
   },
   itemContainer: {
-    flex: 1,
-    marginHorizontal: spacing.xs,
+    width: ITEM_WIDTH,
+    minWidth: ITEM_WIDTH,
   },
   item: {
-    minHeight: 96,
+    minHeight: 90,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.glass.light,
+    backgroundColor: 'rgba(255,255,255,0.85)',
     borderRadius: borderRadius.xl,
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.9)',
     shadowColor: colors.shadow.light,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
     elevation: 2,
   },
   itemToday: {

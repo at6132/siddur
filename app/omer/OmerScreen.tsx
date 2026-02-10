@@ -236,7 +236,6 @@ export const OmerScreen: React.FC = () => {
               <BlurView intensity={80} style={styles.blessingBlur}>
                 <View style={styles.blessingContent}>
                   <Text style={styles.blessingLabel}>Tonight's Count</Text>
-                  <Text style={styles.blessingEnglish}>{blessing.english}</Text>
                   <Text style={styles.blessingHebrew}>{blessing.hebrew}</Text>
                   
                   <Animated.View style={{ transform: [{ scale: todayCounted ? 1 : pulseAnim }] }}>
@@ -273,7 +272,6 @@ export const OmerScreen: React.FC = () => {
               >
                 <View style={styles.blessingContent}>
                   <Text style={styles.blessingLabel}>Tonight's Count</Text>
-                  <Text style={styles.blessingEnglish}>{blessing.english}</Text>
                   <Text style={styles.blessingHebrew}>{blessing.hebrew}</Text>
                   
                   <Animated.View style={{ transform: [{ scale: todayCounted ? 1 : pulseAnim }] }}>
@@ -416,7 +414,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.xl + spacing.safeTopInset,
   },
 
   // Empty State

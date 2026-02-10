@@ -1,9 +1,9 @@
 /**
- * Liquid Glass Design System - Color Palette
+ * Liquid Glass Design System - Color Palettes
  * Feminine, calm, modern palette for the 24/7 app
  */
 
-export const colors = {
+export const lightColors = {
   // Primary palette - soft, feminine
   primary: {
     light: '#F5E6E8', // Soft rose
@@ -79,6 +79,66 @@ export const colors = {
   },
 } as const;
 
-export type ColorKey = keyof typeof colors;
-export type ColorValue = typeof colors[ColorKey];
+export const darkColors: typeof lightColors = {
+  primary: {
+    light: '#F5CFE2',
+    main: '#E2A8C5',
+    dark: '#C87AA1',
+  },
+  secondary: {
+    light: '#89B6CE',
+    main: '#6D9FB9',
+    dark: '#507890',
+  },
+  accent: {
+    gold: '#C9A86A',
+    lavender: '#B8A0D2',
+    sage: '#8FB28F',
+  },
+  background: {
+    primary: '#08070C',
+    secondary: '#110F18',
+    tertiary: '#191625',
+    glass: 'rgba(12, 10, 18, 0.6)',
+  },
+  text: {
+    primary: '#F8F4F9',
+    secondary: '#D8CEE4',   // Soft lavender (no grey)
+    tertiary: '#B8A8D0',   // Muted lavender
+    inverse: '#0A070D',
+  },
+  neutral: {
+    50: '#17141F',
+    100: '#1F1B28',
+    200: '#2A2534',
+    300: '#3A3448',
+    400: '#4E4662',
+    500: '#6A607C',
+    600: '#8A7E9C',
+    700: '#A89EBC',
+    800: '#C4B8D8',
+    900: '#D8CEE4',
+  },
+  semantic: {
+    success: '#80C9A5',
+    info: '#7DAECE',
+    warning: '#CBA96A',
+    error: '#E394A3',
+  },
+  glass: {
+    light: 'rgba(255, 255, 255, 0.18)',
+    medium: 'rgba(255, 255, 255, 0.14)',
+    dark: 'rgba(255, 255, 255, 0.1)',
+    blur: 'rgba(255, 255, 255, 0.08)',
+  },
+  shadow: {
+    light: 'rgba(0, 0, 0, 0.45)',
+    medium: 'rgba(0, 0, 0, 0.55)',
+    dark: 'rgba(0, 0, 0, 0.65)',
+  },
+};
 
+export type ColorPalette = typeof lightColors;
+
+/** @deprecated Use useTheme() and theme.colors for themed screens. Use lightColors for static utilities. */
+export const colors = lightColors;

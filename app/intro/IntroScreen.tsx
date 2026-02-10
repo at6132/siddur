@@ -321,12 +321,6 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
       ]).start();
     });
 
-    // Cycle through feature highlights
-    const featureInterval = setInterval(() => {
-      setCurrentFeature((prev) => (prev + 1) % FEATURES.length);
-    }, 3000);
-
-    return () => clearInterval(featureInterval);
   }, []);
 
   const orb1TranslateY = orb1.interpolate({
@@ -454,7 +448,6 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
                 key={feature.title}
                 style={[
                   styles.featureCard,
-                  currentFeature === index && styles.featureCardActive,
                   {
                     opacity: featureAnimations[index].opacity,
                     transform: [
@@ -463,7 +456,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
                   },
                 ]}
               >
-                <BlurView intensity={80} style={styles.featureBlur}>
+                <BlurView intensity={40} tint="light" style={styles.featureBlur}>
                   <Text style={styles.featureIcon}>{feature.icon}</Text>
                   <View style={styles.featureText}>
                     <Text style={styles.featureTitle}>{feature.title}</Text>
@@ -505,6 +498,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     overflow: 'hidden',
+    paddingTop: spacing.safeTopInset,
   },
   gradient: {
     ...StyleSheet.absoluteFillObject,
@@ -606,17 +600,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  featureCardActive: {
-    borderColor: colors.primary.main,
-    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
   },
   featureBlur: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: spacing.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
   },
   featureIcon: {
     fontSize: 26,

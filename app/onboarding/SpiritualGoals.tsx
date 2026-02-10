@@ -404,6 +404,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center', 
     overflow: 'hidden',
+    paddingTop: spacing.safeTopInset,
   },
   orb1: { 
     position: 'absolute', 

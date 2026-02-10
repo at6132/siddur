@@ -3,7 +3,7 @@
  * Comprehensive Jewish calendar calculations using @hebcal/core
  */
 
-import { HDate, HebrewCalendar, flags, months, Locale } from '@hebcal/core';
+import { HDate, HebrewCalendar, flags, months, Locale, getSedra, ParshaEvent } from '@hebcal/core';
 import { SpecialDay, DAYS_OF_WEEK_HEBREW } from '../../types/calendar';
 
 // Hebrew number conversion
@@ -164,6 +164,15 @@ export class JewishCalendarService {
   }
 
   /**
+   * Check if date is during Aseret Yemei Teshuva (Ten Days of Repentance: 1–10 Tishrei)
+   * When we say Zochreinu, Uchtavenu, etc. in the Amidah
+   */
+  static isAseretYemeiTeshuva(date: Date = new Date()): boolean {
+    const hdate = this.getJewishDate(date);
+    return hdate.getMonth() === months.TISHREI && hdate.getDate() >= 1 && hdate.getDate() <= 10;
+  }
+
+  /**
    * Get Rosh Chodesh name
    */
   static getRoshChodeshName(date: Date = new Date()): string | undefined {
@@ -207,9 +216,27 @@ export class JewishCalendarService {
   }
 
   /**
-   * Check if date is a fast day
+   * True only when the Hebrew date is one of the known fast days.
+   * Used to avoid false positives from Hebcal (e.g. Feb 16 incorrectly flagged).
+   */
+  private static isKnownFastHebrewDate(hdate: HDate): boolean {
+    const month = hdate.getMonth();
+    const day = hdate.getDate();
+    if (month === months.TISHREI && (day === 3 || day === 10)) return true; // Tzom Gedaliah, Yom Kippur
+    if (month === months.TEVET && day === 10) return true; // Asara B'Tevet
+    if ((month === months.ADAR_I || month === months.ADAR_II) && (day === 11 || day === 13)) return true; // Ta'anit Esther
+    if (month === months.TAMUZ && day === 17) return true; // 17 Tammuz
+    if (month === months.AV && day === 9) return true; // Tisha B'Av
+    return false;
+  }
+
+  /**
+   * Check if date is a fast day.
+   * Requires both Hebcal to report a fast AND the Hebrew date to be a known fast (avoids false positives).
    */
   static isFastDay(date: Date = new Date()): boolean {
+    const hdate = this.getJewishDate(date);
+    if (!this.isKnownFastHebrewDate(hdate)) return false;
     const events = this.getHolidays(date);
     if (!events || events.length === 0) return false;
     return events.some((event) => {
@@ -408,33 +435,48 @@ export class JewishCalendarService {
   }
 
   /**
-   * Get Parsha for a given date
+   * Get the upcoming Shabbos for a given date.
+   * Sunday through Friday → that week's Shabbos (upcoming Saturday).
+   * Saturday → same day (this Shabbos).
    */
-  static getParsha(date: Date = new Date()): string | undefined {
-    const events = this.getHolidays(date);
-    if (!events || events.length === 0) return undefined;
-    const parsha = events.find((event) => {
-      const eventFlags = event.getFlags?.() || 0;
-      return eventFlags & flags.PARSHA_HASHAVUA;
-    });
-    return parsha?.getDesc?.('en');
+  private static getUpcomingShabbos(date: Date): Date {
+    const d = new Date(date);
+    const day = d.getDay(); // 0 Sun .. 6 Sat
+    const daysUntilShabbos = day === 6 ? 0 : (6 - day + 7) % 7;
+    d.setDate(d.getDate() + daysUntilShabbos);
+    return d;
   }
 
   /**
-   * Get Parsha in Hebrew
+   * Get Parsha for a given date using Hebcal Sedra API.
+   * Always uses the upcoming Shabbos: Sunday–Shabbos = that week's parsha (read on that Shabbos).
+   */
+  static getParsha(date: Date = new Date()): string | undefined {
+    const shabbos = this.getUpcomingShabbos(date);
+    const hd = new HDate(shabbos);
+    const hyear = hd.getFullYear();
+    const sedra = getSedra(hyear, false);
+    const result = sedra.lookup(hd);
+    try {
+      return new ParshaEvent(result).render('en');
+    } catch {
+      return result.parsha?.join('-') ?? undefined;
+    }
+  }
+
+  /**
+   * Get Parsha in Hebrew (same logic: upcoming Shabbos = this week's parsha).
    */
   static getParshaHebrew(date: Date = new Date()): string | undefined {
-    const events = this.getHolidays(date);
-    if (!events || events.length === 0) return undefined;
-    const parsha = events.find((event) => {
-      const eventFlags = event.getFlags?.() || 0;
-      return eventFlags & flags.PARSHA_HASHAVUA;
-    });
-    if (!parsha) return undefined;
+    const shabbos = this.getUpcomingShabbos(date);
+    const hd = new HDate(shabbos);
+    const hyear = hd.getFullYear();
+    const sedra = getSedra(hyear, false);
+    const result = sedra.lookup(hd);
     try {
-      return parsha.render('he');
+      return new ParshaEvent(result).render('he');
     } catch {
-      return parsha.getDesc?.('en');
+      return result.parsha?.join('־') ?? undefined;
     }
   }
 
@@ -597,6 +639,55 @@ export class JewishCalendarService {
   /**
    * Check if it's a day with Torah reading
    */
+  /**
+   * Get the next Gregorian date when a Hebrew date (day, month) occurs.
+   * Returns null if invalid.
+   */
+  static getNextHebrewDateOccurrence(hebrewDay: number, hebrewMonth: number): Date | null {
+    try {
+      const today = new HDate(new Date());
+      const currentYear = today.getFullYear();
+      let hd = new HDate(hebrewDay, hebrewMonth, currentYear);
+      let greg = hd.greg();
+      if (greg < new Date()) {
+        hd = new HDate(hebrewDay, hebrewMonth, currentYear + 1);
+        greg = hd.greg();
+      }
+      return greg;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Days until next occurrence of Hebrew date. Returns null if today is the date or invalid. */
+  static daysUntilHebrewDate(hebrewDay: number, hebrewMonth: number): number | null {
+    const next = this.getNextHebrewDateOccurrence(hebrewDay, hebrewMonth);
+    if (!next) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(next);
+    target.setHours(0, 0, 0, 0);
+    const diff = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return diff;
+  }
+
+  /** Hebrew month names for display (Jewish year order: Nisan first) */
+  static HEBREW_MONTH_NAMES: { value: number; label: string }[] = [
+    { value: months.NISAN, label: 'Nisan' },
+    { value: months.IYYAR, label: 'Iyar' },
+    { value: months.SIVAN, label: 'Sivan' },
+    { value: months.TAMUZ, label: 'Tammuz' },
+    { value: months.AV, label: 'Av' },
+    { value: months.ELUL, label: 'Elul' },
+    { value: months.TISHREI, label: 'Tishrei' },
+    { value: months.CHESHVAN, label: 'Cheshvan' },
+    { value: months.KISLEV, label: 'Kislev' },
+    { value: months.TEVET, label: 'Tevet' },
+    { value: months.SHVAT, label: 'Shevat' },
+    { value: months.ADAR_I, label: 'Adar I' },
+    { value: months.ADAR_II, label: 'Adar II' },
+  ];
+
   static hasTorahReading(date: Date = new Date()): boolean {
     const dayOfWeek = date.getDay();
     

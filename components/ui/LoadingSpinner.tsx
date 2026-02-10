@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
-import { colors } from '../../src/design/colors';
+import { useTheme } from '../../src/design/theme';
 import { spacing } from '../../src/design/spacing';
 
 interface LoadingSpinnerProps {
@@ -8,13 +8,11 @@ interface LoadingSpinnerProps {
   color?: string;
 }
 
-export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
-  size = 'large',
-  color = colors.primary.main,
-}) => {
+export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ size = 'large', color }) => {
+  const { theme } = useTheme();
   return (
     <View style={styles.container}>
-      <ActivityIndicator size={size} color={color} />
+      <ActivityIndicator size={size} color={color ?? theme.colors.primary.main} />
     </View>
   );
 };

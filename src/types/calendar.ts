@@ -120,6 +120,12 @@ export interface DayInfo {
   isAfterPesach: boolean;
   isAfterSheminiAtzeres: boolean;
   isAfterDecember4th: boolean;  // For tal u'matar in diaspora
+
+  /** Upcoming/current Shabbos times for home widgets (always shows this weekend's) */
+  upcomingShabbos?: {
+    candleLighting: Date | null;  // Friday candle lighting
+    havdalah: Date | null;        // Motzei Shabbos
+  };
 }
 
 export interface CalendarContext {

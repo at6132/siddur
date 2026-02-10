@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { FadeIn } from '../../components/animations/FadeIn';
@@ -18,6 +18,7 @@ import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { CustomReminder } from '../../src/types/preferences';
+import { track, RELIABILITY_EVENTS } from '../../src/analytics';
 
 // Glass Card Component
 const GlassCard: React.FC<{
@@ -40,11 +41,25 @@ const GlassCard: React.FC<{
   </View>
 );
 
-const TIME_OPTIONS = [
-  '6:00 AM', '7:00 AM', '8:00 AM', '9:00 AM', '10:00 AM', '11:00 AM',
-  '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM',
-  '6:00 PM', '7:00 PM', '8:00 PM', '9:00 PM', '10:00 PM',
-];
+function parseTime(timeStr: string): { hour: number; minute: number; ampm: 'AM' | 'PM' } {
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match) {
+    let hour = parseInt(match[1], 10);
+    const minute = Math.min(59, Math.max(0, parseInt(match[2], 10)));
+    const ampm = (match[3].toUpperCase() === 'AM' ? 'AM' : 'PM') as 'AM' | 'PM';
+    if (hour === 0) hour = 12;
+    if (hour > 12) hour = 12;
+    if (hour < 1) hour = 1;
+    return { hour, minute, ampm };
+  }
+  return { hour: 9, minute: 0, ampm: 'AM' as const };
+}
+
+function formatTime(hour: number, minute: number, ampm: 'AM' | 'PM'): string {
+  const h = Math.min(12, Math.max(1, Math.floor(hour)));
+  const m = Math.min(59, Math.max(0, Math.floor(minute)));
+  return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
 
 const DAYS = [
   { id: 'sun', label: 'Sun' },
@@ -56,13 +71,58 @@ const DAYS = [
   { id: 'sat', label: 'Sat' },
 ];
 
+type AddCustomReminderParams = { reminder?: CustomReminder };
+
 export const AddCustomReminderScreen: React.FC = () => {
   const navigation = useNavigation();
-  const [title, setTitle] = useState('');
-  const [message, setMessage] = useState('');
-  const [selectedTime, setSelectedTime] = useState('9:00 AM');
-  const [selectedDays, setSelectedDays] = useState<string[]>(['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']);
+  const route = useRoute<RouteProp<{ params: AddCustomReminderParams }, 'params'>>();
+  const editingReminder = route.params?.reminder ?? null;
+  const isEdit = !!editingReminder;
+
+  const [title, setTitle] = useState(editingReminder?.title ?? '');
+  const [message, setMessage] = useState(editingReminder?.message ?? '');
+  const [selectedTime, setSelectedTime] = useState(editingReminder?.time ?? '9:00 AM');
+  const [selectedDays, setSelectedDays] = useState<string[]>(editingReminder?.days ?? ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']);
   const [saving, setSaving] = useState(false);
+  // Local strings for hour/minute so typing isn't overwritten by derived state
+  const [hourStr, setHourStr] = useState(() => editingReminder ? String(parseTime(editingReminder.time).hour) : '9');
+  const [minuteStr, setMinuteStr] = useState(() => editingReminder ? parseTime(editingReminder.time).minute.toString().padStart(2, '0') : '00');
+  const [hourFocused, setHourFocused] = useState(false);
+  const [minuteFocused, setMinuteFocused] = useState(false);
+
+  const { hour, minute, ampm } = parseTime(selectedTime);
+
+  // Sync hour/minute strings when selectedTime changes (e.g. AM/PM) and field isn't focused
+  useEffect(() => {
+    if (!hourFocused) setHourStr(String(hour));
+    if (!minuteFocused) setMinuteStr(minute.toString().padStart(2, '0'));
+  }, [selectedTime, hour, minute, hourFocused, minuteFocused]);
+
+  const commitHour = () => {
+    const n = parseInt(hourStr.replace(/\D/g, ''), 10);
+    const h = (isNaN(n) || n < 1) ? hour : Math.min(12, Math.max(1, n));
+    const next = formatTime(h, minute, ampm);
+    setSelectedTime(next);
+    setHourStr(String(parseTime(next).hour));
+  };
+  const commitMinute = () => {
+    const n = parseInt(minuteStr.replace(/\D/g, ''), 10);
+    const m = (isNaN(n) || n < 0) ? minute : Math.min(59, Math.max(0, n));
+    const next = formatTime(hour, m, ampm);
+    setSelectedTime(next);
+    setMinuteStr(parseTime(next).minute.toString().padStart(2, '0'));
+  };
+
+  /** Build and validate time from current inputs; return formatted string or null if invalid */
+  const getValidTimeOnSubmit = (): string | null => {
+    const h = parseInt(hourStr.replace(/\D/g, ''), 10);
+    const m = parseInt(minuteStr.replace(/\D/g, ''), 10);
+    if (isNaN(h) || h < 1 || h > 12) return null;
+    if (isNaN(m) || m < 0 || m > 59) return null;
+    return formatTime(h, m, ampm);
+  };
+
+  const setAmpm = (a: 'AM' | 'PM') => setSelectedTime(formatTime(hour, minute, a));
 
   const toggleDay = (dayId: string) => {
     if (selectedDays.includes(dayId)) {
@@ -76,25 +136,47 @@ export const AddCustomReminderScreen: React.FC = () => {
 
   const handleSave = async () => {
     if (!title.trim()) {
+      track(RELIABILITY_EVENTS.VALIDATION_ERROR, { field: 'title', reason_code: 'missing' });
       Alert.alert('Missing Title', 'Please enter a title for your reminder.');
+      return;
+    }
+
+    const timeToSave = getValidTimeOnSubmit();
+    if (timeToSave === null) {
+      track(RELIABILITY_EVENTS.VALIDATION_ERROR, { field: 'time', reason_code: 'invalid_range' });
+      Alert.alert(
+        'Invalid time',
+        'Please enter a valid time: hour 1–12, minute 00–59.'
+      );
       return;
     }
 
     setSaving(true);
     try {
-      const reminder: CustomReminder = {
-        id: `reminder-${Date.now()}`,
-        title: title.trim(),
-        message: message.trim() || title.trim(),
-        time: selectedTime,
-        enabled: true,
-        days: selectedDays as ('sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')[],
-      };
-
-      await UserPreferencesService.addCustomReminder(reminder);
-      Alert.alert('Reminder Added', `"${title}" will remind you daily at ${selectedTime}.`, [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+      if (isEdit && editingReminder) {
+        await UserPreferencesService.updateCustomReminder(editingReminder.id, {
+          title: title.trim(),
+          message: message.trim() || title.trim(),
+          time: timeToSave,
+          days: selectedDays as ('sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')[],
+        });
+        Alert.alert('Reminder Updated', `"${title}" will remind you daily at ${timeToSave}.`, [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      } else {
+        const reminder: CustomReminder = {
+          id: `reminder-${Date.now()}`,
+          title: title.trim(),
+          message: message.trim() || title.trim(),
+          time: timeToSave,
+          enabled: true,
+          days: selectedDays as ('sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')[],
+        };
+        await UserPreferencesService.addCustomReminder(reminder);
+        Alert.alert('Reminder Added', `"${title}" will remind you daily at ${timeToSave}.`, [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      }
     } catch (error) {
       console.error('Error saving reminder:', error);
       Alert.alert('Error', 'Failed to save reminder. Please try again.');
@@ -124,8 +206,8 @@ export const AddCustomReminderScreen: React.FC = () => {
             >
               <Text style={styles.backText}>← Cancel</Text>
             </TouchableOpacity>
-            <Text style={styles.title}>New Reminder</Text>
-            <Text style={styles.subtitle}>Set a custom daily reminder</Text>
+            <Text style={styles.title}>{isEdit ? 'Edit Reminder' : 'New Reminder'}</Text>
+            <Text style={styles.subtitle}>{isEdit ? 'Update your custom daily reminder' : 'Set a custom daily reminder'}</Text>
           </View>
         </FadeIn>
 
@@ -161,33 +243,57 @@ export const AddCustomReminderScreen: React.FC = () => {
           </GlassCard>
         </FadeIn>
 
-        {/* Time Selection */}
+        {/* Time Selection – any hour, any minute */}
         <FadeIn delay={150}>
           <GlassCard>
             <Text style={styles.inputLabel}>Time</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.timeScrollContent}
-            >
-              {TIME_OPTIONS.map((time) => (
-                <TouchableOpacity
-                  key={time}
-                  style={[
-                    styles.timeOption,
-                    selectedTime === time && styles.timeOptionSelected,
-                  ]}
-                  onPress={() => setSelectedTime(time)}
-                >
-                  <Text style={[
-                    styles.timeOptionText,
-                    selectedTime === time && styles.timeOptionTextSelected,
-                  ]}>
-                    {time}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            <View style={styles.timeRow}>
+              <View style={styles.timeInputWrap}>
+                <Text style={styles.timeInputLabel}>Hour</Text>
+                <TextInput
+                  style={styles.timeInput}
+                  value={hourStr}
+                  onChangeText={(t) => setHourStr(t.replace(/\D/g, '').slice(0, 2))}
+                  onFocus={() => setHourFocused(true)}
+                  onBlur={() => { setHourFocused(false); commitHour(); }}
+                  keyboardType="number-pad"
+                  placeholder="9"
+                  placeholderTextColor={colors.text.tertiary}
+                />
+              </View>
+              <Text style={styles.timeColon}>:</Text>
+              <View style={styles.timeInputWrap}>
+                <Text style={styles.timeInputLabel}>Minute</Text>
+                <TextInput
+                  style={styles.timeInput}
+                  value={minuteStr}
+                  onChangeText={(t) => setMinuteStr(t.replace(/\D/g, '').slice(0, 2))}
+                  onFocus={() => setMinuteFocused(true)}
+                  onBlur={() => { setMinuteFocused(false); commitMinute(); }}
+                  keyboardType="number-pad"
+                  placeholder="00"
+                  placeholderTextColor={colors.text.tertiary}
+                />
+              </View>
+              <View style={styles.ampmWrap}>
+                <Text style={styles.timeInputLabel}>AM/PM</Text>
+                <View style={styles.ampmRow}>
+                  <TouchableOpacity
+                    style={[styles.ampmButton, ampm === 'AM' && styles.ampmButtonSelected]}
+                    onPress={() => setAmpm('AM')}
+                  >
+                    <Text style={[styles.ampmText, ampm === 'AM' && styles.ampmTextSelected]}>AM</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.ampmButton, ampm === 'PM' && styles.ampmButtonSelected]}
+                    onPress={() => setAmpm('PM')}
+                  >
+                    <Text style={[styles.ampmText, ampm === 'PM' && styles.ampmTextSelected]}>PM</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+            <Text style={styles.timeHint}>Hour 1–12, minute 00–59</Text>
           </GlassCard>
         </FadeIn>
 
@@ -231,7 +337,7 @@ export const AddCustomReminderScreen: React.FC = () => {
             disabled={saving}
           >
             <Text style={styles.saveButtonText}>
-              {saving ? 'Saving...' : 'Create Reminder'}
+              {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Reminder'}
             </Text>
           </TouchableOpacity>
         </FadeIn>
@@ -251,7 +357,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: spacing.lg,
-    paddingTop: spacing.xl,
+    paddingTop: spacing.xl + spacing.safeTopInset,
   },
 
   // Header
@@ -323,49 +429,86 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
 
-  // Time Selection
-  timeScrollContent: {
+  // Time Selection (any hour, any minute)
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
     gap: spacing.sm,
-    paddingVertical: spacing.sm,
   },
-  timeOption: {
-    paddingHorizontal: spacing.lg,
+  timeInputWrap: {
+    flex: 1,
+    minWidth: 64,
+  },
+  timeInputLabel: {
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
+    color: colors.text.tertiary,
+    marginBottom: 4,
+  },
+  timeInput: {
+    fontFamily: fonts.body.medium,
+    fontSize: 18,
+    color: colors.text.primary,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.08)',
+    minHeight: 48,
+  },
+  timeColon: {
+    fontFamily: fonts.body.bold,
+    fontSize: 22,
+    color: colors.text.secondary,
+    paddingBottom: spacing.sm,
+  },
+  ampmWrap: {
+    minWidth: 88,
+  },
+  ampmRow: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  ampmButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
     backgroundColor: 'rgba(0,0,0,0.04)',
-    marginRight: spacing.xs,
-    minHeight: 40,
+    alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.08)',
   },
-  timeOptionSelected: {
+  ampmButtonSelected: {
     backgroundColor: colors.primary.main,
     borderColor: colors.primary.dark,
-    shadowColor: colors.primary.dark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  timeOptionText: {
-    fontFamily: fonts.body.medium,
+  ampmText: {
+    fontFamily: fonts.body.semiBold,
     fontSize: 14,
     color: colors.text.secondary,
   },
-  timeOptionTextSelected: {
+  ampmTextSelected: {
     color: '#fff',
+  },
+  timeHint: {
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    color: colors.text.tertiary,
+    marginTop: spacing.sm,
   },
 
   // Days Selection
   daysContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     marginBottom: spacing.md,
     gap: 4,
   },
   dayOption: {
-    width: 44,
+    flex: 1,
+    minWidth: 36,
+    maxWidth: 48,
     height: 44,
     borderRadius: 22,
     backgroundColor: 'rgba(0,0,0,0.04)',

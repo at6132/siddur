@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location';
 import { FadeIn } from '../../components/animations/FadeIn';
-import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles, fonts } from '../../src/design/typography';
 import { CalendarEngine } from '../../src/core/calendar/CalendarEngine';
@@ -23,9 +22,14 @@ import { ZmanimService } from '../../src/core/zmanim/ZmanimService';
 import { ExtendedZmanim } from '../../src/types/calendar';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { DayInfo, CalendarContext } from '../../src/types/calendar';
+import { useTheme } from '../../src/design/theme';
+import { colors } from '../../src/design/colors';
+import type { AppTheme } from '../../src/design/theme';
 
 const { width } = Dimensions.get('window');
-const DAY_WIDTH = (width - spacing.lg * 2 - spacing.xs * 6) / 7;
+const CELL_GAP = spacing.sm; // spacing between days
+const ROW_HEIGHT = 64; // height of each day row
+const GRID_PADDING_V = spacing.sm; // vertical padding inside the white box
 
 interface CalendarDay {
   date: Date;
@@ -45,6 +49,8 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
                 'July', 'August', 'September', 'October', 'November', 'December'];
 
 export const CalendarScreen: React.FC = () => {
+  const { theme } = useTheme();
+  const styles = useStyles();
   const [days, setDays] = useState<CalendarDay[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
@@ -298,121 +304,142 @@ export const CalendarScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
+        colors={theme.backgroundGradient}
         style={StyleSheet.absoluteFill}
       />
       
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Month Header */}
-        <FadeIn delay={0}>
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigateMonth(-1)} style={styles.navButton}>
-              <Text style={styles.navButtonText}>‹</Text>
-            </TouchableOpacity>
-            <View style={styles.monthContainer}>
-              <Text style={styles.monthTitle}>
-                {MONTHS[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-              </Text>
-              <Text style={styles.hebrewMonth}>{hebrewMonthName()}</Text>
-            </View>
-            <TouchableOpacity onPress={() => navigateMonth(1)} style={styles.navButton}>
-              <Text style={styles.navButtonText}>›</Text>
-            </TouchableOpacity>
-          </View>
-        </FadeIn>
-
-        {/* Weekday Headers */}
-        <FadeIn delay={50}>
-          <View style={styles.weekdayHeader}>
-            {WEEKDAYS.map((day, index) => (
-              <View key={day} style={styles.weekdayCell}>
-                <Text style={[
-                  styles.weekdayText,
-                  index === 6 && styles.shabbosText
-                ]}>
-                  {day}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </FadeIn>
-
-        {/* Calendar Grid */}
-        <FadeIn delay={100}>
-          <View style={styles.calendarGrid}>
-            {days.map((day, index) => (
-              <TouchableOpacity
-                key={index}
-                style={getDayStyle(day)}
-                onPress={() => handleDayPress(day)}
-                disabled={day.dayOfMonth === 0}
-                activeOpacity={0.7}
-              >
-                {day.dayOfMonth > 0 && (
-                  <>
-                    <Text style={[
-                      styles.dayNumber,
-                      day.isToday && styles.todayText,
-                      day.isShabbos && styles.shabbosText,
-                      day.isYomTov && styles.yomTovText,
-                      day.isFastDay && styles.fastDayText,
-                    ]}>
-                      {day.dayOfMonth}
-                    </Text>
-                    <Text style={styles.hebrewDay}>{day.hebrewDate}</Text>
-                    {day.specialDay && (
-                      <View style={styles.specialIndicator}>
-                        <Text style={styles.specialDot}>
-                          {day.isYomTov ? '✡' : day.isFastDay ? '◐' : day.isRoshChodesh ? '◑' : '•'}
-                        </Text>
-                      </View>
-                    )}
-                  </>
-                )}
+        <View style={styles.calendarCenterWrapper}>
+          {/* Month Header */}
+          <FadeIn delay={0}>
+            <View style={styles.header}>
+              <TouchableOpacity onPress={() => navigateMonth(-1)} style={styles.navButton}>
+                <Text style={styles.navButtonText}>‹</Text>
               </TouchableOpacity>
-            ))}
-          </View>
-        </FadeIn>
+              <View style={styles.monthContainer}>
+                <Text style={styles.monthTitle}>
+                  {MONTHS[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                </Text>
+                <Text style={styles.hebrewMonth}>{hebrewMonthName()}</Text>
+              </View>
+              <TouchableOpacity onPress={() => navigateMonth(1)} style={styles.navButton}>
+                <Text style={styles.navButtonText}>›</Text>
+              </TouchableOpacity>
+            </View>
+          </FadeIn>
 
-        {/* Legend */}
-        <FadeIn delay={150}>
-          <View style={styles.legend}>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: colors.primary.main }]} />
-              <Text style={styles.legendText}>Today</Text>
+          {/* Weekday Headers */}
+          <FadeIn delay={50}>
+            <View style={styles.weekdayHeader}>
+              {WEEKDAYS.map((day, index) => (
+                <View key={day} style={styles.weekdayCell}>
+                  <Text style={[
+                    styles.weekdayText,
+                    index === 6 && styles.shabbosText
+                  ]}>
+                    {day}
+                  </Text>
+                </View>
+              ))}
             </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#E8D4A5' }]} />
-              <Text style={styles.legendText}>Shabbos</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#A5C4D4' }]} />
-              <Text style={styles.legendText}>Yom Tov</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#D4A5A5' }]} />
-              <Text style={styles.legendText}>Fast</Text>
-            </View>
-          </View>
-        </FadeIn>
+          </FadeIn>
 
-        {/* Selected Day Details */}
+          {/* Calendar Grid - only render rows that have days */}
+          <FadeIn delay={100}>
+            <View style={styles.calendarGrid}>
+              {(() => {
+                // Calculate how many rows we actually need
+                const totalRows = Math.ceil(days.length / 7);
+                return Array.from({ length: totalRows }, (_, weekIndex) => {
+                  const weekDays = days.slice(weekIndex * 7, weekIndex * 7 + 7);
+                  const isLastRow = weekIndex === totalRows - 1;
+                  return (
+                    <View key={weekIndex} style={[styles.weekRow, isLastRow && styles.weekRowLast]}>
+                      {Array.from({ length: 7 }, (_, dayIndex) => {
+                        const day = weekDays[dayIndex];
+                        if (!day) {
+                          // Empty cell at the end of the last row
+                          return <View key={dayIndex} style={[styles.day, styles.emptyDay, styles.dayCell]} />;
+                        }
+                        return (
+                          <TouchableOpacity
+                            key={dayIndex}
+                            style={[getDayStyle(day), styles.dayCell]}
+                            onPress={() => handleDayPress(day)}
+                            disabled={day.dayOfMonth === 0}
+                            activeOpacity={0.7}
+                          >
+                            {day.dayOfMonth > 0 && (
+                              <>
+                                <Text style={[
+                                  styles.dayNumber,
+                                  day.isToday && styles.todayText,
+                                  day.isShabbos && styles.shabbosText,
+                                  day.isYomTov && styles.yomTovText,
+                                  day.isFastDay && styles.fastDayText,
+                                ]}>
+                                  {day.dayOfMonth}
+                                </Text>
+                                <Text style={styles.hebrewDay}>{day.hebrewDate}</Text>
+                                {day.specialDay && (
+                                  <View style={styles.specialIndicator}>
+                                    <Text style={styles.specialDot}>
+                                      {day.isYomTov ? '✡' : day.isFastDay ? '◐' : day.isRoshChodesh ? '◑' : '•'}
+                                    </Text>
+                                  </View>
+                                )}
+                              </>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  );
+                });
+              })()}
+            </View>
+          </FadeIn>
+
+          {/* Legend */}
+          <FadeIn delay={150}>
+            <View style={styles.legend}>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: theme.colors.primary.main }]} />
+                <Text style={styles.legendText}>Today</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#E8D4A5' }]} />
+                <Text style={styles.legendText}>Shabbos</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#A5C4D4' }]} />
+                <Text style={styles.legendText}>Yom Tov</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: '#D4A5A5' }]} />
+                <Text style={styles.legendText}>Fast</Text>
+              </View>
+            </View>
+          </FadeIn>
+        </View>
+
+        {/* Selected Day Details - below calendar, scroll to see */}
         {selectedDay && (
           <FadeIn delay={0}>
             <View style={styles.detailsCard}>
               {Platform.OS !== 'web' ? (
-                <BlurView intensity={80} style={styles.detailsBlur}>
+                <BlurView intensity={80} tint={theme.isDark ? 'dark' : 'light'} style={styles.detailsBlur}>
                   <View style={styles.detailsContent}>
                     {renderDayDetails()}
                   </View>
                 </BlurView>
               ) : (
                 <LinearGradient
-                  colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
+                  colors={theme.isDark ? ['rgba(24,22,38,0.95)', 'rgba(20,18,32,0.9)'] : ['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
                   style={styles.detailsBlur}
                 >
                   <View style={styles.detailsContent}>
@@ -423,8 +450,6 @@ export const CalendarScreen: React.FC = () => {
             </View>
           </FadeIn>
         )}
-
-        <View style={{ height: 140 }} />
       </ScrollView>
     </View>
   );
@@ -467,7 +492,7 @@ export const CalendarScreen: React.FC = () => {
               <Text style={styles.tagText}>Yom Tov</Text>
             </View>
           )}
-          {selectedDay.isRoshChodesh && (
+          {selectedDay.isRoshChodesh && !selectedDay.specialDay?.startsWith('Rosh Chodesh') && (
             <View style={[styles.tag, styles.roshChodeshTag]}>
               <Text style={styles.tagText}>Rosh Chodesh</Text>
             </View>
@@ -482,7 +507,7 @@ export const CalendarScreen: React.FC = () => {
         {/* Zmanim */}
         {zmanimLoading ? (
           <View style={styles.zmanimLoading}>
-            <ActivityIndicator size="small" color={colors.primary.main} />
+            <ActivityIndicator size="small" color={theme.colors.primary.main} />
             <Text style={styles.zmanimLoadingText}>Loading zmanim...</Text>
           </View>
         ) : selectedDayZmanim && (
@@ -538,7 +563,8 @@ export const CalendarScreen: React.FC = () => {
   }
 };
 
-const styles = StyleSheet.create({
+function createCalendarStyles(theme: AppTheme) {
+  return {
   container: {
     flex: 1,
   },
@@ -546,8 +572,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.md,
-    paddingTop: spacing.md,
+    padding: spacing.lg,
+    paddingTop: spacing.lg + spacing.safeTopInset,
+    paddingBottom: 120,
+    gap: spacing.md,
+  },
+  calendarCenterWrapper: {
+    width: '100%',
   },
   header: {
     flexDirection: 'row',
@@ -556,216 +587,227 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   navButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.85)',
+    width: 38,
+    height: 38,
+    borderRadius: borderRadius.full,
+    backgroundColor: theme.isDark ? 'rgba(30,30,45,0.9)' : 'rgba(255,255,255,0.8)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: colors.shadow.medium,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowColor: theme.isDark ? '#000' : 'rgba(0,0,0,0.3)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: theme.isDark ? 0.45 : 0.25,
+    shadowRadius: theme.isDark ? 10 : 8,
     elevation: 3,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.95)',
   },
   navButtonText: {
-    fontSize: 28,
-    color: colors.text.secondary,
-    fontWeight: '300',
+    fontSize: 24,
+    color: theme.colors.text.secondary,
   },
   monthContainer: {
     alignItems: 'center',
   },
   monthTitle: {
-    fontFamily: fonts.heading.semiBold,
-    fontSize: 24,
-    color: colors.text.primary,
+    fontFamily: fonts.heading.bold,
+    fontSize: 22,
+    color: theme.colors.text.primary,
   },
   hebrewMonth: {
-    fontFamily: fonts.body.regular,
-    fontSize: 14,
-    color: colors.text.secondary,
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     marginTop: 2,
   },
   weekdayHeader: {
     flexDirection: 'row',
-    marginBottom: spacing.xs,
+    marginBottom: CELL_GAP,
+    paddingHorizontal: spacing.xs,
   },
   weekdayCell: {
-    width: DAY_WIDTH,
+    flex: 1,
+    marginHorizontal: CELL_GAP / 2,
     alignItems: 'center',
-    paddingVertical: 4,
   },
   weekdayText: {
     fontFamily: fonts.body.medium,
-    fontSize: 11,
-    color: colors.text.tertiary,
-    textTransform: 'uppercase',
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  day: {
-    width: DAY_WIDTH,
-    height: DAY_WIDTH + 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255,255,255,0.65)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-    shadowColor: colors.shadow.light,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  emptyDay: {
-    width: DAY_WIDTH,
-    height: DAY_WIDTH + 4,
-    marginBottom: 4,
-  },
-  todayDay: {
-    borderWidth: 2,
-    borderColor: colors.primary.main,
-    backgroundColor: 'rgba(212, 165, 184, 0.15)',
-  },
-  shabbosDay: {
-    backgroundColor: 'rgba(232, 212, 165, 0.3)',
-  },
-  yomTovDay: {
-    backgroundColor: 'rgba(165, 196, 212, 0.4)',
-  },
-  fastDay: {
-    backgroundColor: 'rgba(212, 165, 165, 0.3)',
-  },
-  roshChodeshDay: {
-    backgroundColor: 'rgba(196, 212, 165, 0.3)',
-  },
-  selectedDay: {
-    borderWidth: 2,
-    borderColor: colors.primary.dark,
-    transform: [{ scale: 1.05 }],
-    shadowColor: colors.primary.main,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-  },
-  dayNumber: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 16,
-    color: colors.text.primary,
-  },
-  hebrewDay: {
-    fontFamily: fonts.body.regular,
-    fontSize: 10,
-    color: colors.text.tertiary,
-    marginTop: 1,
-  },
-  todayText: {
-    color: colors.primary.main,
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+    letterSpacing: 0.5,
   },
   shabbosText: {
-    color: '#8B7355',
+    color: theme.colors.primary.main,
   },
-  yomTovText: {
-    color: '#4A7C8C',
+  calendarGrid: {
+    backgroundColor: theme.isDark ? 'rgba(20,20,35,0.85)' : 'rgba(255,255,255,0.65)',
+    borderRadius: borderRadius.xl,
+    paddingTop: GRID_PADDING_V,
+    paddingBottom: GRID_PADDING_V,
+    paddingHorizontal: spacing.xs,
+    shadowColor: theme.isDark ? '#000' : 'rgba(0,0,0,0.2)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: theme.isDark ? 0.4 : 0.2,
+    shadowRadius: theme.isDark ? 20 : 12,
   },
-  fastDayText: {
-    color: '#8C4A4A',
+  weekRow: {
+    height: ROW_HEIGHT,
+    flexDirection: 'row',
+    marginBottom: CELL_GAP,
+  },
+  weekRowLast: {
+    marginBottom: 0,
+  },
+  dayCell: {
+    flex: 1,
+    marginHorizontal: CELL_GAP / 2,
+  },
+  day: {
+    height: ROW_HEIGHT,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.xs,
+    borderWidth: 1,
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.7)',
+    backgroundColor: theme.isDark ? 'rgba(35,35,55,0.8)' : 'rgba(255,255,255,0.55)',
+  },
+  emptyDay: {
+    height: ROW_HEIGHT,
+    borderRadius: borderRadius.lg,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+  },
+  selectedDay: {
+    borderColor: theme.colors.primary.main,
+    borderWidth: 2,
+    shadowColor: theme.colors.primary.main,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  todayDay: {
+    borderColor: theme.colors.primary.dark,
+  },
+  yomTovDay: {
+    backgroundColor: theme.isDark ? 'rgba(120,160,190,0.25)' : 'rgba(165, 196, 212, 0.25)',
+  },
+  fastDay: {
+    backgroundColor: theme.isDark ? 'rgba(212,165,165,0.3)' : 'rgba(212, 165, 165, 0.25)',
+  },
+  roshChodeshDay: {
+    borderStyle: 'dashed',
+    borderColor: theme.colors.primary.main,
+  },
+  dayNumber: {
+    fontFamily: fonts.heading.bold,
+    fontSize: 20,
+    color: theme.colors.text.primary,
+  },
+  hebrewDay: {
+    fontFamily: fonts.body.medium,
+    fontSize: 11,
+    color: theme.colors.text.secondary,
+    marginTop: 2,
   },
   specialIndicator: {
-    position: 'absolute',
-    bottom: 4,
+    marginTop: spacing.xs,
   },
   specialDot: {
-    fontSize: 8,
-    color: colors.text.tertiary,
+    fontSize: 12,
+    color: theme.colors.primary.main,
   },
   legend: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    borderRadius: borderRadius.md,
+    justifyContent: 'space-evenly',
+    backgroundColor: theme.isDark ? 'rgba(25,25,40,0.9)' : 'rgba(255,255,255,0.7)',
+    padding: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    marginTop: spacing.md,
+    shadowColor: theme.isDark ? '#000' : 'rgba(0,0,0,0.15)',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: theme.isDark ? 0.35 : 0.15,
+    shadowRadius: 10,
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.sm,
   },
   legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   legendText: {
-    fontFamily: fonts.body.regular,
-    fontSize: 10,
-    color: colors.text.secondary,
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
+    color: theme.colors.text.secondary,
   },
   detailsCard: {
-    marginTop: spacing.md,
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-    shadowColor: colors.shadow.medium,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  detailsBlur: {
-    overflow: 'hidden',
-  },
-  detailsContent: {
+    borderRadius: borderRadius['2xl'],
     padding: spacing.lg,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: theme.isDark ? 'rgba(20,20,32,0.92)' : 'rgba(255,255,255,0.75)',
+    shadowColor: theme.isDark ? '#000' : 'rgba(0,0,0,0.2)',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: theme.isDark ? 0.4 : 0.15,
+    shadowRadius: 24,
+    borderWidth: 1,
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.8)',
   },
   detailsHeader: {
     alignItems: 'center',
-    marginBottom: spacing.md,
+    marginBottom: 0,
   },
   detailsTitle: {
-    fontFamily: fonts.heading.semiBold,
-    fontSize: 20,
-    color: colors.text.primary,
+    fontFamily: fonts.heading.bold,
+    fontSize: 18,
+    color: theme.colors.text.primary,
+    marginBottom: 0,
   },
   detailsHebrewDate: {
-    fontFamily: fonts.body.regular,
-    fontSize: 16,
-    color: colors.text.secondary,
-    marginTop: spacing.xs,
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    marginBottom: 0,
+  },
+  detailsBlur: {
+    overflow: 'hidden' as const,
+    borderRadius: borderRadius['2xl'],
+  },
+  detailsContent: {
+    padding: spacing.sm,
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
+  todayText: {
+    color: theme.colors.primary.main,
+  },
+  yomTovText: {
+    color: theme.colors.primary.dark,
+  },
+  fastDayText: {
+    color: theme.colors.semantic.error,
   },
   specialBadge: {
-    backgroundColor: colors.primary.main,
+    backgroundColor: theme.colors.primary.main,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
-    marginTop: spacing.sm,
   },
   specialBadgeText: {
     fontFamily: fonts.body.semiBold,
     fontSize: 12,
-    color: '#fff',
+    color: theme.colors.text.inverse,
   },
   tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: spacing.xs,
-    marginBottom: spacing.md,
+    marginBottom: 0,
   },
   tag: {
     paddingHorizontal: spacing.sm,
@@ -778,16 +820,16 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   shabbosTag: {
-    backgroundColor: '#8B7355',
+    backgroundColor: '#E8D4A5',
   },
   yomTovTag: {
-    backgroundColor: '#4A7C8C',
+    backgroundColor: '#A5C4D4',
   },
   roshChodeshTag: {
-    backgroundColor: '#6B8C4A',
+    backgroundColor: theme.colors.primary.main,
   },
   fastTag: {
-    backgroundColor: '#8C4A4A',
+    backgroundColor: '#D4A5A5',
   },
   zmanimLoading: {
     marginTop: spacing.md,
@@ -797,18 +839,18 @@ const styles = StyleSheet.create({
   zmanimLoadingText: {
     fontFamily: fonts.body.regular,
     fontSize: 14,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: spacing.sm,
   },
   zmanimSection: {
-    marginTop: spacing.md,
+    marginTop: 0,
   },
   zmanimTitle: {
     fontFamily: fonts.heading.semiBold,
     fontSize: 16,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     textAlign: 'center',
-    marginBottom: spacing.md,
+    marginBottom: 2,
   },
   zmanimGrid: {
     flexDirection: 'row',
@@ -817,28 +859,41 @@ const styles = StyleSheet.create({
   },
   zmanItem: {
     width: '32%',
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: theme.isDark ? 'rgba(25,25,38,0.9)' : 'rgba(255,255,255,0.7)',
     padding: spacing.sm,
     borderRadius: borderRadius.md,
     marginBottom: spacing.sm,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.85)',
-    shadowColor: colors.shadow.light,
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.85)',
+    shadowColor: theme.isDark ? '#000' : 'rgba(0,0,0,0.08)',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: theme.isDark ? 0.25 : 0.1,
     shadowRadius: 3,
     elevation: 1,
   },
   zmanLabel: {
     fontFamily: fonts.body.regular,
     fontSize: 10,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginBottom: 2,
   },
   zmanTime: {
     fontFamily: fonts.body.semiBold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
-});
+  };
+}
+
+function useStyles() {
+  const { theme } = useTheme();
+  return useMemo(() => {
+    try {
+      return StyleSheet.create(createCalendarStyles(theme));
+    } catch (e) {
+      console.warn('CalendarScreen styles error:', e);
+      return StyleSheet.create({ container: { flex: 1 } });
+    }
+  }, [theme]);
+}

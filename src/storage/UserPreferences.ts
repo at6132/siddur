@@ -30,6 +30,8 @@ export class UserPreferencesService {
       }
       if (!prefs.display) {
         prefs.display = DEFAULT_DISPLAY_PREFERENCES;
+      } else {
+        prefs.display = { ...DEFAULT_DISPLAY_PREFERENCES, ...prefs.display };
       }
       if (!prefs.customCountdowns) {
         prefs.customCountdowns = [];
@@ -57,6 +59,8 @@ export class UserPreferencesService {
     }
     if (!updated.display) {
       updated.display = DEFAULT_DISPLAY_PREFERENCES;
+    } else {
+      updated.display = { ...DEFAULT_DISPLAY_PREFERENCES, ...updated.display };
     }
     if (!updated.customCountdowns) {
       updated.customCountdowns = [];
@@ -98,6 +102,10 @@ export class UserPreferencesService {
         ...display,
       } as DisplayPreferences,
     });
+  }
+
+  static async setHebrewBirthday(birthday: { day: number; month: number } | null): Promise<boolean> {
+    return this.savePreferences({ hebrewBirthday: birthday ?? undefined });
   }
 
   static async setLocation(location: {
@@ -160,6 +168,10 @@ export class UserPreferencesService {
   static async getCustomReminders(): Promise<CustomReminder[]> {
     const existing = await this.getPreferences();
     return existing?.customReminders || [];
+  }
+
+  static async setAutoscrollSpeed(speed: number): Promise<boolean> {
+    return this.savePreferences({ autoscrollSpeed: speed });
   }
 
   static async markOnboardingComplete(): Promise<boolean> {

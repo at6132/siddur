@@ -55,5 +55,18 @@ export class HabitTracker {
   static async markToday(marked: boolean = true): Promise<boolean> {
     return this.mark(new Date(), marked);
   }
+
+  /**
+   * Count of days marked in a date range (inclusive).
+   */
+  static async getMarkedCountInRange(start: Date, end: Date): Promise<number> {
+    const marks = await StorageService.getHabitMarks();
+    if (!marks) return 0;
+    const startStr = this.formatDate(start);
+    const endStr = this.formatDate(end);
+    return Object.keys(marks).filter(
+      (key) => marks[key] && key >= startStr && key <= endStr
+    ).length;
+  }
 }
 

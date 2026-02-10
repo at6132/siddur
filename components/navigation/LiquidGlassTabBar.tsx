@@ -1,21 +1,37 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Dimensions,
-  Animated,
   Platform,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '../../src/design/colors';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+  interpolate,
+  Easing,
+} from 'react-native-reanimated';
+import { useTheme } from '../../src/design/theme';
+import type { AppTheme } from '../../src/design/theme';
 import { fonts } from '../../src/design/typography';
 
+const springConfig = { damping: 18, stiffness: 180 };
+
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const FLOATING_MARGIN_H = 20;
+const FLOATING_MARGIN_BOTTOM = 12;
+const PILL_RADIUS = 32;
+const TAB_BAR_WIDTH = SCREEN_WIDTH - FLOATING_MARGIN_H * 2;
 
 // Custom SVG Icons
 const HomeIcon = ({ color, size = 24 }: { color: string; size?: number }) => (
@@ -46,27 +62,9 @@ const CalendarIcon = ({ color, size = 24 }: { color: string; size?: number }) =>
       strokeLinecap="round"
       strokeLinejoin="round"
     />
-    <Path
-      d="M16 2V6"
-      stroke={color}
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <Path
-      d="M8 2V6"
-      stroke={color}
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-    <Path
-      d="M3 10H21"
-      stroke={color}
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+    <Path d="M16 2V6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M8 2V6" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+    <Path d="M3 10H21" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
   </Svg>
 );
 
@@ -108,13 +106,32 @@ const SettingsIcon = ({ color, size = 24 }: { color: string; size?: number }) =>
   </Svg>
 );
 
+// Hub: your personal center (goals, growth, day/week/month)
+const HubIcon = ({ color, size = 24 }: { color: string; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"
+      stroke={color}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path d="M12 12m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0 -5 0" stroke={color} strokeWidth={2} fill={color} strokeLinecap="round" strokeLinejoin="round" />
+  </Svg>
+);
+
 const TAB_ICONS: { [key: string]: React.FC<{ color: string; size?: number }> } = {
   Home: HomeIcon,
+  Hub: HubIcon,
   Calendar: CalendarIcon,
   Library: BookIcon,
   Tehillim: BookIcon,
   Settings: SettingsIcon,
 };
+
+const ORB_SIZE = 66; // bigger at rest, centered on icon+text (iOS liquid glass)
+const TABS_WRAPPER_MIN_HEIGHT = 76;
+const TABS_PADDING_H = 4; // matches tabsWrapper paddingHorizontal
 
 interface LiquidGlassTabBarProps {
   state: any;
@@ -122,151 +139,302 @@ interface LiquidGlassTabBarProps {
   navigation: any;
 }
 
+function orbCenterXForIndex(index: number, tabWidth: number) {
+  // Center orb over icon+label of active tab (account for tabs padding)
+  const tabCenterX = TABS_PADDING_H + index * tabWidth + tabWidth / 2;
+  return tabCenterX - ORB_SIZE / 2;
+}
+
 export const LiquidGlassTabBar: React.FC<LiquidGlassTabBarProps> = ({
   state,
   descriptors,
   navigation,
 }) => {
+  const { theme } = useTheme();
+  const styles = useStyles();
   const insets = useSafeAreaInsets();
-  const tabWidth = (SCREEN_WIDTH - 32) / state.routes.length;
-  const indicatorPosition = useRef(new Animated.Value(0)).current;
+  const tabCount = state.routes.length;
+  const tabWidth = TAB_BAR_WIDTH / tabCount;
+  const minOrbX = 0;
+  const maxOrbX = TAB_BAR_WIDTH - ORB_SIZE;
+
+  const orbX = useSharedValue(orbCenterXForIndex(state.index, tabWidth));
+  const orbScale = useSharedValue(1);
+  const dragStretchX = useSharedValue(0);
+  const dragGlassOpacity = useSharedValue(1);
+  const isDraggingOrb = useRef(false);
+
+  const goToIndex = useCallback(
+    (index: number) => {
+      if (index >= 0 && index < tabCount) {
+        navigation.emit({ type: 'tabPress', target: state.routes[index].key, canPreventDefault: true });
+        navigation.navigate(state.routes[index].name);
+      }
+    },
+    [navigation, state.routes, tabCount]
+  );
+
+  const snapToIndex = useCallback(
+    (index: number) => {
+      const clamped = Math.max(0, Math.min(tabCount - 1, index));
+      goToIndex(clamped);
+      // useEffect will animate orb to new position when state.index updates
+    },
+    [goToIndex, tabCount]
+  );
+
+  const handleBarTap = useCallback(
+    (x: number) => {
+      const index = Math.floor((x - TABS_PADDING_H) / tabWidth);
+      const clamped = Math.max(0, Math.min(tabCount - 1, index));
+      goToIndex(clamped);
+      orbX.value = withSpring(orbCenterXForIndex(clamped, tabWidth), springConfig);
+    },
+    [goToIndex, tabCount, tabWidth, orbX]
+  );
+
+  const barTapGesture = Gesture.Tap()
+    .onEnd((e) => {
+      runOnJS(handleBarTap)(e.x);
+    });
+
+  const dragStartX = useSharedValue(0);
+
+  const bubblePanGesture = Gesture.Pan()
+    .onStart(() => {
+      isDraggingOrb.current = true;
+      dragStartX.value = orbX.value;
+      orbScale.value = withSpring(1.22, { damping: 14, stiffness: 200 });
+      dragGlassOpacity.value = withTiming(0.18, { duration: 120, easing: Easing.out(Easing.ease) });
+    })
+    .onUpdate((e) => {
+      const next = dragStartX.value + e.translationX;
+      orbX.value = Math.min(maxOrbX, Math.max(minOrbX, next));
+      dragStretchX.value = e.translationX;
+    })
+    .onEnd(() => {
+      isDraggingOrb.current = false;
+      orbScale.value = withSpring(1, springConfig);
+      dragStretchX.value = withSpring(0, springConfig);
+      dragGlassOpacity.value = withTiming(1, { duration: 220, easing: Easing.out(Easing.ease) });
+      const currentCenter = orbX.value + ORB_SIZE / 2;
+      const targetIndex = Math.round((currentCenter - TABS_PADDING_H - tabWidth / 2) / tabWidth);
+      runOnJS(snapToIndex)(targetIndex);
+    });
 
   useEffect(() => {
-    Animated.spring(indicatorPosition, {
-      toValue: state.index * tabWidth,
-      tension: 68,
-      friction: 10,
-      useNativeDriver: true,
-    }).start();
-  }, [state.index]);
+    if (!isDraggingOrb.current) {
+      orbX.value = withSpring(orbCenterXForIndex(state.index, tabWidth), springConfig);
+    }
+  }, [state.index, tabWidth]);
+
+  const bubbleAnimatedStyle = useAnimatedStyle(() => {
+    const stretch = interpolate(
+      dragStretchX.value,
+      [-100, -50, 0, 50, 100],
+      [-0.1, -0.05, 0, 0.05, 0.1]
+    );
+    return {
+      transform: [
+        { translateX: orbX.value },
+        { scaleX: orbScale.value + stretch },
+        { scaleY: orbScale.value - Math.abs(stretch) * 0.6 },
+      ],
+    };
+  });
+
+  const bubbleGlassOverlayStyle = useAnimatedStyle(() => ({
+    opacity: dragGlassOpacity.value,
+  }));
+
+  const bottomPadding = Math.max(insets.bottom, 8) + FLOATING_MARGIN_BOTTOM;
 
   return (
-    <View style={[styles.container, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-      {/* Glass Background */}
-      {Platform.OS !== 'web' ? (
-        <BlurView intensity={80} style={styles.blurContainer}>
-          <View style={styles.glassOverlay} />
-        </BlurView>
-      ) : (
-        <LinearGradient
-          colors={['rgba(255,255,255,0.85)', 'rgba(255,255,255,0.75)']}
-          style={styles.blurContainer}
-        >
-          <View style={styles.glassOverlay} />
-        </LinearGradient>
-      )}
-
-      {/* Tab Content */}
-      <View style={styles.tabsWrapper}>
-        {/* Sliding Indicator */}
-        <Animated.View
-          style={[
-            styles.indicator,
-            {
-              width: tabWidth - 16,
-              transform: [{ translateX: Animated.add(indicatorPosition, new Animated.Value(8)) }],
-            },
-          ]}
-        >
-          <View style={styles.indicatorInner} />
-        </Animated.View>
-
-        {/* Tab Buttons */}
-        {state.routes.map((route: any, index: number) => {
-          const { options } = descriptors[route.key];
-          const label = options.tabBarLabel ?? route.name;
-          const isFocused = state.index === index;
-
-          const IconComponent = TAB_ICONS[route.name] || HomeIcon;
-
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-
-            if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
-            }
-          };
-
-          return (
-            <TouchableOpacity
-              key={route.key}
-              accessibilityRole="button"
-              accessibilityState={isFocused ? { selected: true } : {}}
-              accessibilityLabel={options.tabBarAccessibilityLabel}
-              onPress={onPress}
-              style={[styles.tab, { width: tabWidth }]}
-              activeOpacity={0.7}
-            >
-              <IconComponent
-                color={isFocused ? colors.primary.main : colors.text.tertiary}
-                size={22}
+    <View style={[styles.outer, { paddingBottom: bottomPadding }]} pointerEvents="box-none">
+      <GestureDetector gesture={barTapGesture}>
+        <View style={styles.islandWrapper}>
+          {Platform.OS !== 'web' ? (
+            <>
+              <BlurView
+                intensity={92}
+                tint={theme.isDark ? 'dark' : 'light'}
+                style={StyleSheet.absoluteFill}
               />
-              <Text
+              <LinearGradient
+                colors={
+                  theme.isDark
+                    ? ['rgba(22,19,32,0.92)', 'rgba(18,17,33,0.86)', 'rgba(14,14,24,0.78)']
+                    : ['rgba(255,255,255,0.72)', 'rgba(255,255,255,0.52)', 'rgba(255,255,255,0.38)']
+                }
+                style={StyleSheet.absoluteFill}
+              />
+              <View style={styles.glassBorder} />
+            </>
+          ) : (
+            <LinearGradient
+              colors={
+                theme.isDark
+                  ? ['rgba(30,29,45,0.9)', 'rgba(24,23,37,0.82)', 'rgba(17,17,28,0.76)']
+                  : ['rgba(255,255,255,0.88)', 'rgba(255,255,255,0.75)', 'rgba(255,255,255,0.65)']
+              }
+              style={StyleSheet.absoluteFill}
+            >
+              <View style={styles.glassBorder} />
+            </LinearGradient>
+          )}
+
+          <View style={styles.tabsWrapper}>
+            <GestureDetector gesture={bubblePanGesture}>
+              <Animated.View
                 style={[
-                  styles.label,
+                  styles.orbOuter,
                   {
-                    color: isFocused ? colors.primary.main : colors.text.tertiary,
-                    fontWeight: isFocused ? '600' : '400',
+                    width: ORB_SIZE,
+                    height: ORB_SIZE,
+                    borderRadius: ORB_SIZE / 2,
                   },
+                  bubbleAnimatedStyle,
                 ]}
               >
-                {label}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+                {Platform.OS !== 'web' ? (
+                  <>
+                    <BlurView
+                      intensity={95}
+                      tint={theme.isDark ? 'dark' : 'light'}
+                      style={StyleSheet.absoluteFill}
+                    />
+                    <LinearGradient
+                      colors={
+                        theme.isDark
+                          ? ['rgba(255,255,255,0.25)', 'rgba(200,200,255,0.15)', 'rgba(255,255,255,0.08)']
+                          : ['rgba(255,255,255,0.78)', 'rgba(255,255,255,0.5)', 'rgba(255,255,255,0.35)']
+                      }
+                      style={StyleSheet.absoluteFill}
+                    />
+                    <Animated.View
+                      style={[
+                        StyleSheet.absoluteFill,
+                        styles.orbGlassOverlay,
+                        { borderRadius: ORB_SIZE / 2 },
+                        bubbleGlassOverlayStyle,
+                      ]}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <LinearGradient
+                      colors={
+                        theme.isDark
+                          ? ['rgba(255,255,255,0.25)', 'rgba(220,220,255,0.12)']
+                          : ['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.65)']
+                      }
+                      style={StyleSheet.absoluteFill}
+                    />
+                    <Animated.View
+                      style={[
+                        StyleSheet.absoluteFill,
+                        styles.orbGlassOverlay,
+                        { borderRadius: ORB_SIZE / 2 },
+                        bubbleGlassOverlayStyle,
+                      ]}
+                    />
+                  </>
+                )}
+                <View style={[styles.orbBorder, { borderRadius: ORB_SIZE / 2 }]} />
+              </Animated.View>
+            </GestureDetector>
+
+            {state.routes.map((route: any, index: number) => {
+              const { options } = descriptors[route.key];
+              const label = options.tabBarLabel ?? route.name;
+              const isFocused = state.index === index;
+              const IconComponent = TAB_ICONS[route.name] || HomeIcon;
+
+              return (
+                <View
+                  key={route.key}
+                  style={[styles.tab, { width: tabWidth }]}
+                  pointerEvents="none"
+                >
+                  <IconComponent
+                    color={isFocused ? theme.colors.primary.main : theme.colors.text.tertiary}
+                    size={22}
+                  />
+                  <Text
+                    style={[
+                      styles.label,
+                      {
+                        color: isFocused ? theme.colors.primary.main : theme.colors.text.tertiary,
+                        fontWeight: isFocused ? '600' : '400',
+                      },
+                    ]}
+                  >
+                    {label}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      </GestureDetector>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
+function createTabBarStyles(theme: AppTheme) {
+  return {
+    outer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingHorizontal: FLOATING_MARGIN_H,
+    paddingTop: 10,
   },
-  blurContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 16,
-    right: 16,
-    bottom: 0,
-    borderRadius: 28,
+  islandWrapper: {
+    width: TAB_BAR_WIDTH,
+    alignSelf: 'center',
+    borderRadius: PILL_RADIUS,
+    minHeight: TABS_WRAPPER_MIN_HEIGHT + 8,
     overflow: 'hidden',
+    shadowColor: theme.isDark ? '#000' : '#2C2C2C',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: theme.isDark ? 0.45 : 0.12,
+    shadowRadius: theme.isDark ? 30 : 24,
+    elevation: 12,
+    backgroundColor: 'transparent',
   },
-  glassOverlay: {
+  glassBorder: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.6)',
-    borderRadius: 28,
+    borderRadius: PILL_RADIUS,
+    borderWidth: 1.5,
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.28)' : 'rgba(255, 255, 255, 0.75)',
   },
   tabsWrapper: {
     flexDirection: 'row',
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 4,
+    minHeight: TABS_WRAPPER_MIN_HEIGHT,
   },
-  indicator: {
+  orbOuter: {
     position: 'absolute',
-    top: 8,
-    bottom: 8,
-    borderRadius: 20,
+    top: (TABS_WRAPPER_MIN_HEIGHT - ORB_SIZE) / 2,
+    left: 0,
     overflow: 'hidden',
+    shadowColor: theme.isDark ? '#000' : '#000',
+    shadowOffset: { width: 0, height: theme.isDark ? 6 : 2 },
+    shadowOpacity: theme.isDark ? 0.4 : 0.12,
+    shadowRadius: theme.isDark ? 14 : 8,
+    elevation: 6,
+    backgroundColor: 'transparent',
   },
-  indicatorInner: {
-    flex: 1,
-    backgroundColor: 'rgba(212, 165, 184, 0.25)',
-    borderRadius: 20,
+  orbGlassOverlay: {
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.55)',
+  },
+  orbBorder: {
+    ...StyleSheet.absoluteFillObject,
     borderWidth: 1.5,
-    borderColor: 'rgba(212, 165, 184, 0.4)',
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.45)' : 'rgba(255, 255, 255, 0.9)',
   },
   tab: {
     alignItems: 'center',
@@ -279,4 +447,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
     letterSpacing: 0.2,
   },
-});
+  };
+}
+
+function useStyles() {
+  const { theme } = useTheme();
+  return useMemo(() => {
+    try {
+      return StyleSheet.create(createTabBarStyles(theme));
+    } catch (e) {
+      console.warn('LiquidGlassTabBar styles error:', e);
+      return StyleSheet.create({ outer: {}, islandWrapper: {}, glassBorder: {}, tabsWrapper: {}, orbOuter: {}, orbGlassOverlay: {}, orbBorder: {}, tab: {}, label: {} });
+    }
+  }, [theme]);
+}

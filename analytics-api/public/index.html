@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Siddur Analytics – Admin</title>
+  <style>
+    :root { --bg: #1a1a2e; --card: #16213e; --text: #eee; --muted: #8892b0; --accent: #0f3460; --border: #2a2a4a; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 1rem; }
+    h1 { font-size: 1.5rem; margin: 0 0 1rem; }
+    .filters { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
+    .filters label { color: var(--muted); font-size: 0.875rem; }
+    .filters input, .filters select { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.6rem; border-radius: 6px; }
+    .filters button { background: var(--accent); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; }
+    .filters button:hover { opacity: 0.9; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+    .card .value { font-size: 1.75rem; font-weight: 700; }
+    .card .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; margin-top: 0.25rem; }
+    section { margin-bottom: 1.5rem; }
+    section h2 { font-size: 1rem; margin: 0 0 0.5rem; color: var(--muted); }
+    table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; overflow: hidden; }
+    th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: var(--accent); font-size: 0.75rem; text-transform: uppercase; color: var(--muted); }
+    tr:last-child td { border-bottom: none; }
+    .loading { color: var(--muted); }
+    .muted { color: var(--muted); }
+    .error { color: #e57373; }
+    .export-btn { margin-left: auto; }
+    #eventsTable { font-size: 0.8125rem; }
+    #eventsTable td { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+  </style>
+</head>
+<body>
+  <h1>Siddur Analytics – Admin Dashboard</h1>
+
+  <div class="filters">
+    <label>From <input type="date" id="startDate" /></label>
+    <label>To <input type="date" id="endDate" /></label>
+    <label>Event <input type="text" id="eventName" placeholder="e.g. app_open" style="width: 140px;" /></label>
+    <button type="button" id="applyBtn">Apply</button>
+    <button type="button" id="exportCsv" class="export-btn">Export events CSV</button>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="value" id="dau">–</div><div class="label">DAU</div></div>
+    <div class="card"><div class="value" id="wau">–</div><div class="label">WAU</div></div>
+    <div class="card"><div class="value" id="mau">–</div><div class="label">MAU</div></div>
+  </div>
+
+  <section>
+    <h2>Event counts (funnel / overview)</h2>
+    <div id="eventCounts" class="loading">Loading…</div>
+  </section>
+
+  <section>
+    <h2>Daily active users (app_open by day)</h2>
+    <div id="eventSeries" class="loading">Loading…</div>
+  </section>
+
+  <section>
+    <h2>Retention (cohort by first app_open)</h2>
+    <div id="retention" class="loading">Loading…</div>
+  </section>
+
+  <section>
+    <h2>User explorer (by anonymous_id)</h2>
+    <div class="filters">
+      <label>anonymous_id <input type="text" id="explorerAnonymousId" placeholder="Paste anonymous_id" style="width: 280px;" /></label>
+      <button type="button" id="explorerBtn">Load timeline</button>
+    </div>
+    <div id="explorerEvents" class="loading">Enter an anonymous_id and click Load.</div>
+  </section>
+
+  <section>
+    <h2>Recent events</h2>
+    <div id="eventsWrap">
+      <table id="eventsTable">
+        <thead><tr><th>Time (UTC)</th><th>Event</th><th>anonymous_id</th><th>session_id</th><th>screen</th></tr></thead>
+        <tbody id="eventsBody"></tbody>
+      </table>
+      <div id="eventsStatus" class="loading"></div>
+    </div>
+  </section>
+
+  <script>
+    const base = window.location.origin;
+    function qs(id) { return document.getElementById(id); }
+    function dateIso(d) { return d ? d.toISOString().slice(0, 10) : ''; }
+    function now() { const d = new Date(); return d.toISOString().slice(0, 19) + 'Z'; }
+    function weekAgo() { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0, 19) + 'Z'; }
+
+    function getParams() {
+      return {
+        start_date: qs('startDate').value || undefined,
+        end_date: qs('endDate').value || undefined,
+        event_name: qs('eventName').value.trim() || undefined,
+      };
+    }
+
+    async function fetchJson(path, params = {}) {
+      const u = new URL(path, base);
+      Object.entries(params).forEach(([k, v]) => { if (v != null && v !== '') u.searchParams.set(k, v); });
+      const r = await fetch(u);
+      if (!r.ok) throw new Error(r.statusText);
+      return r.json();
+    }
+
+    async function loadActiveUsers() {
+      try {
+        const data = await fetchJson('/api/stats/active-users');
+        qs('dau').textContent = data.dau ?? '–';
+        qs('wau').textContent = data.wau ?? '–';
+        qs('mau').textContent = data.mau ?? '–';
+      } catch (e) {
+        qs('dau').textContent = qs('wau').textContent = qs('mau').textContent = '?';
+        console.error(e);
+      }
+    }
+
+    async function loadEventCounts() {
+      const el = qs('eventCounts');
+      try {
+        const { start_date, end_date } = getParams();
+        const data = await fetchJson('/api/stats/event-counts', { start_date, end_date });
+        if (!data.counts || data.counts.length === 0) {
+          el.innerHTML = '<p class="muted">No events in range.</p>';
+          return;
+        }
+        el.innerHTML = '<table><thead><tr><th>Event</th><th>Count</th></tr></thead><tbody>' +
+          data.counts.map(({ event_name, count }) => `<tr><td>${escapeHtml(event_name)}</td><td>${count}</td></tr>`).join('') +
+          '</tbody></table>';
+      } catch (e) {
+        el.innerHTML = '<p class="error">Failed to load.</p>';
+        console.error(e);
+      }
+    }
+
+    async function loadRetention() {
+      const el = qs('retention');
+      try {
+        const { start_date, end_date } = getParams();
+        const data = await fetchJson('/api/stats/retention', { start_date, end_date });
+        if (!data.retention || data.retention.length === 0) {
+          el.innerHTML = '<p class="muted">No retention data in range.</p>';
+          return;
+        }
+        const rows = data.retention.map((r) => {
+          const p1 = r.cohort_size ? ((r.retained_1 / r.cohort_size) * 100).toFixed(1) : '–';
+          const p7 = r.cohort_size ? ((r.retained_7 / r.cohort_size) * 100).toFixed(1) : '–';
+          const p30 = r.cohort_size ? ((r.retained_30 / r.cohort_size) * 100).toFixed(1) : '–';
+          return `<tr><td>${escapeHtml(r.cohort_date)}</td><td>${r.cohort_size}</td><td>${r.retained_1} (${p1}%)</td><td>${r.retained_7} (${p7}%)</td><td>${r.retained_30} (${p30}%)</td></tr>`;
+        }).join('');
+        el.innerHTML = '<table><thead><tr><th>Cohort date</th><th>Cohort size</th><th>Day 1</th><th>Day 7</th><th>Day 30</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      } catch (e) {
+        el.innerHTML = '<p class="error">Failed to load.</p>';
+        console.error(e);
+      }
+    }
+
+    async function loadUserExplorer() {
+      const id = qs('explorerAnonymousId').value.trim();
+      const el = qs('explorerEvents');
+      if (!id) {
+        el.textContent = 'Enter an anonymous_id and click Load.';
+        el.className = 'loading';
+        return;
+      }
+      el.textContent = 'Loading…';
+      el.className = 'loading';
+      try {
+        const data = await fetchJson('/api/events', { anonymous_id: id, limit: 500 });
+        const events = data.events || [];
+        if (events.length === 0) {
+          el.innerHTML = '<p class="muted">No events for this user.</p>';
+          return;
+        }
+        const rows = events.map((ev) =>
+          '<tr><td>' + escapeHtml((ev.event_time_utc || '').slice(0, 19)) + '</td><td>' + escapeHtml(ev.event_name || '') + '</td><td>' + escapeHtml(ev.screen_name || '–') + '</td></tr>'
+        ).join('');
+        el.innerHTML = '<table><thead><tr><th>Time (UTC)</th><th>Event</th><th>Screen</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      } catch (e) {
+        el.innerHTML = '<p class="error">Failed to load.</p>';
+        el.className = 'error';
+        console.error(e);
+      }
+    }
+
+    async function loadEventSeries() {
+      const el = qs('eventSeries');
+      try {
+        const days = 30;
+        const data = await fetchJson('/api/stats/event-series', { event_name: 'app_open', days });
+        if (!data.by_day || data.by_day.length === 0) {
+          el.innerHTML = '<p class="muted">No daily data for app_open.</p>';
+          return;
+        }
+        const rows = data.by_day.slice().reverse().map(({ date, count }) => `<tr><td>${escapeHtml(date)}</td><td>${count}</td></tr>`).join('');
+        el.innerHTML = '<table><thead><tr><th>Date</th><th>Unique users</th></tr></thead><tbody>' + rows + '</tbody></table>';
+      } catch (e) {
+        el.innerHTML = '<p class="error">Failed to load.</p>';
+        console.error(e);
+      }
+    }
+
+    async function loadEvents() {
+      const body = qs('eventsBody');
+      const status = qs('eventsStatus');
+      body.innerHTML = '';
+      status.textContent = 'Loading…';
+      status.className = 'loading';
+      try {
+        const { start_date, end_date, event_name } = getParams();
+        const data = await fetchJson('/api/events', {
+          start_date,
+          end_date,
+          event_name,
+          limit: 200,
+          offset: 0,
+        });
+        window._lastEvents = data.events || [];
+        if (window._lastEvents.length === 0) {
+          status.textContent = 'No events in range.';
+          return;
+        }
+        status.textContent = `${window._lastEvents.length} events`;
+        window._lastEvents.forEach((ev) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td>' + escapeHtml((ev.event_time_utc || '').slice(0, 19)) + '</td>' +
+            '<td>' + escapeHtml(ev.event_name || '') + '</td>' +
+            '<td>' + escapeHtml((ev.anonymous_id || '').slice(0, 8)) + '…</td>' +
+            '<td>' + escapeHtml((ev.session_id || '').slice(0, 8)) + '…</td>' +
+            '<td>' + escapeHtml(ev.screen_name || '–') + '</td>';
+          body.appendChild(tr);
+        });
+      } catch (e) {
+        status.textContent = 'Failed to load events.';
+        status.className = 'error';
+        console.error(e);
+      }
+    }
+
+    function escapeHtml(s) {
+      if (s == null) return '';
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function exportCsv() {
+      const events = window._lastEvents;
+      if (!events || events.length === 0) {
+        alert('Load events first, then export.');
+        return;
+      }
+      const headers = ['event_time_utc', 'event_name', 'anonymous_id', 'user_id', 'session_id', 'screen_name', 'app_version', 'platform'];
+      const rows = events.map((ev) =>
+        headers.map((h) => {
+          const v = ev[h];
+          const str = v == null ? '' : String(v);
+          return str.includes(',') || str.includes('"') ? '"' + str.replace(/"/g, '""') + '"' : str;
+        }).join(',')
+      );
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'analytics-events-' + new Date().toISOString().slice(0, 10) + '.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function apply() {
+      loadActiveUsers();
+      loadEventCounts();
+      loadEventSeries();
+      loadRetention();
+      loadEvents();
+    }
+
+    qs('applyBtn').addEventListener('click', apply);
+    qs('exportCsv').addEventListener('click', exportCsv);
+    qs('explorerBtn').addEventListener('click', loadUserExplorer);
+
+    const end = new Date();
+    const start = new Date(end);
+    start.setDate(start.getDate() - 30);
+    qs('startDate').value = dateIso(start);
+    qs('endDate').value = dateIso(end);
+
+    apply();
+  </script>
+</body>
+</html>

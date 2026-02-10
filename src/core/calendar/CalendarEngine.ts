@@ -94,6 +94,36 @@ export class CalendarEngine {
     const isAfterSheminiAtzeres = season === 'winter';
     const isAfterDecember4th = JewishCalendarService.isVtenTalUmatar(date, false) && season === 'winter';
 
+    // Upcoming Shabbos times for home widgets (this weekend's candle lighting & havdalah)
+    let upcomingShabbos: { candleLighting: Date | null; havdalah: Date | null } | undefined;
+    const dow = date.getDay();
+    if (dow <= 5) {
+      // Sun–Fri: get this week's Friday and Saturday
+      const daysUntilFriday = dow <= 4 ? (5 - dow + 7) % 7 : 0;
+      const fridayDate = new Date(date);
+      fridayDate.setDate(date.getDate() + daysUntilFriday);
+      const saturdayDate = new Date(fridayDate);
+      saturdayDate.setDate(fridayDate.getDate() + 1);
+      const [friZmanim, satZmanim] = await Promise.all([
+        ZmanimService.calculateExtendedZmanim(fridayDate, location),
+        ZmanimService.calculateExtendedZmanim(saturdayDate, location),
+      ]);
+      upcomingShabbos = {
+        candleLighting: friZmanim.candleLighting,
+        havdalah: satZmanim.shabbosEnd ?? satZmanim.tzeis,
+      };
+    } else {
+      // Saturday: candle lighting was last night, havdalah is tonight
+      const fridayDate = new Date(date);
+      fridayDate.setDate(date.getDate() - 1);
+      const satZmanim = extendedZmanim;
+      const friZmanim = await ZmanimService.calculateExtendedZmanim(fridayDate, location);
+      upcomingShabbos = {
+        candleLighting: friZmanim.candleLighting,
+        havdalah: satZmanim.shabbosEnd ?? satZmanim.tzeis,
+      };
+    }
+
     return {
       // Date info
       jewishDate,
@@ -136,6 +166,9 @@ export class CalendarEngine {
       isAfterPesach,
       isAfterSheminiAtzeres,
       isAfterDecember4th,
+
+      // Upcoming Shabbos (for home widgets)
+      upcomingShabbos,
     };
   }
 
