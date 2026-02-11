@@ -131,5 +131,38 @@ export class NotificationContentService {
       data: { screen: 'habits' },
     };
   }
+
+  /**
+   * Generate content for Rosh Chodesh reminder
+   */
+  static getRoshChodeshContent(): NotificationContent {
+    return {
+      title: 'Rosh Chodesh today',
+      body: 'A gentle reminder for Rosh Chodesh',
+      data: { screen: 'home', action: 'roshChodesh' },
+    };
+  }
+
+  /**
+   * Generate content for fast day reminder
+   */
+  static getFastDayContent(): NotificationContent {
+    return {
+      title: 'Fast day today',
+      body: 'A gentle reminder for today\'s fast',
+      data: { screen: 'home', action: 'fastDay' },
+    };
+  }
+
+  /**
+   * Generate content for custom reminder
+   */
+  static getCustomReminderContent(title: string, message: string, reminderId: string): NotificationContent {
+    return {
+      title,
+      body: message || title,
+      data: { screen: 'home', type: 'customReminder', reminderId },
+    };
+  }
 }
 

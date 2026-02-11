@@ -3,11 +3,12 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { toLocalDateString } from '../utils/dateUtils';
 
 const STREAK_OPEN_DATES_KEY = '@app_streak_open_dates';
 
 function dateKey(date: Date = new Date()): string {
-  return date.toISOString().split('T')[0];
+  return toLocalDateString(date);
 }
 
 /** Record that the app was opened today (call from Home when focused) */

@@ -3,11 +3,12 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { toLocalDateString } from '../utils/dateUtils';
 
 const DAVENING_DATES_KEY = '@davening_streak_dates';
 
 function dateKey(date: Date = new Date()): string {
-  return date.toISOString().split('T')[0];
+  return toLocalDateString(date);
 }
 
 /** Record that the user davened today (call when SiddurReader is focused) */

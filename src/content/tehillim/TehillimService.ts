@@ -9,6 +9,7 @@ import { SefariaService, TehillimChapterData, SefariaVerse } from '../../service
 import { TehillimChapter, TehillimVerse, DAILY_TEHILLIM, DAY_OF_WEEK_TEHILLIM, TEHILLIM_BOOKS } from './types';
 import { TEHILLIM_CHAPTERS } from './chapters';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { JewishCalendarService } from '../../core/calendar/JewishCalendar';
 
 const TEHILLIM_CACHE_KEY = '@tehillim_full_cache';
 
@@ -118,12 +119,18 @@ export class TehillimService {
   }
 
   /**
-   * Get chapters for today's date (monthly cycle)
+   * Get chapters for today (monthly cycle). Follows the global monthly Tehillim cycle: Hebrew day 1–30, and on the last day of a 29-day month, portions 29+30 are combined (same as everyone).
    */
   static getTodaysChapters(date: Date = new Date()): number[] {
-    const dayOfMonth = date.getDate();
-    const effectiveDay = Math.min(dayOfMonth, 30);
-    return DAILY_TEHILLIM[effectiveDay] || [];
+    const hdate = JewishCalendarService.getJewishDate(date);
+    const day = Math.min(hdate.getDate(), 30);
+    const daysInMonth = JewishCalendarService.getDaysInHebrewMonth(date);
+    if (day === 29 && daysInMonth === 29) {
+      const p29 = DAILY_TEHILLIM[29] || [];
+      const p30 = DAILY_TEHILLIM[30] || [];
+      return [...p29, ...p30];
+    }
+    return DAILY_TEHILLIM[day] || [];
   }
 
   /**

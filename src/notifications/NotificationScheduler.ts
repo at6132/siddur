@@ -5,15 +5,41 @@
 
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { NotificationConfig, NotificationType } from './types';
 import { NotificationContentService } from './NotificationContent';
 import { CalendarEngine } from '../core/calendar/CalendarEngine';
+import { JewishCalendarService } from '../core/calendar/JewishCalendar';
 import { UserPreferences } from '../types/preferences';
 import { CalendarContext } from '../types/calendar';
 import { OmerCalculator } from '../core/omer/OmerCalculator';
 
 // Check if we're on a native platform (not web)
 const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
+
+/** Day id to JS getDay(): sun=0, mon=1, ..., sat=6 */
+const DAY_ID_TO_DOW: Record<string, number> = {
+  sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6,
+};
+
+/** Parse "9:00 AM" / "8:30 PM" to 24h hour and minute */
+function parseTime12h(timeStr: string): { hour: number; minute: number } {
+  const m = /^\s*(\d{1,2})\s*:\s*(\d{2})\s*(AM|PM)?\s*$/i.exec((timeStr || '').trim());
+  if (!m) return { hour: 9, minute: 0 };
+  let h = parseInt(m[1], 10);
+  const min = Math.min(59, Math.max(0, parseInt(m[2], 10)));
+  const pm = (m[3] || '').toUpperCase() === 'PM';
+  if (h === 12) h = pm ? 12 : 0;
+  else if (pm) h += 12;
+  return { hour: h, minute: min };
+}
+
+/** Parse "09:00" / "20:30" to hour and minute */
+function parseTime24h(hhmm: string): { hour: number; minute: number } {
+  const m = /^(\d{1,2}):(\d{2})$/.exec((hhmm || '').trim());
+  if (!m) return { hour: 9, minute: 0 };
+  const h = Math.min(23, Math.max(0, parseInt(m[1], 10)));
+  const min = Math.min(59, Math.max(0, parseInt(m[2], 10)));
+  return { hour: h, minute: min };
+}
 
 /** iOS rejects dates in the past - ensure trigger is at least 60s in the future */
 function isFutureDate(date: Date): boolean {
@@ -71,16 +97,20 @@ export class NotificationScheduler {
     // Get today's info
     const todayInfo = await CalendarEngine.getTodayInfo(context);
 
-    // Schedule daily notifications
+    // Daily Tehillim (use user's time)
     if (preferences.notifications.dailyTehillim) {
-      await this.scheduleDailyTehillim();
+      await this.scheduleDailyTehillim(preferences);
     }
 
+    // Zmanim-based Mincha (15 min before calculated mincha)
     if (preferences.notifications.minchaTime) {
       await this.scheduleMincha(todayInfo);
     }
 
-    // Schedule contextual notifications
+    // Daily prayer reminders at user-chosen times (Shacharis, Mincha, Maariv)
+    await this.schedulePrayerReminders(preferences);
+
+    // Contextual: Hallel / Anenu
     if (preferences.notifications.hallelAnenu) {
       if (todayInfo.daveningChanges.hallel) {
         await this.scheduleHallel(todayInfo);
@@ -96,31 +126,43 @@ export class NotificationScheduler {
       }
     }
 
-    // Schedule Omer notifications if in Omer period
+    // Omer (use user's time)
     if (preferences.notifications.sefirasHaomer) {
       const omerDay = OmerCalculator.getOmerDay();
       if (omerDay !== null) {
-        await this.scheduleOmerReminder(omerDay);
+        await this.scheduleOmerReminder(omerDay, preferences);
       }
     }
 
-    // Schedule Neshama reminder if user has that goal
+    // Neshama reminder
     if (preferences.spiritualGoals.includes('neshama')) {
       await this.scheduleNeshamaReminder();
+    }
+
+    // Rosh Chodesh & Fast Days
+    if (preferences.notifications.roshChodesh || preferences.notifications.fastDays) {
+      await this.scheduleRoshChodeshAndFastDays(preferences, context);
+    }
+
+    // Custom reminders (user-created, with days + time)
+    if (preferences.customReminders?.length) {
+      await this.scheduleCustomReminders(preferences);
     }
   }
 
   /**
-   * Schedule daily Tehillim reminder (morning)
+   * Schedule daily Tehillim reminder at user's chosen time
    */
-  private static async scheduleDailyTehillim(): Promise<void> {
+  private static async scheduleDailyTehillim(preferences: UserPreferences): Promise<void> {
     const content = NotificationContentService.getDailyTehillimContent();
+    const { hour, minute } = parseTime24h(
+      preferences.notifications.dailyTehillimTime || '09:00'
+    );
     const trigger = {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: 9,
-      minute: 0,
+      hour,
+      minute,
     };
-
     await scheduleSafe({ content, trigger });
   }
 
@@ -226,16 +268,21 @@ export class NotificationScheduler {
   }
 
   /**
-   * Schedule Omer reminder (nightly after tzeis)
+   * Schedule Omer reminder at user's chosen time
    */
-  private static async scheduleOmerReminder(omerDay: number): Promise<void> {
+  private static async scheduleOmerReminder(
+    omerDay: number,
+    preferences: UserPreferences
+  ): Promise<void> {
     const content = NotificationContentService.getOmerContent(omerDay);
+    const { hour, minute } = parseTime24h(
+      preferences.notifications.sefirasHaomerTime || '20:30'
+    );
     const trigger = {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: 20,
-      minute: 0,
+      hour,
+      minute,
     };
-
     await scheduleSafe({ content, trigger });
   }
 
@@ -249,8 +296,115 @@ export class NotificationScheduler {
       hour: 10,
       minute: 0,
     };
-
     await scheduleSafe({ content, trigger });
+  }
+
+  /**
+   * Schedule daily prayer reminders (Shacharis, Mincha, Maariv) at user-chosen times
+   */
+  private static async schedulePrayerReminders(preferences: UserPreferences): Promise<void> {
+    const pr = preferences.notifications.prayerReminders;
+    if (!pr) return;
+
+    const items: Array<{ key: 'shacharis' | 'mincha' | 'maariv'; title: string; body: string }> = [
+      { key: 'shacharis', title: 'Shacharis', body: 'A gentle reminder for Shacharis' },
+      { key: 'mincha', title: 'Mincha', body: 'A gentle reminder for Mincha' },
+      { key: 'maariv', title: 'Maariv', body: 'A gentle reminder for Maariv' },
+    ];
+
+    for (const { key, title, body } of items) {
+      const reminder = pr[key];
+      if (!reminder?.enabled) continue;
+      const { hour, minute } = parseTime12h(reminder.time || '9:00 AM');
+      const content = {
+        title,
+        body,
+        data: { screen: 'home', action: key },
+      };
+      await scheduleSafe({
+        content,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DAILY,
+          hour,
+          minute,
+        },
+      });
+    }
+  }
+
+  /**
+   * Schedule custom reminders (user-created) for the next 4 weeks on selected days
+   */
+  private static async scheduleCustomReminders(preferences: UserPreferences): Promise<void> {
+    const reminders = preferences.customReminders || [];
+    const enabled = reminders.filter((r) => r.enabled);
+    if (enabled.length === 0) return;
+
+    const now = new Date();
+    for (const reminder of enabled) {
+      const { hour, minute } = parseTime12h(reminder.time);
+      const content = NotificationContentService.getCustomReminderContent(
+        reminder.title,
+        reminder.message,
+        reminder.id
+      );
+      const dayDows = reminder.days.map((d) => DAY_ID_TO_DOW[d] ?? 0);
+
+      // Schedule next 4 weeks of occurrences on selected weekdays
+      for (let dayOffset = 0; dayOffset < 28; dayOffset++) {
+        const d = new Date(now);
+        d.setDate(d.getDate() + dayOffset);
+        d.setHours(hour, minute, 0, 0);
+        if (!dayDows.includes(d.getDay())) continue;
+        if (!isFutureDate(d)) continue;
+        await scheduleSafe({
+          content,
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: d,
+          },
+        });
+      }
+    }
+  }
+
+  /**
+   * Schedule Rosh Chodesh and Fast Day reminders for the next 60 days
+   */
+  private static async scheduleRoshChodeshAndFastDays(
+    preferences: UserPreferences,
+    context: CalendarContext
+  ): Promise<void> {
+    const reminderHour = 8;
+    const reminderMinute = 0;
+
+    for (let dayOffset = 0; dayOffset < 60; dayOffset++) {
+      const d = new Date();
+      d.setDate(d.getDate() + dayOffset);
+      d.setHours(reminderHour, reminderMinute, 0, 0);
+      if (!isFutureDate(d)) continue;
+
+      if (preferences.notifications.roshChodesh && JewishCalendarService.isRoshChodesh(d)) {
+        const content = NotificationContentService.getRoshChodeshContent();
+        await scheduleSafe({
+          content,
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: d,
+          },
+        });
+      }
+      if (preferences.notifications.fastDays && JewishCalendarService.isFastDay(d)) {
+        const content = NotificationContentService.getFastDayContent();
+        await scheduleSafe({
+          content,
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: d,
+          },
+        });
+      }
+    }
   }
 
   /**

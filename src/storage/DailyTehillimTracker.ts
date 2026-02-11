@@ -1,20 +1,20 @@
 /**
  * Daily Tehillim Progress Tracker
  * Tracks which chapters have been read each day
- * 
- * Default: Traditional 7-day weekly cycle (complete whole Tehillim each week)
- * - Yom Rishon (Sunday): 1-29
- * - Yom Sheni (Monday): 30-50
- * - Yom Shlishi (Tuesday): 51-72
- * - Yom Revii (Wednesday): 73-89
- * - Yom Chamishi (Thursday): 90-106
- * - Yom Shishi (Friday): 107-119
- * - Shabbos (Saturday): 120-150
- * 
- * Users can customize to set a smaller daily goal if needed.
+ *
+ * Weekly: Traditional 7-day cycle (complete whole Tehillim each week) — global week.
+ *
+ * Monthly: Follows the global monthly Tehillim cycle so everyone says the same portion that day.
+ * Uses Hebrew calendar only: knows which months have 29 vs 30 days; on the last day of a
+ * 29-day month, portions 29 and 30 are combined (same as Hebcal/Chabad). Day 1 = portion 1, … day 30 = portion 30.
+ * "This month" = current Hebrew month; progress resets at Rosh Chodesh.
+ *
+ * Users can also choose custom daily goal or "whenever you can".
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { JewishCalendarService } from '../core/calendar/JewishCalendar';
+import { toLocalDateString } from '../utils/dateUtils';
 import { 
   WEEKLY_TEHILLIM, 
   DAILY_TEHILLIM, 
@@ -41,12 +41,32 @@ function getWeekKey(date: Date = new Date()): string {
   d.setHours(0, 0, 0, 0);
   const day = d.getDay();
   d.setDate(d.getDate() - day);
-  return d.toISOString().split('T')[0];
+  return toLocalDateString(d);
 }
 
-/** Month key YYYY-MM */
-function getMonthKey(date: Date = new Date()): string {
-  return date.toISOString().slice(0, 7);
+/** Hebrew month key for the global monthly Tehillim cycle (e.g. "5784-7" = Tishrei 5784). */
+function getHebrewMonthKey(date: Date = new Date()): string {
+  const hdate = JewishCalendarService.getJewishDate(date);
+  return `${hdate.getFullYear()}-${hdate.getMonth()}`;
+}
+
+/** Day of Hebrew month (1–30) for the global monthly Tehillim cycle. Same schedule worldwide (Hebcal/Chabad). */
+function getHebrewDayOfMonth(date: Date = new Date()): number {
+  const hdate = JewishCalendarService.getJewishDate(date);
+  const day = hdate.getDate();
+  return Math.min(day, 30);
+}
+
+/** Today's chapters for monthly cycle. On last day of a 29-day Hebrew month, portions 29+30 are combined (same as everyone). */
+function getMonthlyChaptersForDate(date: Date = new Date()): number[] {
+  const day = getHebrewDayOfMonth(date);
+  const daysInMonth = JewishCalendarService.getDaysInHebrewMonth(date);
+  if (day === 29 && daysInMonth === 29) {
+    const p29 = DAILY_TEHILLIM[29] || [];
+    const p30 = DAILY_TEHILLIM[30] || [];
+    return [...p29, ...p30];
+  }
+  return DAILY_TEHILLIM[day] || [];
 }
 
 const MAX_WPM_READINGS = 50;
@@ -83,7 +103,7 @@ export class DailyTehillimTracker {
    * Get today's date key
    */
   private static getDateKey(date: Date = new Date()): string {
-    return date.toISOString().split('T')[0];
+    return toLocalDateString(date);
   }
 
   /**
@@ -150,11 +170,8 @@ export class DailyTehillimTracker {
     switch (settings.goalType) {
       case 'weekly':
         return WEEKLY_TEHILLIM[date.getDay()] || [];
-      case 'monthly': {
-        const dayOfMonth = date.getDate();
-        const effectiveDay = Math.min(dayOfMonth, 30);
-        return DAILY_TEHILLIM[effectiveDay] || [];
-      }
+      case 'monthly':
+        return getMonthlyChaptersForDate(date);
       case 'custom':
         return this.getCustomChaptersForToday(settings.customChaptersPerDay || 5);
       case 'whenever':
@@ -234,7 +251,7 @@ export class DailyTehillimTracker {
    * Backfills from today's daily progress if monthly storage is empty (same month).
    */
   private static async getMonthlyCompleted(): Promise<number[]> {
-    const monthKey = getMonthKey();
+    const monthKey = getHebrewMonthKey();
     try {
       const raw = await AsyncStorage.getItem(TEHILLIM_MONTHLY_COMPLETED_KEY);
       if (raw) {
@@ -261,7 +278,7 @@ export class DailyTehillimTracker {
   }
 
   private static async addMonthlyCompleted(chapter: number): Promise<void> {
-    const monthKey = getMonthKey();
+    const monthKey = getHebrewMonthKey();
     const chapters = await this.getMonthlyCompleted();
     if (chapters.includes(chapter)) return;
     chapters.push(chapter);
@@ -726,8 +743,8 @@ export class DailyTehillimTracker {
     try {
       const raw = await AsyncStorage.getItem(TEHILLIM_WHENEVER_DAYS_KEY);
       const dates: string[] = raw ? JSON.parse(raw) : [];
-      const startStr = start.toISOString().split('T')[0];
-      const endStr = end.toISOString().split('T')[0];
+      const startStr = toLocalDateString(start);
+      const endStr = toLocalDateString(end);
       return dates.filter((d) => d >= startStr && d <= endStr).length;
     } catch (e) {
       return 0;
@@ -763,8 +780,8 @@ export class DailyTehillimTracker {
       }
       const raw = await AsyncStorage.getItem(TEHILLIM_COMPLETED_DAYS_KEY);
       const dates: string[] = raw ? JSON.parse(raw) : [];
-      const startStr = start.toISOString().split('T')[0];
-      const endStr = end.toISOString().split('T')[0];
+      const startStr = toLocalDateString(start);
+      const endStr = toLocalDateString(end);
       return dates.filter((d) => d >= startStr && d <= endStr).length;
     } catch (e) {
       console.warn('Error reading Tehillim completed days in range:', e);
@@ -788,7 +805,7 @@ export class DailyTehillimTracker {
         let streak = 0;
         const d = new Date();
         for (let i = 0; i < 365; i++) {
-          const key = d.toISOString().split('T')[0];
+          const key = toLocalDateString(d);
           if (dates.includes(key)) {
             streak++;
             d.setDate(d.getDate() - 1);
@@ -811,7 +828,7 @@ export class DailyTehillimTracker {
       let streak = 0;
       const d = new Date();
       for (let i = 0; i < 365; i++) {
-        const key = d.toISOString().split('T')[0];
+        const key = toLocalDateString(d);
         if (dates.includes(key)) {
           streak++;
           d.setDate(d.getDate() - 1);

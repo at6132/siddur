@@ -3,6 +3,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { toLocalDateString } from '../utils/dateUtils';
 
 const STORAGE_KEY = '@daily_goals';
 
@@ -20,7 +21,7 @@ export interface DailyGoalsDay {
 }
 
 function dateKey(d: Date = new Date()): string {
-  return d.toISOString().split('T')[0];
+  return toLocalDateString(d);
 }
 
 function generateId(): string {

@@ -450,6 +450,7 @@ export const SettingsScreen: React.FC = () => {
                               },
                             };
                             await UserPreferencesService.setNotificationPreferences(updated);
+                            await NotificationService.reschedule();
                             loadPreferences();
                           }}
                           trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
@@ -494,6 +495,7 @@ export const SettingsScreen: React.FC = () => {
                               },
                             };
                             await UserPreferencesService.setNotificationPreferences(updated);
+                            await NotificationService.reschedule();
                             loadPreferences();
                           }}
                           trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
@@ -538,6 +540,7 @@ export const SettingsScreen: React.FC = () => {
                               },
                             };
                             await UserPreferencesService.setNotificationPreferences(updated);
+                            await NotificationService.reschedule();
                             loadPreferences();
                           }}
                           trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
@@ -611,6 +614,7 @@ export const SettingsScreen: React.FC = () => {
                               value={reminder.enabled}
                               onValueChange={async (value) => {
                                 await UserPreferencesService.updateCustomReminder(reminder.id, { enabled: value });
+                                await NotificationService.reschedule();
                                 loadPreferences();
                               }}
                               trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
@@ -663,15 +667,14 @@ export const SettingsScreen: React.FC = () => {
                                         {
                                           text: 'Delete',
                                           style: 'destructive',
-                                          onPress: () => {
-                                            (async () => {
-                                              try {
-                                                await UserPreferencesService.deleteCustomReminder(reminder.id);
-                                              } catch (e) {
-                                                console.error('Delete reminder failed:', e);
-                                              }
-                                              loadPreferences();
-                                            })();
+                                          onPress: async () => {
+                                            try {
+                                              await UserPreferencesService.deleteCustomReminder(reminder.id);
+                                              await NotificationService.reschedule();
+                                            } catch (e) {
+                                              console.error('Delete reminder failed:', e);
+                                            }
+                                            loadPreferences();
                                           },
                                         },
                                       ]

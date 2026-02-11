@@ -3,6 +3,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { toLocalDateString } from '../utils/dateUtils';
 
 const BRACHOS_KEY_PREFIX = '@brachos_count_';
 
@@ -14,7 +15,7 @@ export const BRACHOS_PER_TEFILLA = {
 } as const;
 
 function dateKey(date: Date = new Date()): string {
-  return date.toISOString().split('T')[0];
+  return toLocalDateString(date);
 }
 
 function storageKey(date?: Date): string {

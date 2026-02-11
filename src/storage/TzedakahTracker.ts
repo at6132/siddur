@@ -4,6 +4,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { toLocalDateString } from '../utils/dateUtils';
 
 const STORAGE_KEY = '@tzedakah_entries';
 
@@ -43,7 +44,7 @@ export class TzedakahTracker {
 
   static async addEntry(amount: number, organization: string, date?: Date): Promise<TzedakahEntry> {
     const d = date || new Date();
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = toLocalDateString(d);
     const entry: TzedakahEntry = {
       id: generateId(),
       amount,
@@ -67,8 +68,8 @@ export class TzedakahTracker {
     const entries = await this.getAllEntries();
     const monthAgo = new Date();
     monthAgo.setDate(monthAgo.getDate() - 30);
-    const cutoffStr = monthAgo.toISOString().split('T')[0];
-    const todayStr = new Date().toISOString().split('T')[0];
+    const cutoffStr = toLocalDateString(monthAgo);
+    const todayStr = toLocalDateString();
     return entries
       .filter((e) => e.date >= cutoffStr && e.date <= todayStr)
       .reduce((sum, e) => sum + e.amount, 0);
@@ -77,8 +78,8 @@ export class TzedakahTracker {
   /** Total for a date range (inclusive). */
   static async getTotalForDateRange(start: Date, end: Date): Promise<number> {
     const entries = await this.getAllEntries();
-    const startStr = start.toISOString().split('T')[0];
-    const endStr = end.toISOString().split('T')[0];
+    const startStr = toLocalDateString(start);
+    const endStr = toLocalDateString(end);
     return entries
       .filter((e) => e.date >= startStr && e.date <= endStr)
       .reduce((sum, e) => sum + e.amount, 0);
@@ -92,7 +93,7 @@ export class TzedakahTracker {
     if (period === 'month') start.setMonth(start.getMonth() - 1);
     else if (period === 'three_months') start.setMonth(start.getMonth() - 3);
     else if (period === 'year') start.setFullYear(start.getFullYear() - 1);
-    const startStr = start.toISOString().split('T')[0];
+    const startStr = toLocalDateString(start);
     return entries.filter((e) => e.date >= startStr).reduce((s, e) => s + e.amount, 0);
   }
 
@@ -111,7 +112,7 @@ export class TzedakahTracker {
     if (period === 'month') start.setMonth(start.getMonth() - 1);
     else if (period === 'three_months') start.setMonth(start.getMonth() - 3);
     else if (period === 'year') start.setFullYear(start.getFullYear() - 1);
-    const startStr = start.toISOString().split('T')[0];
+    const startStr = toLocalDateString(start);
     return entries.filter((e) => e.date >= startStr);
   }
 

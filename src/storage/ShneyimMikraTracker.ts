@@ -5,6 +5,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { toLocalDateString } from '../utils/dateUtils';
 
 const STORAGE_KEY = '@shneyim_mikra_progress';
 
@@ -19,7 +20,7 @@ function getWeekStart(date: Date = new Date()): string {
   const d = new Date(date);
   const day = d.getDay();
   d.setDate(d.getDate() - day);
-  return d.toISOString().split('T')[0];
+  return toLocalDateString(d);
 }
 
 export class ShneyimMikraTracker {

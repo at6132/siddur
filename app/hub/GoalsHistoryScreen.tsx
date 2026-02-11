@@ -30,6 +30,7 @@ import { ScalePress } from '../../components/animations/ScalePress';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { colors } from '../../src/design/colors';
+import { toLocalDateString } from '../../src/utils/dateUtils';
 import { DailyGoalsService, type DailyGoalsDay } from '../../src/storage/DailyGoalsService';
 
 const { height: H } = Dimensions.get('window');
@@ -37,12 +38,12 @@ const springConfig = { damping: 22, stiffness: 160 };
 
 function formatDateLabel(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
-  const today = new Date();
-  const isToday = dateStr === today.toISOString().split('T')[0];
+  const today = toLocalDateString();
+  const isToday = dateStr === today;
   if (isToday) return 'Today';
-  const yesterday = new Date(today);
+  const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const isYesterday = dateStr === yesterday.toISOString().split('T')[0];
+  const isYesterday = dateStr === toLocalDateString(yesterday);
   if (isYesterday) return 'Yesterday';
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 }

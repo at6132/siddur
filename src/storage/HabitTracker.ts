@@ -3,17 +3,15 @@
  * Manages habit marking without streaks or pressure
  */
 
+import { toLocalDateString } from '../utils/dateUtils';
 import { StorageService } from './StorageService';
 
 export class HabitTracker {
   /**
-   * Format date as YYYY-MM-DD for consistent storage
+   * Format date as YYYY-MM-DD for consistent storage (local timezone)
    */
   private static formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return toLocalDateString(date);
   }
 
   /**

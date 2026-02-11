@@ -9,7 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { FadeIn } from '../../components/animations/FadeIn';
@@ -17,6 +17,7 @@ import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
+import { NotificationService } from '../../src/notifications/NotificationService';
 import { CustomReminder } from '../../src/types/preferences';
 import { track, RELIABILITY_EVENTS } from '../../src/analytics';
 
@@ -160,6 +161,7 @@ export const AddCustomReminderScreen: React.FC = () => {
           time: timeToSave,
           days: selectedDays as ('sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')[],
         });
+        await NotificationService.reschedule();
         Alert.alert('Reminder Updated', `"${title}" will remind you daily at ${timeToSave}.`, [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);
@@ -173,6 +175,7 @@ export const AddCustomReminderScreen: React.FC = () => {
           days: selectedDays as ('sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')[],
         };
         await UserPreferencesService.addCustomReminder(reminder);
+        await NotificationService.reschedule();
         Alert.alert('Reminder Added', `"${title}" will remind you daily at ${timeToSave}.`, [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);

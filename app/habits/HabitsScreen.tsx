@@ -15,6 +15,7 @@ import { FadeIn } from '../../components/animations/FadeIn';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles, fonts } from '../../src/design/typography';
+import { toLocalDateString } from '../../src/utils/dateUtils';
 import { HabitTracker } from '../../src/storage/HabitTracker';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { SpiritualGoal } from '../../src/types/preferences';
@@ -95,13 +96,13 @@ export const HabitsScreen: React.FC = () => {
   const calculateStreak = () => {
     const sortedDates = Array.from(markedDates).sort().reverse();
     let streak = 0;
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString();
     
     for (let i = 0; i < sortedDates.length; i++) {
       const date = sortedDates[i];
       const expectedDate = new Date();
       expectedDate.setDate(expectedDate.getDate() - i);
-      const expectedDateStr = expectedDate.toISOString().split('T')[0];
+      const expectedDateStr = toLocalDateString(expectedDate);
       
       if (date === expectedDateStr) {
         streak++;
@@ -325,7 +326,7 @@ export const HabitsScreen: React.FC = () => {
                     <Text style={styles.sectionTitle}>Recent Days</Text>
                     {recentDates.map((dateStr, index) => {
                       const date = new Date(dateStr);
-                      const isToday = dateStr === new Date().toISOString().split('T')[0];
+                      const isToday = dateStr === toLocalDateString();
                       
                       return (
                         <FadeIn key={dateStr} delay={350 + index * 40}>
@@ -358,7 +359,7 @@ export const HabitsScreen: React.FC = () => {
                     <Text style={styles.sectionTitle}>Recent Days</Text>
                     {recentDates.map((dateStr, index) => {
                       const date = new Date(dateStr);
-                      const isToday = dateStr === new Date().toISOString().split('T')[0];
+                      const isToday = dateStr === toLocalDateString();
                       
                       return (
                         <FadeIn key={dateStr} delay={350 + index * 40}>

@@ -3,6 +3,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { toLocalDateString } from '../utils/dateUtils';
 
 const STORAGE_KEY = '@gratitude_entries';
 
@@ -31,7 +32,7 @@ export class GratitudeTracker {
 
   static async addEntry(text: string, date?: Date): Promise<GratitudeEntry> {
     const d = date || new Date();
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = toLocalDateString(d);
     const entry: GratitudeEntry = {
       id: generateId(),
       text: text.trim() || 'Grateful',
@@ -60,12 +61,12 @@ export class GratitudeTracker {
     const entries = await this.getAllEntries();
     const datesWithEntry = [...new Set(entries.map((e) => e.date))].sort((a, b) => b.localeCompare(a));
     if (datesWithEntry.length === 0) return 0;
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString();
     if (datesWithEntry[0] !== today) return 0;
     let streak = 0;
     const d = new Date();
     for (let i = 0; i < 365; i++) {
-      const key = d.toISOString().split('T')[0];
+      const key = toLocalDateString(d);
       if (datesWithEntry.includes(key)) {
         streak++;
         d.setDate(d.getDate() - 1);

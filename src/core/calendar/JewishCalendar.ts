@@ -22,6 +22,15 @@ export class JewishCalendarService {
   }
 
   /**
+   * Number of days in the Hebrew month containing the given date (29 or 30).
+   * Used for the global monthly Tehillim cycle (29-day months combine portions 29+30 on the last day).
+   */
+  static getDaysInHebrewMonth(date: Date = new Date()): number {
+    const hdate = this.getJewishDate(date);
+    return HDate.daysInMonth(hdate.getMonth(), hdate.getFullYear());
+  }
+
+  /**
    * Get Jewish date string (e.g., "15 Nisan 5784")
    */
   static getJewishDateString(date: Date = new Date()): string {
