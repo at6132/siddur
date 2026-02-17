@@ -129,11 +129,6 @@ export class NotificationScheduler {
       }
     }
 
-    // Neshama reminder
-    if (preferences.spiritualGoals.includes('neshama')) {
-      await this.scheduleNeshamaReminder();
-    }
-
     // Rosh Chodesh & Fast Days
     if (preferences.notifications.roshChodesh || preferences.notifications.fastDays) {
       await this.scheduleRoshChodeshAndFastDays(preferences, context);
@@ -244,19 +239,6 @@ export class NotificationScheduler {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
       hour,
       minute,
-    };
-    await scheduleSafe({ content, trigger });
-  }
-
-  /**
-   * Schedule Neshama reminder
-   */
-  private static async scheduleNeshamaReminder(): Promise<void> {
-    const content = NotificationContentService.getNeshamaContent();
-    const trigger = {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: 10,
-      minute: 0,
     };
     await scheduleSafe({ content, trigger });
   }

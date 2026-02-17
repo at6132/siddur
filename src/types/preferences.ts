@@ -129,7 +129,6 @@ export const DEFAULT_DISPLAY_PREFERENCES: DisplayPreferences = {
 export const SPIRITUAL_GOAL_OPTIONS: { value: SpiritualGoal; label: string }[] = [
   { value: 'tehillim', label: 'Daily Tehillim' },
   { value: 'mincha', label: 'Davening Mincha' },
-  { value: 'neshama', label: '40-Day Commitment' },
   { value: 'sefiras_haomer', label: 'Sefiras HaOmer' },
   { value: 'brachos', label: 'Mindful Brachos' },
   { value: 'gratitude', label: 'Daily Gratitude' },
