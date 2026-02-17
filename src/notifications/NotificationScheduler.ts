@@ -102,11 +102,6 @@ export class NotificationScheduler {
       await this.scheduleDailyTehillim(preferences);
     }
 
-    // Zmanim-based Mincha (15 min before calculated mincha)
-    if (preferences.notifications.minchaTime) {
-      await this.scheduleMincha(todayInfo);
-    }
-
     // Daily prayer reminders at user-chosen times (Shacharis, Mincha, Maariv)
     await this.schedulePrayerReminders(preferences);
 
@@ -164,39 +159,6 @@ export class NotificationScheduler {
       minute,
     };
     await scheduleSafe({ content, trigger });
-  }
-
-  /**
-   * Schedule Mincha reminder
-   */
-  private static async scheduleMincha(dayInfo: any): Promise<void> {
-    const minchaTime = dayInfo?.zmanim?.mincha;
-    if (!minchaTime || !(minchaTime instanceof Date)) return;
-
-    const content = NotificationContentService.getMinchaContent(dayInfo);
-
-    // Schedule for today and next 7 days - only if trigger is in the future
-    for (let i = 0; i <= 7; i++) {
-      const baseDate = new Date(minchaTime);
-      baseDate.setDate(baseDate.getDate() + i);
-      const triggerDate = new Date(baseDate.getTime() - 15 * 60000);
-
-      if (!isFutureDate(triggerDate)) continue;
-
-      await scheduleSafe({
-        content: i === 0 ? content : {
-          ...content,
-          body: `Mincha is at ${baseDate.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
-          })}`,
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: triggerDate,
-        },
-      });
-    }
   }
 
   /**
