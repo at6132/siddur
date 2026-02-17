@@ -155,6 +155,21 @@ export class NotificationContentService {
   }
 
   /**
+   * Generate content for Shekiya (sunset) reminder
+   */
+  static getShekiyaContent(dayInfo: DayInfo): NotificationContent {
+    const sunset = dayInfo.extendedZmanim?.sunset;
+    const timeStr = sunset
+      ? sunset.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      : 'sunset';
+    return {
+      title: 'Shekiya reminder',
+      body: `Sunset is at ${timeStr}`,
+      data: { screen: 'Home', action: 'shekiya' },
+    };
+  }
+
+  /**
    * Generate content for Daily Gratitude reminder
    */
   static getDailyGratitudeContent(): NotificationContent {

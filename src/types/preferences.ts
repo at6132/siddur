@@ -54,6 +54,10 @@ export interface NotificationPreferences {
   dailyGratitude: boolean;
   dailyGratitudeTime: string; // HH:MM
   
+  // Shekiya (sunset) reminder — every day, N minutes before sunset
+  shekiyaReminder: boolean;
+  shekiyaMinutesBefore: number;
+  
   // Custom countdowns
   customCountdowns: boolean;
 }
@@ -145,6 +149,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   sefirasHaomerTime: '20:30',
   dailyGratitude: false,
   dailyGratitudeTime: '20:00',
+  shekiyaReminder: false,
+  shekiyaMinutesBefore: 15,
   customCountdowns: true,
 };
 

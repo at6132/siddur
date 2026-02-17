@@ -95,6 +95,7 @@ export const SettingsScreen: React.FC = () => {
   >(null);
   const [timePickerValue, setTimePickerValue] = useState('');
   const [pickerDate, setPickerDate] = useState(() => new Date());
+  const [shekiyaMinutesPickerOpen, setShekiyaMinutesPickerOpen] = useState(false);
 
   /** Format 24h "09:00" as "9:00 AM"; 24h "20:30" as "8:30 PM" */
   const formatTehillimTimeForDisplay = (hhmm: string): string => {
@@ -752,6 +753,31 @@ export const SettingsScreen: React.FC = () => {
                       )}
                     </View>
 
+                    {/* Shekiya (sunset) reminder — N minutes before sunset every day */}
+                    <View style={styles.notifOption}>
+                      <View style={styles.notifOptionMain}>
+                        <Text style={styles.optionLabel}>Shekiya (Sunset) Reminder</Text>
+                        <Switch
+                          value={preferences.notifications.shekiyaReminder}
+                          onValueChange={(value) => updateNotificationPreference('shekiyaReminder', value)}
+                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                          thumbColor={preferences.notifications.shekiyaReminder ? theme.colors.primary.main : theme.colors.neutral[400]}
+                        />
+                      </View>
+                      {preferences.notifications.shekiyaReminder && (
+                        <View style={styles.notifSubOption}>
+                          <View style={styles.notifSubOptionRow}>
+                            <Text style={styles.subOptionLabel}>Remind me</Text>
+                            <TouchableOpacity style={styles.timeButton} onPress={() => setShekiyaMinutesPickerOpen(true)}>
+                              <Text style={styles.timeButtonText}>
+                                {preferences.notifications.shekiyaMinutesBefore ?? 15} min before sunset
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
                     <View style={styles.divider} />
                     <Text style={styles.additionalRemindersSectionTitle}>Additional Reminders</Text>
                     <View style={styles.additionalRemindersContainer}>
@@ -1187,6 +1213,51 @@ export const SettingsScreen: React.FC = () => {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {/* Shekiya: minutes before sunset picker */}
+      <Modal
+        visible={shekiyaMinutesPickerOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShekiyaMinutesPickerOpen(false)}
+      >
+        <Pressable style={styles.timePickerOverlay} onPress={() => setShekiyaMinutesPickerOpen(false)}>
+          <Pressable style={styles.timePickerBox} onPress={e => e.stopPropagation()}>
+            <View style={styles.timePickerHeader}>
+              <Text style={styles.timePickerTitle}>Shekiya Reminder</Text>
+              <Text style={styles.timePickerSubtitle}>Minutes before sunset</Text>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.sm }}>
+              {[5, 10, 15, 20, 25, 30, 45, 60].map((mins) => (
+                <TouchableOpacity
+                  key={mins}
+                  style={[
+                    styles.shekiyaMinuteChip,
+                    preferences?.notifications.shekiyaMinutesBefore === mins && styles.shekiyaMinuteChipSelected,
+                  ]}
+                  onPress={async () => {
+                    await updateNotificationPreference('shekiyaMinutesBefore', mins);
+                    setShekiyaMinutesPickerOpen(false);
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    styles.shekiyaMinuteChipText,
+                    preferences?.notifications.shekiyaMinutesBefore === mins && styles.shekiyaMinuteChipTextSelected,
+                  ]}>
+                    {mins} min
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.timePickerActions}>
+              <TouchableOpacity style={styles.timePickerCancel} onPress={() => setShekiyaMinutesPickerOpen(false)} activeOpacity={0.7}>
+                <Text style={styles.timePickerCancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 };
@@ -1444,6 +1515,24 @@ function createSettingsStyles(theme: AppTheme) {
   timePickerSaveText: {
     fontFamily: fonts.body.medium,
     fontSize: 16,
+    color: theme.colors.primary.contrast,
+  },
+  shekiyaMinuteChip: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    margin: spacing.xs,
+    borderRadius: borderRadius.lg,
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+  },
+  shekiyaMinuteChipSelected: {
+    backgroundColor: theme.colors.primary.main,
+  },
+  shekiyaMinuteChipText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 15,
+    color: theme.colors.text.primary,
+  },
+  shekiyaMinuteChipTextSelected: {
     color: theme.colors.primary.contrast,
   },
   minuteSelector: {

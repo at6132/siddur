@@ -141,6 +141,11 @@ export class NotificationScheduler {
       await this.scheduleDailyGratitude(preferences);
     }
 
+    // Shekiya (sunset) reminder — N minutes before sunset each day
+    if (preferences.notifications.shekiyaReminder) {
+      await this.scheduleShekiyaReminder(preferences, context);
+    }
+
     // Custom reminders (user-created, with days + time + openToScreen)
     if (preferences.customReminders?.length) {
       await this.scheduleCustomReminders(preferences);
@@ -378,6 +383,33 @@ export class NotificationScheduler {
           });
         }
       }
+    }
+  }
+
+  /**
+   * Schedule Shekiya (sunset) reminder for the next 7 days — N minutes before sunset (zman-based).
+   */
+  private static async scheduleShekiyaReminder(
+    preferences: UserPreferences,
+    context: CalendarContext
+  ): Promise<void> {
+    const minsBefore = Math.max(1, Math.min(120, preferences.notifications.shekiyaMinutesBefore ?? 15));
+    for (let dayOffset = 0; dayOffset <= 7; dayOffset++) {
+      const date = new Date();
+      date.setDate(date.getDate() + dayOffset);
+      const dayInfo = await CalendarEngine.getDayInfo(date, context);
+      const sunset = dayInfo?.extendedZmanim?.sunset;
+      if (!sunset || !(sunset instanceof Date)) continue;
+      const triggerAt = new Date(sunset.getTime() - minsBefore * 60000);
+      if (!isFutureDate(triggerAt)) continue;
+      const content = NotificationContentService.getShekiyaContent(dayInfo);
+      await scheduleSafe({
+        content,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: triggerAt,
+        },
+      });
     }
   }
 
