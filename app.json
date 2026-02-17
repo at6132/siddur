@@ -2,7 +2,7 @@
   "expo": {
     "name": "Siddur",
     "slug": "siddur",
-    "version": "1.01.2",
+    "version": "1.02",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.siddur.app",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to calculate accurate prayer times (zmanim).",
         "NSUserNotificationsUsageDescription": "We'll send gentle reminders to help you stay consistent with your davening.",
@@ -55,7 +55,7 @@
       "url": "https://u.expo.dev/44bb4af8-f301-486a-9a3a-d43ea10755dc"
     },
     "android": {
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
