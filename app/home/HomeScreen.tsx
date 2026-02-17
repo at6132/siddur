@@ -29,7 +29,6 @@ import * as Location from 'expo-location';
 import { FadeIn } from '../../components/animations/FadeIn';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { ErrorView } from '../../components/ui/ErrorView';
-import { NotificationBanner } from '../../components/ui/NotificationBanner';
 import { MoonPhaseAnimation } from '../../components/ui/MoonPhaseAnimation';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
@@ -1703,11 +1702,6 @@ export const HomeScreen: React.FC = () => {
         style={{ top: height * 0.15, right: -40 }}
         duration={6000}
       />
-
-      {/* Notification Banner */}
-      {!isEditing && (
-        <NotificationBanner onSetup={() => navigation.navigate('Settings' as never)} />
-      )}
 
       {/* Content - scrollable when many widgets */}
       <View style={styles.contentWrapper}>
