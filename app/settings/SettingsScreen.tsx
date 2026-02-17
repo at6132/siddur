@@ -757,7 +757,7 @@ export const SettingsScreen: React.FC = () => {
                     <View style={styles.additionalRemindersContainer}>
                       <View style={styles.additionalReminderItem}>
                         <View style={styles.notifOptionMain}>
-                          <Text style={styles.optionLabel}>Hallel / Special Days</Text>
+                          <Text style={styles.optionLabel}>Hallel</Text>
                           <Switch
                             value={preferences.notifications.hallelAnenu}
                             onValueChange={(value) => updateNotificationPreference('hallelAnenu', value)}
@@ -1162,7 +1162,7 @@ export const SettingsScreen: React.FC = () => {
           <Pressable style={styles.timePickerBox} onPress={e => e.stopPropagation()}>
             <View style={styles.timePickerHeader}>
               <Text style={styles.timePickerTitle}>
-                {timePickerFor === 'tehillim' ? 'Tehillim' : timePickerFor === 'omer' ? 'Sefiras HaOmer' : timePickerFor === 'hallelAnenu' ? 'Hallel / Anenu' : timePickerFor === 'roshChodesh' ? 'Rosh Chodesh' : timePickerFor === 'fastDays' ? 'Fast Days' : timePickerFor === 'dailyGratitude' ? 'Daily Gratitude' : timePickerFor === 'shacharis' ? 'Shacharis' : timePickerFor === 'mincha' ? 'Mincha' : 'Maariv'}
+                {timePickerFor === 'tehillim' ? 'Tehillim' : timePickerFor === 'omer' ? 'Sefiras HaOmer' : timePickerFor === 'hallelAnenu' ? 'Hallel' : timePickerFor === 'roshChodesh' ? 'Rosh Chodesh' : timePickerFor === 'fastDays' ? 'Fast Days' : timePickerFor === 'dailyGratitude' ? 'Daily Gratitude' : timePickerFor === 'shacharis' ? 'Shacharis' : timePickerFor === 'mincha' ? 'Mincha' : 'Maariv'}
               </Text>
               <Text style={styles.timePickerSubtitle}>Set reminder time</Text>
             </View>
