@@ -762,11 +762,11 @@ export const SettingsScreen: React.FC = () => {
                     </View>
 
                     <View style={styles.divider} />
-                    <Text style={styles.subSectionTitle}>Additional Reminders</Text>
-                    <View style={styles.toggleGrid}>
-                      <View style={styles.notifOption}>
+                    <Text style={styles.additionalRemindersSectionTitle}>Additional Reminders</Text>
+                    <View style={styles.additionalRemindersContainer}>
+                      <View style={styles.additionalReminderItem}>
                         <View style={styles.notifOptionMain}>
-                          <Text style={styles.toggleGridLabel}>Hallel / Special Days</Text>
+                          <Text style={styles.optionLabel}>Hallel / Special Days</Text>
                           <Switch
                             value={preferences.notifications.hallelAnenu}
                             onValueChange={(value) => updateNotificationPreference('hallelAnenu', value)}
@@ -788,9 +788,9 @@ export const SettingsScreen: React.FC = () => {
                         )}
                       </View>
 
-                      <View style={styles.notifOption}>
+                      <View style={styles.additionalReminderItem}>
                         <View style={styles.notifOptionMain}>
-                          <Text style={styles.toggleGridLabel}>Rosh Chodesh</Text>
+                          <Text style={styles.optionLabel}>Rosh Chodesh</Text>
                           <Switch
                             value={preferences.notifications.roshChodesh}
                             onValueChange={(value) => updateNotificationPreference('roshChodesh', value)}
@@ -812,9 +812,9 @@ export const SettingsScreen: React.FC = () => {
                         )}
                       </View>
 
-                      <View style={styles.notifOption}>
+                      <View style={styles.additionalReminderItem}>
                         <View style={styles.notifOptionMain}>
-                          <Text style={styles.toggleGridLabel}>Fast Days</Text>
+                          <Text style={styles.optionLabel}>Fast Days</Text>
                           <Switch
                             value={preferences.notifications.fastDays}
                             onValueChange={(value) => updateNotificationPreference('fastDays', value)}
@@ -836,9 +836,9 @@ export const SettingsScreen: React.FC = () => {
                         )}
                       </View>
 
-                      <View style={styles.notifOption}>
+                      <View style={[styles.additionalReminderItem, styles.additionalReminderItemLast]}>
                         <View style={styles.notifOptionMain}>
-                          <Text style={styles.toggleGridLabel}>Sefiras HaOmer</Text>
+                          <Text style={styles.optionLabel}>Sefiras HaOmer</Text>
                           <Switch
                             value={preferences.notifications.sefirasHaomer}
                             onValueChange={(value) => updateNotificationPreference('sefirasHaomer', value)}
@@ -1610,7 +1610,29 @@ function createSettingsStyles(theme: AppTheme) {
     marginTop: 4,
   },
 
-  // Toggle Grid
+  // Additional Reminders section
+  additionalRemindersSectionTitle: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 13,
+    color: theme.colors.text.tertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.md,
+    marginTop: spacing.lg,
+  },
+  additionalRemindersContainer: {},
+  additionalReminderItem: {
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    paddingVertical: spacing.md + spacing.xs,
+    borderWidth: 1,
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+    marginBottom: spacing.md,
+  },
+  additionalReminderItemLast: {
+    marginBottom: spacing.sm,
+  },
   toggleGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
