@@ -11,6 +11,10 @@ import { JewishCalendarService } from '../core/calendar/JewishCalendar';
 import { UserPreferences } from '../types/preferences';
 import { CalendarContext } from '../types/calendar';
 import { OmerCalculator } from '../core/omer/OmerCalculator';
+import { toLocalDateString } from '../utils/dateUtils';
+import { GratitudeTracker } from '../storage/GratitudeTracker';
+import { DailyTehillimTracker } from '../storage/DailyTehillimTracker';
+import { HabitTracker } from '../storage/HabitTracker';
 
 // Check if we're on a native platform (not web)
 const isNative = Platform.OS === 'ios' || Platform.OS === 'android';
@@ -105,19 +109,19 @@ export class NotificationScheduler {
     // Daily prayer reminders at user-chosen times (Shacharis, Mincha, Maariv)
     await this.schedulePrayerReminders(preferences);
 
-    // Contextual: Hallel / Anenu
+    // Contextual: Hallel / Anenu (user's time)
     if (preferences.notifications.hallelAnenu) {
       if (todayInfo.daveningChanges.hallel) {
-        await this.scheduleHallel(todayInfo);
+        await this.scheduleHallel(preferences);
       }
       if (todayInfo.daveningChanges.anenu) {
-        await this.scheduleAnenu(todayInfo);
+        await this.scheduleAnenu(preferences);
       }
     }
 
     if (preferences.notifications.shabbosReminders) {
       if (todayInfo.isShabbos || todayInfo.zmanim.shabbosStart) {
-        await this.scheduleShabbosReminders(todayInfo);
+        await this.scheduleShabbosReminders(todayInfo, preferences);
       }
     }
 
@@ -134,10 +138,18 @@ export class NotificationScheduler {
       await this.scheduleRoshChodeshAndFastDays(preferences, context);
     }
 
-    // Custom reminders (user-created, with days + time)
+    // Daily Gratitude
+    if (preferences.notifications.dailyGratitude) {
+      await this.scheduleDailyGratitude(preferences);
+    }
+
+    // Custom reminders (user-created, with days + time + openToScreen)
     if (preferences.customReminders?.length) {
       await this.scheduleCustomReminders(preferences);
     }
+
+    // Streak reminders (invisible, not in settings - gentle nudge if about to lose streak)
+    await this.scheduleStreakReminders();
   }
 
   /**
@@ -157,46 +169,61 @@ export class NotificationScheduler {
   }
 
   /**
-   * Schedule Hallel reminder
+   * Schedule Hallel reminder at user's chosen time
    */
-  private static async scheduleHallel(dayInfo: any): Promise<void> {
+  private static async scheduleHallel(preferences: UserPreferences): Promise<void> {
     const content = NotificationContentService.getHallelContent();
-    const trigger = {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: 8,
-      minute: 0,
-    };
-
-    await scheduleSafe({ content, trigger });
+    const { hour, minute } = parseTime24h(
+      preferences.notifications.hallelAnenuTime || '08:00'
+    );
+    await scheduleSafe({
+      content,
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour,
+        minute,
+      },
+    });
   }
 
   /**
-   * Schedule Anenu reminder (fast days)
+   * Schedule Anenu reminder (fast days) at user's chosen time
    */
-  private static async scheduleAnenu(dayInfo: any): Promise<void> {
+  private static async scheduleAnenu(preferences: UserPreferences): Promise<void> {
     const content = NotificationContentService.getAnenuContent();
-    const trigger = {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour: 8,
-      minute: 0,
-    };
-
-    await scheduleSafe({ content, trigger });
+    const { hour, minute } = parseTime24h(
+      preferences.notifications.hallelAnenuTime || '08:00'
+    );
+    await scheduleSafe({
+      content,
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour,
+        minute,
+      },
+    });
   }
 
   /**
-   * Schedule Shabbos reminders
+   * Schedule Shabbos reminders (Friday "coming" at user time + candle lighting N min before)
    */
-  private static async scheduleShabbosReminders(dayInfo: any): Promise<void> {
+  private static async scheduleShabbosReminders(
+    dayInfo: any,
+    preferences: UserPreferences
+  ): Promise<void> {
     const now = new Date();
     const dayOfWeek = now.getDay(); // 0=Sun, 5=Fri
+    const { hour: comingHour, minute: comingMinute } = parseTime24h(
+      preferences.notifications.shabbosComingTime || '14:00'
+    );
 
-    // Next Friday 2 PM (day 5). If today is Fri and before 2 PM, use today.
+    // Next Friday at user's chosen time. If today is Fri and before that time, use today.
     let daysToAdd = (5 - dayOfWeek + 7) % 7;
-    if (daysToAdd === 0 && now.getHours() >= 14) daysToAdd = 7;
+    if (daysToAdd === 0 && (now.getHours() > comingHour || (now.getHours() === comingHour && now.getMinutes() >= comingMinute)))
+      daysToAdd = 7;
     const fridayAfternoon = new Date(now);
     fridayAfternoon.setDate(fridayAfternoon.getDate() + daysToAdd);
-    fridayAfternoon.setHours(14, 0, 0, 0);
+    fridayAfternoon.setHours(comingHour, comingMinute, 0, 0);
 
     if (isFutureDate(fridayAfternoon)) {
       await scheduleSafe({
@@ -208,10 +235,11 @@ export class NotificationScheduler {
       });
     }
 
-    // Candle lighting reminder (30 min before)
+    // Candle lighting reminder (N min before, from preferences)
+    const minsBefore = preferences.notifications.shabbosMinutesBefore ?? 30;
     const candleLighting = dayInfo?.zmanim?.candleLighting;
     if (candleLighting instanceof Date) {
-      const candleTime = new Date(candleLighting.getTime() - 30 * 60000);
+      const candleTime = new Date(candleLighting.getTime() - minsBefore * 60000);
       if (isFutureDate(candleTime)) {
         await scheduleSafe({
           content: NotificationContentService.getCandleLightingContent(dayInfo),
@@ -263,7 +291,7 @@ export class NotificationScheduler {
       const content = {
         title,
         body,
-        data: { screen: 'home', action: key },
+        data: { screen: 'Home', action: key },
       };
       await scheduleSafe({
         content,
@@ -290,7 +318,8 @@ export class NotificationScheduler {
       const content = NotificationContentService.getCustomReminderContent(
         reminder.title,
         reminder.message,
-        reminder.id
+        reminder.id,
+        reminder.openToScreen
       );
       const dayDows = reminder.days.map((d) => DAY_ID_TO_DOW[d] ?? 0);
 
@@ -319,35 +348,125 @@ export class NotificationScheduler {
     preferences: UserPreferences,
     context: CalendarContext
   ): Promise<void> {
-    const reminderHour = 8;
-    const reminderMinute = 0;
+    const roshChodeshTime = parseTime24h(preferences.notifications.roshChodeshTime || '08:00');
+    const fastDaysTime = parseTime24h(preferences.notifications.fastDaysTime || '08:00');
 
     for (let dayOffset = 0; dayOffset < 60; dayOffset++) {
-      const d = new Date();
-      d.setDate(d.getDate() + dayOffset);
-      d.setHours(reminderHour, reminderMinute, 0, 0);
-      if (!isFutureDate(d)) continue;
+      const day = new Date();
+      day.setDate(day.getDate() + dayOffset);
 
-      if (preferences.notifications.roshChodesh && JewishCalendarService.isRoshChodesh(d)) {
-        const content = NotificationContentService.getRoshChodeshContent();
+      if (preferences.notifications.roshChodesh && JewishCalendarService.isRoshChodesh(day)) {
+        const triggerDate = new Date(day);
+        triggerDate.setHours(roshChodeshTime.hour, roshChodeshTime.minute, 0, 0);
+        if (isFutureDate(triggerDate)) {
+          await scheduleSafe({
+            content: NotificationContentService.getRoshChodeshContent(),
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: triggerDate,
+            },
+          });
+        }
+      }
+      if (preferences.notifications.fastDays && JewishCalendarService.isFastDay(day)) {
+        const triggerDate = new Date(day);
+        triggerDate.setHours(fastDaysTime.hour, fastDaysTime.minute, 0, 0);
+        if (isFutureDate(triggerDate)) {
+          await scheduleSafe({
+            content: NotificationContentService.getFastDayContent(),
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: triggerDate,
+            },
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Schedule Daily Gratitude reminder at user's chosen time
+   */
+  private static async scheduleDailyGratitude(preferences: UserPreferences): Promise<void> {
+    const content = NotificationContentService.getDailyGratitudeContent();
+    const { hour, minute } = parseTime24h(
+      preferences.notifications.dailyGratitudeTime || '20:00'
+    );
+    await scheduleSafe({
+      content,
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+        hour,
+        minute,
+      },
+    });
+  }
+
+  /**
+   * Schedule streak nudges (invisible in settings). If user did Tehillim/Gratitude/Habits
+   * yesterday but not today, schedule one gentle reminder for 8 PM today.
+   */
+  private static async scheduleStreakReminders(): Promise<void> {
+    const now = new Date();
+    const today = toLocalDateString(now);
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = toLocalDateString(yesterday);
+    const reminderHour = 20;
+    const reminderMinute = 0;
+    const triggerDate = new Date(now);
+    triggerDate.setHours(reminderHour, reminderMinute, 0, 0);
+    if (!isFutureDate(triggerDate)) return;
+
+    try {
+      // Tehillim: did yesterday, not today
+      const tehillimDidYesterday =
+        (await DailyTehillimTracker.getCompletedDaysInRange(yesterday, yesterday)) > 0;
+      const tehillimDoneToday = await DailyTehillimTracker.isComplete();
+      if (tehillimDidYesterday && !tehillimDoneToday) {
         await scheduleSafe({
-          content,
+          content: NotificationContentService.getStreakReminderContent('tehillim'),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: d,
+            date: new Date(triggerDate.getTime()),
           },
         });
       }
-      if (preferences.notifications.fastDays && JewishCalendarService.isFastDay(d)) {
-        const content = NotificationContentService.getFastDayContent();
+    } catch (e) {
+      console.warn('Streak reminder (Tehillim) check failed:', e);
+    }
+
+    try {
+      // Gratitude: most recent entry was yesterday
+      const entries = await GratitudeTracker.getAllEntries();
+      const dates = [...new Set(entries.map((e) => e.date))].sort((a, b) => b.localeCompare(a));
+      if (dates.length > 0 && dates[0] === yesterdayStr) {
         await scheduleSafe({
-          content,
+          content: NotificationContentService.getStreakReminderContent('gratitude'),
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: d,
+            date: new Date(triggerDate.getTime()),
           },
         });
       }
+    } catch (e) {
+      console.warn('Streak reminder (Gratitude) check failed:', e);
+    }
+
+    try {
+      // Habits: marked yesterday, not today
+      const marked = await HabitTracker.getMarkedDates();
+      if (marked.has(yesterdayStr) && !marked.has(today)) {
+        await scheduleSafe({
+          content: NotificationContentService.getStreakReminderContent('habits'),
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: new Date(triggerDate.getTime()),
+          },
+        });
+      }
+    } catch (e) {
+      console.warn('Streak reminder (Habits) check failed:', e);
     }
   }
 

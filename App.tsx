@@ -85,30 +85,49 @@ function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    const handleOmerNotification = (data: { screen?: string; omerDay?: number }) => {
-      if (data?.screen === 'omer' && typeof data.omerDay === 'number') {
-        StorageService.markOmerDay(data.omerDay, true).then(() => {
-          const nav = () => {
-            if (navigationRef.isReady()) {
-              navigationRef.navigate('Omer' as never);
-            } else {
-              setTimeout(nav, 100);
-            }
-          };
-          nav();
-        });
-      }
+    const handleNotification = (response: Notifications.NotificationResponse) => {
+      const data = response.notification.request.content.data as {
+        screen?: string;
+        omerDay?: number;
+        action?: string;
+      };
+      const screenName = data?.screen;
+      const doNav = () => {
+        if (!navigationRef.isReady()) {
+          setTimeout(doNav, 100);
+          return;
+        }
+        const hubScreens = ['Gratitude', 'AddGratitude', 'DailyGoals', 'GoalsHistory', 'HubOverview'];
+        if (screenName && hubScreens.includes(screenName)) {
+          navigationRef.navigate('Main' as never, {
+            screen: 'Hub',
+            params: { screen: screenName },
+          } as never);
+          return;
+        }
+        if (screenName === 'Home' || screenName === 'Calendar' || screenName === 'Library' || screenName === 'Settings') {
+          navigationRef.navigate('Main' as never, { screen: screenName } as never);
+          return;
+        }
+        if (screenName === 'Omer' || screenName === 'omer') {
+          if (typeof data.omerDay === 'number') {
+            StorageService.markOmerDay(data.omerDay, true).catch(() => {});
+          }
+          navigationRef.navigate('Omer' as never);
+          return;
+        }
+        if (screenName && ['TehillimList', 'Habits', 'Tzedakah', 'AddCustomReminder'].includes(screenName)) {
+          navigationRef.navigate(screenName as never);
+          return;
+        }
+        navigationRef.navigate('Main' as never, { screen: 'Home' } as never);
+      };
+      doNav();
     };
     Notifications.getLastNotificationResponseAsync().then((response) => {
-      if (response) {
-        const data = response.notification.request.content.data as { screen?: string; omerDay?: number };
-        handleOmerNotification(data);
-      }
+      if (response) handleNotification(response);
     });
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as { screen?: string; omerDay?: number };
-      handleOmerNotification(data);
-    });
+    const sub = Notifications.addNotificationResponseReceivedListener(handleNotification);
     return () => sub.remove();
   }, []);
 

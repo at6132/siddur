@@ -90,7 +90,9 @@ export const SettingsScreen: React.FC = () => {
   const [expandedSection, setExpandedSection] = useState<string | null>('notifications');
   const [locationLoading, setLocationLoading] = useState(false);
   const [reminderMenuId, setReminderMenuId] = useState<string | null>(null);
-  const [timePickerFor, setTimePickerFor] = useState<'shacharis' | 'mincha' | 'maariv' | 'tehillim' | null>(null);
+  const [timePickerFor, setTimePickerFor] = useState<
+    'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'omer' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'shabbosComing' | 'dailyGratitude' | null
+  >(null);
   const [timePickerValue, setTimePickerValue] = useState('');
   const [pickerDate, setPickerDate] = useState(() => new Date());
 
@@ -156,13 +158,19 @@ export const SettingsScreen: React.FC = () => {
   const dateTo24h = (d: Date): string =>
     `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
-  const openTimePicker = (which: 'shacharis' | 'mincha' | 'maariv' | 'tehillim') => {
+  type TimePickerKind = 'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'omer' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'shabbosComing' | 'dailyGratitude';
+  const openTimePicker = (which: TimePickerKind) => {
     if (!preferences) return;
-    const initial =
-      which === 'tehillim'
-        ? formatTehillimTimeForDisplay(preferences.notifications.dailyTehillimTime || '09:00')
-        : (preferences.notifications.prayerReminders?.[which]?.time ||
-          (which === 'shacharis' ? '7:00 AM' : which === 'mincha' ? '1:00 PM' : '8:00 PM'));
+    const n = preferences.notifications;
+    let initial: string;
+    if (which === 'tehillim') initial = formatTehillimTimeForDisplay(n.dailyTehillimTime || '09:00');
+    else if (which === 'omer') initial = formatTehillimTimeForDisplay(n.sefirasHaomerTime || '20:30');
+    else if (which === 'hallelAnenu') initial = formatTehillimTimeForDisplay(n.hallelAnenuTime || '08:00');
+    else if (which === 'roshChodesh') initial = formatTehillimTimeForDisplay(n.roshChodeshTime || '08:00');
+    else if (which === 'fastDays') initial = formatTehillimTimeForDisplay(n.fastDaysTime || '08:00');
+    else if (which === 'shabbosComing') initial = formatTehillimTimeForDisplay(n.shabbosComingTime || '14:00');
+    else if (which === 'dailyGratitude') initial = formatTehillimTimeForDisplay(n.dailyGratitudeTime || '20:00');
+    else initial = preferences.notifications.prayerReminders?.[which]?.time || (which === 'shacharis' ? '7:00 AM' : which === 'mincha' ? '1:00 PM' : '8:00 PM');
     setTimePickerValue(initial);
     setPickerDate(timeStringToDate(initial));
     setTimePickerFor(which);
@@ -170,9 +178,19 @@ export const SettingsScreen: React.FC = () => {
 
   const saveTimePicker = async () => {
     if (!preferences || !timePickerFor) return;
-    if (timePickerFor === 'tehillim') {
-      await updateNotificationPreference('dailyTehillimTime', dateTo24h(pickerDate));
-    } else {
+    const keyMap: Partial<Record<typeof timePickerFor, keyof NotificationPreferences>> = {
+      tehillim: 'dailyTehillimTime',
+      omer: 'sefirasHaomerTime',
+      hallelAnenu: 'hallelAnenuTime',
+      roshChodesh: 'roshChodeshTime',
+      fastDays: 'fastDaysTime',
+      shabbosComing: 'shabbosComingTime',
+      dailyGratitude: 'dailyGratitudeTime',
+    };
+    const key = keyMap[timePickerFor];
+    if (key) {
+      await updateNotificationPreference(key, dateTo24h(pickerDate));
+    } else if (timePickerFor === 'shacharis' || timePickerFor === 'mincha' || timePickerFor === 'maariv') {
       const updated = {
         ...preferences.notifications,
         prayerReminders: {
@@ -564,6 +582,31 @@ export const SettingsScreen: React.FC = () => {
                     <View style={styles.divider} />
                     <Text style={styles.subSectionTitle}>Other Reminders</Text>
 
+                    {/* Daily Gratitude */}
+                    <View style={styles.notifOption}>
+                      <View style={styles.notifOptionMain}>
+                        <Text style={styles.optionLabel}>Daily Gratitude</Text>
+                        <Switch
+                          value={preferences.notifications.dailyGratitude}
+                          onValueChange={(value) => updateNotificationPreference('dailyGratitude', value)}
+                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                          thumbColor={preferences.notifications.dailyGratitude ? theme.colors.primary.main : theme.colors.neutral[400]}
+                        />
+                      </View>
+                      {preferences.notifications.dailyGratitude && (
+                        <View style={styles.notifSubOption}>
+                          <View style={styles.notifSubOptionRow}>
+                            <Text style={styles.subOptionLabel}>Remind me at</Text>
+                            <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('dailyGratitude')}>
+                              <Text style={styles.timeButtonText}>
+                                {formatTehillimTimeForDisplay(preferences.notifications.dailyGratitudeTime || '20:00')}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
                     {/* Daily Tehillim */}
                     <View style={styles.notifOption}>
                       <View style={styles.notifOptionMain}>
@@ -691,48 +734,130 @@ export const SettingsScreen: React.FC = () => {
                     </Modal>
 
                     <View style={styles.divider} />
+                    <Text style={styles.subSectionTitle}>Shabbos & Special Days</Text>
 
-                    {/* Other Toggles - Grid Layout */}
+                    {/* Shabbos Reminders */}
+                    <View style={styles.notifOption}>
+                      <View style={styles.notifOptionMain}>
+                        <Text style={styles.optionLabel}>Shabbos Reminders</Text>
+                        <Switch
+                          value={preferences.notifications.shabbosReminders}
+                          onValueChange={(value) => updateNotificationPreference('shabbosReminders', value)}
+                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                          thumbColor={preferences.notifications.shabbosReminders ? theme.colors.primary.main : theme.colors.neutral[400]}
+                        />
+                      </View>
+                      {preferences.notifications.shabbosReminders && (
+                        <View style={styles.notifSubOption}>
+                          <View style={styles.notifSubOptionRow}>
+                            <Text style={styles.subOptionLabel}>Friday reminder at</Text>
+                            <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('shabbosComing')}>
+                              <Text style={styles.timeButtonText}>
+                                {formatTehillimTimeForDisplay(preferences.notifications.shabbosComingTime || '14:00')}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      )}
+                    </View>
+
+                    <View style={styles.divider} />
                     <Text style={styles.subSectionTitle}>Additional Reminders</Text>
                     <View style={styles.toggleGrid}>
-                      <View style={styles.toggleGridItem}>
-                        <Text style={styles.toggleGridLabel}>Hallel / Special Days</Text>
-                        <Switch
-                          value={preferences.notifications.hallelAnenu}
-                          onValueChange={(value) => updateNotificationPreference('hallelAnenu', value)}
-                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                          thumbColor={preferences.notifications.hallelAnenu ? theme.colors.primary.main : theme.colors.neutral[400]}
-                        />
+                      <View style={styles.notifOption}>
+                        <View style={styles.notifOptionMain}>
+                          <Text style={styles.toggleGridLabel}>Hallel / Special Days</Text>
+                          <Switch
+                            value={preferences.notifications.hallelAnenu}
+                            onValueChange={(value) => updateNotificationPreference('hallelAnenu', value)}
+                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                            thumbColor={preferences.notifications.hallelAnenu ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          />
+                        </View>
+                        {preferences.notifications.hallelAnenu && (
+                          <View style={styles.notifSubOption}>
+                            <View style={styles.notifSubOptionRow}>
+                              <Text style={styles.subOptionLabel}>Time</Text>
+                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('hallelAnenu')}>
+                                <Text style={styles.timeButtonText}>
+                                  {formatTehillimTimeForDisplay(preferences.notifications.hallelAnenuTime || '08:00')}
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        )}
                       </View>
 
-                      <View style={styles.toggleGridItem}>
-                        <Text style={styles.toggleGridLabel}>Rosh Chodesh</Text>
-                        <Switch
-                          value={preferences.notifications.roshChodesh}
-                          onValueChange={(value) => updateNotificationPreference('roshChodesh', value)}
-                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                          thumbColor={preferences.notifications.roshChodesh ? theme.colors.primary.main : theme.colors.neutral[400]}
-                        />
+                      <View style={styles.notifOption}>
+                        <View style={styles.notifOptionMain}>
+                          <Text style={styles.toggleGridLabel}>Rosh Chodesh</Text>
+                          <Switch
+                            value={preferences.notifications.roshChodesh}
+                            onValueChange={(value) => updateNotificationPreference('roshChodesh', value)}
+                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                            thumbColor={preferences.notifications.roshChodesh ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          />
+                        </View>
+                        {preferences.notifications.roshChodesh && (
+                          <View style={styles.notifSubOption}>
+                            <View style={styles.notifSubOptionRow}>
+                              <Text style={styles.subOptionLabel}>Time</Text>
+                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('roshChodesh')}>
+                                <Text style={styles.timeButtonText}>
+                                  {formatTehillimTimeForDisplay(preferences.notifications.roshChodeshTime || '08:00')}
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        )}
                       </View>
 
-                      <View style={styles.toggleGridItem}>
-                        <Text style={styles.toggleGridLabel}>Fast Days</Text>
-                        <Switch
-                          value={preferences.notifications.fastDays}
-                          onValueChange={(value) => updateNotificationPreference('fastDays', value)}
-                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                          thumbColor={preferences.notifications.fastDays ? theme.colors.primary.main : theme.colors.neutral[400]}
-                        />
+                      <View style={styles.notifOption}>
+                        <View style={styles.notifOptionMain}>
+                          <Text style={styles.toggleGridLabel}>Fast Days</Text>
+                          <Switch
+                            value={preferences.notifications.fastDays}
+                            onValueChange={(value) => updateNotificationPreference('fastDays', value)}
+                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                            thumbColor={preferences.notifications.fastDays ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          />
+                        </View>
+                        {preferences.notifications.fastDays && (
+                          <View style={styles.notifSubOption}>
+                            <View style={styles.notifSubOptionRow}>
+                              <Text style={styles.subOptionLabel}>Time</Text>
+                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('fastDays')}>
+                                <Text style={styles.timeButtonText}>
+                                  {formatTehillimTimeForDisplay(preferences.notifications.fastDaysTime || '08:00')}
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        )}
                       </View>
 
-                      <View style={styles.toggleGridItem}>
-                        <Text style={styles.toggleGridLabel}>Sefiras HaOmer</Text>
-                        <Switch
-                          value={preferences.notifications.sefirasHaomer}
-                          onValueChange={(value) => updateNotificationPreference('sefirasHaomer', value)}
-                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                          thumbColor={preferences.notifications.sefirasHaomer ? theme.colors.primary.main : theme.colors.neutral[400]}
-                        />
+                      <View style={styles.notifOption}>
+                        <View style={styles.notifOptionMain}>
+                          <Text style={styles.toggleGridLabel}>Sefiras HaOmer</Text>
+                          <Switch
+                            value={preferences.notifications.sefirasHaomer}
+                            onValueChange={(value) => updateNotificationPreference('sefirasHaomer', value)}
+                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                            thumbColor={preferences.notifications.sefirasHaomer ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          />
+                        </View>
+                        {preferences.notifications.sefirasHaomer && (
+                          <View style={styles.notifSubOption}>
+                            <View style={styles.notifSubOptionRow}>
+                              <Text style={styles.subOptionLabel}>Time</Text>
+                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('omer')}>
+                                <Text style={styles.timeButtonText}>
+                                  {formatTehillimTimeForDisplay(preferences.notifications.sefirasHaomerTime || '20:30')}
+                                </Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        )}
                       </View>
                     </View>
                   </>
@@ -1046,7 +1171,7 @@ export const SettingsScreen: React.FC = () => {
           <Pressable style={styles.timePickerBox} onPress={e => e.stopPropagation()}>
             <View style={styles.timePickerHeader}>
               <Text style={styles.timePickerTitle}>
-                {timePickerFor === 'tehillim' ? 'Tehillim reminder' : timePickerFor === 'shacharis' ? 'Shacharis' : timePickerFor === 'mincha' ? 'Mincha' : 'Maariv'}
+                {timePickerFor === 'tehillim' ? 'Tehillim' : timePickerFor === 'omer' ? 'Sefiras HaOmer' : timePickerFor === 'hallelAnenu' ? 'Hallel / Anenu' : timePickerFor === 'roshChodesh' ? 'Rosh Chodesh' : timePickerFor === 'fastDays' ? 'Fast Days' : timePickerFor === 'shabbosComing' ? 'Friday reminder' : timePickerFor === 'dailyGratitude' ? 'Daily Gratitude' : timePickerFor === 'shacharis' ? 'Shacharis' : timePickerFor === 'mincha' ? 'Mincha' : 'Maariv'}
               </Text>
               <Text style={styles.timePickerSubtitle}>Set reminder time</Text>
             </View>

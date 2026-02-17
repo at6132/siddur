@@ -37,14 +37,22 @@ export interface NotificationPreferences {
   
   // Special days
   hallelAnenu: boolean;
+  hallelAnenuTime: string; // HH:MM
   shabbosReminders: boolean;
   shabbosMinutesBefore: number;
+  shabbosComingTime: string; // HH:MM - Friday afternoon "Shabbos coming" reminder
   roshChodesh: boolean;
+  roshChodeshTime: string; // HH:MM
   fastDays: boolean;
+  fastDaysTime: string; // HH:MM
   
   // Counting
   sefirasHaomer: boolean;
   sefirasHaomerTime: string;
+  
+  // Daily Gratitude
+  dailyGratitude: boolean;
+  dailyGratitudeTime: string; // HH:MM
   
   // Custom countdowns
   customCountdowns: boolean;
@@ -61,6 +69,19 @@ export interface CustomCountdown {
   isActive: boolean;
 }
 
+/** Screen name for deep link when user taps the reminder (e.g. 'Home', 'TehillimList', 'Gratitude') */
+export type CustomReminderOpenToScreen =
+  | 'Home'
+  | 'TehillimList'
+  | 'Gratitude'
+  | 'Habits'
+  | 'Omer'
+  | 'Calendar'
+  | 'DailyGoals'
+  | 'HubOverview'
+  | 'Settings'
+  | 'Library';
+
 export interface CustomReminder {
   id: string;
   title: string;
@@ -68,6 +89,8 @@ export interface CustomReminder {
   time: string; // HH:MM AM/PM format
   enabled: boolean;
   days: ('sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')[]; // Which days to remind
+  /** Where in the app to open when user taps the notification. Default 'Home'. */
+  openToScreen?: CustomReminderOpenToScreen;
 }
 
 export interface DisplayPreferences {
@@ -110,12 +133,18 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   minchaTime: true,
   minchaMinutesBefore: 30,
   hallelAnenu: true,
+  hallelAnenuTime: '08:00',
   shabbosReminders: true,
-  shabbosMinutesBefore: 18,
+  shabbosMinutesBefore: 30,
+  shabbosComingTime: '14:00',
   roshChodesh: true,
+  roshChodeshTime: '08:00',
   fastDays: true,
+  fastDaysTime: '08:00',
   sefirasHaomer: true,
   sefirasHaomerTime: '20:30',
+  dailyGratitude: false,
+  dailyGratitudeTime: '20:00',
   customCountdowns: true,
 };
 

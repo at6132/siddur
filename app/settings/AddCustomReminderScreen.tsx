@@ -18,7 +18,7 @@ import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { NotificationService } from '../../src/notifications/NotificationService';
-import { CustomReminder } from '../../src/types/preferences';
+import { CustomReminder, CustomReminderOpenToScreen } from '../../src/types/preferences';
 import { track, RELIABILITY_EVENTS } from '../../src/analytics';
 
 // Glass Card Component
@@ -72,6 +72,19 @@ const DAYS = [
   { id: 'sat', label: 'Sat' },
 ];
 
+const OPEN_TO_OPTIONS: { value: CustomReminderOpenToScreen; label: string }[] = [
+  { value: 'Home', label: 'Home' },
+  { value: 'TehillimList', label: 'Tehillim' },
+  { value: 'Gratitude', label: 'Daily Gratitude' },
+  { value: 'Habits', label: 'Habits' },
+  { value: 'Omer', label: 'Omer' },
+  { value: 'DailyGoals', label: 'Daily Goals' },
+  { value: 'HubOverview', label: 'Hub' },
+  { value: 'Calendar', label: 'Calendar' },
+  { value: 'Library', label: 'Library' },
+  { value: 'Settings', label: 'Settings' },
+];
+
 type AddCustomReminderParams = { reminder?: CustomReminder };
 
 export const AddCustomReminderScreen: React.FC = () => {
@@ -90,6 +103,9 @@ export const AddCustomReminderScreen: React.FC = () => {
   const [minuteStr, setMinuteStr] = useState(() => editingReminder ? parseTime(editingReminder.time).minute.toString().padStart(2, '0') : '00');
   const [hourFocused, setHourFocused] = useState(false);
   const [minuteFocused, setMinuteFocused] = useState(false);
+  const [openToScreen, setOpenToScreen] = useState<CustomReminderOpenToScreen>(
+    editingReminder?.openToScreen ?? 'Home'
+  );
 
   const { hour, minute, ampm } = parseTime(selectedTime);
 
@@ -160,6 +176,7 @@ export const AddCustomReminderScreen: React.FC = () => {
           message: message.trim() || title.trim(),
           time: timeToSave,
           days: selectedDays as ('sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')[],
+          openToScreen,
         });
         await NotificationService.reschedule();
         Alert.alert('Reminder Updated', `"${title}" will remind you daily at ${timeToSave}.`, [
@@ -173,6 +190,7 @@ export const AddCustomReminderScreen: React.FC = () => {
           time: timeToSave,
           enabled: true,
           days: selectedDays as ('sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')[],
+          openToScreen,
         };
         await UserPreferencesService.addCustomReminder(reminder);
         await NotificationService.reschedule();
@@ -329,6 +347,34 @@ export const AddCustomReminderScreen: React.FC = () => {
             >
               <Text style={styles.selectAllText}>Select All Days</Text>
             </TouchableOpacity>
+          </GlassCard>
+        </FadeIn>
+
+        {/* Open to screen */}
+        <FadeIn delay={225}>
+          <GlassCard>
+            <Text style={styles.inputLabel}>When I tap this reminder, open</Text>
+            <View style={styles.openToRow}>
+              {OPEN_TO_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[
+                    styles.openToChip,
+                    openToScreen === opt.value && styles.openToChipSelected,
+                  ]}
+                  onPress={() => setOpenToScreen(opt.value)}
+                >
+                  <Text
+                    style={[
+                      styles.openToChipText,
+                      openToScreen === opt.value && styles.openToChipTextSelected,
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </GlassCard>
         </FadeIn>
 
@@ -546,6 +592,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primary.main,
     textDecorationLine: 'underline',
+  },
+
+  openToRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  openToChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  openToChipSelected: {
+    backgroundColor: colors.primary.main,
+    borderColor: colors.primary.dark,
+  },
+  openToChipText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: colors.text.secondary,
+  },
+  openToChipTextSelected: {
+    color: '#fff',
   },
 
   // Save Button

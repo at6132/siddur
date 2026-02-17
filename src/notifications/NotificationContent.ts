@@ -15,7 +15,7 @@ export class NotificationContentService {
     return {
       title: 'A moment for Tehillim',
       body: 'A gentle reminder for your daily Tehillim',
-      data: { screen: 'tehillim' },
+      data: { screen: 'TehillimList' },
     };
   }
 
@@ -32,7 +32,7 @@ export class NotificationContentService {
     return {
       title: 'Mincha time',
       body: `Mincha is at ${timeStr}`,
-      data: { screen: 'home', action: 'mincha' },
+      data: { screen: 'Home', action: 'mincha' },
     };
   }
 
@@ -43,7 +43,7 @@ export class NotificationContentService {
     return {
       title: 'Hallel today',
       body: 'A gentle reminder to say Hallel',
-      data: { screen: 'home', action: 'hallel' },
+      data: { screen: 'Home', action: 'hallel' },
     };
   }
 
@@ -54,7 +54,7 @@ export class NotificationContentService {
     return {
       title: 'Anenu today',
       body: 'A gentle reminder for Anenu on this fast day',
-      data: { screen: 'home', action: 'anenu' },
+      data: { screen: 'Home', action: 'anenu' },
     };
   }
 
@@ -67,7 +67,7 @@ export class NotificationContentService {
       return {
         title: 'Shabbos is coming',
         body: 'Shabbos is coming ✨',
-        data: { screen: 'home' },
+        data: { screen: 'Home' },
       };
     }
 
@@ -79,7 +79,7 @@ export class NotificationContentService {
     return {
       title: 'Shabbos is coming',
       body: `Candle lighting is at ${timeStr} ✨`,
-      data: { screen: 'home' },
+      data: { screen: 'Home' },
     };
   }
 
@@ -92,7 +92,7 @@ export class NotificationContentService {
       return {
         title: 'Candle lighting',
         body: 'Time to light candles',
-        data: { screen: 'home' },
+        data: { screen: 'Home' },
       };
     }
 
@@ -104,7 +104,7 @@ export class NotificationContentService {
     return {
       title: 'Candle lighting',
       body: `Candle lighting is at ${timeStr}`,
-      data: { screen: 'home' },
+      data: { screen: 'Home' },
     };
   }
 
@@ -117,7 +117,7 @@ export class NotificationContentService {
     return {
       title: `Tonight is day ${omerDay} of the Omer`,
       body: blessing.english,
-      data: { screen: 'omer', omerDay },
+      data: { screen: 'Omer', omerDay },
     };
   }
 
@@ -139,7 +139,7 @@ export class NotificationContentService {
     return {
       title: 'Rosh Chodesh today',
       body: 'A gentle reminder for Rosh Chodesh',
-      data: { screen: 'home', action: 'roshChodesh' },
+      data: { screen: 'Home', action: 'roshChodesh' },
     };
   }
 
@@ -150,18 +150,61 @@ export class NotificationContentService {
     return {
       title: 'Fast day today',
       body: 'A gentle reminder for today\'s fast',
-      data: { screen: 'home', action: 'fastDay' },
+      data: { screen: 'Home', action: 'fastDay' },
     };
+  }
+
+  /**
+   * Generate content for Daily Gratitude reminder
+   */
+  static getDailyGratitudeContent(): NotificationContent {
+    return {
+      title: 'Daily Gratitude',
+      body: 'A moment to add something you\'re grateful for',
+      data: { screen: 'Gratitude' },
+    };
+  }
+
+  /**
+   * Generate content for streak nudge (invisible in settings - "don't lose your streak")
+   */
+  static getStreakReminderContent(
+    type: 'tehillim' | 'gratitude' | 'habits'
+  ): NotificationContent {
+    const config = {
+      tehillim: {
+        title: 'Your Tehillim streak is waiting',
+        body: 'A quick moment today keeps your streak going 💜',
+        screen: 'TehillimList',
+      },
+      gratitude: {
+        title: 'Your gratitude streak is waiting',
+        body: 'Add one thing you\'re grateful for today',
+        screen: 'Gratitude',
+      },
+      habits: {
+        title: 'Your habit streak is waiting',
+        body: 'Show up today — even just a little',
+        screen: 'Habits',
+      },
+    };
+    const { title, body, screen } = config[type];
+    return { title, body, data: { screen } };
   }
 
   /**
    * Generate content for custom reminder
    */
-  static getCustomReminderContent(title: string, message: string, reminderId: string): NotificationContent {
+  static getCustomReminderContent(
+    title: string,
+    message: string,
+    reminderId: string,
+    openToScreen?: string
+  ): NotificationContent {
     return {
       title,
       body: message || title,
-      data: { screen: 'home', type: 'customReminder', reminderId },
+      data: { screen: openToScreen || 'Home', type: 'customReminder', reminderId },
     };
   }
 }
