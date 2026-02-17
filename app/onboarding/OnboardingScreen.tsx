@@ -2,19 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NusachSelection } from './NusachSelection';
-import { SpiritualGoals } from './SpiritualGoals';
 import { WelcomeScreen } from './WelcomeScreen';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { spacing } from '../../src/design/spacing';
 import { Nusach } from '../../src/types/nusach';
-import { SpiritualGoal } from '../../src/types/preferences';
 import * as Location from 'expo-location';
 import { track, ONBOARDING_EVENTS } from '../../src/analytics';
 
-type OnboardingStep = 'nusach' | 'goals' | 'welcome';
+type OnboardingStep = 'nusach' | 'welcome';
 
-const STEP_IDS: OnboardingStep[] = ['nusach', 'goals', 'welcome'];
-const STEP_NAMES: Record<OnboardingStep, string> = { nusach: 'Nusach', goals: 'Spiritual Goals', welcome: 'Welcome' };
+const STEP_IDS: OnboardingStep[] = ['nusach', 'welcome'];
+const STEP_NAMES: Record<OnboardingStep, string> = { nusach: 'Nusach', welcome: 'Welcome' };
 
 interface OnboardingScreenProps {
   onComplete: () => void;
@@ -58,13 +56,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
     const completionTimeMs = Date.now() - stepStartedAt.current;
     track(ONBOARDING_EVENTS.ONBOARDING_STEP_COMPLETED, { step_id: 'nusach', completion_time_ms: completionTimeMs });
     await UserPreferencesService.setNusach(selectedNusach);
-    setStep('goals');
-  };
-
-  const handleGoalsSelect = async (selectedGoals: SpiritualGoal[]) => {
-    const completionTimeMs = Date.now() - stepStartedAt.current;
-    track(ONBOARDING_EVENTS.ONBOARDING_STEP_COMPLETED, { step_id: 'goals', completion_time_ms: completionTimeMs });
-    await UserPreferencesService.setSpiritualGoals(selectedGoals);
+    await UserPreferencesService.setSpiritualGoals([]);
 
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -95,18 +87,21 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
         return (
           <NusachSelection
             onSelect={handleNusachSelect}
-            onSkip={() => {
+            onSkip={async () => {
               track(ONBOARDING_EVENTS.ONBOARDING_SKIPPED, { step_id: 'nusach' });
-              setStep('goals');
-            }}
-          />
-        );
-      case 'goals':
-        return (
-          <SpiritualGoals
-            onSelect={handleGoalsSelect}
-            onSkip={() => {
-              track(ONBOARDING_EVENTS.ONBOARDING_SKIPPED, { step_id: 'goals' });
+              await UserPreferencesService.setSpiritualGoals([]);
+              try {
+                const { status } = await Location.requestForegroundPermissionsAsync();
+                if (status === 'granted') {
+                  const location = await Location.getCurrentPositionAsync({});
+                  await UserPreferencesService.setLocation({
+                    latitude: location.coords.latitude,
+                    longitude: location.coords.longitude,
+                  });
+                }
+              } catch (e) {
+                console.warn('Location error:', e);
+              }
               setStep('welcome');
             }}
           />
