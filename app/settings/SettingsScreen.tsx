@@ -91,7 +91,7 @@ export const SettingsScreen: React.FC = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [reminderMenuId, setReminderMenuId] = useState<string | null>(null);
   const [timePickerFor, setTimePickerFor] = useState<
-    'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'omer' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'shabbosComing' | 'dailyGratitude' | null
+    'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'omer' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'dailyGratitude' | null
   >(null);
   const [timePickerValue, setTimePickerValue] = useState('');
   const [pickerDate, setPickerDate] = useState(() => new Date());
@@ -158,7 +158,7 @@ export const SettingsScreen: React.FC = () => {
   const dateTo24h = (d: Date): string =>
     `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
-  type TimePickerKind = 'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'omer' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'shabbosComing' | 'dailyGratitude';
+  type TimePickerKind = 'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'omer' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'dailyGratitude';
   const openTimePicker = (which: TimePickerKind) => {
     if (!preferences) return;
     const n = preferences.notifications;
@@ -168,7 +168,6 @@ export const SettingsScreen: React.FC = () => {
     else if (which === 'hallelAnenu') initial = formatTehillimTimeForDisplay(n.hallelAnenuTime || '08:00');
     else if (which === 'roshChodesh') initial = formatTehillimTimeForDisplay(n.roshChodeshTime || '08:00');
     else if (which === 'fastDays') initial = formatTehillimTimeForDisplay(n.fastDaysTime || '08:00');
-    else if (which === 'shabbosComing') initial = formatTehillimTimeForDisplay(n.shabbosComingTime || '14:00');
     else if (which === 'dailyGratitude') initial = formatTehillimTimeForDisplay(n.dailyGratitudeTime || '20:00');
     else initial = preferences.notifications.prayerReminders?.[which]?.time || (which === 'shacharis' ? '7:00 AM' : which === 'mincha' ? '1:00 PM' : '8:00 PM');
     setTimePickerValue(initial);
@@ -184,7 +183,6 @@ export const SettingsScreen: React.FC = () => {
       hallelAnenu: 'hallelAnenuTime',
       roshChodesh: 'roshChodeshTime',
       fastDays: 'fastDaysTime',
-      shabbosComing: 'shabbosComingTime',
       dailyGratitude: 'dailyGratitudeTime',
     };
     const key = keyMap[timePickerFor];
@@ -736,7 +734,7 @@ export const SettingsScreen: React.FC = () => {
                     <View style={styles.divider} />
                     <Text style={styles.subSectionTitle}>Shabbos & Special Days</Text>
 
-                    {/* Shabbos Reminders */}
+                    {/* Shabbos Reminders (zman-based: candle lighting + Friday afternoon) */}
                     <View style={styles.notifOption}>
                       <View style={styles.notifOptionMain}>
                         <Text style={styles.optionLabel}>Shabbos Reminders</Text>
@@ -749,14 +747,7 @@ export const SettingsScreen: React.FC = () => {
                       </View>
                       {preferences.notifications.shabbosReminders && (
                         <View style={styles.notifSubOption}>
-                          <View style={styles.notifSubOptionRow}>
-                            <Text style={styles.subOptionLabel}>Friday reminder at</Text>
-                            <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('shabbosComing')}>
-                              <Text style={styles.timeButtonText}>
-                                {formatTehillimTimeForDisplay(preferences.notifications.shabbosComingTime || '14:00')}
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
+                          <Text style={styles.subOptionLabel}>Based on your location’s zmanim (candle lighting and Friday reminder)</Text>
                         </View>
                       )}
                     </View>
@@ -1171,7 +1162,7 @@ export const SettingsScreen: React.FC = () => {
           <Pressable style={styles.timePickerBox} onPress={e => e.stopPropagation()}>
             <View style={styles.timePickerHeader}>
               <Text style={styles.timePickerTitle}>
-                {timePickerFor === 'tehillim' ? 'Tehillim' : timePickerFor === 'omer' ? 'Sefiras HaOmer' : timePickerFor === 'hallelAnenu' ? 'Hallel / Anenu' : timePickerFor === 'roshChodesh' ? 'Rosh Chodesh' : timePickerFor === 'fastDays' ? 'Fast Days' : timePickerFor === 'shabbosComing' ? 'Friday reminder' : timePickerFor === 'dailyGratitude' ? 'Daily Gratitude' : timePickerFor === 'shacharis' ? 'Shacharis' : timePickerFor === 'mincha' ? 'Mincha' : 'Maariv'}
+                {timePickerFor === 'tehillim' ? 'Tehillim' : timePickerFor === 'omer' ? 'Sefiras HaOmer' : timePickerFor === 'hallelAnenu' ? 'Hallel / Anenu' : timePickerFor === 'roshChodesh' ? 'Rosh Chodesh' : timePickerFor === 'fastDays' ? 'Fast Days' : timePickerFor === 'dailyGratitude' ? 'Daily Gratitude' : timePickerFor === 'shacharis' ? 'Shacharis' : timePickerFor === 'mincha' ? 'Mincha' : 'Maariv'}
               </Text>
               <Text style={styles.timePickerSubtitle}>Set reminder time</Text>
             </View>

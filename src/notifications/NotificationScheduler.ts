@@ -120,9 +120,7 @@ export class NotificationScheduler {
     }
 
     if (preferences.notifications.shabbosReminders) {
-      if (todayInfo.isShabbos || todayInfo.zmanim.shabbosStart) {
-        await this.scheduleShabbosReminders(todayInfo, preferences);
-      }
+      await this.scheduleShabbosReminders(preferences, context);
     }
 
     // Omer (use user's time)
@@ -205,50 +203,49 @@ export class NotificationScheduler {
   }
 
   /**
-   * Schedule Shabbos reminders (Friday "coming" at user time + candle lighting N min before)
+   * Schedule Shabbos reminders (both zman-based: relative to candle lighting time).
+   * - "Shabbos coming" = 60 min before candle lighting, says "Shabbos is coming — candle lighting at X"
+   * - "Candle lighting" = N min before (from preferences, e.g. 18), says "Candle lighting at X"
    */
   private static async scheduleShabbosReminders(
-    dayInfo: any,
-    preferences: UserPreferences
+    preferences: UserPreferences,
+    context: CalendarContext
   ): Promise<void> {
     const now = new Date();
     const dayOfWeek = now.getDay(); // 0=Sun, 5=Fri
-    const { hour: comingHour, minute: comingMinute } = parseTime24h(
-      preferences.notifications.shabbosComingTime || '14:00'
-    );
-
-    // Next Friday at user's chosen time. If today is Fri and before that time, use today.
+    // Next Friday
     let daysToAdd = (5 - dayOfWeek + 7) % 7;
-    if (daysToAdd === 0 && (now.getHours() > comingHour || (now.getHours() === comingHour && now.getMinutes() >= comingMinute)))
-      daysToAdd = 7;
-    const fridayAfternoon = new Date(now);
-    fridayAfternoon.setDate(fridayAfternoon.getDate() + daysToAdd);
-    fridayAfternoon.setHours(comingHour, comingMinute, 0, 0);
+    if (daysToAdd === 0 && now.getHours() >= 12) daysToAdd = 7; // if already Friday afternoon, do next week
+    const fridayDate = new Date(now);
+    fridayDate.setDate(fridayDate.getDate() + daysToAdd);
+    const fridayInfo = await CalendarEngine.getDayInfo(fridayDate, context);
+    const candleLighting = fridayInfo?.zmanim?.candleLighting;
+    if (!candleLighting || !(candleLighting instanceof Date)) return;
 
-    if (isFutureDate(fridayAfternoon)) {
+    const minsBeforeCandle = preferences.notifications.shabbosMinutesBefore ?? 18;
+
+    // "Shabbos coming" — 60 minutes before candle lighting (zman-based)
+    const shabbosComingAt = new Date(candleLighting.getTime() - 60 * 60000);
+    if (isFutureDate(shabbosComingAt)) {
       await scheduleSafe({
-        content: NotificationContentService.getShabbosComingContent(dayInfo),
+        content: NotificationContentService.getShabbosComingContent(fridayInfo),
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: fridayAfternoon,
+          date: shabbosComingAt,
         },
       });
     }
 
-    // Candle lighting reminder (N min before, from preferences)
-    const minsBefore = preferences.notifications.shabbosMinutesBefore ?? 30;
-    const candleLighting = dayInfo?.zmanim?.candleLighting;
-    if (candleLighting instanceof Date) {
-      const candleTime = new Date(candleLighting.getTime() - minsBefore * 60000);
-      if (isFutureDate(candleTime)) {
-        await scheduleSafe({
-          content: NotificationContentService.getCandleLightingContent(dayInfo),
-          trigger: {
-            type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: candleTime,
-          },
-        });
-      }
+    // "Candle lighting" — N min before candle lighting (e.g. 18 min), says "Candle lighting at X"
+    const candleReminderAt = new Date(candleLighting.getTime() - minsBeforeCandle * 60000);
+    if (isFutureDate(candleReminderAt)) {
+      await scheduleSafe({
+        content: NotificationContentService.getCandleLightingContent(fridayInfo),
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: candleReminderAt,
+        },
+      });
     }
   }
 
