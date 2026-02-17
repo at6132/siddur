@@ -14,6 +14,7 @@ import {
   Pressable,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Constants from 'expo-constants';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
@@ -87,7 +88,6 @@ export const SettingsScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [downloadingContent, setDownloadingContent] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
-  const [expandedSection, setExpandedSection] = useState<string | null>('notifications');
   const [locationLoading, setLocationLoading] = useState(false);
   const [reminderMenuId, setReminderMenuId] = useState<string | null>(null);
   const [timePickerFor, setTimePickerFor] = useState<
@@ -358,10 +358,6 @@ export const SettingsScreen: React.FC = () => {
     );
   };
 
-  const toggleSection = (section: string) => {
-    setExpandedSection(expandedSection === section ? null : section);
-  };
-
   if (loading || !preferences) {
     return (
       <View style={styles.container}>
@@ -407,21 +403,14 @@ export const SettingsScreen: React.FC = () => {
         {/* ============ NOTIFICATIONS SECTION ============ */}
         <FadeIn delay={50}>
           <GlassCard style={styles.card}>
-            <TouchableOpacity 
-              style={styles.sectionHeader}
-              onPress={() => toggleSection('notifications')}
-            >
+            <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <Text style={styles.sectionIcon}>🔔</Text>
                 <Text style={styles.sectionTitle}>Notifications</Text>
               </View>
-              <Text style={styles.expandIcon}>
-                {expandedSection === 'notifications' ? '−' : '+'}
-              </Text>
-            </TouchableOpacity>
+            </View>
 
-            {expandedSection === 'notifications' && (
-              <View style={styles.sectionContent}>
+            <View style={styles.sectionContent}>
                 {/* Master Toggle */}
                 <View style={styles.masterToggle}>
                   <View>
@@ -879,29 +868,24 @@ export const SettingsScreen: React.FC = () => {
                     </View>
                   </>
                 )}
-              </View>
-            )}
+            </View>
           </GlassCard>
         </FadeIn>
 
         {/* ============ NUSACH SECTION ============ */}
         <FadeIn delay={100}>
           <GlassCard style={styles.card}>
-            <TouchableOpacity 
-              style={styles.sectionHeader}
-              onPress={() => toggleSection('nusach')}
-            >
+            <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <Text style={styles.sectionIcon}>📜</Text>
                 <Text style={styles.sectionTitle}>Nusach</Text>
               </View>
-              <Text style={styles.currentValue}>
+              <Text style={styles.sectionSubtitle}>
                 {preferences.nusach === 'ashkenaz' ? 'Ashkenaz' : 'Sfard'}
               </Text>
-            </TouchableOpacity>
+            </View>
 
-            {expandedSection === 'nusach' && (
-              <View style={styles.sectionContent}>
+            <View style={styles.sectionContent}>
                 <Text style={styles.optionDescription}>
                   Choose your prayer tradition for correct text variations
                 </Text>
@@ -947,29 +931,24 @@ export const SettingsScreen: React.FC = () => {
                     </Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-            )}
+            </View>
           </GlassCard>
         </FadeIn>
 
         {/* ============ LOCATION SECTION ============ */}
         <FadeIn delay={150}>
           <GlassCard style={styles.card}>
-            <TouchableOpacity 
-              style={styles.sectionHeader}
-              onPress={() => toggleSection('location')}
-            >
+            <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <Text style={styles.sectionIcon}>📍</Text>
                 <Text style={styles.sectionTitle}>Location</Text>
               </View>
-              <Text style={styles.currentValue}>
+              <Text style={styles.sectionSubtitle}>
                 {preferences.location?.cityName || 'Not set'}
               </Text>
-            </TouchableOpacity>
+            </View>
 
-            {expandedSection === 'location' && (
-              <View style={styles.sectionContent}>
+            <View style={styles.sectionContent}>
                 <Text style={styles.optionDescription}>
                   Your location is used to calculate accurate zmanim (prayer times)
                 </Text>
@@ -998,29 +977,21 @@ export const SettingsScreen: React.FC = () => {
                     </Text>
                   )}
                 </TouchableOpacity>
-              </View>
-            )}
+            </View>
           </GlassCard>
         </FadeIn>
 
         {/* ============ DISPLAY SECTION ============ */}
         <FadeIn delay={200}>
           <GlassCard style={styles.card}>
-            <TouchableOpacity 
-              style={styles.sectionHeader}
-              onPress={() => toggleSection('display')}
-            >
+            <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <Text style={styles.sectionIcon}>🎨</Text>
                 <Text style={styles.sectionTitle}>Display</Text>
               </View>
-              <Text style={styles.expandIcon}>
-                {expandedSection === 'display' ? '−' : '+'}
-              </Text>
-            </TouchableOpacity>
+            </View>
 
-            {expandedSection === 'display' && (
-              <View style={styles.sectionContent}>
+            <View style={styles.sectionContent}>
                 {/* Theme / Appearance – dark mode hidden for now; app stays light */}
                 {/* Text Size */}
                 <View style={styles.displayOption}>
@@ -1057,29 +1028,21 @@ export const SettingsScreen: React.FC = () => {
                     thumbColor={preferences.display?.showTransliteration ? theme.colors.primary.main : theme.colors.neutral[400]}
                   />
                 </View>
-              </View>
-            )}
+            </View>
           </GlassCard>
         </FadeIn>
 
         {/* ============ OFFLINE CONTENT SECTION ============ */}
         <FadeIn delay={250}>
           <GlassCard style={styles.card}>
-            <TouchableOpacity 
-              style={styles.sectionHeader}
-              onPress={() => toggleSection('offline')}
-            >
+            <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <Text style={styles.sectionIcon}>📥</Text>
                 <Text style={styles.sectionTitle}>Offline Content</Text>
               </View>
-              <Text style={styles.expandIcon}>
-                {expandedSection === 'offline' ? '−' : '+'}
-              </Text>
-            </TouchableOpacity>
+            </View>
 
-            {expandedSection === 'offline' && (
-              <View style={styles.sectionContent}>
+            <View style={styles.sectionContent}>
                 <Text style={styles.optionDescription}>
                   Download all Tehillim and Siddur content for offline use
                 </Text>
@@ -1114,32 +1077,26 @@ export const SettingsScreen: React.FC = () => {
                     </TouchableOpacity>
                   </View>
                 )}
-              </View>
-            )}
+            </View>
           </GlassCard>
         </FadeIn>
 
         {/* ============ ABOUT SECTION ============ */}
         <FadeIn delay={300}>
           <GlassCard style={styles.card}>
-            <TouchableOpacity 
-              style={styles.sectionHeader}
-              onPress={() => toggleSection('about')}
-            >
+            <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <Text style={styles.sectionIcon}>ℹ️</Text>
                 <Text style={styles.sectionTitle}>About</Text>
               </View>
-              <Text style={styles.expandIcon}>
-                {expandedSection === 'about' ? '−' : '+'}
-              </Text>
-            </TouchableOpacity>
+            </View>
 
-            {expandedSection === 'about' && (
-              <View style={styles.sectionContent}>
+            <View style={styles.sectionContent}>
                 <View style={styles.aboutRow}>
                   <Text style={styles.aboutLabel}>Version</Text>
-                  <Text style={styles.aboutValue}>1.01.1</Text>
+                  <Text style={styles.aboutValue}>
+                    {Constants.expoConfig?.version ?? Constants.manifest?.version ?? '1.0.0'}
+                  </Text>
                 </View>
                 
                 <View style={styles.aboutRow}>
@@ -1161,8 +1118,7 @@ export const SettingsScreen: React.FC = () => {
                     <Text style={styles.resetButtonText}>Reset App</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
-            )}
+            </View>
           </GlassCard>
         </FadeIn>
 
@@ -1311,13 +1267,12 @@ function createSettingsStyles(theme: AppTheme) {
     marginTop: spacing.xs,
   },
 
-  // Section Header
+  // Section Header (flat – no expand/collapse)
   sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
     padding: spacing.lg,
-    minHeight: 60,
+    paddingBottom: spacing.sm,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -1332,15 +1287,12 @@ function createSettingsStyles(theme: AppTheme) {
     fontSize: 17,
     color: theme.colors.text.primary,
   },
-  expandIcon: {
-    fontSize: 20,
-    color: theme.colors.text.tertiary,
-    fontWeight: '300',
-  },
-  currentValue: {
+  sectionSubtitle: {
     fontFamily: fonts.body.medium,
     fontSize: 14,
     color: theme.colors.text.secondary,
+    marginTop: 2,
+    marginLeft: 28, // align with title after icon
   },
 
   // Section Content
