@@ -233,7 +233,8 @@ export const GemaraReaderScreen: React.FC = () => {
     (async () => {
       const prefs = await UserPreferencesService.getPreferences();
       if (prefs?.display?.textSize) setTextSize(prefs.display.textSize);
-      setShowEnglish(prefs?.display?.showTransliteration ?? false);
+      // English feature disabled – always default to false
+      // setShowEnglish(prefs?.display?.showTransliteration ?? false);
       if (prefs?.autoscrollSpeed != null) setAutoscrollSpeed(Math.max(0.5, Math.min(2, prefs.autoscrollSpeed)));
     })();
   }, []);

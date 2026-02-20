@@ -944,7 +944,8 @@ export const SiddurReaderScreen: React.FC = () => {
       if (prefs?.display?.textSize && TEXT_SIZES.includes(prefs.display.textSize)) {
         setTextSize(prefs.display.textSize);
       }
-      setShowEnglish(prefs?.display?.showTransliteration ?? false);
+      // English feature disabled – always default to false
+      // setShowEnglish(prefs?.display?.showTransliteration ?? false);
     } finally {
       setPrefsLoaded(true);
     }
