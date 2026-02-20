@@ -8,6 +8,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FadeIn } from '../../components/animations/FadeIn';
+import { BackButton } from '../../components/ui/BackButton';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { useTheme } from '../../src/design/theme';
@@ -100,9 +101,7 @@ export const RambamBookScreen: React.FC = () => {
       <View style={styles.container}>
         <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
         <View style={[styles.content, { paddingTop: spacing.xl + spacing.safeTopInset }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
           <Text style={styles.title}>Book not found</Text>
         </View>
       </View>
@@ -123,9 +122,7 @@ export const RambamBookScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
         </View>
         <Text style={styles.title}>{book.hebrew}</Text>
         <Text style={styles.subtitle}>{book.english} • {JewishCalendarService.numberToHebrew(totalChapters)} פרקים</Text>

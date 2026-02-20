@@ -727,8 +727,8 @@ export const HomeScreen: React.FC = () => {
     ]);
     setTehillimProgress({
       percentComplete: progress.percentComplete,
-      chaptersRemaining: progress.chaptersRemaining,
-      totalChapters: progress.totalChapters,
+      chaptersRemaining: progress.chaptersRemaining ?? [],
+      totalChapters: progress.totalChapters ?? [],
       message,
       dayName: progress.dayName,
       goalType: progress.goalType,
@@ -1022,7 +1022,7 @@ export const HomeScreen: React.FC = () => {
                     <Text style={styles.tehillimFooterText}>
                       {tehillimProgress.goalType === 'whenever'
                         ? `${tehillimProgress.overallCompleted} of 150 perakim`
-                        : `${tehillimProgress.totalChapters.length - tehillimProgress.chaptersRemaining.length} of ${tehillimProgress.totalChapters.length} today`}
+                        : `${(tehillimProgress.totalChapters ?? []).length - (tehillimProgress.chaptersRemaining ?? []).length} of ${(tehillimProgress.totalChapters ?? []).length} today`}
                     </Text>
                     {tehillimProgress.goalType !== 'whenever' && tehillimProgress.overallLabel ? (
                       <Text style={styles.tehillimFooterSubtext}>

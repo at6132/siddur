@@ -646,6 +646,21 @@ export class DailyTehillimTracker {
   }
 
   /**
+   * Reset "whenever you can" progress (clear all completed perakim in whenever mode).
+   */
+  static async resetWheneverProgress(): Promise<void> {
+    await AsyncStorage.removeItem(TEHILLIM_WHENEVER_COMPLETED_KEY);
+    await AsyncStorage.removeItem(TEHILLIM_WHENEVER_DAYS_KEY);
+  }
+
+  /**
+   * Reset custom daily goal progress (start cycle from chapter 1 again).
+   */
+  static async resetCustomProgress(): Promise<void> {
+    await AsyncStorage.removeItem(TEHILLIM_CUSTOM_PROGRESS_KEY);
+  }
+
+  /**
    * Check if today's Tehillim is complete
    */
   static async isComplete(): Promise<boolean> {

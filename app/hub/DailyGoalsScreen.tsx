@@ -24,6 +24,7 @@ import { AllDoneCelebration } from '../../components/hub/AllDoneCelebration';
 import { GoalProgressRing } from '../../components/hub/GoalProgressRing';
 import { SlideInRow } from '../../components/hub/SlideInRow';
 import { ScalePress } from '../../components/animations/ScalePress';
+import { BackButton } from '../../components/ui/BackButton';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { colors } from '../../src/design/colors';
@@ -127,9 +128,7 @@ export const DailyGoalsScreen: React.FC = () => {
       <LinearGradient colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']} style={StyleSheet.absoluteFill} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backRow}>
-            <Text style={styles.backText}>← Back to Hub</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} label="Back to Hub" style={styles.backRow} />
 
           <Text style={styles.title}>Today's goals</Text>
           <Text style={styles.subtitle}>{dayName}</Text>

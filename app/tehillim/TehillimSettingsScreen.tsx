@@ -14,6 +14,8 @@ import { BlurView } from 'expo-blur';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
+import { useTheme } from '../../src/design/theme';
+import { BackButton } from '../../components/ui/BackButton';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { TehillimSettings, TehillimGoalType, WEEKLY_TEHILLIM, HEBREW_DAY_NAMES } from '../../src/content/tehillim/types';
 
@@ -72,6 +74,7 @@ const GlassOption: React.FC<{
 
 export const TehillimSettingsScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { theme } = useTheme();
   const [settings, setSettings] = useState<TehillimSettings>({
     goalType: 'weekly',
     customChaptersPerDay: 5,
@@ -129,12 +132,7 @@ export const TehillimSettingsScreen: React.FC = () => {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
           <Text style={styles.title}>Daily Tehillim</Text>
           <Text style={styles.subtitle}>Choose your daily reading goal</Text>
         </View>
@@ -204,6 +202,28 @@ export const TehillimSettingsScreen: React.FC = () => {
             <Text style={styles.customNote}>
               At {settings.customChaptersPerDay || 5} chapters/day, you'll complete Tehillim every {Math.ceil(150 / (settings.customChaptersPerDay || 5))} days
             </Text>
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={async () => {
+                await DailyTehillimTracker.resetCustomProgress();
+              }}
+            >
+              <Text style={styles.resetButtonText}>Reset progress</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Whenever you can – reset progress */}
+        {settings.goalType === 'whenever' && (
+          <View style={styles.wheneverResetSection}>
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={async () => {
+                await DailyTehillimTracker.resetWheneverProgress();
+              }}
+            >
+              <Text style={styles.resetButtonText}>Reset progress</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -255,11 +275,12 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginBottom: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingRight: spacing.md,
   },
   backText: {
     fontFamily: fonts.body.medium,
     fontSize: 16,
-    color: colors.primary.dark,
   },
   title: {
     fontFamily: fonts.heading.bold,
@@ -403,6 +424,21 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
     marginTop: spacing.sm,
     textAlign: 'center',
+  },
+  resetButton: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignSelf: 'center',
+  },
+  resetButtonText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 14,
+    color: colors.primary.main,
+  },
+  wheneverResetSection: {
+    marginBottom: spacing.xl,
+    alignItems: 'center',
   },
 
   // Schedule Section

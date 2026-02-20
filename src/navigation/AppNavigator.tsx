@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { spacing } from '../design/spacing';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { IntroScreen } from '../../app/intro/IntroScreen';
@@ -50,6 +51,7 @@ import { textStyles } from '../design/typography';
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 const HubStack = createStackNavigator();
+const LibraryStack = createStackNavigator();
 
 function HubNavigator() {
   return (
@@ -60,6 +62,15 @@ function HubNavigator() {
       <HubStack.Screen name="Gratitude" component={GratitudeScreen} />
       <HubStack.Screen name="AddGratitude" component={AddGratitudeScreen} />
     </HubStack.Navigator>
+  );
+}
+
+function LibraryNavigator() {
+  return (
+    <LibraryStack.Navigator screenOptions={{ headerShown: false }} initialRouteName="LibraryHome">
+      <LibraryStack.Screen name="LibraryHome" component={LibraryScreen} />
+      <LibraryStack.Screen name="SiddurReader" component={SiddurReaderScreen} />
+    </LibraryStack.Navigator>
   );
 }
 
@@ -89,8 +100,14 @@ function MainTabs() {
       />
       <Tab.Screen
         name="Library"
-        component={LibraryScreen}
-        options={{ tabBarLabel: 'Library' }}
+        component={LibraryNavigator}
+        options={({ route }) => {
+          const routeName = getFocusedRouteNameFromRoute(route) ?? 'LibraryHome';
+          return {
+            tabBarLabel: 'Library',
+            tabBarStyle: routeName === 'SiddurReader' ? { display: 'none' } : undefined,
+          };
+        }}
       />
       <Tab.Screen
         name="Settings"
@@ -163,16 +180,7 @@ export default function AppNavigator() {
           <Stack.Screen
             name="TehillimReader"
             component={TehillimReaderScreen}
-            options={{
-              headerShown: true,
-              headerStyle: {
-                backgroundColor: theme.colors.background.glass,
-              },
-              headerTintColor: theme.colors.text.primary,
-              headerTitleStyle: {
-                ...textStyles.h4,
-              },
-            }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Omer"
@@ -236,17 +244,7 @@ export default function AppNavigator() {
           <Stack.Screen
             name="TehillimList"
             component={TehillimListScreen}
-            options={{
-              headerShown: true,
-              title: 'Tehillim',
-              headerStyle: {
-                backgroundColor: theme.colors.background.glass,
-              },
-              headerTintColor: theme.colors.text.primary,
-              headerTitleStyle: {
-                ...textStyles.h4,
-              },
-            }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="CustomizeHome"

@@ -1,16 +1,24 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useWindowDimensions } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GlassPanel } from '../../components/ui/GlassPanel';
 import { FadeIn } from '../../components/animations/FadeIn';
+import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../components/reader/ReaderChrome';
+import { ReaderToolbar, HEBREW_FONT_SIZES, HEBREW_LINE_HEIGHTS } from '../../components/reader/ReaderToolbar';
+import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
+import { useAutoscroll } from '../../components/reader/useAutoscroll';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles, fonts } from '../../src/design/typography';
+import { useTheme } from '../../src/design/theme';
 import { TehillimService } from '../../src/content/tehillim/TehillimService';
 import { TehillimChapter, TehillimVerse } from '../../src/content/tehillim/types';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
+import { UserPreferencesService } from '../../src/storage/UserPreferences';
+import type { DisplayPreferences } from '../../src/types/preferences';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -26,20 +34,37 @@ function cleanVerseText(text: string | undefined): string {
 export const TehillimReaderScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
+  const { theme } = useTheme();
   const psalm = (route.params as any)?.psalm || 1;
   
+  const insets = useSafeAreaInsets();
+  const { height: viewportHeight } = useWindowDimensions();
   const [chapter, setChapter] = useState<TehillimChapter | null>(null);
   const [loading, setLoading] = useState(true);
-  const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [textSize, setTextSize] = useState<DisplayPreferences['textSize']>('medium');
+  const [showEnglish, setShowEnglish] = useState(false);
   const [isMarkedComplete, setIsMarkedComplete] = useState(false);
   const [isDailyChapter, setIsDailyChapter] = useState(false);
   const [isWheneverMode, setIsWheneverMode] = useState(false);
+  const [autoscrollPlaying, setAutoscrollPlaying] = useState(false);
+  const [autoscrollSpeed, setAutoscrollSpeed] = useState(1);
   const scrollRef = useRef<ScrollView>(null);
-  const hasReachedEnd = useRef(false);
+  const scrollYRef = useRef(0);
+  const contentHeightRef = useRef(0);
   const readingStartTime = useRef<number | null>(null);
 
   useEffect(() => {
-    hasReachedEnd.current = false;
+    (async () => {
+      const prefs = await UserPreferencesService.getPreferences();
+      if (prefs?.display?.textSize) setTextSize(prefs.display.textSize);
+      setShowEnglish(prefs?.display?.showTransliteration ?? false);
+      if (prefs?.autoscrollSpeed != null) setAutoscrollSpeed(Math.max(0.5, Math.min(2, prefs.autoscrollSpeed)));
+    })();
+  }, []);
+
+  useAutoscroll(scrollRef, scrollYRef, contentHeightRef, viewportHeight, autoscrollPlaying, autoscrollSpeed);
+
+  useEffect(() => {
     readingStartTime.current = Date.now();
     loadChapter(psalm);
     checkIfDailyChapter(psalm);
@@ -51,15 +76,6 @@ export const TehillimReaderScreen: React.FC = () => {
     setIsWheneverMode(whenever);
     setIsDailyChapter(whenever || progress.totalChapters.includes(chapterNum));
     setIsMarkedComplete(progress.chaptersCompleted?.includes(chapterNum) ?? false);
-  };
-
-  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
-    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 100;
-    if (isCloseToBottom && !hasReachedEnd.current) {
-      hasReachedEnd.current = true;
-      markChapterComplete();
-    }
   };
 
   const getWordCount = (): number => {
@@ -104,29 +120,24 @@ export const TehillimReaderScreen: React.FC = () => {
     }
   };
 
-  const getHebrewFontSize = () => {
-    switch (fontSize) {
-      case 'small': return 18;
-      case 'large': return 28;
-      default: return 22;
-    }
-  };
-
   const renderVerse = (verse: TehillimVerse, index: number) => {
-    const size = getHebrewFontSize();
+    const size = HEBREW_FONT_SIZES[textSize];
+    const lineHeight = HEBREW_LINE_HEIGHTS[textSize] * 1.15; // slightly more breathable
+    const isLast = index === chapter!.verses.length - 1;
     return (
-      <FadeIn key={verse.number} delay={30 * index}>
-        <View style={styles.verseContainer}>
-          <View style={styles.verseNumberContainer}>
-            <Text style={styles.verseNumber}>{verse.number}</Text>
-          </View>
-          <View style={styles.verseTextContainer}>
-            <Text style={[styles.hebrewText, { fontSize: size, lineHeight: size * 1.6 }]}>
-              {cleanVerseText(verse.hebrew)}
-            </Text>
-          </View>
+      <View key={verse.number} style={[styles.verseBlock, !isLast && styles.verseBlockBorder]}>
+        <Text style={[styles.hebrewVerse, { fontSize: size, lineHeight }]} selectable>
+          {cleanVerseText(verse.hebrew)}
+        </Text>
+        {showEnglish && verse.english && (
+          <Text style={[styles.englishVerse, { fontSize: size * 0.88, lineHeight: lineHeight * 0.9 }]} selectable>
+            {verse.english}
+          </Text>
+        )}
+        <View style={styles.verseLabelRow}>
+          <Text style={styles.verseLabel}>{verse.number}</Text>
         </View>
-      </FadeIn>
+      </View>
     );
   };
 
@@ -165,22 +176,56 @@ export const TehillimReaderScreen: React.FC = () => {
         colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
         style={StyleSheet.absoluteFill}
       />
-      
+      <ReaderChrome
+        title={chapter ? `Psalm ${chapter.number}` : `Psalm ${psalm}`}
+        onBack={() => navigation.goBack()}
+        topInset={insets.top}
+      >
+        <ReaderToolbar
+          textSize={textSize}
+          onTextSizeChange={setTextSize}
+          showEnglish={showEnglish}
+          onShowEnglishChange={setShowEnglish}
+          showEnglishToggle={true}
+        />
+      </ReaderChrome>
       <ScrollView
         ref={scrollRef}
         style={styles.scrollView}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + READER_CHROME_HEADER_HEIGHT_APPROX + spacing.lg, paddingBottom: 160 + 88 }]}
         showsVerticalScrollIndicator={true}
-        onScroll={handleScroll}
+        onScroll={(e) => {
+          scrollYRef.current = e.nativeEvent.contentOffset.y;
+        }}
+        onContentSizeChange={(_, h) => { contentHeightRef.current = h; }}
         scrollEventThrottle={16}
         bounces={true}
         nestedScrollEnabled={true}
       >
-        {/* Daily / Whenever Tehillim Badge — show "Complete perek" in whenever mode on every perek */}
+        {/* Verses */}
+        <View style={styles.readingCard}>
+          <View style={styles.readingCardHeader}>
+            <Text style={styles.readingCardTitle}>Psalm {chapter.number}</Text>
+            {chapter.title && (
+              <Text style={styles.readingCardSubtitle} numberOfLines={2}>{chapter.title}</Text>
+            )}
+          </View>
+          {chapter.verses.map((verse, index) => renderVerse(verse, index))}
+        </View>
+
+        {/* Attribution */}
+        <View style={styles.attributionContainer}>
+          <Text style={styles.attributionText}>
+            Texts provided by{' '}
+            <Text style={styles.attributionLink}>Sefaria.org</Text>
+          </Text>
+        </View>
+
+        {/* Completion badge & button — at bottom of all text */}
         {isDailyChapter && (
           <FadeIn delay={0}>
             <View style={[styles.dailyBadge, isMarkedComplete && styles.dailyBadgeComplete]}>
-              <Text style={styles.dailyBadgeText}>
+              <Text style={[styles.dailyBadgeText, isMarkedComplete && styles.dailyBadgeCompleteText]}>
                 {isMarkedComplete
                   ? (isWheneverMode ? '✓ Perek complete' : '✓ Completed Today')
                   : isWheneverMode
@@ -201,67 +246,6 @@ export const TehillimReaderScreen: React.FC = () => {
             </View>
           </FadeIn>
         )}
-
-        {/* Header */}
-        <FadeIn delay={0}>
-          <View style={styles.headerSection}>
-            <Text style={styles.chapterNumber}>{chapter.hebrewNumber}</Text>
-            <Text style={styles.chapterNumberEnglish}>Psalm {chapter.number}</Text>
-            {chapter.title && (
-              <Text style={styles.chapterTitle}>{chapter.title}</Text>
-            )}
-            {chapter.themes && chapter.themes.length > 0 && (
-              <View style={styles.themesContainer}>
-                {chapter.themes.slice(0, 3).map((theme, i) => (
-                  <View key={i} style={styles.themeTag}>
-                    <Text style={styles.themeText}>{theme}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        </FadeIn>
-
-        {/* Controls */}
-        <FadeIn delay={50}>
-          <View style={styles.controlsContainer}>
-            <View style={styles.controlRow}>
-              <Text style={styles.controlLabel}>Text Size</Text>
-              <View style={styles.sizeButtons}>
-                {(['small', 'medium', 'large'] as const).map((size) => (
-                  <TouchableOpacity
-                    key={size}
-                    style={[
-                      styles.sizeButton,
-                      fontSize === size && styles.sizeButtonActive,
-                    ]}
-                    onPress={() => setFontSize(size)}
-                  >
-                    <Text style={[
-                      styles.sizeButtonText,
-                      fontSize === size && styles.sizeButtonTextActive,
-                    ]}>
-                      {size === 'small' ? 'A' : size === 'medium' ? 'A' : 'A'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </View>
-        </FadeIn>
-
-        {/* Verses */}
-        <GlassPanel padding="lg" borderRadius="2xl" style={styles.versesPanel}>
-          {chapter.verses.map((verse, index) => renderVerse(verse, index))}
-        </GlassPanel>
-
-        {/* Attribution */}
-        <View style={styles.attributionContainer}>
-          <Text style={styles.attributionText}>
-            Texts provided by{' '}
-            <Text style={styles.attributionLink}>Sefaria.org</Text>
-          </Text>
-        </View>
 
         {/* Navigation */}
         <View style={styles.navigationContainer}>
@@ -290,6 +274,13 @@ export const TehillimReaderScreen: React.FC = () => {
           )}
         </View>
       </ScrollView>
+      <ReaderAutoscrollBar
+        playing={autoscrollPlaying}
+        onPlayingChange={setAutoscrollPlaying}
+        speed={autoscrollSpeed}
+        onSpeedChange={setAutoscrollSpeed}
+        bottomInset={insets.bottom}
+      />
     </GestureHandlerRootView>
   );
 };
@@ -303,10 +294,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: spacing.xl,
-    paddingTop: spacing.lg + spacing.safeTopInset,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
     paddingBottom: 160,
     flexGrow: 1,
+    maxWidth: 640,
+    alignSelf: 'center',
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,
@@ -317,52 +311,6 @@ const styles = StyleSheet.create({
   loadingText: {
     ...textStyles.body,
     color: colors.text.secondary,
-  },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-  },
-  chapterNumber: {
-    fontFamily: fonts.heading.bold,
-    fontSize: 56,
-    color: colors.primary.main,
-    marginBottom: spacing.sm,
-    letterSpacing: -1,
-    textShadowColor: colors.shadow.light,
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
-  },
-  chapterNumberEnglish: {
-    fontFamily: fonts.body.medium,
-    fontSize: 15,
-    color: colors.text.secondary,
-    marginBottom: spacing.md,
-    letterSpacing: 0.5,
-  },
-  chapterTitle: {
-    fontFamily: fonts.heading.semiBold,
-    fontSize: 20,
-    color: colors.text.primary,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-    lineHeight: 28,
-  },
-  themesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: spacing.xs,
-  },
-  themeTag: {
-    backgroundColor: 'rgba(212, 165, 184, 0.3)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-  },
-  themeText: {
-    ...textStyles.caption,
-    color: colors.primary.dark,
-    textTransform: 'capitalize',
   },
   controlsContainer: {
     backgroundColor: colors.glass.light,
@@ -412,37 +360,74 @@ const styles = StyleSheet.create({
   sizeButtonTextActive: {
     color: '#fff',
   },
-  versesPanel: {
-    marginBottom: spacing.lg,
-  },
-  verseContainer: {
-    flexDirection: 'row',
+  readingCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.72)',
+    borderRadius: borderRadius.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
     marginBottom: spacing.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.04)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1,
+  },
+  readingCardHeader: {
     paddingBottom: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.04)',
-  },
-  verseNumberContainer: {
-    width: 36,
-    alignItems: 'center',
-    paddingTop: 6,
-  },
-  verseNumber: {
-    fontFamily: fonts.body.bold,
-    fontSize: 15,
-    color: colors.primary.main,
-    opacity: 0.7,
-  },
-  verseTextContainer: {
-    flex: 1,
-    paddingLeft: spacing.sm,
-  },
-  hebrewText: {
-    fontFamily: fonts.heading.regular,
-    textAlign: 'right',
-    color: colors.text.primary,
     marginBottom: spacing.md,
-    letterSpacing: 0.3,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
+  },
+  readingCardTitle: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 15,
+    color: colors.text.tertiary,
+    letterSpacing: 0.5,
+  },
+  readingCardSubtitle: {
+    fontFamily: fonts.body.regular,
+    fontSize: 14,
+    color: colors.text.secondary,
+    marginTop: spacing.xs,
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  verseBlock: {
+    paddingVertical: spacing.md + 4,
+    paddingHorizontal: spacing.sm,
+  },
+  verseBlockBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
+  },
+  hebrewVerse: {
+    fontFamily: fonts.heading.regular,
+    color: colors.text.primary,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    letterSpacing: 0.4,
+    marginBottom: spacing.xs,
+  },
+  englishVerse: {
+    fontFamily: fonts.body.regular,
+    color: colors.text.secondary,
+    textAlign: 'left',
+    marginTop: spacing.sm,
+    lineHeight: 24,
+    opacity: 0.92,
+  },
+  verseLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: spacing.xs,
+  },
+  verseLabel: {
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
+    color: colors.text.tertiary,
+    opacity: 0.85,
   },
   englishText: {
     fontFamily: fonts.body.regular,
@@ -466,73 +451,70 @@ const styles = StyleSheet.create({
   navigationContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: spacing.lg,
+    marginTop: spacing.xl,
     gap: spacing.md,
-  },
-  navButton: {
-    backgroundColor: colors.glass.medium,
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.8)',
-    shadowColor: colors.shadow.light,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  navButtonText: {
-    fontFamily: fonts.body.bold,
-    fontSize: 15,
-    color: colors.primary.dark,
-    letterSpacing: 0.3,
   },
   navSpacer: {
     flex: 1,
   },
   dailyBadge: {
-    backgroundColor: 'rgba(212, 165, 184, 0.35)',
+    backgroundColor: 'rgba(212, 165, 184, 0.22)',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
     alignSelf: 'stretch',
-    marginBottom: spacing.lg,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xl,
     borderWidth: 1,
-    borderColor: 'rgba(212, 165, 184, 0.5)',
-    shadowColor: colors.primary.main,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 1,
+    borderColor: 'rgba(212, 165, 184, 0.35)',
     flexDirection: 'column',
     alignItems: 'center',
     gap: spacing.sm,
   },
   dailyBadgeComplete: {
-    backgroundColor: 'rgba(165, 212, 184, 0.35)',
-    borderColor: 'rgba(165, 212, 184, 0.6)',
-    shadowColor: colors.semantic.success,
+    backgroundColor: 'rgba(0, 0, 0, 0.06)',
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    opacity: 0.92,
+  },
+  dailyBadgeCompleteText: {
+    color: colors.text.tertiary,
+    fontFamily: fonts.body.medium,
   },
   dailyBadgeText: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 14,
-    color: colors.text.primary,
-    letterSpacing: 0.3,
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: colors.text.secondary,
+    letterSpacing: 0.2,
     textAlign: 'center',
   },
   markCompleteButton: {
-    backgroundColor: 'rgba(165, 212, 184, 0.6)',
+    backgroundColor: 'rgba(80, 180, 120, 0.85)',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(165, 212, 184, 0.8)',
     alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(60, 160, 100, 0.5)',
   },
   markCompleteButtonText: {
     fontFamily: fonts.body.semiBold,
-    fontSize: 12,
-    color: colors.text.primary,
+    fontSize: 13,
+    color: '#fff',
+  },
+  navButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.06)',
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  navButtonText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 14,
+    color: colors.primary.dark,
+    letterSpacing: 0.2,
   },
 });

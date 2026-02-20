@@ -26,6 +26,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { FadeIn } from '../../components/animations/FadeIn';
+import { BackButton } from '../../components/ui/BackButton';
 import { ScalePress } from '../../components/animations/ScalePress';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
@@ -109,9 +110,7 @@ export const GoalsHistoryScreen: React.FC = () => {
     <View style={styles.container}>
       <LinearGradient colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']} style={StyleSheet.absoluteFill} />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backRow}>
-          <Text style={styles.backText}>← Back</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} style={styles.backRow} />
 
         <Text style={styles.title}>Past days</Text>
         <Text style={styles.subtitle}>Scroll through and tap a day to see what you accomplished</Text>

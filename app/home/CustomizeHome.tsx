@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { FadeIn } from '../../components/animations/FadeIn';
+import { BackButton } from '../../components/ui/BackButton';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
@@ -159,12 +160,7 @@ export const CustomizeHome: React.FC = () => {
         {/* Header */}
         <FadeIn delay={0}>
           <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              style={styles.backButton}
-            >
-              <Text style={styles.backText}>← Back</Text>
-            </TouchableOpacity>
+            <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
             <Text style={styles.title}>Customize Home</Text>
             <Text style={styles.subtitle}>Drag to reorder, tap to toggle visibility</Text>
           </View>

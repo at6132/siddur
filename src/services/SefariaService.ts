@@ -22,6 +22,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { JewishCalendarService } from '../core/calendar/JewishCalendar';
 
 const SEFARIA_API_BASE = 'https://www.sefaria.org/api';
 const SEFARIA_V3_TEXTS = 'https://www.sefaria.org/api/v3/texts';
@@ -368,27 +369,382 @@ export class SefariaService {
     if (!data) return null;
 
     try {
-      const rawHebrewStr = Array.isArray(data.hebrew) ? data.hebrew.join('\n') : (data.hebrew ?? '');
-      const rawEnglishStr = Array.isArray(data.english) ? (data.english ?? []).join('\n') : (data.english ?? '');
-      const straight = (s: string) => s.replace(/\n\s*\n/g, '\n').trim();
+      const rawHebrewStr = Array.isArray(data.hebrew) ? data.hebrew.join('\n\n') : (data.hebrew ?? '');
+      const rawEnglishStr = Array.isArray(data.english) ? (data.english ?? []).join('\n\n') : (data.english ?? '');
+      // Preserve paragraph breaks (\n\n) for readability (e.g. Tefillas HaDerech)
+      const normalizeParagraphs = (s: string) => s.replace(/\n\s*\n/g, '\n\n').trim();
 
       const hebrewSegments = this.parseInstructionSegments(rawHebrewStr).map((seg) => ({
-        text: straight(seg.text),
+        text: normalizeParagraphs(seg.text),
         italic: seg.italic,
       }));
       const englishSegments = this.parseInstructionSegments(rawEnglishStr).map((seg) => ({
-        text: straight(seg.text),
+        text: normalizeParagraphs(seg.text),
         italic: seg.italic,
       }));
 
-      const hebrew = hebrewSegments.map((s) => s.text).join('').replace(/\n\s*\n/g, '\n').trim();
-      const english = englishSegments.map((s) => s.text).join('').replace(/\n\s*\n/g, '\n').trim();
+      let hebrew = hebrewSegments.map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim();
+      let english = englishSegments.map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim();
+      let finalHebrewSegments = hebrewSegments;
+      let finalEnglishSegments = englishSegments;
+
+      // Birkat Hamazon: start from first bracha and optional middle cut; never throw so section always loads
+      if (sectionKey === 'birchas_hamazon') {
+        try {
+        const stripNikkud = (s: string) => s.replace(/[\u0591-\u05C7]/g, '');
+        // Allow optional nikkud (U+0591–U+05C7) between letters
+        const nik = '[\\u0591-\\u05C7]*';
+        const feedRe = new RegExp(
+          `ה${nik}ז${nik}ן${nik}\\s+א${nik}ת${nik}\\s+ה${nik}ע${nik}ו?${nik}ל${nik}ם`,
+          'u'
+        );
+        const brachaStartRe = new RegExp(
+          `ב${nik}ר${nik}וּ?${nik}ךְ?${nik}\\s+א${nik}ת${nik}ָּ?${nik}ה${nik}`,
+          'gu'
+        );
+        const feedMatch = hebrew.match(feedRe);
+        if (feedMatch && feedMatch.index !== undefined) {
+          const beforeFeed = hebrew.slice(0, feedMatch.index);
+          let lastStart = -1;
+          let m: RegExpExecArray | null;
+          brachaStartRe.lastIndex = 0;
+          while ((m = brachaStartRe.exec(beforeFeed)) !== null) lastStart = m.index;
+          if (lastStart >= 0) {
+            hebrew = hebrew.slice(lastStart);
+            finalHebrewSegments = [{ text: hebrew, italic: false }];
+          }
+        } else {
+          // Fallback: strip nikkud and search
+          const strippedHeb = stripNikkud(hebrew);
+          const feedIdx = strippedHeb.search(/הזן\s+את\s+העולם/);
+          if (feedIdx !== -1) {
+            const beforeStripped = strippedHeb.slice(0, feedIdx);
+            const brachaStartStripped = beforeStripped.lastIndexOf('ברוך אתה');
+            if (brachaStartStripped !== -1) {
+              const strippedToOriginal: number[] = [];
+              for (let i = 0; i < hebrew.length; i++) {
+                if (!/[\u0591-\u05C7]/.test(hebrew[i])) strippedToOriginal.push(i);
+              }
+              const originalStart = strippedToOriginal[brachaStartStripped] ?? 0;
+              hebrew = hebrew.slice(originalStart);
+              finalHebrewSegments = [{ text: hebrew, italic: false }];
+            }
+          } else {
+            // Last resort: start from first "ברוך אתה" in the text
+            const firstBaruch = hebrew.search(new RegExp(`ב${nik}ר${nik}וּ?${nik}ךְ?${nik}\\s+א${nik}ת${nik}ָּ?${nik}ה${nik}`, 'u'));
+            if (firstBaruch > 0) {
+              hebrew = hebrew.slice(firstBaruch);
+              finalHebrewSegments = [{ text: hebrew, italic: false }];
+            }
+          }
+        }
+        // English: trim to same bracha
+        const feedEnRe = /Who\s+(?:nourishes|feeds)\s+(?:the\s+entire\s+)?(?:world|whole\s+world)/i;
+        const feedEn = english.search(feedEnRe);
+        if (feedEn !== -1) {
+          const beforeFeed = english.slice(0, feedEn);
+          const blessed = beforeFeed.lastIndexOf('Blessed are You');
+          if (blessed !== -1) {
+            english = english.slice(blessed);
+            finalEnglishSegments = [{ text: english, italic: false }];
+          }
+        } else {
+          const blessedOnly = english.indexOf('Blessed are You');
+          if (blessedOnly !== -1) {
+            const afterFirst = english.slice(blessedOnly);
+            if (afterFirst.search(/Who\s+(?:nourishes|feeds)/i) !== -1) {
+              english = afterFirst;
+              finalEnglishSegments = [{ text: english, italic: false }];
+            }
+          }
+        }
+        // Cut between end of first bracha and "נודה לך", put Nodeh on new line. Only look between "הזן" and "נודה".
+        const strippedHeb = stripNikkud(hebrew);
+        let nodehStartStripped = strippedHeb.indexOf('נודה לך');
+        if (nodehStartStripped === -1) nodehStartStripped = strippedHeb.indexOf('נודה ');
+        if (nodehStartStripped === -1) nodehStartStripped = strippedHeb.indexOf('נודה');
+        let endFirstBrachaStripped = -1;
+        const hazanIdx = strippedHeb.indexOf('הזן');
+        if (nodehStartStripped > 0 && hazanIdx !== -1 && nodehStartStripped > hazanIdx) {
+          const between = strippedHeb.slice(hazanIdx, nodehStartStripped);
+          const idxKol = Math.max(
+            between.lastIndexOf('העולם כולו'),
+            between.lastIndexOf('כולו'),
+            between.lastIndexOf('הכול'),
+            between.lastIndexOf('הכל')
+          );
+          if (idxKol !== -1) {
+            const rest = between.slice(idxKol);
+            const word = rest.match(/^(העולם\s+כולו|כולו|הכול|הכל)\s*[:.,]?\s*/)?.[0] ?? rest.slice(0, 8);
+            endFirstBrachaStripped = hazanIdx + idxKol + word.length;
+          } else if (between.includes('\n\n')) {
+            endFirstBrachaStripped = hazanIdx + between.indexOf('\n\n') + 2;
+          }
+        }
+        if (nodehStartStripped > 0 && endFirstBrachaStripped > 0 && endFirstBrachaStripped < nodehStartStripped) {
+          const strippedToOriginal: number[] = [];
+          for (let i = 0; i < hebrew.length; i++) {
+            if (!/[\u0591-\u05C7]/.test(hebrew[i])) strippedToOriginal.push(i);
+          }
+          const endOriginal = strippedToOriginal[endFirstBrachaStripped] ?? endFirstBrachaStripped;
+          const startOriginal = strippedToOriginal[nodehStartStripped] ?? nodehStartStripped;
+          hebrew = hebrew.slice(0, endOriginal).trimEnd() + '\n\n' + hebrew.slice(startOriginal);
+          finalHebrewSegments = [{ text: hebrew, italic: false }];
+        }
+        const nodehEnMatch = english.match(/\b(We\s+(?:will\s+)?(?:give\s+thanks|thank)\s+You|Nodeh\s+lecha)/i);
+        const nodehStartEn = nodehEnMatch ? (nodehEnMatch.index ?? -1) : -1;
+        if (nodehStartEn !== -1 && nodehStartEn > 0) {
+          const beforeNodeh = english.slice(0, nodehStartEn);
+          const endM = beforeNodeh.match(/(?:world|all|everything|whole\s+world)\.?\s*$/i);
+          const endEn = endM ? beforeNodeh.lastIndexOf(endM[0]) + endM[0].length : -1;
+          if (endEn > 0 && endEn < nodehStartEn) {
+            english = english.slice(0, endEn).trimEnd() + '\n\n' + english.slice(nodehStartEn);
+            finalEnglishSegments = [{ text: english, italic: false }];
+          }
+        }
+        // Al HaNissim: by date show nothing / Chanukah only / Purim only
+        const alHanissim = JewishCalendarService.isAlHanissim(new Date());
+        const strippedAl = stripNikkud(hebrew).replace(/\u05BE/g, ' ');
+        const blockStartStripped = strippedAl.indexOf('בחנוכה ופורים') !== -1 ? strippedAl.indexOf('בחנוכה ופורים')
+          : strippedAl.indexOf('בחנוכה אומרים') !== -1 ? strippedAl.indexOf('בחנוכה אומרים')
+          : strippedAl.indexOf('בחנוכה');
+        const idxVeal = strippedAl.indexOf('ועל הכול') !== -1 ? strippedAl.indexOf('ועל הכול') : strippedAl.indexOf('ועל הכל');
+        if (blockStartStripped !== -1 && idxVeal !== -1 && idxVeal > blockStartStripped) {
+          const beforeBlock = strippedAl.slice(0, blockStartStripped);
+          const lastShea = beforeBlock.lastIndexOf('שעה');
+          let endBecholStripped = lastShea !== -1 ? lastShea + 3 : blockStartStripped;
+          if (strippedAl[endBecholStripped] === ':') endBecholStripped += 1;
+          while (endBecholStripped < strippedAl.length && (strippedAl[endBecholStripped] === ' ' || strippedAl[endBecholStripped] === '\n')) endBecholStripped += 1;
+          const strippedToOriginal: number[] = [];
+          for (let i = 0; i < hebrew.length; i++) {
+            if (!/[\u0591-\u05C7]/.test(hebrew[i])) strippedToOriginal.push(i);
+          }
+          const endBecholOriginal = strippedToOriginal[endBecholStripped] ?? endBecholStripped;
+          const vealOriginal = strippedToOriginal[idxVeal] ?? idxVeal;
+          if (alHanissim === false) {
+            hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + hebrew.slice(vealOriginal);
+            finalHebrewSegments = [{ text: hebrew, italic: false }];
+          } else if (alHanissim === 'chanukah') {
+            const chanukahStart = strippedAl.indexOf('בחנוכה אומרים', blockStartStripped);
+            const purimStart = strippedAl.indexOf('בפורים אומרים', blockStartStripped);
+            if (chanukahStart !== -1 && purimStart > chanukahStart) {
+              const chanukahEndOriginal = strippedToOriginal[purimStart] ?? purimStart;
+              const chanukahStartOriginal = strippedToOriginal[chanukahStart] ?? chanukahStart;
+              const chanukahBlock = hebrew.slice(chanukahStartOriginal, chanukahEndOriginal).trim();
+              hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + chanukahBlock + '\n\n' + hebrew.slice(vealOriginal);
+              finalHebrewSegments = [{ text: hebrew, italic: false }];
+            } else {
+              hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + hebrew.slice(vealOriginal);
+              finalHebrewSegments = [{ text: hebrew, italic: false }];
+            }
+          } else if (alHanissim === 'purim') {
+            const purimStart = strippedAl.indexOf('בפורים אומרים', blockStartStripped);
+            if (purimStart !== -1 && purimStart < idxVeal) {
+              const purimStartOriginal = strippedToOriginal[purimStart] ?? purimStart;
+              const purimBlock = hebrew.slice(purimStartOriginal, vealOriginal).trim();
+              hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + purimBlock + '\n\n' + hebrew.slice(vealOriginal);
+              finalHebrewSegments = [{ text: hebrew, italic: false }];
+            } else {
+              hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + hebrew.slice(vealOriginal);
+              finalHebrewSegments = [{ text: hebrew, italic: false }];
+            }
+          }
+        }
+        // Remove "בונה ירושלים דוד ושלמה תקנוה..." paragraph through "וכן'." / "וכו'."
+        const strippedBoneh = stripNikkud(hebrew);
+        const bonehStart = strippedBoneh.indexOf('בונה ירושלים');
+        if (bonehStart !== -1) {
+          const afterBoneh = strippedBoneh.slice(bonehStart);
+          const endMatch = afterBoneh.match(/[\s\S]*?(?:וכן['']\.?|וכו['']\.?)/);
+          if (endMatch) {
+            const endStripped = bonehStart + endMatch[0].length;
+            const strippedToOriginal: number[] = [];
+            for (let i = 0; i < hebrew.length; i++) {
+              if (!/[\u0591-\u05C7]/.test(hebrew[i])) strippedToOriginal.push(i);
+            }
+            const startOriginal = strippedToOriginal[bonehStart] ?? bonehStart;
+            const lastStrippedIdx = endStripped - 1;
+            let endOriginal = (strippedToOriginal[lastStrippedIdx] ?? lastStrippedIdx) + 1;
+            while (endOriginal < hebrew.length && /[\u0591-\u05C7]/.test(hebrew[endOriginal])) endOriginal++;
+            hebrew = (hebrew.slice(0, startOriginal).trimEnd() + '\n\n' + hebrew.slice(endOriginal).trimStart()).trim();
+            finalHebrewSegments = [{ text: hebrew, italic: false }];
+          }
+        }
+        // Remove Shabbat addition: "בשבת מוסיפים:" through "וּבַעַל הַנֶּחָמוֹת:"
+        const strippedShabbos = stripNikkud(hebrew);
+        const shabbosStart = strippedShabbos.indexOf('בשבת מוסיפים');
+        if (shabbosStart !== -1) {
+          const afterShabbos = strippedShabbos.slice(shabbosStart);
+          const endMatch = afterShabbos.match(/[\s\S]*?ובעל הנחמות:?/);
+          if (endMatch) {
+            const endStripped = shabbosStart + endMatch[0].length;
+            const strippedToOriginal: number[] = [];
+            for (let i = 0; i < hebrew.length; i++) {
+              if (!/[\u0591-\u05C7]/.test(hebrew[i])) strippedToOriginal.push(i);
+            }
+            const startOriginal = strippedToOriginal[shabbosStart] ?? shabbosStart;
+            const lastStrippedIdx = endStripped - 1;
+            let endOriginal = (strippedToOriginal[lastStrippedIdx] ?? lastStrippedIdx) + 1;
+            while (endOriginal < hebrew.length && /[\u0591-\u05C7]/.test(hebrew[endOriginal])) endOriginal++;
+            hebrew = (hebrew.slice(0, startOriginal).trimEnd() + '\n\n' + hebrew.slice(endOriginal).trimStart()).trim();
+            finalHebrewSegments = [{ text: hebrew, italic: false }];
+          }
+        }
+        // Remove halacha paragraph: "שכח לומר רצה..." through "דיני שכחה:"
+        const strippedHalacha = stripNikkud(hebrew);
+        const halachaStart = strippedHalacha.indexOf('שכח לומר');
+        if (halachaStart !== -1) {
+          const afterHalacha = strippedHalacha.slice(halachaStart);
+          const endMatch = afterHalacha.match(/[\s\S]*?דיני שכחה:?/);
+          if (endMatch) {
+            const endStripped = halachaStart + endMatch[0].length;
+            const strippedToOriginal: number[] = [];
+            for (let i = 0; i < hebrew.length; i++) {
+              if (!/[\u0591-\u05C7]/.test(hebrew[i])) strippedToOriginal.push(i);
+            }
+            const startOriginal = strippedToOriginal[halachaStart] ?? halachaStart;
+            const lastStrippedIdx = endStripped - 1;
+            let endOriginal = (strippedToOriginal[lastStrippedIdx] ?? lastStrippedIdx) + 1;
+            while (endOriginal < hebrew.length && /[\u0591-\u05C7]/.test(hebrew[endOriginal])) endOriginal++;
+            if (endOriginal < hebrew.length && hebrew[endOriginal] === ':') endOriginal += 1;
+            hebrew = (hebrew.slice(0, startOriginal).trimEnd() + '\n\n' + hebrew.slice(endOriginal).trimStart()).trim();
+            finalHebrewSegments = [{ text: hebrew, italic: false }];
+          }
+        }
+        // Remove "הטוב והמטיב ביבנה תקנוה..." through "שנתנו לקבורה."
+        const strippedTov = stripNikkud(hebrew);
+        let tovStart = strippedTov.indexOf('הטוב והמטיב ביבנה');
+        if (tovStart === -1) {
+          const alt = strippedTov.indexOf('הטוב והמטיב');
+          if (alt !== -1 && strippedTov.slice(alt).includes('תקנוה')) tovStart = alt;
+        }
+        if (tovStart !== -1) {
+          const afterTov = strippedTov.slice(tovStart);
+          const endMatch = afterTov.match(/[\s\S]*?שנתנו לקבורה\.?/);
+          if (endMatch) {
+            const endStripped = tovStart + endMatch[0].length;
+            const strippedToOriginal: number[] = [];
+            for (let i = 0; i < hebrew.length; i++) {
+              if (!/[\u0591-\u05C7]/.test(hebrew[i])) strippedToOriginal.push(i);
+            }
+            const startOriginal = strippedToOriginal[tovStart] ?? tovStart;
+            const lastStrippedIdx = endStripped - 1;
+            let endOriginal = (strippedToOriginal[lastStrippedIdx] ?? lastStrippedIdx) + 1;
+            while (endOriginal < hebrew.length && /[\u0591-\u05C7]/.test(hebrew[endOriginal])) endOriginal++;
+            if (endOriginal < hebrew.length && hebrew[endOriginal] === '.') endOriginal += 1;
+            hebrew = (hebrew.slice(0, startOriginal).trimEnd() + '\n\n' + hebrew.slice(endOriginal).trimStart()).trim();
+            finalHebrewSegments = [{ text: hebrew, italic: false }];
+          }
+        }
+        hebrew = hebrew.replace(/[\u200E-\u200F\u202A-\u202E]/g, '');
+        hebrew = hebrew.replace(/(וּבְכָל־)\s*ת[\u0591-\u05C7]*ע(\s+)(?=וּבְכָל\s|שָׁעָה)/g, '$1עֵת$2');
+        hebrew = hebrew.replace(/עֵת(\s+)(?=וּבְכָל\s)/g, 'עֵת\u2060$1');
+        hebrew = hebrew.replace(/(ר[\u0591-\u05C7]*ח[\u0591-\u05C7]*ם)(\s+)(י[\u0591-\u05C7]*ה[\u0591-\u05C7]*ו[\u0591-\u05C7]*ה)/g, '$1 נָא$2$3');
+        finalHebrewSegments = [{ text: hebrew, italic: false }];
+        } catch (e) {
+          console.warn('Sefaria: birchas_hamazon trim failed, using full text', e);
+        }
+      }
+
+      // Tefillas HaDerech: parenthetical (אם דעתו לחזור...) stays on one line, add colon, render as grey instruction
+      if (sectionKey === 'tefilas_haderech') {
+        const paren = '(אם דעתו לחזור מיד אומר וְתַחְזִירֵנוּ לְשָׁלוֹם)';
+        const parenWithColon = '(אם דעתו לחזור מיד אומר: וְתַחְזִירֵנוּ לְשָׁלוֹם): ';
+        // Remove line breaks around parenthetical and add colon after it
+        hebrew = hebrew.replace(/\s*\(\s*אם דעתו לחזור מיד אומר וְתַחְזִירֵנוּ לְשָׁלוֹם\s*\)\s*/g, ' ' + parenWithColon);
+        const idx = hebrew.indexOf(parenWithColon);
+        if (idx !== -1) {
+          const before = hebrew.slice(0, idx);
+          const after = hebrew.slice(idx + parenWithColon.length);
+          finalHebrewSegments = [
+            { text: before, italic: false },
+            { text: parenWithColon, italic: true },
+            { text: after, italic: false },
+          ];
+        }
+        // English: same idea — parenthetical instruction on one line with colon, grey/italic
+        const enMatch = english.match(/\s*\(\s*(If one intends to return immediately[^)]+)\)\s*/i);
+        if (enMatch) {
+          const enParenWithColon = '(' + enMatch[1].trim() + '): ';
+          english = english.replace(/\s*\(\s*If one intends to return immediately[^)]+\)\s*/gi, ' ' + enParenWithColon);
+          const enIdx = english.indexOf(enParenWithColon);
+          if (enIdx !== -1) {
+            finalEnglishSegments = [
+              { text: english.slice(0, enIdx), italic: false },
+              { text: enParenWithColon, italic: true },
+              { text: english.slice(enIdx + enParenWithColon.length), italic: false },
+            ];
+          }
+        }
+
+        // לפי נוסח ספרד: Ashkenaz = remove italic explanation entirely; Sfard = remove the label, keep "יי" as normal
+        const lefiNusachSefard = 'לפי נוסח ספרד';
+        if (nusach === 'ashkenaz') {
+          finalHebrewSegments = finalHebrewSegments.filter((seg) => !seg.text.includes(lefiNusachSefard));
+          finalEnglishSegments = finalEnglishSegments.filter((seg) => !/according to Sfard nusach|according to Sefard nusach/i.test(seg.text));
+        } else {
+          // Sfard: strip "לפי נוסח ספרד" and replace with space so "יי שׁוֹמֵעַ תְּפִלָּה" is normal bracha with space before Name
+          finalHebrewSegments = finalHebrewSegments
+            .map((seg) => ({
+              text: seg.text.replace(lefiNusachSefard, ' ').replace(/\s{2,}/g, ' ').trim(),
+              italic: seg.text.includes(lefiNusachSefard) ? false : seg.italic,
+            }))
+            .filter((seg) => seg.text.length > 0);
+          // Line break after תְּפִלָּה: so next section (verses) starts on new paragraph
+          finalHebrewSegments = finalHebrewSegments.map((seg) => ({
+            ...seg,
+            text: seg.text.replace('תְּפִלָּה:', 'תְּפִלָּה:\n\n'),
+          }));
+          finalEnglishSegments = finalEnglishSegments
+            .map((seg) => ({
+              text: seg.text.replace(/\s*\(?according to Sfard nusach[^)]*\)?\s*/gi, ' ').replace(/\s{2,}/g, ' ').trim(),
+              italic: /according to Sfard nusach/i.test(seg.text) ? false : seg.italic,
+            }))
+            .filter((seg) => seg.text.length > 0);
+        }
+        // Remove everything after תְּפִלָּה: (verses etc. — user wants only the bracha)
+        const tefilaEnd = 'תְּפִלָּה:';
+        const cutHebrew = (seg: { text: string; italic: boolean }) => {
+          const i = seg.text.indexOf(tefilaEnd);
+          if (i === -1) return seg;
+          return { text: seg.text.slice(0, i + tefilaEnd.length), italic: seg.italic };
+        };
+        let done = false;
+        finalHebrewSegments = finalHebrewSegments
+          .map((seg) => {
+            if (done) return null;
+            const out = cutHebrew(seg);
+            if (out.text.length < seg.text.length) done = true;
+            return out;
+          })
+          .filter((s): s is { text: string; italic: boolean } => s != null);
+
+        const enEnd = /who hears prayer\.?/i;
+        const cutEnglish = (seg: { text: string; italic: boolean }) => {
+          const m = seg.text.match(enEnd);
+          if (!m) return seg;
+          const i = (m.index ?? 0) + m[0].length;
+          return { text: seg.text.slice(0, i), italic: seg.italic };
+        };
+        done = false;
+        finalEnglishSegments = finalEnglishSegments
+          .map((seg) => {
+            if (done) return null;
+            const out = cutEnglish(seg);
+            if (out.text.length < seg.text.length) done = true;
+            return out;
+          })
+          .filter((s): s is { text: string; italic: boolean } => s != null);
+
+        hebrew = finalHebrewSegments.map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim();
+        english = finalEnglishSegments.map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim();
+      }
 
       return {
         hebrew,
         english,
-        hebrewSegments: hebrewSegments.length > 0 ? hebrewSegments : undefined,
-        englishSegments: englishSegments.length > 0 ? englishSegments : undefined,
+        hebrewSegments: finalHebrewSegments.length > 0 ? finalHebrewSegments : undefined,
+        englishSegments: finalEnglishSegments.length > 0 ? finalEnglishSegments : undefined,
       };
     } catch {
       return null;

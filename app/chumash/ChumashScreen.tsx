@@ -9,6 +9,7 @@ import { useFocusEffect } from '@react-navigation/core';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { FadeIn } from '../../components/animations/FadeIn';
+import { BackButton } from '../../components/ui/BackButton';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { useTheme } from '../../src/design/theme';
@@ -201,9 +202,7 @@ export const ChumashScreen: React.FC = () => {
       <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
         </View>
         <Text style={styles.title}>Chumash</Text>
         <Text style={styles.titleHebrew}>חומש</Text>

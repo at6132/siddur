@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BackButton } from '../../components/ui/BackButton';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { colors } from '../../src/design/colors';
@@ -50,9 +51,7 @@ export const GratitudeScreen: React.FC = () => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backRow}>
-          <Text style={styles.backText}>← Back to Hub</Text>
-        </TouchableOpacity>
+        <BackButton onPress={() => navigation.goBack()} label="Back to Hub" style={styles.backRow} />
         <Text style={styles.title}>Daily gratitude</Text>
         <Text style={styles.subtitle}>What are you thankful for?</Text>
         {streak > 0 && (

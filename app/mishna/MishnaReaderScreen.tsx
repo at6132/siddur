@@ -3,7 +3,7 @@
  * Params: { mishnaYomi?: true } for today's perek, or { tractate, perek }.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,12 +14,19 @@ import {
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../components/reader/ReaderChrome';
+import { ReaderToolbar, HEBREW_FONT_SIZES, HEBREW_LINE_HEIGHTS } from '../../components/reader/ReaderToolbar';
+import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
+import { useAutoscroll } from '../../components/reader/useAutoscroll';
 import { spacing } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { useTheme } from '../../src/design/theme';
 import { SefariaService, SefariaText } from '../../src/services/SefariaService';
+import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import type { AppTheme } from '../../src/design/theme';
+import type { DisplayPreferences } from '../../src/types/preferences';
 import { getTodayMishnaYomi, MISHNA_TRACTATES } from '../../src/services/MishnaYomiService';
 
 type RouteParams = {
@@ -31,6 +38,18 @@ type RouteParams = {
 function createStyles(theme: AppTheme) {
   return StyleSheet.create({
     container: { flex: 1 },
+    staticTopBar: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      zIndex: 10,
+      paddingHorizontal: spacing.lg,
+      paddingBottom: spacing.sm,
+      backgroundColor: theme.isDark ? 'rgba(20,18,32,0.98)' : 'rgba(250,249,247,0.98)',
+      borderBottomWidth: 1,
+      borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
+    },
     scrollView: { flex: 1 },
     content: {
       padding: spacing.lg,
@@ -152,11 +171,30 @@ export const MishnaReaderScreen: React.FC = () => {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
+  const { height: viewportHeight } = useWindowDimensions();
   const [tractate, setTractate] = useState<string | null>(params.tractate || null);
   const [perek, setPerek] = useState<number | null>(params.perek ?? null);
   const [data, setData] = useState<SefariaText | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [textSize, setTextSize] = useState<DisplayPreferences['textSize']>('medium');
+  const [showEnglish, setShowEnglish] = useState(false);
+  const [autoscrollPlaying, setAutoscrollPlaying] = useState(false);
+  const [autoscrollSpeed, setAutoscrollSpeed] = useState(1);
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+  const contentHeightRef = useRef(0);
+
+  useEffect(() => {
+    (async () => {
+      const prefs = await UserPreferencesService.getPreferences();
+      if (prefs?.display?.textSize) setTextSize(prefs.display.textSize);
+      setShowEnglish(prefs?.display?.showTransliteration ?? false);
+      if (prefs?.autoscrollSpeed != null) setAutoscrollSpeed(Math.max(0.5, Math.min(2, prefs.autoscrollSpeed)));
+    })();
+  }, []);
+
+  useAutoscroll(scrollRef, scrollYRef, contentHeightRef, viewportHeight, autoscrollPlaying, autoscrollSpeed);
 
   useEffect(() => {
     let cancelled = false;
@@ -229,46 +267,53 @@ export const MishnaReaderScreen: React.FC = () => {
   const headerTractateLabel = tractate && perek != null ? `Mishnah ${tractate}` : null;
   const headerPerekLabel = tractate && perek != null ? `Perek ${perek}` : params.mishnaYomi ? "Today's Mishna Yomi" : 'Mishna';
 
-  return (
-    <View style={[styles.container, { paddingTop: insets.top, direction: 'rtl' }]}>
-      <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingTop: spacing.md }]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={[styles.backText, { writingDirection: 'rtl' }]}>Back →</Text>
-          </TouchableOpacity>
-          <View style={[styles.headerTitleBlock, { alignItems: 'flex-start' }]}>
-            {headerTractateLabel ? (
-              <>
-                <Text style={[styles.tractateLabel, { textAlign: 'right', writingDirection: 'rtl' }]} numberOfLines={1}>{headerTractateLabel}</Text>
-                <Text style={[styles.perekLabel, { textAlign: 'right', writingDirection: 'rtl' }]} numberOfLines={1}>{headerPerekLabel}</Text>
-              </>
-            ) : (
-              <Text style={[styles.title, { textAlign: 'right', writingDirection: 'rtl' }]} numberOfLines={1}>{headerPerekLabel}</Text>
-            )}
-          </View>
-          <View style={styles.navRow}>
-            <TouchableOpacity
-              onPress={goNext}
-              style={[styles.navButton, !hasNext && styles.navButtonDisabled]}
-              disabled={!hasNext}
-            >
-              <Text style={[styles.navButtonText, { writingDirection: 'rtl' }]}>← Next</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={goPrev}
-              style={[styles.navButton, !hasPrev && styles.navButtonDisabled]}
-              disabled={!hasPrev}
-            >
-              <Text style={[styles.navButtonText, { writingDirection: 'rtl' }]}>Prev →</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+  const hebrewFontSize = HEBREW_FONT_SIZES[textSize];
+  const hebrewLineHeight = HEBREW_LINE_HEIGHTS[textSize];
+  const englishFontSize = hebrewFontSize * 0.85;
+  const englishLineHeight = hebrewLineHeight * 0.85;
 
+  const chromeTitle = headerTractateLabel ? `${headerTractateLabel} • ${headerPerekLabel}` : headerPerekLabel;
+
+  return (
+    <View style={[styles.container, { direction: 'rtl' }]}>
+      <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
+      <ReaderChrome
+        title={chromeTitle}
+        onBack={() => navigation.goBack()}
+        topInset={insets.top}
+      >
+        <ReaderToolbar
+          textSize={textSize}
+          onTextSizeChange={setTextSize}
+          showEnglish={showEnglish}
+          onShowEnglishChange={setShowEnglish}
+          showEnglishToggle={true}
+        />
+      </ReaderChrome>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.scrollView}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + READER_CHROME_HEADER_HEIGHT_APPROX + spacing.md, paddingBottom: 120 }]}
+        showsVerticalScrollIndicator={false}
+        onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+        onContentSizeChange={(_, h) => { contentHeightRef.current = h; }}
+      >
+        <View style={styles.navRow}>
+          <TouchableOpacity
+            onPress={goNext}
+            style={[styles.navButton, !hasNext && styles.navButtonDisabled]}
+            disabled={!hasNext}
+          >
+            <Text style={[styles.navButtonText, { writingDirection: 'rtl' }]}>← Next</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={goPrev}
+            style={[styles.navButton, !hasPrev && styles.navButtonDisabled]}
+            disabled={!hasPrev}
+          >
+            <Text style={[styles.navButtonText, { writingDirection: 'rtl' }]}>Prev →</Text>
+          </TouchableOpacity>
+        </View>
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.colors.primary?.main || '#888'} />
@@ -285,21 +330,28 @@ export const MishnaReaderScreen: React.FC = () => {
               const arrH = Array.isArray(rawH) ? rawH : (rawH ? [rawH] : []);
               return arrH.map((block, i) => {
                 const clean = typeof block === 'string' ? block.replace(/<[^>]+>/g, '').trim() : String(block);
-                return clean ? <Text key={i} style={styles.hebrewBlock}>{clean}</Text> : null;
+                return clean ? <Text key={i} style={[styles.hebrewBlock, { fontSize: hebrewFontSize, lineHeight: hebrewLineHeight }]}>{clean}</Text> : null;
               });
             })()}
-            {(() => {
+            {showEnglish && (() => {
               const rawE = data.english;
               const arrE = Array.isArray(rawE) ? rawE : (rawE ? [rawE] : []);
               return arrE.map((block, i) => {
                 const clean = typeof block === 'string' ? block.replace(/<[^>]+>/g, '').trim() : String(block);
-                return clean ? <Text key={i} style={styles.englishBlock}>{clean}</Text> : null;
+                return clean ? <Text key={i} style={[styles.englishBlock, { fontSize: englishFontSize, lineHeight: englishLineHeight }]}>{clean}</Text> : null;
               });
             })()}
             <Text style={styles.attribution}>Texts provided by Sefaria • sefaria.org</Text>
           </View>
         ) : null}
       </ScrollView>
+      <ReaderAutoscrollBar
+        playing={autoscrollPlaying}
+        onPlayingChange={setAutoscrollPlaying}
+        speed={autoscrollSpeed}
+        onSpeedChange={setAutoscrollSpeed}
+        bottomInset={insets.bottom}
+      />
     </View>
   );
 };

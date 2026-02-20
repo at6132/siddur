@@ -444,6 +444,39 @@ export class JewishCalendarService {
   }
 
   /**
+   * Check if Yaaleh V'Yavo is said (Rosh Chodesh, Chol Hamoed, or relevant Yom Tov in Birkat Hamazon).
+   */
+  static isYaalehVyavoDay(date: Date = new Date()): boolean {
+    if (this.isRoshChodesh(date)) return true;
+    if (this.isCholHamoed(date)) return true;
+    if (this.isYomKippur(date)) return true;
+    const hdate = this.getJewishDate(date);
+    const month = hdate.getMonth();
+    const day = hdate.getDate();
+    if (month === months.NISAN && (day === 15 || day === 16)) return true;
+    if (month === months.SIVAN && (day === 6 || day === 7)) return true;
+    if (month === months.TISHREI && (day === 15 || day === 16 || (day >= 17 && day <= 21) || day === 22 || day === 23)) return true;
+    return false;
+  }
+
+  /**
+   * Phrase (stripped of nikkud) to highlight in the Yaaleh V'Yavo paragraph for the given date. Returns null if not a Yaaleh V'Yavo day.
+   */
+  static getYaalehVyavoPhrase(date: Date = new Date()): string | null {
+    if (!this.isYaalehVyavoDay(date)) return null;
+    const hdate = this.getJewishDate(date);
+    const month = hdate.getMonth();
+    const day = hdate.getDate();
+    if (this.isYomKippur(date)) return 'הכפורים';
+    if (this.isRoshChodesh(date)) return 'ראש החודש';
+    if (month === months.TISHREI && (day === 22 || day === 23)) return 'שמיני עצרת';
+    if (month === months.TISHREI && (day >= 15 && day <= 21)) return 'חג הסוכות';
+    if (month === months.SIVAN && (day === 6 || day === 7)) return 'חג השבועות';
+    if (month === months.NISAN && (day >= 15 && day <= 22)) return 'חג המצות';
+    return null;
+  }
+
+  /**
    * Get the upcoming Shabbos for a given date.
    * Sunday through Friday → that week's Shabbos (upcoming Saturday).
    * Saturday → same day (this Shabbos).

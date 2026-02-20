@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TouchableOpacity } from 'react-native';
 import { useTheme } from '../../src/design/theme';
+import { BackButton } from '../../components/ui/BackButton';
 import { spacing } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 
@@ -22,9 +23,7 @@ export const ParshaScreen: React.FC = () => {
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <Text style={styles.backText}>← Back</Text>
-      </TouchableOpacity>
+      <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
       <View style={styles.content}>
         <Text style={styles.title}>Parsha</Text>
         <Text style={styles.placeholder}>Coming soon</Text>

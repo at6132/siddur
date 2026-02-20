@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location';
 import { FadeIn } from '../../components/animations/FadeIn';
+import { LiquidGlassSegmentedControl } from '../../components/navigation/LiquidGlassSegmentedControl';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius, shadows } from '../../src/design/spacing';
 import { textStyles, fonts } from '../../src/design/typography';
@@ -96,6 +97,8 @@ export const SettingsScreen: React.FC = () => {
   const [timePickerValue, setTimePickerValue] = useState('');
   const [pickerDate, setPickerDate] = useState(() => new Date());
   const [shekiyaMinutesPickerOpen, setShekiyaMinutesPickerOpen] = useState(false);
+  type SettingsTab = 'notifications' | 'general' | 'data' | 'about';
+  const [activeTab, setActiveTab] = useState<SettingsTab>('notifications');
 
   /** Format 24h "09:00" as "9:00 AM"; 24h "20:30" as "8:30 PM" */
   const formatTehillimTimeForDisplay = (hhmm: string): string => {
@@ -389,17 +392,23 @@ export const SettingsScreen: React.FC = () => {
           <Text style={styles.pageTitle}>Settings</Text>
         </FadeIn>
 
-        {/* Support & credit */}
-        <FadeIn delay={25}>
-          <GlassCard style={styles.card}>
-            <View style={styles.supportSection}>
-              <Text style={styles.supportTitle}>Support</Text>
-              <Text style={styles.supportText}>Call or text 9739341031 for support</Text>
-              <Text style={styles.supportCredit}>Project by Avi Taub at Sheva Studios</Text>
-            </View>
-          </GlassCard>
-        </FadeIn>
+        {/* Tab bar – liquid glass with draggable orb */}
+        <LiquidGlassSegmentedControl
+          tabs={[
+            { key: 'notifications', label: 'Notifications' },
+            { key: 'general', label: 'General' },
+            { key: 'data', label: 'Data' },
+            { key: 'about', label: 'About' },
+          ]}
+          activeIndex={(['notifications', 'general', 'data', 'about'] as const).indexOf(activeTab)}
+          onIndexChange={(index) =>
+            setActiveTab(['notifications', 'general', 'data', 'about'][index] as SettingsTab)
+          }
+        />
 
+        {/* ============ NOTIFICATIONS TAB ============ */}
+        {activeTab === 'notifications' && (
+        <>
         {/* ============ NOTIFICATIONS SECTION ============ */}
         <FadeIn delay={50}>
           <GlassCard style={styles.card}>
@@ -871,9 +880,14 @@ export const SettingsScreen: React.FC = () => {
             </View>
           </GlassCard>
         </FadeIn>
+        </>
+        )}
 
+        {/* ============ GENERAL TAB ============ */}
+        {activeTab === 'general' && (
+        <>
         {/* ============ NUSACH SECTION ============ */}
-        <FadeIn delay={100}>
+        <FadeIn delay={50}>
           <GlassCard style={styles.card}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
@@ -1022,18 +1036,23 @@ export const SettingsScreen: React.FC = () => {
                 <View style={styles.simpleToggle}>
                   <Text style={styles.optionLabel}>Show Transliteration</Text>
                   <Switch
-                    value={preferences.display?.showTransliteration ?? false}
-                    onValueChange={(value) => updateDisplayPreference('showTransliteration', value)}
+                    value={false}
+                    onValueChange={() => Alert.alert('Coming Soon', 'English translations will be available in a future update.')}
                     trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                    thumbColor={preferences.display?.showTransliteration ? theme.colors.primary.main : theme.colors.neutral[400]}
+                    thumbColor={theme.colors.neutral[400]}
                   />
                 </View>
             </View>
           </GlassCard>
         </FadeIn>
+        </>
+        )}
 
+        {/* ============ DATA TAB ============ */}
+        {activeTab === 'data' && (
+        <>
         {/* ============ OFFLINE CONTENT SECTION ============ */}
-        <FadeIn delay={250}>
+        <FadeIn delay={50}>
           <GlassCard style={styles.card}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
@@ -1080,9 +1099,25 @@ export const SettingsScreen: React.FC = () => {
             </View>
           </GlassCard>
         </FadeIn>
+        </>
+        )}
+
+        {/* ============ ABOUT TAB ============ */}
+        {activeTab === 'about' && (
+        <>
+        {/* Support & credit */}
+        <FadeIn delay={25}>
+          <GlassCard style={styles.card}>
+            <View style={styles.supportSection}>
+              <Text style={styles.supportTitle}>Support</Text>
+              <Text style={styles.supportText}>Call or text 9739341031 for support</Text>
+              <Text style={styles.supportCredit}>Project by Avi Taub at Sheva Studios</Text>
+            </View>
+          </GlassCard>
+        </FadeIn>
 
         {/* ============ ABOUT SECTION ============ */}
-        <FadeIn delay={300}>
+        <FadeIn delay={50}>
           <GlassCard style={styles.card}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
@@ -1123,12 +1158,14 @@ export const SettingsScreen: React.FC = () => {
         </FadeIn>
 
         {/* App Logo/Branding */}
-        <FadeIn delay={350}>
+        <FadeIn delay={75}>
           <View style={styles.brandingSection}>
             <Text style={styles.appName}>24/7</Text>
             <Text style={styles.tagline}>With you, when you choose.</Text>
           </View>
         </FadeIn>
+        </>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -1240,7 +1277,7 @@ function createSettingsStyles(theme: AppTheme) {
     fontFamily: fonts.heading.bold,
     fontSize: 32,
     color: theme.colors.text.primary,
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
   },
 
   card: {},
@@ -1511,17 +1548,6 @@ function createSettingsStyles(theme: AppTheme) {
   },
   minuteOptionTextActive: {
     color: '#fff',
-  },
-
-  // Sub-section title
-  subSectionTitle: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 13,
-    color: theme.colors.text.tertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginTop: spacing.sm,
-    marginBottom: spacing.sm,
   },
 
   // Custom Reminders

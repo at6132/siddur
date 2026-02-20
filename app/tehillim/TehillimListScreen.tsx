@@ -11,12 +11,14 @@ import {
   Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/core';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { GlassPanel } from '../../components/ui/GlassPanel';
 import { ScalePress } from '../../components/animations/ScalePress';
 import { FadeIn } from '../../components/animations/FadeIn';
+import { BackButton } from '../../components/ui/BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
@@ -72,6 +74,7 @@ interface OverallProgress {
 
 export const TehillimListScreen: React.FC = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [dailyProgress, setDailyProgress] = useState<DailyProgress | null>(null);
   const [overallProgress, setOverallProgress] = useState<OverallProgress | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -135,7 +138,9 @@ export const TehillimListScreen: React.FC = () => {
   const renderDailyCard = () => {
     if (!dailyProgress) return null;
 
-    const { dayName, totalChapters, percentComplete, chaptersRemaining, goalType } = dailyProgress;
+    const { dayName, percentComplete, goalType } = dailyProgress;
+    const totalChapters = dailyProgress.totalChapters ?? [];
+    const chaptersRemaining = dailyProgress.chaptersRemaining ?? [];
     const isWhenever = goalType === 'whenever';
     const startChapter = totalChapters[0];
     const endChapter = totalChapters[totalChapters.length - 1];
@@ -291,7 +296,11 @@ export const TehillimListScreen: React.FC = () => {
         colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
         style={StyleSheet.absoluteFill}
       />
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
+        <View style={styles.headerRow}>
+          <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
+          <Text style={styles.headerTitle}>Tehillim</Text>
+        </View>
         <View style={styles.searchBar}>
           <Ionicons name="search" size={20} color={colors.text.tertiary} style={styles.searchIcon} />
           <TextInput
@@ -327,8 +336,27 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg + spacing.safeTopInset,
     paddingBottom: spacing.md,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  backButton: {
+    paddingVertical: spacing.sm,
+    paddingRight: spacing.md,
+  },
+  backText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 16,
+    color: colors.primary.main,
+  },
+  headerTitle: {
+    fontFamily: fonts.heading.bold,
+    fontSize: 22,
+    color: colors.text.primary,
+    marginLeft: spacing.sm,
   },
   list: {
     paddingHorizontal: spacing.lg,

@@ -153,6 +153,10 @@ export const LiquidGlassTabBar: React.FC<LiquidGlassTabBarProps> = ({
   const { theme } = useTheme();
   const styles = useStyles();
   const insets = useSafeAreaInsets();
+  const currentRoute = state.routes[state.index];
+  const currentOptions = currentRoute ? descriptors[currentRoute.key]?.options : undefined;
+  const tabBarHidden = currentOptions?.tabBarStyle?.display === 'none';
+
   const tabCount = state.routes.length;
   const tabWidth = TAB_BAR_WIDTH / tabCount;
   const minOrbX = 0;
@@ -248,6 +252,10 @@ export const LiquidGlassTabBar: React.FC<LiquidGlassTabBarProps> = ({
   }));
 
   const bottomPadding = Math.max(insets.bottom, 8) + FLOATING_MARGIN_BOTTOM;
+
+  if (tabBarHidden) {
+    return null;
+  }
 
   return (
     <View style={[styles.outer, { paddingBottom: bottomPadding }]} pointerEvents="box-none">

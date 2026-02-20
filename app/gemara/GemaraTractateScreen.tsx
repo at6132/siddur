@@ -9,6 +9,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { FadeIn } from '../../components/animations/FadeIn';
+import { BackButton } from '../../components/ui/BackButton';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { useTheme } from '../../src/design/theme';
@@ -124,9 +125,7 @@ export const GemaraTractateScreen: React.FC = () => {
       <View style={styles.container}>
         <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
         <View style={styles.content}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
           <Text style={styles.title}>Tractate not found</Text>
         </View>
       </View>
@@ -145,9 +144,7 @@ export const GemaraTractateScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+          <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
         </View>
         <Text style={[styles.title, { writingDirection: 'rtl', textAlign: 'right' }]}>{hebrewName}</Text>
         <Text style={styles.subtitleHebrew}>{JewishCalendarService.numberToHebrew(dapim)} דפים • נגע לדף</Text>
