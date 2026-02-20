@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { BackButton } from '../../components/ui/BackButton';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
@@ -54,11 +55,21 @@ export const GratitudeScreen: React.FC = () => {
         <BackButton onPress={() => navigation.goBack()} label="Back to Hub" style={styles.backRow} />
         <Text style={styles.title}>Daily gratitude</Text>
         <Text style={styles.subtitle}>What are you thankful for?</Text>
-        {streak > 0 && (
-          <View style={styles.streakPill}>
-            <Text style={styles.streakText}>🔥 {streak} day streak</Text>
-          </View>
-        )}
+        <View style={styles.headerActions}>
+          {streak > 0 && (
+            <View style={styles.streakPill}>
+              <Text style={styles.streakText}>🔥 {streak} day streak</Text>
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.reminderBtn}
+            onPress={() => (navigation as any).navigate('Settings', { scrollTo: 'dailyGratitude' })}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="notifications-outline" size={16} color={colors.primary.main} />
+            <Text style={styles.reminderBtnText}>Set Reminder</Text>
+          </TouchableOpacity>
+        </View>
 
         {loading ? (
           <Text style={styles.muted}>Loading…</Text>
@@ -97,17 +108,36 @@ const styles = StyleSheet.create({
   backText: { fontFamily: fonts.body.medium, fontSize: 16, color: colors.text.secondary },
   title: { fontFamily: fonts.heading.bold, fontSize: 28, color: colors.text.primary, marginBottom: 4 },
   subtitle: { fontFamily: fonts.body.regular, fontSize: 16, color: colors.text.secondary, marginBottom: spacing.sm },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+  },
   streakPill: {
-    alignSelf: 'flex-start',
     backgroundColor: Platform.OS === 'web' ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.9)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.06)',
-    marginBottom: spacing.lg,
   },
   streakText: { fontFamily: fonts.body.semibold, fontSize: 14, color: colors.primary.dark },
+  reminderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+  },
+  reminderBtnText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: colors.primary.main,
+  },
   muted: { fontFamily: fonts.body.regular, fontSize: 14, color: colors.text.tertiary, marginBottom: spacing.md },
   entryRow: {
     backgroundColor: Platform.OS === 'web' ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.85)',

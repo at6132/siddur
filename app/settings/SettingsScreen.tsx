@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Constants from 'expo-constants';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location';
@@ -81,12 +81,18 @@ const GlassCard: React.FC<{
   );
 };
 
+type SettingsRouteParams = {
+  scrollTo?: 'dailyGratitude';
+};
+
 export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();
+  const route = useRoute<RouteProp<{ Settings: SettingsRouteParams }, 'Settings'>>();
   const { theme } = useTheme();
   const styles = useMemo(() => createSettingsStyles(theme), [theme]);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
+  const scrollViewRef = useRef<ScrollView>(null);
   const [downloadingContent, setDownloadingContent] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [locationLoading, setLocationLoading] = useState(false);
@@ -224,6 +230,16 @@ export const SettingsScreen: React.FC = () => {
   useEffect(() => {
     loadPreferences();
   }, [loadPreferences]);
+
+  // Handle scroll to section from navigation params
+  useEffect(() => {
+    if (route.params?.scrollTo === 'dailyGratitude' && !loading) {
+      setTimeout(() => {
+        // Scroll to approximately where "Other Reminders" / Daily Gratitude section is
+        scrollViewRef.current?.scrollTo({ y: 580, animated: true });
+      }, 400);
+    }
+  }, [route.params?.scrollTo, loading]);
 
   // Refresh when returning from Add Custom Reminder (or any sub-screen) so new reminders show
   useFocusEffect(
@@ -383,6 +399,7 @@ export const SettingsScreen: React.FC = () => {
       />
       
       <ScrollView 
+        ref={scrollViewRef}
         style={styles.scrollView} 
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
