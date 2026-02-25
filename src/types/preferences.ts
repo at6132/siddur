@@ -124,9 +124,9 @@ export interface UserPreferences {
 }
 
 export const DEFAULT_PRAYER_REMINDERS: PrayerReminders = {
-  shacharis: { enabled: false, time: '7:00 AM' },
-  mincha: { enabled: false, time: '1:00 PM' },
-  maariv: { enabled: false, time: '8:00 PM' },
+  shacharis: { enabled: true, time: '7:00 AM' },
+  mincha: { enabled: true, time: '1:00 PM' },
+  maariv: { enabled: true, time: '8:00 PM' },
 };
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
@@ -147,9 +147,9 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   fastDaysTime: '08:00',
   sefirasHaomer: true,
   sefirasHaomerTime: '20:30',
-  dailyGratitude: false,
+  dailyGratitude: true,
   dailyGratitudeTime: '20:00',
-  shekiyaReminder: false,
+  shekiyaReminder: true,
   shekiyaMinutesBefore: 15,
   customCountdowns: true,
 };
