@@ -98,6 +98,11 @@ export class NotificationScheduler {
       return;
     }
 
+    // Schedule custom reminders FIRST so they are not dropped by iOS 64-notification limit
+    if (preferences.customReminders?.length) {
+      await this.scheduleCustomReminders(preferences);
+    }
+
     // Get today's info
     const todayInfo = await CalendarEngine.getTodayInfo(context);
 
@@ -144,11 +149,6 @@ export class NotificationScheduler {
     // Shekiya (sunset) reminder — N minutes before sunset each day
     if (preferences.notifications.shekiyaReminder) {
       await this.scheduleShekiyaReminder(preferences, context);
-    }
-
-    // Custom reminders (user-created, with days + time + openToScreen)
-    if (preferences.customReminders?.length) {
-      await this.scheduleCustomReminders(preferences);
     }
 
     // Streak reminders (invisible, not in settings - gentle nudge if about to lose streak)
@@ -323,20 +323,23 @@ export class NotificationScheduler {
         reminder.id,
         reminder.openToScreen
       );
+      // Ensure body is non-empty (required by some platforms)
+      if (!content.body || content.body.trim() === '') {
+        content.body = content.title || 'Reminder';
+      }
       const dayDows = reminder.days.map((d) => DAY_ID_TO_DOW[d] ?? 0);
+      if (dayDows.length === 0) continue;
 
       // Schedule next 4 weeks of occurrences on selected weekdays
       for (let dayOffset = 0; dayOffset < 28; dayOffset++) {
-        const d = new Date(now);
-        d.setDate(d.getDate() + dayOffset);
-        d.setHours(hour, minute, 0, 0);
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, hour, minute, 0, 0);
         if (!dayDows.includes(d.getDay())) continue;
         if (!isFutureDate(d)) continue;
         await scheduleSafe({
-          content,
+          content: { ...content, data: { ...content.data } },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
-            date: d,
+            date: new Date(d.getTime()),
           },
         });
       }
