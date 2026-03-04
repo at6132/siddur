@@ -59,7 +59,44 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_id);
     CREATE INDEX IF NOT EXISTS idx_events_created ON events(created_at);
   `);
+  await initTehillimTables();
   console.log('[analytics-api] DB initialized.');
+}
+
+// --- Shared Tehillim (campaigns + commitments/completions) ---
+export async function initTehillimTables() {
+  const p = getPool();
+  if (!p) return;
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS tehillim_campaigns (
+      id TEXT PRIMARY KEY,
+      type TEXT NOT NULL CHECK (type IN ('split', 'shared')),
+      title TEXT NOT NULL DEFAULT '',
+      reason TEXT NOT NULL DEFAULT '',
+      deadline TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      created_by TEXT
+    );
+    CREATE TABLE IF NOT EXISTS tehillim_commitments (
+      campaign_id TEXT NOT NULL REFERENCES tehillim_campaigns(id) ON DELETE CASCADE,
+      perek_number INT NOT NULL CHECK (perek_number >= 1 AND perek_number <= 150),
+      participant_id TEXT NOT NULL,
+      completed_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(campaign_id, perek_number)
+    );
+    CREATE TABLE IF NOT EXISTS tehillim_completions (
+      campaign_id TEXT NOT NULL REFERENCES tehillim_campaigns(id) ON DELETE CASCADE,
+      perek_number INT NOT NULL CHECK (perek_number >= 1 AND perek_number <= 150),
+      participant_id TEXT NOT NULL,
+      completed_at TIMESTAMPTZ DEFAULT NOW(),
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(campaign_id, perek_number, participant_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_tehillim_commitments_campaign ON tehillim_commitments(campaign_id);
+    CREATE INDEX IF NOT EXISTS idx_tehillim_completions_campaign ON tehillim_completions(campaign_id);
+  `);
+  console.log('[analytics-api] Tehillim tables initialized.');
 }
 
 export async function insertEvents(events) {
@@ -377,4 +414,142 @@ export async function upsertIdentityProfile(anonymousId, profile) {
        updated_at = NOW()`,
     [anonymousId, JSON.stringify(profile)]
   );
+}
+
+// --- Shared Tehillim ---
+function shortId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+export async function createTehillimCampaign({ type, title, reason, deadline, createdBy }) {
+  const p = getPool();
+  if (!p) throw new Error('Database not available');
+  const id = shortId();
+  await p.query(
+    `INSERT INTO tehillim_campaigns (id, type, title, reason, deadline, created_by)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [id, type, title || '', reason || '', deadline || null, createdBy || null]
+  );
+  return { id, type, title: title || '', reason: reason || '', deadline: deadline || null };
+}
+
+export async function getTehillimCampaign(id) {
+  const p = getPool();
+  if (!p) return null;
+  const r = await p.query(
+    `SELECT id, type, title, reason, deadline, created_at, created_by FROM tehillim_campaigns WHERE id = $1`,
+    [id]
+  );
+  if (!r.rows[0]) return null;
+  const row = r.rows[0];
+  return {
+    id: row.id,
+    type: row.type,
+    title: row.title,
+    reason: row.reason,
+    deadline: row.deadline ? row.deadline.toISOString() : null,
+    created_at: row.created_at?.toISOString(),
+    created_by: row.created_by,
+  };
+}
+
+/** For split: commitments (one per perek). For shared: completions (many per perek). */
+export async function getTehillimCampaignPereks(campaignId) {
+  const p = getPool();
+  if (!p) return { commitments: [], completions: [] };
+  const campaign = await getTehillimCampaign(campaignId);
+  if (!campaign) return null;
+  if (campaign.type === 'split') {
+    const r = await p.query(
+      `SELECT perek_number, participant_id, completed_at, created_at FROM tehillim_commitments WHERE campaign_id = $1 ORDER BY perek_number`,
+      [campaignId]
+    );
+    return {
+      commitments: r.rows.map((row) => ({
+        perek_number: row.perek_number,
+        participant_id: row.participant_id,
+        completed_at: row.completed_at ? row.completed_at.toISOString() : null,
+        created_at: row.created_at?.toISOString(),
+      })),
+      completions: [],
+    };
+  }
+  const r = await p.query(
+    `SELECT perek_number, participant_id, completed_at, created_at FROM tehillim_completions WHERE campaign_id = $1 ORDER BY perek_number`,
+    [campaignId]
+  );
+  return {
+    commitments: [],
+    completions: r.rows.map((row) => ({
+      perek_number: row.perek_number,
+      participant_id: row.participant_id,
+      completed_at: row.completed_at ? row.completed_at.toISOString() : null,
+      created_at: row.created_at?.toISOString(),
+    })),
+  };
+}
+
+/** Split mode: claim a range. Fails if any perek already claimed. */
+export async function claimTehillimRange(campaignId, perekStart, perekEnd, participantId) {
+  const p = getPool();
+  if (!p) throw new Error('Database not available');
+  const campaign = await getTehillimCampaign(campaignId);
+  if (!campaign || campaign.type !== 'split') throw new Error('Campaign not found or not split mode');
+  for (let n = perekStart; n <= perekEnd; n++) {
+    const existing = await p.query(
+      `SELECT 1 FROM tehillim_commitments WHERE campaign_id = $1 AND perek_number = $2`,
+      [campaignId, n]
+    );
+    if (existing.rows.length > 0) throw new Error(`Perek ${n} already claimed`);
+  }
+  for (let n = perekStart; n <= perekEnd; n++) {
+    await p.query(
+      `INSERT INTO tehillim_commitments (campaign_id, perek_number, participant_id) VALUES ($1, $2, $3)`,
+      [campaignId, n, participantId]
+    );
+  }
+  return { claimed: perekEnd - perekStart + 1 };
+}
+
+/** Mark perek(s) complete. Split: update commitment row. Shared: insert into completions. */
+export async function completeTehillimPereks(campaignId, perekNumbers, participantId) {
+  const p = getPool();
+  if (!p) throw new Error('Database not available');
+  const campaign = await getTehillimCampaign(campaignId);
+  if (!campaign) throw new Error('Campaign not found');
+  for (const perek of perekNumbers) {
+    if (campaign.type === 'split') {
+      await p.query(
+        `UPDATE tehillim_commitments SET completed_at = NOW() WHERE campaign_id = $1 AND perek_number = $2 AND participant_id = $3`,
+        [campaignId, perek, participantId]
+      );
+    } else {
+      await p.query(
+        `INSERT INTO tehillim_completions (campaign_id, perek_number, participant_id)
+         VALUES ($1, $2, $3)
+         ON CONFLICT (campaign_id, perek_number, participant_id) DO UPDATE SET completed_at = NOW()`,
+        [campaignId, perek, participantId]
+      );
+    }
+  }
+  return { completed: perekNumbers.length };
+}
+
+/** Status for UI: campaign + perek state (claimed/completed). */
+export async function getTehillimCampaignStatus(campaignId, participantId) {
+  const campaign = await getTehillimCampaign(campaignId);
+  if (!campaign) return null;
+  const data = await getTehillimCampaignPereks(campaignId);
+  if (!data) return null;
+  const byPerek = {};
+  if (campaign.type === 'split') {
+    data.commitments.forEach((c) => {
+      byPerek[c.perek_number] = { participant_id: c.participant_id, completed_at: c.completed_at, is_mine: c.participant_id === participantId };
+    });
+  } else {
+    data.completions.filter((c) => c.participant_id === participantId).forEach((c) => {
+      byPerek[c.perek_number] = { completed_at: c.completed_at };
+    });
+  }
+  return { campaign, byPerek };
 }

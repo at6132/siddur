@@ -365,6 +365,15 @@ export const HubOverviewScreen: React.FC = () => {
 
         <FadeIn delay={450}>
           <ExploreCard
+            icon="book-outline"
+            title="Shared Tehillim"
+            subtitle="Create or join a shared Tehillim page"
+            onPress={() => (navigation as any).navigate('CreateSharedTehillim')}
+          />
+        </FadeIn>
+
+        <FadeIn delay={450}>
+          <ExploreCard
             icon="location-outline"
             title="Minyan Finder"
             subtitle="Find nearby minyanim"

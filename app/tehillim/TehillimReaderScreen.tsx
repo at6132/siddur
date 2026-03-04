@@ -19,6 +19,8 @@ import { TehillimChapter, TehillimVerse } from '../../src/content/tehillim/types
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import type { DisplayPreferences } from '../../src/types/preferences';
+import { getAnonymousId } from '../../src/analytics/IdentityService';
+import { completeTehillimPereks } from '../../src/api/tehillimApi';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -36,6 +38,7 @@ export const TehillimReaderScreen: React.FC = () => {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const psalm = (route.params as any)?.psalm || 1;
+  const campaignId = (route.params as any)?.campaignId as string | undefined;
   
   const insets = useSafeAreaInsets();
   const { height: viewportHeight } = useWindowDimensions();
@@ -48,6 +51,7 @@ export const TehillimReaderScreen: React.FC = () => {
   const [isWheneverMode, setIsWheneverMode] = useState(false);
   const [autoscrollPlaying, setAutoscrollPlaying] = useState(false);
   const [autoscrollSpeed, setAutoscrollSpeed] = useState(1);
+  const [campaignMarking, setCampaignMarking] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
   const contentHeightRef = useRef(0);
@@ -102,6 +106,20 @@ export const TehillimReaderScreen: React.FC = () => {
       });
       setIsMarkedComplete(true);
       setIsDailyChapter(true);
+    }
+  };
+
+  const markCampaignComplete = async () => {
+    if (!campaignId) return;
+    setCampaignMarking(true);
+    try {
+      const participantId = await getAnonymousId();
+      await completeTehillimPereks(campaignId, [psalm], participantId);
+      navigation.goBack();
+    } catch (e) {
+      console.warn('Campaign complete failed:', e);
+    } finally {
+      setCampaignMarking(false);
     }
   };
 
@@ -244,6 +262,27 @@ export const TehillimReaderScreen: React.FC = () => {
                   </Text>
                 </TouchableOpacity>
               )}
+            </View>
+          </FadeIn>
+        )}
+
+        {/* Shared campaign: mark this perek complete and return to shared page */}
+        {campaignId && (
+          <FadeIn delay={0}>
+            <View style={styles.dailyBadge}>
+              <Text style={styles.dailyBadgeText}>Shared Tehillim page</Text>
+              <TouchableOpacity
+                style={styles.markCompleteButton}
+                onPress={markCampaignComplete}
+                disabled={campaignMarking}
+                activeOpacity={0.7}
+              >
+                {campaignMarking ? (
+                  <ActivityIndicator size="small" color={colors.text.inverse} />
+                ) : (
+                  <Text style={styles.markCompleteButtonText}>Mark complete & return</Text>
+                )}
+              </TouchableOpacity>
             </View>
           </FadeIn>
         )}

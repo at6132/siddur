@@ -22,6 +22,12 @@ import {
   upsertIdentityProfile,
   getEventCountsByName,
   getRetention,
+  createTehillimCampaign,
+  getTehillimCampaign,
+  getTehillimCampaignPereks,
+  getTehillimCampaignStatus,
+  claimTehillimRange,
+  completeTehillimPereks,
 } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -178,6 +184,86 @@ app.get('/api/stats/event-counts', async (req, res) => {
   } catch (e) {
     console.error('[analytics-api] GET /api/stats/event-counts', e);
     res.status(500).json({ error: 'Failed to get event counts' });
+  }
+});
+
+// --- Shared Tehillim ---
+const TEHILLIM_BASE_URL = process.env.TEHILLIM_BASE_URL || process.env.RAILWAY_STATIC_URL || 'https://siddur.app';
+
+app.post('/api/tehillim/campaigns', async (req, res) => {
+  try {
+    const { type, title, reason, deadline, created_by } = req.body || {};
+    if (!type || !['split', 'shared'].includes(type)) {
+      return res.status(400).json({ error: 'type must be "split" or "shared"' });
+    }
+    const campaign = await createTehillimCampaign({
+      type,
+      title: title || '',
+      reason: reason || '',
+      deadline: deadline || null,
+      createdBy: created_by || null,
+    });
+    const link = `${TEHILLIM_BASE_URL}/tehillim/${campaign.id}`;
+    res.status(201).json({ campaign: { ...campaign, link } });
+  } catch (e) {
+    console.error('[analytics-api] POST /api/tehillim/campaigns', e);
+    res.status(500).json({ error: e.message || 'Failed to create campaign' });
+  }
+});
+
+app.get('/api/tehillim/campaigns/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const participantId = req.query.participant_id || '';
+    const campaign = await getTehillimCampaign(id);
+    if (!campaign) return res.status(404).json({ error: 'Campaign not found' });
+    const status = await getTehillimCampaignStatus(id, participantId);
+    const raw = await getTehillimCampaignPereks(id);
+    res.json({
+      campaign,
+      byPerek: status?.byPerek || {},
+      commitments: raw?.commitments || [],
+      completions: raw?.completions || [],
+    });
+  } catch (e) {
+    console.error('[analytics-api] GET /api/tehillim/campaigns/:id', e);
+    res.status(500).json({ error: 'Failed to get campaign' });
+  }
+});
+
+app.post('/api/tehillim/campaigns/:id/commit', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { perek_start, perek_end, participant_id } = req.body || {};
+    const start = parseInt(perek_start, 10);
+    const end = parseInt(perek_end, 10);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 1 || end > 150 || start > end) {
+      return res.status(400).json({ error: 'perek_start and perek_end must be 1–150, start <= end' });
+    }
+    if (!participant_id) return res.status(400).json({ error: 'participant_id required' });
+    const result = await claimTehillimRange(id, start, end, participant_id);
+    res.json(result);
+  } catch (e) {
+    if (e.message?.includes('already claimed')) return res.status(409).json({ error: e.message });
+    console.error('[analytics-api] POST /api/tehillim/campaigns/:id/commit', e);
+    res.status(500).json({ error: e.message || 'Failed to claim range' });
+  }
+});
+
+app.post('/api/tehillim/campaigns/:id/complete', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { perek_numbers, participant_id } = req.body || {};
+    const arr = Array.isArray(perek_numbers) ? perek_numbers : [perek_numbers].filter(Boolean).map((n) => parseInt(n, 10));
+    if (arr.length === 0 || arr.some((n) => !Number.isFinite(n) || n < 1 || n > 150)) {
+      return res.status(400).json({ error: 'perek_numbers must be array of 1–150' });
+    }
+    if (!participant_id) return res.status(400).json({ error: 'participant_id required' });
+    const result = await completeTehillimPereks(id, arr, participant_id);
+    res.json(result);
+  } catch (e) {
+    console.error('[analytics-api] POST /api/tehillim/campaigns/:id/complete', e);
+    res.status(500).json({ error: e.message || 'Failed to complete' });
   }
 });
 

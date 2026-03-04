@@ -323,7 +323,20 @@ export const TehillimListScreen: React.FC = () => {
         contentContainerStyle={styles.list}
         columnWrapperStyle={styles.row}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={renderDailyCard}
+        ListHeaderComponent={
+          <View>
+            <TouchableOpacity
+              style={styles.sharedTehillimBanner}
+              onPress={() => navigation.navigate('CreateSharedTehillim' as never)}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="people-outline" size={22} color={colors.primary.main} />
+              <Text style={styles.sharedTehillimBannerText}>Make your Tehillim page</Text>
+              <Text style={styles.sharedTehillimBannerSubtext}>Share a link • others join & complete</Text>
+            </TouchableOpacity>
+            {renderDailyCard()}
+          </View>
+        }
         keyboardShouldPersistTaps="handled"
       />
     </View>
@@ -362,6 +375,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingTop: 0,
     paddingBottom: 140,
+  },
+  sharedTehillimBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 165, 184, 0.4)',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  sharedTehillimBannerText: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 15,
+    color: colors.primary.dark,
+  },
+  sharedTehillimBannerSubtext: {
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    color: colors.text.secondary,
+    width: '100%',
+    marginLeft: 30,
   },
   searchBar: {
     flexDirection: 'row',

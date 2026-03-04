@@ -11,6 +11,8 @@ import { CalendarScreen } from '../../app/calendar/CalendarScreen';
 import { TehillimListScreen } from '../../app/tehillim/TehillimListScreen';
 import { TehillimReaderScreen } from '../../app/tehillim/TehillimReaderScreen';
 import { TehillimSettingsScreen } from '../../app/tehillim/TehillimSettingsScreen';
+import { CreateSharedTehillimScreen } from '../../app/tehillim/CreateSharedTehillimScreen';
+import { SharedTehillimViewScreen } from '../../app/tehillim/SharedTehillimViewScreen';
 import { LibraryScreen } from '../../app/library/LibraryScreen';
 import { ParshaScreen } from '../../app/library/ParshaScreen';
 import { CustomizeHome } from '../../app/home/CustomizeHome';
@@ -244,6 +246,16 @@ export default function AppNavigator() {
           <Stack.Screen
             name="TehillimList"
             component={TehillimListScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="CreateSharedTehillim"
+            component={CreateSharedTehillimScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SharedTehillimView"
+            component={SharedTehillimViewScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen
