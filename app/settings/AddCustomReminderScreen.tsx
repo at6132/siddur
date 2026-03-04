@@ -179,7 +179,8 @@ export const AddCustomReminderScreen: React.FC = () => {
           days: selectedDays as ('sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')[],
           openToScreen,
         });
-        await NotificationService.reschedule();
+        const prefs = await UserPreferencesService.getPreferences();
+        await NotificationService.reschedule(prefs ?? undefined);
         Alert.alert('Reminder Updated', `"${title}" will remind you daily at ${timeToSave}.`, [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);
@@ -194,7 +195,8 @@ export const AddCustomReminderScreen: React.FC = () => {
           openToScreen,
         };
         await UserPreferencesService.addCustomReminder(reminder);
-        await NotificationService.reschedule();
+        const prefs = await UserPreferencesService.getPreferences();
+        await NotificationService.reschedule(prefs ?? undefined);
         Alert.alert('Reminder Added', `"${title}" will remind you daily at ${timeToSave}.`, [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);

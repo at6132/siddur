@@ -181,6 +181,90 @@ export class NotificationContentService {
   }
 
   /**
+   * Yaaleh V'Yavo days (Rosh Chodesh, Chol Hamoed, Yom Tov) — morning reminder
+   */
+  static getYaalehVyavoContent(): NotificationContent {
+    return {
+      title: 'Yaaleh V\'Yavo today',
+      body: 'A gentle reminder — today we add Yaaleh V\'Yavo in Birkat Hamazon and the Amidah',
+      data: { screen: 'Home', action: 'yaalehVyavo' },
+    };
+  }
+
+  /**
+   * Al HaNisim (Chanukah or Purim) — morning reminder
+   */
+  static getAlHanissimContent(type: 'chanukah' | 'purim'): NotificationContent {
+    if (type === 'chanukah') {
+      return {
+        title: 'Al HaNisim — Chanukah',
+        body: 'A gentle reminder — today we add Al HaNisim for Chanukah',
+        data: { screen: 'Home', action: 'alHanissimChanukah' },
+      };
+    }
+    return {
+      title: 'Al HaNisim — Purim',
+      body: 'A gentle reminder — today we add Al HaNisim for Purim',
+      data: { screen: 'Home', action: 'alHanissimPurim' },
+    };
+  }
+
+  /**
+   * Mashiv HaRuach / V'ten Tal Umatar (winter) — morning reminder
+   */
+  static getMashivVtenTalContent(): NotificationContent {
+    return {
+      title: 'Mashiv HaRuach / V\'ten Tal Umatar',
+      body: 'A gentle reminder — winter davening additions today',
+      data: { screen: 'Home', action: 'mashivVtenTal' },
+    };
+  }
+
+  /**
+   * Aneinu (fast days) — morning reminder
+   */
+  static getAneinuContent(): NotificationContent {
+    return {
+      title: 'Aneinu today',
+      body: 'A gentle reminder — add Aneinu in the Amidah on this fast day',
+      data: { screen: 'Home', action: 'aneinu' },
+    };
+  }
+
+  /**
+   * Nachem (Tisha B\'Av) — morning reminder
+   */
+  static getNachemContent(): NotificationContent {
+    return {
+      title: 'Nachem today',
+      body: 'A gentle reminder — add Nachem in the Amidah on Tisha B\'Av',
+      data: { screen: 'Home', action: 'nachem' },
+    };
+  }
+
+  /**
+   * Avinu Malkeinu (Aseres Yemei Teshuva & fast days) — morning reminder
+   */
+  static getAvinuMalkeinuContent(): NotificationContent {
+    return {
+      title: 'Avinu Malkeinu today',
+      body: 'A gentle reminder — we say Avinu Malkeinu today',
+      data: { screen: 'Home', action: 'avinuMalkeinu' },
+    };
+  }
+
+  /**
+   * Selichos (Elul / Aseres Yemei Teshuva) — morning reminder
+   */
+  static getSelichosContent(): NotificationContent {
+    return {
+      title: 'Selichos today',
+      body: 'A gentle reminder — Selichos are said today',
+      data: { screen: 'Home', action: 'selichos' },
+    };
+  }
+
+  /**
    * Generate content for streak nudge (invisible in settings - "don't lose your streak")
    */
   static getStreakReminderContent(

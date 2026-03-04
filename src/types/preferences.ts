@@ -58,6 +58,23 @@ export interface NotificationPreferences {
   shekiyaReminder: boolean;
   shekiyaMinutesBefore: number;
   
+  // Davening add-ons: morning reminders on Yaaleh V'Yavo days (Rosh Chodesh, Chol Hamoed, Yom Tov) and Al HaNisim (Chanukah, Purim)
+  daveningAddOns: boolean;
+  daveningAddOnsYaalehVyavo: boolean;
+  daveningAddOnsYaalehVyavoTime: string; // HH:MM
+  daveningAddOnsAlHanissim: boolean;
+  daveningAddOnsAlHanissimTime: string; // HH:MM
+  daveningAddOnsMashivVtenTal: boolean;
+  daveningAddOnsMashivVtenTalTime: string; // HH:MM
+  daveningAddOnsAneinu: boolean;
+  daveningAddOnsAneinuTime: string; // HH:MM
+  daveningAddOnsNachem: boolean;
+  daveningAddOnsNachemTime: string; // HH:MM
+  daveningAddOnsAvinuMalkeinu: boolean;
+  daveningAddOnsAvinuMalkeinuTime: string; // HH:MM
+  daveningAddOnsSelichos: boolean;
+  daveningAddOnsSelichosTime: string; // HH:MM
+  
   // Custom countdowns
   customCountdowns: boolean;
 }
@@ -152,6 +169,21 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   shekiyaReminder: true,
   shekiyaMinutesBefore: 15,
   customCountdowns: true,
+  daveningAddOns: true,
+  daveningAddOnsYaalehVyavo: true,
+  daveningAddOnsYaalehVyavoTime: '08:00',
+  daveningAddOnsAlHanissim: true,
+  daveningAddOnsAlHanissimTime: '08:00',
+  daveningAddOnsMashivVtenTal: true,
+  daveningAddOnsMashivVtenTalTime: '08:00',
+  daveningAddOnsAneinu: true,
+  daveningAddOnsAneinuTime: '08:00',
+  daveningAddOnsNachem: true,
+  daveningAddOnsNachemTime: '08:00',
+  daveningAddOnsAvinuMalkeinu: true,
+  daveningAddOnsAvinuMalkeinuTime: '08:00',
+  daveningAddOnsSelichos: true,
+  daveningAddOnsSelichosTime: '08:00',
 };
 
 export const DEFAULT_DISPLAY_PREFERENCES: DisplayPreferences = {

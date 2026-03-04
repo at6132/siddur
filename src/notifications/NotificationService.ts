@@ -38,20 +38,21 @@ export class NotificationService {
   }
 
   /**
-   * Reschedule notifications (call when preferences change)
+   * Reschedule notifications (call when preferences change).
+   * Pass optional preferences to use immediately (e.g. after adding a custom reminder) so notifications take effect without toggling.
    */
-  static async reschedule(): Promise<void> {
-    const preferences = await UserPreferencesService.getPreferences();
-    if (!preferences) {
+  static async reschedule(preferences?: UserPreferences): Promise<void> {
+    const prefs = preferences ?? await UserPreferencesService.getPreferences();
+    if (!prefs) {
       return;
     }
 
     const context: CalendarContext = {
-      nusach: preferences.nusach,
-      location: preferences.location,
+      nusach: prefs.nusach,
+      location: prefs.location,
     };
 
-    await NotificationScheduler.scheduleNotifications(preferences, context);
+    await NotificationScheduler.scheduleNotifications(prefs, context);
   }
 
   /**

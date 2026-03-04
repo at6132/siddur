@@ -141,6 +141,11 @@ export class NotificationScheduler {
       await this.scheduleRoshChodeshAndFastDays(preferences, context);
     }
 
+    // Davening add-ons: Yaaleh V'Yavo days and Al HaNisim (Chanukah, Purim) — morning reminders
+    if (preferences.notifications.daveningAddOns) {
+      await this.scheduleDaveningAddOns(preferences, context);
+    }
+
     // Daily Gratitude
     if (preferences.notifications.dailyGratitude) {
       await this.scheduleDailyGratitude(preferences);
@@ -379,6 +384,173 @@ export class NotificationScheduler {
         if (isFutureDate(triggerDate)) {
           await scheduleSafe({
             content: NotificationContentService.getFastDayContent(),
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: triggerDate,
+            },
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Schedule Davening add-ons: morning notifications for Yaaleh V'Yavo, Al HaNisim, Mashiv/V'ten Tal, Aneinu, Nachem, Avinu Malkeinu, Selichos (next 60 days).
+   */
+  private static async scheduleDaveningAddOns(
+    preferences: UserPreferences,
+    _context: CalendarContext
+  ): Promise<void> {
+    const yaalehTime = parseTime24h(
+      preferences.notifications.daveningAddOnsYaalehVyavoTime ?? '08:00'
+    );
+    const alHanissimTime = parseTime24h(
+      preferences.notifications.daveningAddOnsAlHanissimTime ?? '08:00'
+    );
+    const mashivTime = parseTime24h(
+      preferences.notifications.daveningAddOnsMashivVtenTalTime ?? '08:00'
+    );
+    const aneinuTime = parseTime24h(
+      preferences.notifications.daveningAddOnsAneinuTime ?? '08:00'
+    );
+    const nachemTime = parseTime24h(
+      preferences.notifications.daveningAddOnsNachemTime ?? '08:00'
+    );
+    const avinuTime = parseTime24h(
+      preferences.notifications.daveningAddOnsAvinuMalkeinuTime ?? '08:00'
+    );
+    const selichosTime = parseTime24h(
+      preferences.notifications.daveningAddOnsSelichosTime ?? '08:00'
+    );
+
+    // Mashiv HaRuach / V'ten Tal: only first 7 days after the winter switch (not all winter).
+    let mashivFirstDayOffset: number | null = null;
+    if (preferences.notifications.daveningAddOnsMashivVtenTal) {
+      for (let d = 0; d < 60; d++) {
+        const check = new Date();
+        check.setDate(check.getDate() + d);
+        if (JewishCalendarService.isMashivHaruach(check)) {
+          mashivFirstDayOffset = d;
+          break;
+        }
+      }
+    }
+
+    for (let dayOffset = 0; dayOffset < 60; dayOffset++) {
+      const day = new Date();
+      day.setDate(day.getDate() + dayOffset);
+
+      if (
+        preferences.notifications.daveningAddOnsYaalehVyavo &&
+        JewishCalendarService.isYaalehVyavoDay(day)
+      ) {
+        const triggerDate = new Date(day);
+        triggerDate.setHours(yaalehTime.hour, yaalehTime.minute, 0, 0);
+        if (isFutureDate(triggerDate)) {
+          await scheduleSafe({
+            content: NotificationContentService.getYaalehVyavoContent(),
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: triggerDate,
+            },
+          });
+        }
+      }
+
+      const alHanissim = JewishCalendarService.isAlHanissim(day);
+      if (preferences.notifications.daveningAddOnsAlHanissim && alHanissim) {
+        const triggerDate = new Date(day);
+        triggerDate.setHours(alHanissimTime.hour, alHanissimTime.minute, 0, 0);
+        if (isFutureDate(triggerDate)) {
+          await scheduleSafe({
+            content: NotificationContentService.getAlHanissimContent(alHanissim),
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: triggerDate,
+            },
+          });
+        }
+      }
+
+      if (
+        preferences.notifications.daveningAddOnsMashivVtenTal &&
+        mashivFirstDayOffset !== null &&
+        dayOffset >= mashivFirstDayOffset &&
+        dayOffset < mashivFirstDayOffset + 7
+      ) {
+        const triggerDate = new Date(day);
+        triggerDate.setHours(mashivTime.hour, mashivTime.minute, 0, 0);
+        if (isFutureDate(triggerDate)) {
+          await scheduleSafe({
+            content: NotificationContentService.getMashivVtenTalContent(),
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: triggerDate,
+            },
+          });
+        }
+      }
+
+      if (
+        preferences.notifications.daveningAddOnsAneinu &&
+        JewishCalendarService.isFastDay(day)
+      ) {
+        const triggerDate = new Date(day);
+        triggerDate.setHours(aneinuTime.hour, aneinuTime.minute, 0, 0);
+        if (isFutureDate(triggerDate)) {
+          await scheduleSafe({
+            content: NotificationContentService.getAneinuContent(),
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: triggerDate,
+            },
+          });
+        }
+      }
+
+      if (
+        preferences.notifications.daveningAddOnsNachem &&
+        JewishCalendarService.isTishaBAv(day)
+      ) {
+        const triggerDate = new Date(day);
+        triggerDate.setHours(nachemTime.hour, nachemTime.minute, 0, 0);
+        if (isFutureDate(triggerDate)) {
+          await scheduleSafe({
+            content: NotificationContentService.getNachemContent(),
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: triggerDate,
+            },
+          });
+        }
+      }
+
+      const isAvinuDay =
+        JewishCalendarService.isAseretYemeiTeshuva(day) ||
+        JewishCalendarService.isFastDay(day);
+      if (preferences.notifications.daveningAddOnsAvinuMalkeinu && isAvinuDay) {
+        const triggerDate = new Date(day);
+        triggerDate.setHours(avinuTime.hour, avinuTime.minute, 0, 0);
+        if (isFutureDate(triggerDate)) {
+          await scheduleSafe({
+            content: NotificationContentService.getAvinuMalkeinuContent(),
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: triggerDate,
+            },
+          });
+        }
+      }
+
+      if (
+        preferences.notifications.daveningAddOnsSelichos &&
+        JewishCalendarService.isSelichosPeriod(day)
+      ) {
+        const triggerDate = new Date(day);
+        triggerDate.setHours(selichosTime.hour, selichosTime.minute, 0, 0);
+        if (isFutureDate(triggerDate)) {
+          await scheduleSafe({
+            content: NotificationContentService.getSelichosContent(),
             trigger: {
               type: Notifications.SchedulableTriggerInputTypes.DATE,
               date: triggerDate,

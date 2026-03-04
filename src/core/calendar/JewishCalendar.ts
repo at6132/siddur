@@ -331,6 +331,19 @@ export class JewishCalendarService {
   }
 
   /**
+   * Check if date is during Selichos period (Elul 21+ or Tishrei 1–9, before Yom Kippur).
+   * Ashkenazi: from Sunday before Rosh Hashana; Sefardi: entire Elul. Simplified: Elul 21+ or Tishrei 1–9.
+   */
+  static isSelichosPeriod(date: Date = new Date()): boolean {
+    const hdate = this.getJewishDate(date);
+    const month = hdate.getMonth();
+    const day = hdate.getDate();
+    if (month === 6 && day >= 21) return true; // Elul
+    if (month === 7 && day >= 1 && day <= 9) return true; // Tishrei before Yom Kippur
+    return false;
+  }
+
+  /**
    * Check if date is during the Omer period
    */
   static isOmerPeriod(date: Date = new Date()): boolean {

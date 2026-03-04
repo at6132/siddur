@@ -21,6 +21,7 @@ import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location';
 import { FadeIn } from '../../components/animations/FadeIn';
 import { LiquidGlassSegmentedControl } from '../../components/navigation/LiquidGlassSegmentedControl';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius, shadows } from '../../src/design/spacing';
 import { textStyles, fonts } from '../../src/design/typography';
@@ -98,8 +99,9 @@ export const SettingsScreen: React.FC = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [reminderMenuId, setReminderMenuId] = useState<string | null>(null);
   const [timePickerFor, setTimePickerFor] = useState<
-    'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'omer' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'dailyGratitude' | null
+    'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'omer' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'dailyGratitude' | 'daveningYaalehVyavo' | 'daveningAlHanissim' | 'daveningMashivVtenTal' | 'daveningAneinu' | 'daveningNachem' | 'daveningAvinuMalkeinu' | 'daveningSelichos' | null
   >(null);
+  const [daveningAddOnsExpanded, setDaveningAddOnsExpanded] = useState(false);
   const [timePickerValue, setTimePickerValue] = useState('');
   const [pickerDate, setPickerDate] = useState(() => new Date());
   const [shekiyaMinutesPickerOpen, setShekiyaMinutesPickerOpen] = useState(false);
@@ -168,7 +170,7 @@ export const SettingsScreen: React.FC = () => {
   const dateTo24h = (d: Date): string =>
     `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
-  type TimePickerKind = 'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'omer' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'dailyGratitude';
+  type TimePickerKind = 'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'omer' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'dailyGratitude' | 'daveningYaalehVyavo' | 'daveningAlHanissim' | 'daveningMashivVtenTal' | 'daveningAneinu' | 'daveningNachem' | 'daveningAvinuMalkeinu' | 'daveningSelichos';
   const openTimePicker = (which: TimePickerKind) => {
     if (!preferences) return;
     const n = preferences.notifications;
@@ -179,6 +181,13 @@ export const SettingsScreen: React.FC = () => {
     else if (which === 'roshChodesh') initial = formatTehillimTimeForDisplay(n.roshChodeshTime || '08:00');
     else if (which === 'fastDays') initial = formatTehillimTimeForDisplay(n.fastDaysTime || '08:00');
     else if (which === 'dailyGratitude') initial = formatTehillimTimeForDisplay(n.dailyGratitudeTime || '20:00');
+    else if (which === 'daveningYaalehVyavo') initial = formatTehillimTimeForDisplay(n.daveningAddOnsYaalehVyavoTime ?? '08:00');
+    else if (which === 'daveningAlHanissim') initial = formatTehillimTimeForDisplay(n.daveningAddOnsAlHanissimTime ?? '08:00');
+    else if (which === 'daveningMashivVtenTal') initial = formatTehillimTimeForDisplay(n.daveningAddOnsMashivVtenTalTime ?? '08:00');
+    else if (which === 'daveningAneinu') initial = formatTehillimTimeForDisplay(n.daveningAddOnsAneinuTime ?? '08:00');
+    else if (which === 'daveningNachem') initial = formatTehillimTimeForDisplay(n.daveningAddOnsNachemTime ?? '08:00');
+    else if (which === 'daveningAvinuMalkeinu') initial = formatTehillimTimeForDisplay(n.daveningAddOnsAvinuMalkeinuTime ?? '08:00');
+    else if (which === 'daveningSelichos') initial = formatTehillimTimeForDisplay(n.daveningAddOnsSelichosTime ?? '08:00');
     else initial = preferences.notifications.prayerReminders?.[which]?.time || (which === 'shacharis' ? '7:00 AM' : which === 'mincha' ? '1:00 PM' : '8:00 PM');
     setTimePickerValue(initial);
     setPickerDate(timeStringToDate(initial));
@@ -194,6 +203,13 @@ export const SettingsScreen: React.FC = () => {
       roshChodesh: 'roshChodeshTime',
       fastDays: 'fastDaysTime',
       dailyGratitude: 'dailyGratitudeTime',
+      daveningYaalehVyavo: 'daveningAddOnsYaalehVyavoTime',
+      daveningAlHanissim: 'daveningAddOnsAlHanissimTime',
+      daveningMashivVtenTal: 'daveningAddOnsMashivVtenTalTime',
+      daveningAneinu: 'daveningAddOnsAneinuTime',
+      daveningNachem: 'daveningAddOnsNachemTime',
+      daveningAvinuMalkeinu: 'daveningAddOnsAvinuMalkeinuTime',
+      daveningSelichos: 'daveningAddOnsSelichosTime',
     };
     const key = keyMap[timePickerFor];
     if (key) {
@@ -671,7 +687,8 @@ export const SettingsScreen: React.FC = () => {
                               value={reminder.enabled}
                               onValueChange={async (value) => {
                                 await UserPreferencesService.updateCustomReminder(reminder.id, { enabled: value });
-                                await NotificationService.reschedule();
+                                const prefs = await UserPreferencesService.getPreferences();
+                                await NotificationService.reschedule(prefs ?? undefined);
                                 loadPreferences();
                               }}
                               trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
@@ -727,7 +744,8 @@ export const SettingsScreen: React.FC = () => {
                                           onPress: async () => {
                                             try {
                                               await UserPreferencesService.deleteCustomReminder(reminder.id);
-                                              await NotificationService.reschedule();
+                                              const prefs = await UserPreferencesService.getPreferences();
+                                              await NotificationService.reschedule(prefs ?? undefined);
                                             } catch (e) {
                                               console.error('Delete reminder failed:', e);
                                             }
@@ -792,6 +810,149 @@ export const SettingsScreen: React.FC = () => {
                         </View>
                       )}
                     </View>
+
+                    {/* Davening add-ons: Yaaleh V'Yavo days & Al HaNisim (Chanukah, Purim) — morning reminders */}
+                    <TouchableOpacity
+                      style={styles.notifOption}
+                      onPress={() => setDaveningAddOnsExpanded(!daveningAddOnsExpanded)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.notifOptionMain}>
+                        <View style={styles.daveningAddOnsTitleRow}>
+                          <Ionicons
+                            name={daveningAddOnsExpanded ? 'chevron-down' : 'chevron-forward'}
+                            size={20}
+                            color={theme.colors.text.tertiary}
+                            style={styles.daveningAddOnsChevron}
+                          />
+                          <Text style={styles.optionLabel}>Davening add-ons</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }} onStartShouldSetResponder={() => true}>
+                          <Switch
+                            value={preferences.notifications.daveningAddOns}
+                            onValueChange={(value) => updateNotificationPreference('daveningAddOns', value)}
+                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                            thumbColor={preferences.notifications.daveningAddOns ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          />
+                        </View>
+                      </View>
+                      {daveningAddOnsExpanded && (
+                        <View style={styles.daveningAddOnsDropdown}>
+                          <View style={styles.daveningAddOnsRow}>
+                            <Text style={styles.daveningAddOnsRowLabel}>Yaaleh V'Yavo</Text>
+                            <View style={styles.daveningAddOnsRowControls}>
+                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningYaalehVyavo')}>
+                                <Text style={styles.timeButtonText}>
+                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsYaalehVyavoTime ?? '08:00')}
+                                </Text>
+                              </TouchableOpacity>
+                              <Switch
+                                value={preferences.notifications.daveningAddOnsYaalehVyavo}
+                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsYaalehVyavo', value)}
+                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                                thumbColor={preferences.notifications.daveningAddOnsYaalehVyavo ? theme.colors.primary.main : theme.colors.neutral[400]}
+                              />
+                            </View>
+                          </View>
+                          <View style={styles.daveningAddOnsRow}>
+                            <Text style={styles.daveningAddOnsRowLabel}>Al HaNisim</Text>
+                            <View style={styles.daveningAddOnsRowControls}>
+                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningAlHanissim')}>
+                                <Text style={styles.timeButtonText}>
+                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsAlHanissimTime ?? '08:00')}
+                                </Text>
+                              </TouchableOpacity>
+                              <Switch
+                                value={preferences.notifications.daveningAddOnsAlHanissim}
+                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsAlHanissim', value)}
+                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                                thumbColor={preferences.notifications.daveningAddOnsAlHanissim ? theme.colors.primary.main : theme.colors.neutral[400]}
+                              />
+                            </View>
+                          </View>
+                          <View style={styles.daveningAddOnsRow}>
+                            <Text style={styles.daveningAddOnsRowLabel}>Mashiv HaRuach & V'ten Tal Umatar</Text>
+                            <View style={styles.daveningAddOnsRowControls}>
+                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningMashivVtenTal')}>
+                                <Text style={styles.timeButtonText}>
+                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsMashivVtenTalTime ?? '08:00')}
+                                </Text>
+                              </TouchableOpacity>
+                              <Switch
+                                value={preferences.notifications.daveningAddOnsMashivVtenTal}
+                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsMashivVtenTal', value)}
+                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                                thumbColor={preferences.notifications.daveningAddOnsMashivVtenTal ? theme.colors.primary.main : theme.colors.neutral[400]}
+                              />
+                            </View>
+                          </View>
+                          <View style={styles.daveningAddOnsRow}>
+                            <Text style={styles.daveningAddOnsRowLabel}>Aneinu</Text>
+                            <View style={styles.daveningAddOnsRowControls}>
+                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningAneinu')}>
+                                <Text style={styles.timeButtonText}>
+                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsAneinuTime ?? '08:00')}
+                                </Text>
+                              </TouchableOpacity>
+                              <Switch
+                                value={preferences.notifications.daveningAddOnsAneinu}
+                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsAneinu', value)}
+                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                                thumbColor={preferences.notifications.daveningAddOnsAneinu ? theme.colors.primary.main : theme.colors.neutral[400]}
+                              />
+                            </View>
+                          </View>
+                          <View style={styles.daveningAddOnsRow}>
+                            <Text style={styles.daveningAddOnsRowLabel}>Nachem</Text>
+                            <View style={styles.daveningAddOnsRowControls}>
+                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningNachem')}>
+                                <Text style={styles.timeButtonText}>
+                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsNachemTime ?? '08:00')}
+                                </Text>
+                              </TouchableOpacity>
+                              <Switch
+                                value={preferences.notifications.daveningAddOnsNachem}
+                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsNachem', value)}
+                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                                thumbColor={preferences.notifications.daveningAddOnsNachem ? theme.colors.primary.main : theme.colors.neutral[400]}
+                              />
+                            </View>
+                          </View>
+                          <View style={styles.daveningAddOnsRow}>
+                            <Text style={styles.daveningAddOnsRowLabel}>Avinu Malkeinu</Text>
+                            <View style={styles.daveningAddOnsRowControls}>
+                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningAvinuMalkeinu')}>
+                                <Text style={styles.timeButtonText}>
+                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsAvinuMalkeinuTime ?? '08:00')}
+                                </Text>
+                              </TouchableOpacity>
+                              <Switch
+                                value={preferences.notifications.daveningAddOnsAvinuMalkeinu}
+                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsAvinuMalkeinu', value)}
+                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                                thumbColor={preferences.notifications.daveningAddOnsAvinuMalkeinu ? theme.colors.primary.main : theme.colors.neutral[400]}
+                              />
+                            </View>
+                          </View>
+                          <View style={[styles.daveningAddOnsRow, styles.daveningAddOnsRowLast]}>
+                            <Text style={styles.daveningAddOnsRowLabel}>Selichos</Text>
+                            <View style={styles.daveningAddOnsRowControls}>
+                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningSelichos')}>
+                                <Text style={styles.timeButtonText}>
+                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsSelichosTime ?? '08:00')}
+                                </Text>
+                              </TouchableOpacity>
+                              <Switch
+                                value={preferences.notifications.daveningAddOnsSelichos}
+                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsSelichos', value)}
+                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                                thumbColor={preferences.notifications.daveningAddOnsSelichos ? theme.colors.primary.main : theme.colors.neutral[400]}
+                              />
+                            </View>
+                          </View>
+                        </View>
+                      )}
+                    </TouchableOpacity>
 
                     <View style={styles.divider} />
                     <Text style={styles.additionalRemindersSectionTitle}>Additional Reminders</Text>
@@ -1198,7 +1359,7 @@ export const SettingsScreen: React.FC = () => {
           <Pressable style={styles.timePickerBox} onPress={e => e.stopPropagation()}>
             <View style={styles.timePickerHeader}>
               <Text style={styles.timePickerTitle}>
-                {timePickerFor === 'tehillim' ? 'Tehillim' : timePickerFor === 'omer' ? 'Sefiras HaOmer' : timePickerFor === 'hallelAnenu' ? 'Hallel' : timePickerFor === 'roshChodesh' ? 'Rosh Chodesh' : timePickerFor === 'fastDays' ? 'Fast Days' : timePickerFor === 'dailyGratitude' ? 'Daily Gratitude' : timePickerFor === 'shacharis' ? 'Shacharis' : timePickerFor === 'mincha' ? 'Mincha' : 'Maariv'}
+                {timePickerFor === 'tehillim' ? 'Tehillim' : timePickerFor === 'omer' ? 'Sefiras HaOmer' : timePickerFor === 'hallelAnenu' ? 'Hallel' : timePickerFor === 'roshChodesh' ? 'Rosh Chodesh' : timePickerFor === 'fastDays' ? 'Fast Days' : timePickerFor === 'dailyGratitude' ? 'Daily Gratitude' : timePickerFor === 'daveningYaalehVyavo' ? 'Yaaleh V\'Yavo' : timePickerFor === 'daveningAlHanissim' ? 'Al HaNisim' : timePickerFor === 'daveningMashivVtenTal' ? 'Mashiv HaRuach & V\'ten Tal' : timePickerFor === 'daveningAneinu' ? 'Aneinu' : timePickerFor === 'daveningNachem' ? 'Nachem' : timePickerFor === 'daveningAvinuMalkeinu' ? 'Avinu Malkeinu' : timePickerFor === 'daveningSelichos' ? 'Selichos' : timePickerFor === 'shacharis' ? 'Shacharis' : timePickerFor === 'mincha' ? 'Mincha' : 'Maariv'}
               </Text>
               <Text style={styles.timePickerSubtitle}>Set reminder time</Text>
             </View>
@@ -1437,6 +1598,49 @@ function createSettingsStyles(theme: AppTheme) {
     justifyContent: 'space-between',
     alignItems: 'center',
     flexWrap: 'wrap',
+  },
+  // Davening add-ons dropdown
+  daveningAddOnsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
+  },
+  daveningAddOnsChevron: {
+    marginRight: 2,
+  },
+  daveningAddOnsDropdown: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
+    paddingLeft: spacing.xs,
+  },
+  daveningAddOnsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    minHeight: 52,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.sm,
+  },
+  daveningAddOnsRowLast: {
+    marginBottom: 0,
+  },
+  daveningAddOnsRowLabel: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 14,
+    color: theme.colors.text.primary,
+    flex: 1,
+    marginRight: spacing.md,
+  },
+  daveningAddOnsRowControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   simpleToggle: {
     flexDirection: 'row',
