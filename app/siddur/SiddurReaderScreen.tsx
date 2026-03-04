@@ -1223,8 +1223,17 @@ export const SiddurReaderScreen: React.FC = () => {
                 ) : sectionContent[section.key] ? (
                   (() => {
                     const content = sectionContent[section.key]!;
-                    const hebrewStyle = [styles.hebrewText, { fontSize: HEBREW_FONT_SIZES[textSize], lineHeight: HEBREW_LINE_HEIGHTS[textSize] }];
-                    const hebrewInstructionStyle = [styles.hebrewText, styles.instructionText, { fontSize: HEBREW_FONT_SIZES[textSize] * 0.8, lineHeight: HEBREW_LINE_HEIGHTS[textSize] * 0.9 }];
+                    const hebrewStyle = [
+                      styles.hebrewText,
+                      { fontSize: HEBREW_FONT_SIZES[textSize], lineHeight: HEBREW_LINE_HEIGHTS[textSize] },
+                      ...(Platform.OS === 'ios' ? [{ letterSpacing: 0 }] : []),
+                    ];
+                    const hebrewInstructionStyle = [
+                      styles.hebrewText,
+                      styles.instructionText,
+                      { fontSize: HEBREW_FONT_SIZES[textSize] * 0.8, lineHeight: HEBREW_LINE_HEIGHTS[textSize] * 0.9 },
+                      ...(Platform.OS === 'ios' ? [{ letterSpacing: 0 }] : []),
+                    ];
                     const renderSegmentsAsBlocks = (
                       segs: { text: string; italic: boolean }[],
                       normalStyle: object,
@@ -1238,7 +1247,7 @@ export const SiddurReaderScreen: React.FC = () => {
                         if (segs[i].italic) {
                           nodes.push(
                             <View key={`seg-${keyIdx++}`} style={instructionBlockStyle}>
-                              <Text style={instructionStyle}>{segs[i].text}</Text>
+                              <Text allowFontScaling={false} style={instructionStyle}>{segs[i].text}</Text>
                             </View>
                           );
                           i += 1;
@@ -1248,8 +1257,11 @@ export const SiddurReaderScreen: React.FC = () => {
                             normalParts.push(segs[i].text);
                             i += 1;
                           }
+                          const combined = normalParts.join('');
                           nodes.push(
-                            <Text key={`seg-${keyIdx++}`} style={normalStyle}>{normalParts.join('')}</Text>
+                            <View key={`seg-${keyIdx++}`} style={styles.hebrewSegmentBlock}>
+                              {renderTextWithParagraphs(combined, normalStyle, spacing.lg, true)}
+                            </View>
                           );
                         }
                       }
@@ -1264,7 +1276,11 @@ export const SiddurReaderScreen: React.FC = () => {
                           styles.instructionBlock
                         );
                       }
-                      return <Text style={hebrewStyle}>{content.hebrew}</Text>;
+                      return (
+                        <View style={styles.hebrewSegmentBlock}>
+                          {renderTextWithParagraphs(content.hebrew, hebrewStyle, spacing.lg, true)}
+                        </View>
+                      );
                     };
                     const renderEnglish = () => {
                       if (!showEnglish) return null;
@@ -1378,26 +1394,18 @@ export const SiddurReaderScreen: React.FC = () => {
     </>
   );
 
-  /** Split text by paragraph breaks (\n\n) and render each with spacing for readability. On iOS, RTL text uses one Text node (no paragraph split) so the engine keeps one RTL run and lays out lines like "עֵת וּבְכָל שָׁעָה" correctly. */
+  /** Split text by paragraph breaks (\n\n). On iOS use one View+Text per paragraph to avoid RTL run fragmentation and fragment displacement. No RLM; rely on writingDirection + textAlign. */
   const renderTextWithParagraphs = (text: string, textStyle: object, paragraphSpacing?: number, isRtl?: boolean) => {
     const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
-    const rtlMark = isRtl && Platform.OS === 'ios' ? '\u200F' : '';
     if (paragraphs.length <= 1) {
-      return <Text style={textStyle}>{rtlMark}{text}</Text>;
+      return <Text allowFontScaling={false} style={textStyle}>{text}</Text>;
     }
-    const spacing = paragraphSpacing ?? spacing.md;
-    if (isRtl && Platform.OS === 'ios') {
-      return (
-        <Text style={textStyle}>
-          {rtlMark}{paragraphs.join('\n\n')}
-        </Text>
-      );
-    }
+    const gap = paragraphSpacing ?? spacing.md;
     return (
       <>
         {paragraphs.map((para, idx) => (
-          <View key={idx} style={idx > 0 ? [styles.prayerParagraph, { marginTop: spacing }] : undefined}>
-            <Text style={textStyle}>{para}</Text>
+          <View key={idx} style={idx > 0 ? [styles.prayerParagraph, { marginTop: gap }] : undefined}>
+            <Text allowFontScaling={false} style={textStyle}>{para}</Text>
           </View>
         ))}
       </>
@@ -1405,8 +1413,17 @@ export const SiddurReaderScreen: React.FC = () => {
   };
 
   const renderSectionContent = (content: PrayerTextData) => {
-    const hebrewStyle = [styles.hebrewText, { fontSize: HEBREW_FONT_SIZES[textSize], lineHeight: HEBREW_LINE_HEIGHTS[textSize] }];
-    const hebrewInstructionStyle = [styles.hebrewText, styles.instructionText, { fontSize: HEBREW_FONT_SIZES[textSize] * 0.8, lineHeight: HEBREW_LINE_HEIGHTS[textSize] * 0.9 }];
+    const hebrewStyle = [
+      styles.hebrewText,
+      { fontSize: HEBREW_FONT_SIZES[textSize], lineHeight: HEBREW_LINE_HEIGHTS[textSize] },
+      ...(Platform.OS === 'ios' ? [{ letterSpacing: 0 }] : []),
+    ];
+    const hebrewInstructionStyle = [
+      styles.hebrewText,
+      styles.instructionText,
+      { fontSize: HEBREW_FONT_SIZES[textSize] * 0.8, lineHeight: HEBREW_LINE_HEIGHTS[textSize] * 0.9 },
+      ...(Platform.OS === 'ios' ? [{ letterSpacing: 0 }] : []),
+    ];
     const renderSegmentsAsBlocks = (
       segs: { text: string; italic: boolean }[],
       normalStyle: object,
@@ -1418,9 +1435,8 @@ export const SiddurReaderScreen: React.FC = () => {
       let keyIdx = 0;
       while (i < segs.length) {
         if (segs[i].italic) {
-          // Instructions: just render as simple text, no extra spacing
           nodes.push(
-            <Text key={`seg-${keyIdx++}`} style={instructionStyle}>{segs[i].text}</Text>
+            <Text key={`seg-${keyIdx++}`} allowFontScaling={false} style={instructionStyle}>{segs[i].text}</Text>
           );
           i += 1;
         } else {
@@ -1431,7 +1447,7 @@ export const SiddurReaderScreen: React.FC = () => {
           }
           const combined = normalParts.join('');
           nodes.push(
-            <View key={`seg-${keyIdx++}`}>
+            <View key={`seg-${keyIdx++}`} style={styles.hebrewSegmentBlock}>
               {renderTextWithParagraphs(combined, normalStyle, spacing.lg, true)}
             </View>
           );
@@ -1439,24 +1455,8 @@ export const SiddurReaderScreen: React.FC = () => {
       }
       return <>{nodes}</>;
     };
-    const isTefilasHaDerech = effectiveSectionKey === 'tefilas_haderech' || service === 'tefilas_haderech';
-    const renderSegmentsInline = (segs: { text: string; italic: boolean }[], normalStyle: object, instructionStyle: object) => (
-      <Text style={normalStyle}>
-        {segs.map((seg, idx) =>
-          seg.italic ? (
-            <Text key={idx} style={instructionStyle}>{seg.text}</Text>
-          ) : (
-            <Text key={idx} style={normalStyle}>{seg.text}</Text>
-          )
-        )}
-      </Text>
-    );
-
     const renderHebrew = () => {
       if (content.hebrewSegments?.length) {
-        if (isTefilasHaDerech) {
-          return renderSegmentsInline(content.hebrewSegments, hebrewStyle, hebrewInstructionStyle);
-        }
         return renderSegmentsAsBlocks(
           content.hebrewSegments,
           hebrewStyle,
@@ -1465,7 +1465,7 @@ export const SiddurReaderScreen: React.FC = () => {
         );
       }
       return (
-        <View>
+        <View style={styles.hebrewSegmentBlock}>
           {renderTextWithParagraphs(content.hebrew, hebrewStyle, spacing.lg, true)}
         </View>
       );
@@ -1477,13 +1477,6 @@ export const SiddurReaderScreen: React.FC = () => {
       const engStyle = [styles.englishText, { fontSize: engSize, lineHeight: engLine }];
       const engInstructionStyle = [styles.englishText, styles.instructionText, { fontSize: engSize, lineHeight: engLine }];
       if (content.englishSegments?.length) {
-        if (isTefilasHaDerech) {
-          return (
-            <View style={styles.englishBlockWrap}>
-              {renderSegmentsInline(content.englishSegments, engStyle, engInstructionStyle)}
-            </View>
-          );
-        }
         return (
           <View style={styles.englishBlockWrap}>
             {content.englishSegments.map((seg, idx) => (
@@ -2024,10 +2017,14 @@ const styles = StyleSheet.create({
     color: colors.text.tertiary,
   },
   sectionContent: {
+    width: '100%',
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: 'rgba(0,0,0,0.06)',
+  },
+  hebrewSegmentBlock: {
+    width: '100%',
   },
   prayerParagraph: {
     marginBottom: 0,

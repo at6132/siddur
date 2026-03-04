@@ -495,9 +495,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Grid - 3 per row, equal size, full width (explicit widths to avoid RTL/flex issues)
+  // Grid - 3 per row, RTL so perek א is on the right (Hebrew reading order)
   row: {
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
     justifyContent: 'space-between',
     gap: GRID_GAP,
     marginBottom: spacing.md,
@@ -534,14 +534,16 @@ const styles = StyleSheet.create({
   },
   itemContent: {
     alignItems: 'center',
+    justifyContent: 'center',
     position: 'relative',
   },
   hebrewNumber: {
     fontFamily: fonts.heading.bold,
     fontSize: 24,
     color: colors.text.primary,
-    marginBottom: 4,
     letterSpacing: -0.5,
+    writingDirection: 'rtl',
+    textAlign: 'center',
   },
   hebrewNumberToday: {
     color: colors.primary.dark,
@@ -550,10 +552,11 @@ const styles = StyleSheet.create({
     color: colors.semantic.success,
   },
   englishNumber: {
-    fontFamily: fonts.body.medium,
-    fontSize: 13,
-    color: colors.text.secondary,
+    fontFamily: fonts.body.regular,
+    fontSize: 10,
+    color: colors.text.tertiary,
     letterSpacing: 0.2,
+    marginTop: 2,
   },
   englishNumberToday: {
     color: colors.primary.main,
