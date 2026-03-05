@@ -16,10 +16,12 @@ import {
   TextInput,
   Dimensions,
   Platform,
+  Share,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BackButton } from '../../components/ui/BackButton';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
@@ -258,6 +260,14 @@ export const SharedTehillimViewScreen: React.FC = () => {
     ? new Date(campaign.deadline).toLocaleDateString(undefined, { dateStyle: 'medium' })
     : null;
 
+  const shareLink = `https://siddur24seven.com/tehillim/${campaignId}`;
+  const handleShare = () => {
+    Share.share({
+      message: shareLink,
+      title: campaign.title ? `Shared Tehillim: ${campaign.title}` : 'Shared Tehillim link',
+    }).catch(() => {});
+  };
+
   return (
     <View style={styles.container}>
       <LinearGradient
@@ -272,7 +282,13 @@ export const SharedTehillimViewScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <BackButton onPress={() => navigation.goBack()} style={styles.backBtn} />
+          <View style={styles.headerRow}>
+            <BackButton onPress={() => navigation.goBack()} style={styles.backBtn} />
+            <TouchableOpacity onPress={handleShare} style={styles.shareBtn} hitSlop={8}>
+              <Ionicons name="share-outline" size={24} color={colors.primary.main} />
+              <Text style={styles.shareBtnText}>Share</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.title}>{campaign.title || 'Shared Tehillim'}</Text>
           {campaign.reason ? <Text style={styles.reason}>{campaign.reason}</Text> : null}
           {deadlineStr ? <Text style={styles.deadline}>By {deadlineStr}</Text> : null}
@@ -452,7 +468,25 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: GRID_PADDING / 2, paddingTop: spacing.xl + spacing.safeTopInset },
   header: { marginBottom: spacing.xl },
-  backBtn: { marginBottom: spacing.sm },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  backBtn: { marginBottom: 0 },
+  shareBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  shareBtnText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 15,
+    color: colors.primary.main,
+    marginLeft: 6,
+  },
   title: {
     fontFamily: fonts.heading.bold,
     fontSize: 24,
