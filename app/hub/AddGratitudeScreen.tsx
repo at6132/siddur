@@ -53,7 +53,7 @@ export const AddGratitudeScreen: React.FC = () => {
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps={Platform.OS === 'ios' ? 'never' : 'handled'}
           showsVerticalScrollIndicator={false}
         >
           <BackButton onPress={() => navigation.goBack()} style={styles.backRow} />
@@ -70,6 +70,7 @@ export const AddGratitudeScreen: React.FC = () => {
               placeholderTextColor={colors.text.tertiary}
               multiline
               numberOfLines={4}
+              inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
             />
           </View>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}

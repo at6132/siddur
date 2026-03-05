@@ -553,3 +553,65 @@ export async function getTehillimCampaignStatus(campaignId, participantId) {
   }
   return { campaign, byPerek };
 }
+
+const EXPIRED_GRACE_DAYS = 3;
+
+/** Delete campaigns that have a deadline and it passed more than EXPIRED_GRACE_DAYS ago. */
+export async function cleanupExpiredTehillimCampaigns() {
+  const p = getPool();
+  if (!p) return 0;
+  const r = await p.query(
+    `DELETE FROM tehillim_campaigns
+     WHERE deadline IS NOT NULL AND deadline < NOW() - INTERVAL '${EXPIRED_GRACE_DAYS} days'
+     RETURNING id`
+  );
+  return r.rowCount ?? 0;
+}
+
+/** List campaigns for a participant: created by them or they have commitments/completions. Excludes expired+grace. */
+export async function listTehillimCampaignsForParticipant(participantId) {
+  const p = getPool();
+  if (!p) return [];
+  await cleanupExpiredTehillimCampaigns();
+  const r = await p.query(
+    `SELECT c.id, c.type, c.title, c.reason, c.deadline, c.created_at, c.created_by
+     FROM tehillim_campaigns c
+     LEFT JOIN tehillim_commitments cm ON cm.campaign_id = c.id AND cm.participant_id = $1
+     LEFT JOIN tehillim_completions cp ON cp.campaign_id = c.id AND cp.participant_id = $1
+     WHERE (c.created_by = $1 OR cm.campaign_id IS NOT NULL OR cp.campaign_id IS NOT NULL)
+       AND (c.deadline IS NULL OR c.deadline >= NOW() - INTERVAL '${EXPIRED_GRACE_DAYS} days')
+     GROUP BY c.id
+     ORDER BY c.created_at DESC`,
+    [participantId]
+  );
+  return r.rows.map((row) => ({
+    id: row.id,
+    type: row.type,
+    title: row.title,
+    reason: row.reason,
+    deadline: row.deadline ? row.deadline.toISOString() : null,
+    created_at: row.created_at?.toISOString(),
+    created_by: row.created_by,
+    is_creator: row.created_by === participantId,
+  }));
+}
+
+/** Remove this participant from the campaign (their commitments and completions). */
+export async function leaveTehillimCampaign(campaignId, participantId) {
+  const p = getPool();
+  if (!p) throw new Error('Database not available');
+  await p.query(`DELETE FROM tehillim_commitments WHERE campaign_id = $1 AND participant_id = $2`, [campaignId, participantId]);
+  await p.query(`DELETE FROM tehillim_completions WHERE campaign_id = $1 AND participant_id = $2`, [campaignId, participantId]);
+  return { left: true };
+}
+
+/** Delete campaign entirely; only allowed if created_by matches. */
+export async function deleteTehillimCampaign(campaignId, participantId) {
+  const p = getPool();
+  if (!p) throw new Error('Database not available');
+  const campaign = await getTehillimCampaign(campaignId);
+  if (!campaign) throw new Error('Campaign not found');
+  if (campaign.created_by !== participantId) throw new Error('Only the creator can delete the campaign');
+  await p.query(`DELETE FROM tehillim_campaigns WHERE id = $1`, [campaignId]);
+  return { deleted: true };
+}

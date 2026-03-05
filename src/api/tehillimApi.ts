@@ -23,6 +23,7 @@ export interface TehillimCampaign {
   created_at?: string;
   created_by?: string | null;
   link?: string;
+  is_creator?: boolean;
 }
 
 export interface CampaignDetailResponse {
@@ -113,7 +114,43 @@ export async function completeTehillimPereks(
   return res.json();
 }
 
-/** Parse campaign id from share link (e.g. https://siddur.app/tehillim/abc12 or siddur://tehillim/abc12). */
+export async function listMyTehillimCampaigns(participantId: string): Promise<{ campaigns: TehillimCampaign[] }> {
+  const base = await getBaseUrl();
+  if (!base) return { campaigns: [] };
+  const url = `${base}/api/tehillim/campaigns?participant_id=${encodeURIComponent(participantId)}`;
+  const res = await fetch(url);
+  if (!res.ok) return { campaigns: [] };
+  return res.json();
+}
+
+export async function leaveTehillimCampaign(campaignId: string, participantId: string): Promise<void> {
+  const base = await getBaseUrl();
+  if (!base) throw new Error('Analytics URL not configured');
+  const res = await fetch(`${base}/api/tehillim/campaigns/${encodeURIComponent(campaignId)}/leave`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ participant_id: participantId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to leave');
+  }
+}
+
+export async function deleteTehillimCampaign(campaignId: string, participantId: string): Promise<void> {
+  const base = await getBaseUrl();
+  if (!base) throw new Error('Analytics URL not configured');
+  const res = await fetch(
+    `${base}/api/tehillim/campaigns/${encodeURIComponent(campaignId)}?participant_id=${encodeURIComponent(participantId)}`,
+    { method: 'DELETE' }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Failed to delete');
+  }
+}
+
+/** Parse campaign id from share link (e.g. https://siddur24seven.com/tehillim/abc12 or siddur://tehillim/abc12). */
 export function parseCampaignIdFromLink(link: string): string | null {
   const trimmed = link.trim();
   const match = trimmed.match(/tehillim[\/#]([a-z0-9]+)/i);

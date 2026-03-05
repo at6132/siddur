@@ -125,7 +125,7 @@ export const CreateSharedTehillimScreen: React.FC = () => {
   const handleJoinWithLink = () => {
     const id = parseCampaignIdFromLink(joinLinkInput);
     if (!id) {
-      Alert.alert('Invalid link', 'Paste the full link you received (e.g. https://siddur.app/tehillim/abc12xyz)');
+      Alert.alert('Invalid link', 'Paste the full link you received (e.g. https://siddur24seven.com/tehillim/abc12xyz)');
       return;
     }
     setJoinModalVisible(false);
@@ -174,7 +174,7 @@ export const CreateSharedTehillimScreen: React.FC = () => {
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       />
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps={Platform.OS === 'ios' ? 'never' : 'handled'}>
         <View style={styles.header}>
           <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
           <Text style={styles.title}>Make your Tehillim page</Text>
@@ -210,6 +210,7 @@ export const CreateSharedTehillimScreen: React.FC = () => {
             onChangeText={setTitle}
             placeholder="e.g. Refuah for Sarah"
             placeholderTextColor={colors.text.tertiary}
+            inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
           />
         </View>
         <View style={styles.section}>
@@ -221,6 +222,7 @@ export const CreateSharedTehillimScreen: React.FC = () => {
             placeholder="e.g. Refuah sheleima"
             placeholderTextColor={colors.text.tertiary}
             multiline
+            inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
           />
         </View>
         <View style={styles.section}>
@@ -231,6 +233,7 @@ export const CreateSharedTehillimScreen: React.FC = () => {
             onChangeText={setDeadline}
             placeholder="e.g. 2025-03-15 or leave blank"
             placeholderTextColor={colors.text.tertiary}
+            inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
           />
         </View>
 
@@ -260,10 +263,11 @@ export const CreateSharedTehillimScreen: React.FC = () => {
               style={styles.modalInput}
               value={joinLinkInput}
               onChangeText={setJoinLinkInput}
-              placeholder="https://siddur.app/tehillim/..."
+              placeholder="https://siddur24seven.com/tehillim/..."
               placeholderTextColor={colors.text.tertiary}
               autoCapitalize="none"
               autoCorrect={false}
+              inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
             />
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.modalCancel} onPress={() => setJoinModalVisible(false)}>

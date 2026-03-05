@@ -28,6 +28,9 @@ import {
   getTehillimCampaignStatus,
   claimTehillimRange,
   completeTehillimPereks,
+  listTehillimCampaignsForParticipant,
+  leaveTehillimCampaign,
+  deleteTehillimCampaign,
 } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -188,7 +191,12 @@ app.get('/api/stats/event-counts', async (req, res) => {
 });
 
 // --- Shared Tehillim ---
-const TEHILLIM_BASE_URL = process.env.TEHILLIM_BASE_URL || process.env.RAILWAY_STATIC_URL || 'https://siddur.app';
+// Shareable link base. Set TEHILLIM_BASE_URL in Railway to override (e.g. if domain points to API).
+const TEHILLIM_BASE_URL =
+  process.env.TEHILLIM_BASE_URL ||
+  process.env.RAILWAY_STATIC_URL ||
+  (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null) ||
+  'https://siddur24seven.com';
 
 app.post('/api/tehillim/campaigns', async (req, res) => {
   try {
@@ -264,6 +272,46 @@ app.post('/api/tehillim/campaigns/:id/complete', async (req, res) => {
   } catch (e) {
     console.error('[analytics-api] POST /api/tehillim/campaigns/:id/complete', e);
     res.status(500).json({ error: e.message || 'Failed to complete' });
+  }
+});
+
+app.get('/api/tehillim/campaigns', async (req, res) => {
+  try {
+    const participantId = req.query.participant_id || '';
+    if (!participantId) return res.status(400).json({ error: 'participant_id required' });
+    const campaigns = await listTehillimCampaignsForParticipant(participantId);
+    res.json({ campaigns });
+  } catch (e) {
+    console.error('[analytics-api] GET /api/tehillim/campaigns', e);
+    res.status(500).json({ error: 'Failed to list campaigns' });
+  }
+});
+
+app.post('/api/tehillim/campaigns/:id/leave', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { participant_id } = req.body || {};
+    if (!participant_id) return res.status(400).json({ error: 'participant_id required' });
+    await leaveTehillimCampaign(id, participant_id);
+    res.json({ left: true });
+  } catch (e) {
+    console.error('[analytics-api] POST /api/tehillim/campaigns/:id/leave', e);
+    res.status(500).json({ error: e.message || 'Failed to leave' });
+  }
+});
+
+app.delete('/api/tehillim/campaigns/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const participantId = req.query.participant_id || req.body?.participant_id || '';
+    if (!participantId) return res.status(400).json({ error: 'participant_id required' });
+    await deleteTehillimCampaign(id, participantId);
+    res.json({ deleted: true });
+  } catch (e) {
+    if (e.message?.includes('Only the creator')) return res.status(403).json({ error: e.message });
+    if (e.message?.includes('not found')) return res.status(404).json({ error: e.message });
+    console.error('[analytics-api] DELETE /api/tehillim/campaigns/:id', e);
+    res.status(500).json({ error: e.message || 'Failed to delete' });
   }
 });
 

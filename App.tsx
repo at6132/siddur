@@ -1,11 +1,23 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Platform } from 'react-native';
+import {
+  Platform,
+  Keyboard,
+  StyleSheet,
+  View,
+  InputAccessoryView,
+  TouchableOpacity,
+  Text,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer, createNavigationContainerRef, DarkTheme as NavigationDarkTheme, DefaultTheme as NavigationLightTheme } from '@react-navigation/native';
+import {
+  NavigationContainer,
+  useNavigationContainerRef,
+  DarkTheme as NavigationDarkTheme,
+  DefaultTheme as NavigationLightTheme,
+} from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { StorageService } from './src/storage/StorageService';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 import {
   useFonts,
@@ -29,8 +41,6 @@ import { AnalyticsErrorBoundary } from './components/analytics/AnalyticsErrorBou
 
 // Keep splash screen visible while loading fonts
 SplashScreen.preventAutoHideAsync();
-
-const navigationRef = createNavigationContainerRef();
 
 const ROUTE_TO_FEATURE: Record<string, string> = {
   Home: 'home',
@@ -82,6 +92,7 @@ function getActiveRouteName(state: any): string | null {
 
 function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
   const { theme } = useTheme();
+  const navigationRef = useNavigationContainerRef();
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -178,6 +189,19 @@ function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
         <AppNavigator />
         <StatusBar style={theme.statusBarStyle} />
       </NavigationContainer>
+      {Platform.OS === 'ios' && (
+        <InputAccessoryView nativeID="globalDone">
+          <View style={styles.inputAccessory}>
+            <TouchableOpacity
+              style={styles.inputAccessoryDone}
+              onPress={() => Keyboard.dismiss()}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.inputAccessoryDoneText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </InputAccessoryView>
+      )}
     </GestureHandlerRootView>
   );
 }
@@ -240,5 +264,24 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  inputAccessory: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#e8e8ed',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#c8c8cc',
+  },
+  inputAccessoryDone: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  inputAccessoryDoneText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#007AFF',
   },
 });

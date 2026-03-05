@@ -219,6 +219,7 @@ export const AddCustomReminderScreen: React.FC = () => {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps={Platform.OS === 'ios' ? 'never' : 'handled'}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
@@ -241,6 +242,7 @@ export const AddCustomReminderScreen: React.FC = () => {
               value={title}
               onChangeText={setTitle}
               maxLength={50}
+              inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
             />
           </GlassCard>
         </FadeIn>
@@ -258,6 +260,7 @@ export const AddCustomReminderScreen: React.FC = () => {
               maxLength={150}
               multiline
               numberOfLines={3}
+              inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
             />
           </GlassCard>
         </FadeIn>
@@ -278,6 +281,7 @@ export const AddCustomReminderScreen: React.FC = () => {
                   keyboardType="number-pad"
                   placeholder="9"
                   placeholderTextColor={colors.text.tertiary}
+                  inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
                 />
               </View>
               <Text style={styles.timeColon}>:</Text>
@@ -292,6 +296,7 @@ export const AddCustomReminderScreen: React.FC = () => {
                   keyboardType="number-pad"
                   placeholder="00"
                   placeholderTextColor={colors.text.tertiary}
+                  inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
                 />
               </View>
               <View style={styles.ampmWrap}>

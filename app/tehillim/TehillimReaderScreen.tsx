@@ -240,8 +240,26 @@ export const TehillimReaderScreen: React.FC = () => {
           </Text>
         </View>
 
-        {/* Completion badge & button — at bottom of all text */}
-        {isDailyChapter && (
+        {/* Completion — only for the context you opened from: shared page OR personal daily */}
+        {campaignId ? (
+          <FadeIn delay={0}>
+            <View style={styles.dailyBadge}>
+              <Text style={styles.dailyBadgeText}>Shared Tehillim page</Text>
+              <TouchableOpacity
+                style={styles.markCompleteButton}
+                onPress={markCampaignComplete}
+                disabled={campaignMarking}
+                activeOpacity={0.7}
+              >
+                {campaignMarking ? (
+                  <ActivityIndicator size="small" color={colors.text.inverse} />
+                ) : (
+                  <Text style={styles.markCompleteButtonText}>Mark complete & return</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </FadeIn>
+        ) : isDailyChapter ? (
           <FadeIn delay={0}>
             <View style={[styles.dailyBadge, isMarkedComplete && styles.dailyBadgeComplete]}>
               <Text style={[styles.dailyBadgeText, isMarkedComplete && styles.dailyBadgeCompleteText]}>
@@ -264,28 +282,7 @@ export const TehillimReaderScreen: React.FC = () => {
               )}
             </View>
           </FadeIn>
-        )}
-
-        {/* Shared campaign: mark this perek complete and return to shared page */}
-        {campaignId && (
-          <FadeIn delay={0}>
-            <View style={styles.dailyBadge}>
-              <Text style={styles.dailyBadgeText}>Shared Tehillim page</Text>
-              <TouchableOpacity
-                style={styles.markCompleteButton}
-                onPress={markCampaignComplete}
-                disabled={campaignMarking}
-                activeOpacity={0.7}
-              >
-                {campaignMarking ? (
-                  <ActivityIndicator size="small" color={colors.text.inverse} />
-                ) : (
-                  <Text style={styles.markCompleteButtonText}>Mark complete & return</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </FadeIn>
-        )}
+        ) : null}
 
         {/* Navigation */}
         <View style={styles.navigationContainer}>

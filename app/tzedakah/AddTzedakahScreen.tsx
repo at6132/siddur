@@ -58,7 +58,7 @@ export const AddTzedakahScreen: React.FC = () => {
       >
         <ScrollView
           contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps={Platform.OS === 'ios' ? 'never' : 'handled'}
           showsVerticalScrollIndicator={false}
         >
           <BackButton onPress={() => navigation.goBack()} style={styles.backRow} />
@@ -74,6 +74,7 @@ export const AddTzedakahScreen: React.FC = () => {
               placeholder="0.00"
               placeholderTextColor={colors.text.tertiary}
               keyboardType="decimal-pad"
+              inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
             />
           </View>
           <View style={styles.field}>
@@ -85,6 +86,7 @@ export const AddTzedakahScreen: React.FC = () => {
               placeholder="e.g. Chabad, local food bank"
               placeholderTextColor={colors.text.tertiary}
               autoCapitalize="words"
+              inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
             />
           </View>
           {error ? <Text style={styles.errorText}>{error}</Text> : null}

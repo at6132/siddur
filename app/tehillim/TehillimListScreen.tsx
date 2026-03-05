@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
   TextInput,
   Platform,
   Animated,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,6 +25,13 @@ import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
+import { getAnonymousId } from '../../src/analytics/IdentityService';
+import {
+  listMyTehillimCampaigns,
+  leaveTehillimCampaign,
+  deleteTehillimCampaign,
+  type TehillimCampaign,
+} from '../../src/api/tehillimApi';
 
 // Hebrew letters for Tehillim numbering
 const HEBREW_LETTERS = [
@@ -78,6 +86,7 @@ export const TehillimListScreen: React.FC = () => {
   const [dailyProgress, setDailyProgress] = useState<DailyProgress | null>(null);
   const [overallProgress, setOverallProgress] = useState<OverallProgress | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [myCampaigns, setMyCampaigns] = useState<TehillimCampaign[]>([]);
 
   useFocusEffect(
     useCallback(() => {
@@ -99,6 +108,13 @@ export const TehillimListScreen: React.FC = () => {
       goalType: progress.goalType,
     });
     setOverallProgress(overall);
+    try {
+      const pid = await getAnonymousId();
+      const { campaigns } = await listMyTehillimCampaigns(pid);
+      setMyCampaigns(campaigns || []);
+    } catch {
+      setMyCampaigns([]);
+    }
   };
 
   const allTehillim: TehillimItem[] = useMemo(
@@ -133,6 +149,96 @@ export const TehillimListScreen: React.FC = () => {
     if (nextChapter) {
       navigation.navigate('TehillimReader' as never, { psalm: nextChapter } as never);
     }
+  };
+
+  const handleLeaveCampaign = async (c: TehillimCampaign) => {
+    Alert.alert(
+      'Leave Tehillim page?',
+      `Leave "${c.title || 'Shared Tehillim'}"? You can rejoin with the link.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Leave',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const pid = await getAnonymousId();
+              await leaveTehillimCampaign(c.id, pid);
+              await loadProgress();
+            } catch (e: any) {
+              Alert.alert('Error', e?.message || 'Could not leave');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteCampaign = async (c: TehillimCampaign) => {
+    Alert.alert(
+      'Delete Tehillim page?',
+      `Permanently delete "${c.title || 'Shared Tehillim'}"? Everyone will lose access.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const pid = await getAnonymousId();
+              await deleteTehillimCampaign(c.id, pid);
+              await loadProgress();
+            } catch (e: any) {
+              Alert.alert('Error', e?.message || 'Could not delete');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderMyTehillimPagesSection = () => {
+    if (!myCampaigns.length) return null;
+    return (
+      <View style={styles.myPagesSection}>
+        <Text style={styles.myPagesSectionTitle}>Your Tehillim pages</Text>
+        <Text style={styles.myPagesSectionSubtitle}>Separate from your personal Tehillim above</Text>
+        {myCampaigns.map((c) => {
+          const deadlineStr = c.deadline ? new Date(c.deadline).toLocaleDateString(undefined, { dateStyle: 'short' }) : null;
+          return (
+            <View key={c.id} style={styles.myPagesCard}>
+              <View style={styles.myPagesCardContent}>
+                <Text style={styles.myPagesCardTitle}>{c.title || 'Shared Tehillim'}</Text>
+                {(c.reason || deadlineStr) && (
+                  <Text style={styles.myPagesCardSubtitle} numberOfLines={2}>
+                    {[c.reason, deadlineStr ? `By ${deadlineStr}` : null].filter(Boolean).join(' · ')}
+                  </Text>
+                )}
+                <Text style={styles.myPagesCardType}>{c.type === 'split' ? 'Split & claim' : 'Shared completion'}</Text>
+              </View>
+              <View style={styles.myPagesCardActions}>
+                <TouchableOpacity
+                  style={styles.myPagesOpenBtn}
+                  onPress={() => navigation.navigate('SharedTehillimView' as never, { campaignId: c.id } as never)}
+                >
+                  <Text style={styles.myPagesOpenBtnText}>Open</Text>
+                </TouchableOpacity>
+                {c.is_creator ? (
+                  <TouchableOpacity style={styles.myPagesLeaveBtn} onPress={() => handleDeleteCampaign(c)}>
+                    <Ionicons name="trash-outline" size={16} color={colors.semantic.error} />
+                    <Text style={styles.myPagesLeaveBtnText}>Delete</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.myPagesLeaveBtn} onPress={() => handleLeaveCampaign(c)}>
+                    <Text style={styles.myPagesLeaveBtnText}>Leave</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
   };
 
   const renderDailyCard = () => {
@@ -312,6 +418,7 @@ export const TehillimListScreen: React.FC = () => {
             returnKeyType="search"
             autoCorrect={false}
             autoCapitalize="none"
+            inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
           />
         </View>
       </View>
@@ -335,9 +442,10 @@ export const TehillimListScreen: React.FC = () => {
               <Text style={styles.sharedTehillimBannerSubtext}>Share a link • others join & complete</Text>
             </TouchableOpacity>
             {renderDailyCard()}
+            {renderMyTehillimPagesSection()}
           </View>
         }
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps={Platform.OS === 'ios' ? 'never' : 'handled'}
       />
     </View>
   );
@@ -400,6 +508,76 @@ const styles = StyleSheet.create({
     color: colors.text.secondary,
     width: '100%',
     marginLeft: 30,
+  },
+  myPagesSection: {
+    marginTop: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  myPagesSectionTitle: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 18,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  myPagesSectionSubtitle: {
+    fontFamily: fonts.body.regular,
+    fontSize: 13,
+    color: colors.text.secondary,
+    marginBottom: spacing.md,
+  },
+  myPagesCard: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  myPagesCardContent: { marginBottom: spacing.sm },
+  myPagesCardTitle: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 16,
+    color: colors.text.primary,
+  },
+  myPagesCardSubtitle: {
+    fontFamily: fonts.body.regular,
+    fontSize: 13,
+    color: colors.text.secondary,
+    marginTop: 2,
+  },
+  myPagesCardType: {
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
+    color: colors.primary.main,
+    marginTop: 4,
+  },
+  myPagesCardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  myPagesOpenBtn: {
+    backgroundColor: colors.primary.main,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+  },
+  myPagesOpenBtnText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 14,
+    color: colors.text.inverse,
+  },
+  myPagesLeaveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+  },
+  myPagesLeaveBtnText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 14,
+    color: colors.semantic.error,
   },
   searchBar: {
     flexDirection: 'row',
