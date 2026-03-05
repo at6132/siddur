@@ -137,6 +137,20 @@ export async function leaveTehillimCampaign(campaignId: string, participantId: s
   }
 }
 
+export async function joinTehillimCampaign(campaignId: string, participantId: string): Promise<void> {
+  const base = await getBaseUrl();
+  if (!base) return;
+  const res = await fetch(`${base}/api/tehillim/campaigns/${encodeURIComponent(campaignId)}/join`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ participant_id: participantId }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    if (res.status === 404) throw new Error(err.error || 'Campaign not found');
+  }
+}
+
 export async function deleteTehillimCampaign(campaignId: string, participantId: string): Promise<void> {
   const base = await getBaseUrl();
   if (!base) throw new Error('Analytics URL not configured');

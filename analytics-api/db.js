@@ -95,6 +95,13 @@ export async function initTehillimTables() {
     );
     CREATE INDEX IF NOT EXISTS idx_tehillim_commitments_campaign ON tehillim_commitments(campaign_id);
     CREATE INDEX IF NOT EXISTS idx_tehillim_completions_campaign ON tehillim_completions(campaign_id);
+    CREATE TABLE IF NOT EXISTS tehillim_participants (
+      campaign_id TEXT NOT NULL REFERENCES tehillim_campaigns(id) ON DELETE CASCADE,
+      participant_id TEXT NOT NULL,
+      joined_at TIMESTAMPTZ DEFAULT NOW(),
+      PRIMARY KEY (campaign_id, participant_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_tehillim_participants_campaign ON tehillim_participants(campaign_id);
   `);
   console.log('[analytics-api] Tehillim tables initialized.');
 }
@@ -568,7 +575,20 @@ export async function cleanupExpiredTehillimCampaigns() {
   return r.rowCount ?? 0;
 }
 
-/** List campaigns for a participant: created by them or they have commitments/completions. Excludes expired+grace. */
+/** Join a campaign so it appears in "Your Tehillim pages". Idempotent. */
+export async function joinTehillimCampaign(campaignId, participantId) {
+  const p = getPool();
+  if (!p) throw new Error('Database not available');
+  const campaign = await getTehillimCampaign(campaignId);
+  if (!campaign) throw new Error('Campaign not found');
+  await p.query(
+    `INSERT INTO tehillim_participants (campaign_id, participant_id) VALUES ($1, $2) ON CONFLICT (campaign_id, participant_id) DO NOTHING`,
+    [campaignId, participantId]
+  );
+  return { joined: true };
+}
+
+/** List campaigns for a participant: created by them or they have commitments/completions or joined. Excludes expired+grace. */
 export async function listTehillimCampaignsForParticipant(participantId) {
   const p = getPool();
   if (!p) return [];
@@ -578,7 +598,8 @@ export async function listTehillimCampaignsForParticipant(participantId) {
      FROM tehillim_campaigns c
      LEFT JOIN tehillim_commitments cm ON cm.campaign_id = c.id AND cm.participant_id = $1
      LEFT JOIN tehillim_completions cp ON cp.campaign_id = c.id AND cp.participant_id = $1
-     WHERE (c.created_by = $1 OR cm.campaign_id IS NOT NULL OR cp.campaign_id IS NOT NULL)
+     LEFT JOIN tehillim_participants tp ON tp.campaign_id = c.id AND tp.participant_id = $1
+     WHERE (c.created_by = $1 OR cm.campaign_id IS NOT NULL OR cp.campaign_id IS NOT NULL OR tp.campaign_id IS NOT NULL)
        AND (c.deadline IS NULL OR c.deadline >= NOW() - INTERVAL '${EXPIRED_GRACE_DAYS} days')
      GROUP BY c.id
      ORDER BY c.created_at DESC`,
@@ -596,12 +617,13 @@ export async function listTehillimCampaignsForParticipant(participantId) {
   }));
 }
 
-/** Remove this participant from the campaign (their commitments and completions). */
+/** Remove this participant from the campaign (their commitments, completions, and participant record). */
 export async function leaveTehillimCampaign(campaignId, participantId) {
   const p = getPool();
   if (!p) throw new Error('Database not available');
   await p.query(`DELETE FROM tehillim_commitments WHERE campaign_id = $1 AND participant_id = $2`, [campaignId, participantId]);
   await p.query(`DELETE FROM tehillim_completions WHERE campaign_id = $1 AND participant_id = $2`, [campaignId, participantId]);
+  await p.query(`DELETE FROM tehillim_participants WHERE campaign_id = $1 AND participant_id = $2`, [campaignId, participantId]);
   return { left: true };
 }
 

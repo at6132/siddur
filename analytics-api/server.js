@@ -31,6 +31,7 @@ import {
   listTehillimCampaignsForParticipant,
   leaveTehillimCampaign,
   deleteTehillimCampaign,
+  joinTehillimCampaign,
 } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -287,6 +288,20 @@ app.get('/api/tehillim/campaigns', async (req, res) => {
   }
 });
 
+app.post('/api/tehillim/campaigns/:id/join', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { participant_id } = req.body || {};
+    if (!participant_id) return res.status(400).json({ error: 'participant_id required' });
+    await joinTehillimCampaign(id, participant_id);
+    res.json({ joined: true });
+  } catch (e) {
+    if (e.message?.includes('not found')) return res.status(404).json({ error: e.message });
+    console.error('[analytics-api] POST /api/tehillim/campaigns/:id/join', e);
+    res.status(500).json({ error: e.message || 'Failed to join' });
+  }
+});
+
 app.post('/api/tehillim/campaigns/:id/leave', async (req, res) => {
   try {
     const { id } = req.params;
@@ -313,6 +328,13 @@ app.delete('/api/tehillim/campaigns/:id', async (req, res) => {
     console.error('[analytics-api] DELETE /api/tehillim/campaigns/:id', e);
     res.status(500).json({ error: e.message || 'Failed to delete' });
   }
+});
+
+// Redirect web link to app: GET /tehillim/:id → siddur://tehillim/:id (so opening https://siddur24seven.com/tehillim/xyz opens the app)
+app.get('/tehillim/:id', (req, res) => {
+  const { id } = req.params;
+  if (!id || !/^[a-z0-9]+$/i.test(id)) return res.status(400).send('Invalid campaign id');
+  res.redirect(302, `siddur://tehillim/${id}`);
 });
 
 // Admin dashboard (static)

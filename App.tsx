@@ -7,6 +7,7 @@ import {
   InputAccessoryView,
   TouchableOpacity,
   Text,
+  Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -38,6 +39,7 @@ import { ThemeProvider, useTheme } from './src/design/theme';
 import { bootstrapLifecycle } from './src/analytics/lifecycle';
 import { track, getPreviousScreenInfo, SCREEN_EVENTS, events } from './src/analytics';
 import { AnalyticsErrorBoundary } from './components/analytics/AnalyticsErrorBoundary';
+import { parseCampaignIdFromLink } from './src/api/tehillimApi';
 
 // Keep splash screen visible while loading fonts
 SplashScreen.preventAutoHideAsync();
@@ -178,6 +180,27 @@ function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
     });
     const featureName = ROUTE_TO_FEATURE[route];
     if (featureName) track(events.feature.entry(featureName), { context: 'screen', screen_name: route });
+  }, []);
+
+  // Deep link: siddur://tehillim/<id> or https://siddur24seven.com/tehillim/<id> → open SharedTehillimView
+  useEffect(() => {
+    const navigateToTehillimCampaign = (url: string | null) => {
+      if (!url) return;
+      const campaignId = parseCampaignIdFromLink(url);
+      if (!campaignId) return;
+      const go = () => {
+        if (!navigationRef.isReady()) {
+          setTimeout(go, 100);
+          return;
+        }
+        navigationRef.navigate('SharedTehillimView' as never, { campaignId } as never);
+      };
+      go();
+    };
+
+    Linking.getInitialURL().then(navigateToTehillimCampaign);
+    const sub = Linking.addEventListener('url', ({ url }) => navigateToTehillimCampaign(url));
+    return () => sub.remove();
   }, []);
 
   return (

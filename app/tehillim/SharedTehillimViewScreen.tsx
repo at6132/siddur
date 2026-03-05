@@ -27,6 +27,7 @@ import { getAnonymousId } from '../../src/analytics/IdentityService';
 import {
   getTehillimCampaign,
   claimTehillimRange,
+  joinTehillimCampaign,
   CampaignDetailResponse,
 } from '../../src/api/tehillimApi';
 
@@ -85,6 +86,9 @@ export const SharedTehillimViewScreen: React.FC = () => {
       const res = await getTehillimCampaign(campaignId, pid);
       setData(res);
       setError(null);
+      try {
+        await joinTehillimCampaign(campaignId, pid);
+      } catch (_) {}
     } catch (e: any) {
       setError(e?.message || 'Failed to load');
       setData(null);
