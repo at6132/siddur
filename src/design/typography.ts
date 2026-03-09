@@ -8,7 +8,7 @@
  */
 
 export const fonts = {
-  // Heading font - elegant serif
+  // Heading font - elegant serif (Latin/English)
   heading: {
     regular: 'CormorantGaramond_400Regular',
     medium: 'CormorantGaramond_500Medium',
@@ -21,6 +21,13 @@ export const fonts = {
     medium: 'Nunito_500Medium',
     semibold: 'Nunito_600SemiBold',
     bold: 'Nunito_700Bold',
+  },
+  // Hebrew font - serif with full nikkud/taamim mark anchoring
+  hebrew: {
+    regular: 'FrankRuhlLibre_400Regular',
+    medium: 'FrankRuhlLibre_500Medium',
+    semibold: 'FrankRuhlLibre_600SemiBold',
+    bold: 'FrankRuhlLibre_700Bold',
   },
 } as const;
 

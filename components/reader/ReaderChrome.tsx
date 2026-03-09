@@ -15,7 +15,7 @@ import { BackButton } from '../ui/BackButton';
 import type { AppTheme } from '../../src/design/theme';
 
 /** Approximate height of the chrome (back row + title + toolbar + padding) for content paddingTop. */
-export const READER_CHROME_HEADER_HEIGHT_APPROX = 130;
+export const READER_CHROME_HEADER_HEIGHT_APPROX = 160;
 
 export interface ReaderChromeProps {
   title: string;
@@ -162,10 +162,10 @@ function createStyles(theme: AppTheme) {
       letterSpacing: -0.5,
     },
     titleHebrew: {
-      fontFamily: fonts.heading.regular,
+      fontFamily: fonts.hebrew.regular,
       fontSize: 20,
       color: theme.colors.text.secondary,
-      letterSpacing: 0.2,
+      letterSpacing: 0,
     },
     toolbarRow: {
       flexDirection: 'row',

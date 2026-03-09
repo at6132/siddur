@@ -2095,10 +2095,11 @@ function createHomeStyles(theme: AppTheme) {
   // Date Card
   dateCard: {},
   hebrewDate: {
-    fontFamily: fonts.heading.bold,
+    fontFamily: fonts.hebrew.bold,
     fontSize: 26,
     color: theme.colors.text.primary,
     textAlign: 'center',
+    letterSpacing: 0,
   },
   dateDivider: {
     width: 40,
@@ -2368,10 +2369,11 @@ function createHomeStyles(theme: AppTheme) {
     color: theme.colors.text.primary,
   },
   parshaHebrew: {
-    fontFamily: fonts.body.medium,
+    fontFamily: fonts.hebrew.medium,
     fontSize: 14,
     color: theme.colors.text.secondary,
     marginTop: 2,
+    letterSpacing: 0,
   },
   parshaSubtext: {
     fontFamily: fonts.body.regular,
@@ -2390,11 +2392,12 @@ function createHomeStyles(theme: AppTheme) {
     marginBottom: spacing.xs,
   },
   inspirationHebrew: {
-    fontFamily: fonts.heading.semibold,
+    fontFamily: fonts.hebrew.semibold,
     fontSize: 18,
     color: theme.colors.text.primary,
     textAlign: 'center',
     marginBottom: spacing.xs,
+    letterSpacing: 0,
   },
   inspirationTranslation: {
     fontFamily: fonts.body.regular,
@@ -3047,10 +3050,11 @@ function createHomeStyles(theme: AppTheme) {
     paddingVertical: spacing.md,
   },
   wordHebrew: {
-    fontFamily: fonts.heading.bold,
+    fontFamily: fonts.hebrew.bold,
     fontSize: 24,
     color: theme.colors.text.primary,
     marginBottom: spacing.xs,
+    letterSpacing: 0,
   },
   wordMeaning: {
     fontFamily: fonts.body.medium,

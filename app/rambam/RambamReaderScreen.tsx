@@ -102,9 +102,10 @@ function createStyles(theme: AppTheme) {
       padding: spacing.lg,
     },
     hebrewBlock: {
-      fontFamily: fonts.heading.regular,
+      fontFamily: fonts.hebrew.regular,
       fontSize: 20,
       lineHeight: 34,
+      letterSpacing: 0,
       color: theme.colors.text.primary,
       marginBottom: spacing.md,
       textAlign: 'right',

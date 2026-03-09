@@ -754,10 +754,10 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   hebrewNumber: {
-    fontFamily: fonts.heading.bold,
+    fontFamily: fonts.hebrew.bold,
     fontSize: 24,
     color: colors.text.primary,
-    letterSpacing: -0.5,
+    letterSpacing: 0,
     writingDirection: 'rtl',
     textAlign: 'center',
   },

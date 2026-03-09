@@ -150,9 +150,10 @@ function createStyles(theme: AppTheme) {
       padding: spacing.lg,
     },
     hebrewBlock: {
-      fontFamily: fonts.heading.regular,
+      fontFamily: fonts.hebrew.regular,
       fontSize: 20,
       lineHeight: 34,
+      letterSpacing: 0,
       color: theme.colors.text.primary,
       marginBottom: spacing.md,
       textAlign: 'right',
@@ -189,8 +190,9 @@ function createStyles(theme: AppTheme) {
       borderTopColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
     },
     amudSectionHeader: {
-      fontFamily: fonts.heading.semibold,
+      fontFamily: fonts.hebrew.semibold,
       fontSize: 18,
+      letterSpacing: 0,
       color: theme.colors.text.primary,
       marginTop: spacing.xl,
       marginBottom: spacing.md,

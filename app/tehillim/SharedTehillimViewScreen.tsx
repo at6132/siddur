@@ -550,7 +550,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  cellHebrew: { fontFamily: fonts.heading.semiBold, fontSize: 16 },
+  cellHebrew: { fontFamily: fonts.hebrew.semibold, fontSize: 16, letterSpacing: 0 },
   cellNum: { fontFamily: fonts.body.regular, fontSize: 10, color: colors.text.tertiary, marginTop: 2 },
   hint: {
     fontFamily: fonts.body.regular,
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.06)',
   },
-  claimModalCellHebrew: { fontFamily: fonts.heading.semiBold, fontSize: 14 },
+  claimModalCellHebrew: { fontFamily: fonts.hebrew.semibold, fontSize: 14, letterSpacing: 0 },
   claimModalCellNum: { fontFamily: fonts.body.regular, fontSize: 9, color: colors.text.tertiary, marginTop: 1 },
   claimModalActions: {
     flexDirection: 'row',

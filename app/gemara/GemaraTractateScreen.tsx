@@ -43,9 +43,10 @@ function createStyles(theme: AppTheme) {
       color: theme.colors.text.secondary,
     },
     title: {
-      fontFamily: fonts.heading.bold,
+      fontFamily: fonts.hebrew.bold,
       fontSize: 26,
       color: theme.colors.text.primary,
+      letterSpacing: 0,
     },
     subtitle: {
       fontFamily: fonts.body.regular,
@@ -54,19 +55,21 @@ function createStyles(theme: AppTheme) {
       marginTop: 4,
     },
     subtitleHebrew: {
-      fontFamily: fonts.body.regular,
+      fontFamily: fonts.hebrew.regular,
       fontSize: 14,
       color: theme.colors.text.tertiary,
       marginTop: 4,
       writingDirection: 'rtl',
       textAlign: 'right',
+      letterSpacing: 0,
     },
     dafTextHebrew: {
-      fontFamily: fonts.heading.semiBold,
+      fontFamily: fonts.hebrew.semibold,
       fontSize: 14,
       color: theme.colors.text.primary,
       writingDirection: 'rtl',
       textAlign: 'center',
+      letterSpacing: 0,
     },
     grid: {
       flexDirection: 'row',

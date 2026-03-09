@@ -612,10 +612,10 @@ function createCalendarStyles(theme: AppTheme) {
     color: theme.colors.text.primary,
   },
   hebrewMonth: {
-    fontFamily: fonts.body.medium,
+    fontFamily: fonts.hebrew.medium,
     fontSize: 12,
     color: theme.colors.text.secondary,
-    letterSpacing: 1,
+    letterSpacing: 0,
     textTransform: 'uppercase',
     marginTop: 2,
   },
@@ -706,9 +706,10 @@ function createCalendarStyles(theme: AppTheme) {
     color: theme.colors.text.primary,
   },
   hebrewDay: {
-    fontFamily: fonts.body.medium,
+    fontFamily: fonts.hebrew.medium,
     fontSize: 11,
     color: theme.colors.text.secondary,
+    letterSpacing: 0,
     marginTop: 2,
   },
   specialIndicator: {

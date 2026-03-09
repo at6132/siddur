@@ -41,19 +41,21 @@ function createStyles(theme: AppTheme) {
       color: theme.colors.text.secondary,
     },
     title: {
-      fontFamily: fonts.heading.bold,
+      fontFamily: fonts.hebrew.bold,
       fontSize: 26,
       color: theme.colors.text.primary,
       writingDirection: 'rtl',
       textAlign: 'right',
+      letterSpacing: 0,
     },
     subtitle: {
-      fontFamily: fonts.body.regular,
+      fontFamily: fonts.hebrew.regular,
       fontSize: 14,
       color: theme.colors.text.tertiary,
       marginTop: 4,
       writingDirection: 'rtl',
       textAlign: 'right',
+      letterSpacing: 0,
     },
     grid: {
       flexDirection: 'row',
@@ -78,11 +80,12 @@ function createStyles(theme: AppTheme) {
       backgroundColor: theme.isDark ? 'rgba(40,38,55,0.8)' : 'rgba(255,255,255,0.7)',
     },
     perekTextHebrew: {
-      fontFamily: fonts.heading.semibold,
+      fontFamily: fonts.hebrew.semibold,
       fontSize: 14,
       color: theme.colors.text.primary,
       writingDirection: 'rtl',
       textAlign: 'center',
+      letterSpacing: 0,
     },
   });
 }

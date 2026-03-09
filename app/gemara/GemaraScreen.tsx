@@ -88,17 +88,19 @@ function createStyles(theme: AppTheme) {
       color: theme.colors.text.primary,
     },
     titleHebrew: {
-      fontFamily: fonts.body.regular,
+      fontFamily: fonts.hebrew.regular,
       fontSize: 18,
       color: theme.colors.text.tertiary,
       marginTop: 4,
+      letterSpacing: 0,
     },
     sectionTitle: {
-      fontFamily: fonts.heading.semiBold,
+      fontFamily: fonts.hebrew.semibold,
       fontSize: 18,
       color: theme.colors.text.primary,
       marginBottom: spacing.md,
       marginTop: spacing.lg,
+      letterSpacing: 0,
     },
     dafYomiCard: {
       borderRadius: borderRadius.xl,
@@ -140,11 +142,12 @@ function createStyles(theme: AppTheme) {
       flexShrink: 1,
     },
     mesechtaTitleHebrew: {
-      fontFamily: fonts.heading.regular,
+      fontFamily: fonts.hebrew.regular,
       fontSize: 18,
       color: theme.colors.text.primary,
       writingDirection: 'rtl',
       textAlign: 'right',
+      letterSpacing: 0,
     },
     grid: {
       flexDirection: 'row',

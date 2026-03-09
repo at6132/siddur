@@ -848,9 +848,10 @@ function createLibraryStyles(theme: AppTheme) {
     color: theme.colors.text.primary,
   },
   prayerHebrew: {
-    fontFamily: fonts.body.regular,
+    fontFamily: fonts.hebrew.regular,
     fontSize: 16,
     color: theme.colors.text.secondary,
+    letterSpacing: 0,
   },
   prayerSubtitle: {
     fontFamily: fonts.body.regular,
@@ -928,10 +929,11 @@ function createLibraryStyles(theme: AppTheme) {
     marginBottom: spacing.xs,
   },
   quickAccessText: {
-    fontFamily: fonts.body.medium,
+    fontFamily: fonts.hebrew.medium,
     fontSize: 12,
     color: theme.colors.text.secondary,
     textAlign: 'center',
+    letterSpacing: 0,
     writingDirection: 'rtl',
   },
   quickAccessCustomizeButton: {
@@ -986,9 +988,10 @@ function createLibraryStyles(theme: AppTheme) {
     borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
   },
   customizeModalRowText: {
-    fontFamily: fonts.body.medium,
+    fontFamily: fonts.hebrew.medium,
     fontSize: 15,
     color: theme.colors.text.primary,
+    letterSpacing: 0,
     writingDirection: 'rtl',
   },
   customizeModalRemoveBtn: {

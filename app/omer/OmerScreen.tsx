@@ -555,11 +555,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   blessingHebrew: {
-    fontFamily: fonts.body.regular,
+    fontFamily: fonts.hebrew.regular,
     fontSize: 18,
     color: colors.text.secondary,
     textAlign: 'center',
     lineHeight: 28,
+    letterSpacing: 0,
     marginBottom: spacing.lg,
   },
   countButton: {

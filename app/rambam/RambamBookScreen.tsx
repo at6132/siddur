@@ -42,11 +42,12 @@ function createStyles(theme: AppTheme) {
       color: theme.colors.text.secondary,
     },
     title: {
-      fontFamily: fonts.heading.bold,
+      fontFamily: fonts.hebrew.bold,
       fontSize: 26,
       color: theme.colors.text.primary,
       writingDirection: 'rtl',
       textAlign: 'right',
+      letterSpacing: 0,
     },
     subtitle: {
       fontFamily: fonts.body.regular,
@@ -70,15 +71,17 @@ function createStyles(theme: AppTheme) {
       justifyContent: 'space-between',
     },
     sectionTitle: {
-      fontFamily: fonts.heading.semibold,
+      fontFamily: fonts.hebrew.semibold,
       fontSize: 16,
       color: theme.colors.text.primary,
       flex: 1,
+      letterSpacing: 0,
     },
     sectionChapters: {
-      fontFamily: fonts.body.regular,
+      fontFamily: fonts.hebrew.regular,
       fontSize: 13,
       color: theme.colors.text.tertiary,
+      letterSpacing: 0,
     },
   });
 }
