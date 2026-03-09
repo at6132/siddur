@@ -800,6 +800,8 @@ const AUTOSCROLL_SPEED_MAX = 2;
 
 /** Tallit & Tefillin are optional (e.g. women don't have); show Hebrew + plus to expand. */
 const OPTIONAL_SECTIONS = ['tallit', 'tefillin'];
+/** Sections before Ashrei that are collapsed by default; tap to expand. Key = sectionKey. */
+const COLLAPSED_BEFORE_ASHREI_MINCHA: string[] = ['mincha_korbanot'];
 const AUTOSCROLL_PIXELS_PER_SECOND = 45; // at speed 1
 
 const TEXT_SIZES: DisplayPreferences['textSize'][] = ['xsmall', 'small', 'medium', 'large'];
@@ -926,6 +928,8 @@ export const SiddurReaderScreen: React.FC = () => {
   const [autoscrollSpeed, setAutoscrollSpeed] = useState(1); // 0.5–2
   /** Optional sections (tallit, tefillin) collapsed by default; tap to expand. */
   const [expandedOptionals, setExpandedOptionals] = useState<Record<string, boolean>>({});
+  /** "Before Ashrei" sections (e.g. Mincha Korbanot) collapsed by default; tap to expand. */
+  const [expandedBeforeAshrei, setExpandedBeforeAshrei] = useState<Record<string, boolean>>({});
 
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
@@ -1201,6 +1205,11 @@ export const SiddurReaderScreen: React.FC = () => {
             const isOptionalExpanded = isOptional && expandedOptionals[section.key];
             const showOptionalCollapsed = isOptional && !isOptionalExpanded;
 
+            const isBeforeAshreiCollapsed =
+              service === 'mincha' &&
+              COLLAPSED_BEFORE_ASHREI_MINCHA.includes(section.key) &&
+              !expandedBeforeAshrei[section.key];
+
             return (
               <View
                 key={section.key}
@@ -1219,6 +1228,17 @@ export const SiddurReaderScreen: React.FC = () => {
                     <Text style={[styles.hebrewText, styles.optionalSectionLabel, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
                       {section.hebrewTitle}  +
                     </Text>
+                  </TouchableOpacity>
+                ) : isBeforeAshreiCollapsed ? (
+                  <TouchableOpacity
+                    onPress={() => setExpandedBeforeAshrei(prev => ({ ...prev, [section.key]: true }))}
+                    style={styles.collapsedBeforeAshreiRow}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+                      {section.hebrewTitle}
+                    </Text>
+                    <Text style={styles.collapsedBeforeAshreiHint}>Tap to open</Text>
                   </TouchableOpacity>
                 ) : sectionContent[section.key] ? (
                   (() => {
@@ -1803,6 +1823,24 @@ const styles = StyleSheet.create({
   optionalSectionLabel: {
     fontFamily: fonts.heading.semiBold,
     color: colors.primary.main,
+  },
+  collapsedBeforeAshreiRow: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.08)',
+    borderRadius: borderRadius.md,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+  },
+  collapsedBeforeAshreiHebrew: {
+    fontFamily: fonts.heading.semiBold,
+    color: colors.text.primary,
+  },
+  collapsedBeforeAshreiHint: {
+    fontFamily: fonts.body.regular,
+    fontSize: 13,
+    color: colors.text.tertiary,
+    marginTop: 4,
   },
 
   sectionMenuBackdrop: {
