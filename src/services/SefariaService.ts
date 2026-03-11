@@ -26,6 +26,7 @@ import { JewishCalendarService } from '../core/calendar/JewishCalendar';
 import {
   removeParagraphTitles,
   AMIDAH_BRACHA_TITLES,
+  removeAseretYemeiTeshuvaBlockIfNotToday,
 } from './MinchaTextRules';
 
 const SEFARIA_API_BASE = 'https://www.sefaria.org/api';
@@ -170,6 +171,19 @@ export class SefariaService {
     } else {
       return null;
     }
+
+    // Range refs return array of chapters, each chapter = array of verses. Flatten to array of strings (one per chapter).
+    const flattenSegments = (v: string | string[]): string | string[] => {
+      if (typeof v === 'string') return v;
+      if (!Array.isArray(v) || v.length === 0) return v;
+      const first = v[0];
+      if (Array.isArray(first)) {
+        return v.map((ch) => (Array.isArray(ch) ? ch.join(' ') : String(ch)));
+      }
+      return v;
+    };
+    hebrew = flattenSegments(hebrew);
+    english = flattenSegments(english);
 
     return {
       hebrew,
@@ -448,6 +462,10 @@ export class SefariaService {
         const stripped = removeParagraphTitles(rawHebrewStr, rawEnglishStr, AMIDAH_BRACHA_TITLES);
         rawHebrewStr = stripped.hebrew;
         rawEnglishStr = stripped.english;
+        // When NOT during עשרת ימי תשובה (שי"ת), remove the entire בעשי"ת block (Zochreinu + halacha note)
+        const noAseret = removeAseretYemeiTeshuvaBlockIfNotToday(rawHebrewStr, rawEnglishStr, new Date());
+        rawHebrewStr = noAseret.hebrew;
+        rawEnglishStr = noAseret.english;
       }
       // Mincha: split Korbanot vs Ashrei (Chatzi Kaddish removal is done in the reader, same as Bentching)
       if (sectionKey === 'mincha_korbanot' || sectionKey === 'mincha_ashrei') {

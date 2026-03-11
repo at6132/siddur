@@ -20,6 +20,7 @@ export const READER_CHROME_HEADER_HEIGHT_APPROX = 160;
 export interface ReaderChromeProps {
   title: string;
   titleHebrew?: string;
+  titleIsHebrew?: boolean;
   onBack: () => void;
   topInset: number;
   /** Toolbar row (e.g. ReaderToolbar for text size + English). */
@@ -35,6 +36,7 @@ export interface ReaderChromeProps {
 export function ReaderChrome({
   title,
   titleHebrew,
+  titleIsHebrew,
   onBack,
   topInset,
   children,
@@ -168,6 +170,7 @@ function createStyles(theme: AppTheme) {
     titleHebrew: {
       fontFamily: fonts.hebrew.regular,
       fontSize: 20,
+      color: theme.colors.text.primary,
       letterSpacing: 0,
       writingDirection: 'rtl',
       textAlign: 'right',

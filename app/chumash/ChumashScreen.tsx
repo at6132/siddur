@@ -194,8 +194,8 @@ export const ChumashScreen: React.FC = () => {
     }
   };
 
-  const openBook = (firstRef: string) => {
-    (navigation as any).navigate('ChumashReader', { ref: firstRef });
+  const openBook = (b: { sefariaName: string; hebrew: string; firstRef: string }) => {
+    (navigation as any).navigate('ChumashParshahPicker', { sefariaName: b.sefariaName });
   };
 
   const dayName = HEBREW_DAY_NAMES[new Date().getDay()];
@@ -237,7 +237,7 @@ export const ChumashScreen: React.FC = () => {
             {CHUMASH_BOOKS.map((b, i) => (
               <View key={b.sefariaName} style={styles.gridItemWrapper}>
                 <FadeIn delay={200 + i * 20}>
-                  <TouchableOpacity style={styles.bookCard} onPress={() => openBook(b.firstRef)} activeOpacity={0.8}>
+                  <TouchableOpacity style={styles.bookCard} onPress={() => openBook(b)} activeOpacity={0.8}>
                     <Text style={styles.bookTitleHebrew}>{b.hebrew}</Text>
                   </TouchableOpacity>
                 </FadeIn>
