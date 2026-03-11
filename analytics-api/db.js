@@ -637,3 +637,50 @@ export async function deleteTehillimCampaign(campaignId, participantId) {
   await p.query(`DELETE FROM tehillim_campaigns WHERE id = $1`, [campaignId]);
   return { deleted: true };
 }
+
+/** Count of tehillim_perek_completed events with source=private (for admin stats). */
+export async function getPrivateTehillimPerekCount(startDate, endDate) {
+  const p = getPool();
+  if (!p) return 0;
+  const conditions = ["event_name = 'tehillim_perek_completed'", "(payload->>'source' = 'private' OR payload->>'source' IS NULL)"];
+  const params = [];
+  let i = 1;
+  if (startDate) {
+    conditions.push(`event_time_utc >= $${i}`);
+    params.push(startDate);
+    i++;
+  }
+  if (endDate) {
+    conditions.push(`event_time_utc <= $${i}`);
+    params.push(endDate);
+    i++;
+  }
+  const where = conditions.join(' AND ');
+  const res = await p.query(
+    `SELECT COUNT(*) AS count FROM events WHERE ${where}`,
+    params
+  );
+  return Number(res.rows[0]?.count ?? 0);
+}
+
+/** Admin Tehillim stats: shared pages created, shared perakim completed (from DB), private perakim completed (from events). */
+export async function getTehillimStats(startDate, endDate) {
+  const p = getPool();
+  let sharedPagesCreated = 0;
+  let sharedPerakimCompleted = 0;
+  if (p) {
+    const [pagesRes, commitRes, complRes] = await Promise.all([
+      p.query(`SELECT COUNT(*) AS count FROM tehillim_campaigns`),
+      p.query(`SELECT COUNT(*) AS count FROM tehillim_commitments WHERE completed_at IS NOT NULL`),
+      p.query(`SELECT COUNT(*) AS count FROM tehillim_completions`),
+    ]);
+    sharedPagesCreated = Number(pagesRes.rows[0]?.count ?? 0);
+    sharedPerakimCompleted = Number(commitRes.rows[0]?.count ?? 0) + Number(complRes.rows[0]?.count ?? 0);
+  }
+  const privatePerakimCompleted = await getPrivateTehillimPerekCount(startDate, endDate);
+  return {
+    shared_pages_created: sharedPagesCreated,
+    shared_perakim_completed: sharedPerakimCompleted,
+    private_perakim_completed: privatePerakimCompleted,
+  };
+}

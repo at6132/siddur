@@ -110,3 +110,8 @@ export const RELIABILITY_EVENTS = {
   SCREEN_RENDER_TIME: 'screen_render_time',
   NETWORK_REQUEST: 'network_request',
 } as const;
+
+/** Tehillim (private & shared completion) */
+export const TEHILLIM_EVENTS = {
+  PEREK_COMPLETED: 'tehillim_perek_completed',
+} as const;

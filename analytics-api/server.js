@@ -32,6 +32,7 @@ import {
   leaveTehillimCampaign,
   deleteTehillimCampaign,
   joinTehillimCampaign,
+  getTehillimStats,
 } from './db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -188,6 +189,19 @@ app.get('/api/stats/event-counts', async (req, res) => {
   } catch (e) {
     console.error('[analytics-api] GET /api/stats/event-counts', e);
     res.status(500).json({ error: 'Failed to get event counts' });
+  }
+});
+
+// Tehillim stats: private perakim (from events), shared perakim (from DB), shared pages created
+app.get('/api/stats/tehillim', async (req, res) => {
+  try {
+    const start_date = req.query.start_date || undefined;
+    const end_date = req.query.end_date || undefined;
+    const stats = await getTehillimStats(start_date, end_date);
+    res.json(stats);
+  } catch (e) {
+    console.error('[analytics-api] GET /api/stats/tehillim', e);
+    res.status(500).json({ error: 'Failed to get Tehillim stats' });
   }
 });
 

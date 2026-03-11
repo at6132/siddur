@@ -4,112 +4,338 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Siddur Analytics – Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    :root { --bg: #1a1a2e; --card: #16213e; --text: #eee; --muted: #8892b0; --accent: #0f3460; --border: #2a2a4a; }
+    :root {
+      --bg-primary: #FFFFFF;
+      --bg-secondary: #FAF9F7;
+      --bg-tertiary: #F5F3F0;
+      --primary-light: #F5E6E8;
+      --primary-main: #D4A5B8;
+      --primary-dark: #B88FA3;
+      --secondary-light: #E8F0F5;
+      --secondary-main: #A5C4D4;
+      --secondary-dark: #8FA3B8;
+      --text-primary: #2C2C2C;
+      --text-secondary: #6B6B6B;
+      --text-tertiary: #9B9B9B;
+      --glass-light: rgba(255, 255, 255, 0.85);
+      --glass-medium: rgba(255, 255, 255, 0.65);
+      --glass-dark: rgba(255, 255, 255, 0.45);
+      --shadow-light: rgba(0, 0, 0, 0.06);
+      --shadow-rose: rgba(212, 165, 184, 0.25);
+      --error: #D4A5A5;
+      --radius-sm: 10px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 24px;
+      --font-heading: 'Cormorant Garamond', Georgia, serif;
+      --font-body: 'Nunito', system-ui, sans-serif;
+    }
     * { box-sizing: border-box; }
-    body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 1rem; }
-    h1 { font-size: 1.5rem; margin: 0 0 1rem; }
-    .filters { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; margin-bottom: 1rem; }
-    .filters label { color: var(--muted); font-size: 0.875rem; }
-    .filters input, .filters select { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.6rem; border-radius: 6px; }
-    .filters button { background: var(--accent); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; }
-    .filters button:hover { opacity: 0.9; }
-    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
-    .card .value { font-size: 1.75rem; font-weight: 700; }
-    .card .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; margin-top: 0.25rem; }
-    section { margin-bottom: 1.5rem; }
-    section h2 { font-size: 1rem; margin: 0 0 0.5rem; color: var(--muted); }
-    table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 8px; overflow: hidden; }
-    th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
-    th { background: var(--accent); font-size: 0.75rem; text-transform: uppercase; color: var(--muted); }
-    tr:last-child td { border-bottom: none; }
-    .loading { color: var(--muted); }
-    .muted { color: var(--muted); }
-    .error { color: #e57373; }
-    .export-btn { margin-left: auto; }
-    #eventsTable { font-size: 0.8125rem; }
-    #eventsTable td { max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; min-height: 100vh; font-family: var(--font-body); background: var(--bg-secondary); color: var(--text-primary); -webkit-font-smoothing: antialiased; }
+
+    #loginView {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: linear-gradient(145deg, #FAF9F7 0%, #F5E6E8 35%, #E8F0F5 70%, #FAF9F7 100%);
+      background-size: 200% 200%;
+      animation: gradientShift 12s ease infinite;
+    }
+    @keyframes gradientShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+    #loginView.hidden { display: none; }
+    .login-card {
+      max-width: 380px;
+      width: 100%;
+      padding: 40px 36px;
+      background: var(--glass-light);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: var(--radius-xl);
+      box-shadow: 0 8px 32px var(--shadow-light), 0 0 0 1px rgba(255,255,255,0.5);
+      animation: cardIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    @keyframes cardIn { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+    .login-card h1 { font-family: var(--font-heading); font-weight: 700; font-size: 1.85rem; margin: 0 0 6px; color: var(--text-primary); }
+    .login-card .subtitle { font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 28px; }
+    .login-card label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; }
+    .login-card input[type="password"] {
+      width: 100%;
+      padding: 14px 18px;
+      font-family: var(--font-body);
+      font-size: 1rem;
+      border: 1px solid rgba(212, 165, 184, 0.35);
+      border-radius: var(--radius-md);
+      background: rgba(255,255,255,0.8);
+      color: var(--text-primary);
+    }
+    .login-card input[type="password"]:focus { outline: none; border-color: var(--primary-main); box-shadow: 0 0 0 3px var(--shadow-rose); }
+    .login-error { font-size: 0.85rem; color: var(--error); margin-top: 10px; min-height: 20px; }
+    .login-btn {
+      width: 100%;
+      margin-top: 24px;
+      padding: 14px 24px;
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 1rem;
+      color: white;
+      background: linear-gradient(135deg, var(--primary-main), var(--primary-dark));
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      box-shadow: 0 4px 14px var(--shadow-rose);
+      transition: transform 0.15s, box-shadow 0.2s;
+    }
+    .login-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--shadow-rose); }
+
+    #dashboardView { display: none; min-height: 100vh; }
+    #dashboardView.visible { display: block; }
+    .dashboard-bg { position: fixed; inset: 0; background: linear-gradient(160deg, #FAF9F7 0%, #F5E6E8 28%, #E8F0F5 55%, #FAF9F7 85%); z-index: -1; }
+    .dashboard-inner { max-width: 1200px; margin: 0 auto; padding: 24px 20px 48px; }
+    .dashboard-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 28px; animation: fadeIn 0.5s ease forwards; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .dashboard-header h1 { font-family: var(--font-heading); font-weight: 700; font-size: 1.75rem; margin: 0; color: var(--text-primary); }
+    .logout-btn {
+      padding: 10px 18px;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--glass-medium);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+    }
+    .logout-btn:hover { background: var(--glass-dark); color: var(--text-primary); }
+
+    .filters-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      background: var(--glass-light);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 2px 12px var(--shadow-light), 0 0 0 1px rgba(255,255,255,0.6);
+      animation: fadeIn 0.5s 0.1s ease both;
+    }
+    .filters-bar label { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); }
+    .filters-bar input[type="date"], .filters-bar input[type="text"] {
+      padding: 10px 14px;
+      font-family: var(--font-body);
+      font-size: 0.9rem;
+      border: 1px solid rgba(212, 165, 184, 0.3);
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.7);
+      color: var(--text-primary);
+    }
+    .filters-bar input[type="text"] { width: 160px; }
+    .filters-bar .apply-btn {
+      padding: 10px 20px;
+      font-family: var(--font-body);
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: white;
+      background: linear-gradient(135deg, var(--primary-main), var(--primary-dark));
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      box-shadow: 0 2px 10px var(--shadow-rose);
+      transition: transform 0.15s;
+    }
+    .filters-bar .apply-btn:hover { transform: translateY(-1px); }
+    .filters-bar .export-btn {
+      margin-left: auto;
+      padding: 10px 16px;
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--primary-dark);
+      background: rgba(212, 165, 184, 0.2);
+      border: 1px solid rgba(212, 165, 184, 0.4);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+    .filters-bar .export-btn:hover { background: rgba(212, 165, 184, 0.35); transform: translateY(-1px); }
+
+    .cards-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      padding: 20px 18px;
+      background: var(--glass-light);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 2px 12px var(--shadow-light), 0 0 0 1px rgba(255,255,255,0.5);
+      animation: slideUp 0.5s ease both;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--shadow-light); }
+    .stat-card .value { font-family: var(--font-heading); font-weight: 700; font-size: 1.9rem; color: var(--text-primary); line-height: 1.2; }
+    .stat-card .label { font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 6px; }
+    .stat-card:nth-child(1) { animation-delay: 0.12s; }
+    .stat-card:nth-child(2) { animation-delay: 0.18s; }
+    .stat-card:nth-child(3) { animation-delay: 0.24s; }
+    .stat-card:nth-child(4) { animation-delay: 0.30s; }
+    .stat-card:nth-child(5) { animation-delay: 0.36s; }
+    .stat-card:nth-child(6) { animation-delay: 0.42s; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+
+    .section { margin-bottom: 28px; animation: fadeIn 0.5s ease both; }
+    .section-header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+    .section-header h2 { font-family: var(--font-heading); font-weight: 600; font-size: 1.2rem; margin: 0; color: var(--text-primary); }
+    .section-header .hint { font-size: 0.8rem; color: var(--text-tertiary); }
+    .glass-panel {
+      padding: 20px;
+      background: var(--glass-light);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 2px 12px var(--shadow-light), 0 0 0 1px rgba(255,255,255,0.5);
+      overflow: hidden;
+    }
+    .glass-panel table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+    .glass-panel th { text-align: left; padding: 12px 14px; font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); background: rgba(255,255,255,0.5); border-bottom: 1px solid rgba(0,0,0,0.06); }
+    .glass-panel td { padding: 12px 14px; border-bottom: 1px solid rgba(0,0,0,0.04); color: var(--text-primary); }
+    .glass-panel tr:last-child td { border-bottom: none; }
+    .glass-panel tr:hover td { background: rgba(255,255,255,0.4); }
+    .glass-panel .loading { color: var(--text-tertiary); padding: 16px; }
+    .glass-panel .muted { color: var(--text-tertiary); font-size: 0.9rem; }
+    .glass-panel .error { color: var(--error); font-size: 0.9rem; }
+    .explorer-bar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+    .explorer-bar input { padding: 10px 14px; font-family: var(--font-body); font-size: 0.9rem; border: 1px solid rgba(212, 165, 184, 0.3); border-radius: var(--radius-sm); background: rgba(255,255,255,0.7); width: 280px; max-width: 100%; }
+    .explorer-bar button { padding: 10px 18px; font-family: var(--font-body); font-weight: 600; font-size: 0.9rem; color: white; background: linear-gradient(135deg, var(--secondary-main), var(--secondary-dark)); border: none; border-radius: var(--radius-sm); cursor: pointer; transition: transform 0.15s; }
+    .explorer-bar button:hover { transform: translateY(-1px); }
+    #eventsTable td { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
   </style>
 </head>
 <body>
-  <h1>Siddur Analytics – Admin Dashboard</h1>
-
-  <div class="filters">
-    <label>From <input type="date" id="startDate" /></label>
-    <label>To <input type="date" id="endDate" /></label>
-    <label>Event <input type="text" id="eventName" placeholder="e.g. app_open" style="width: 140px;" /></label>
-    <button type="button" id="applyBtn">Apply</button>
-    <button type="button" id="exportCsv" class="export-btn">Export events CSV</button>
+  <div id="loginView">
+    <div class="login-card">
+      <h1>Admin</h1>
+      <p class="subtitle">Siddur Analytics Dashboard</p>
+      <form id="loginForm">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Enter password" autocomplete="current-password" />
+        <div class="login-error" id="loginError"></div>
+        <button type="submit" class="login-btn">Enter</button>
+      </form>
+    </div>
   </div>
 
-  <div class="cards">
-    <div class="card"><div class="value" id="dau">–</div><div class="label">DAU</div></div>
-    <div class="card"><div class="value" id="wau">–</div><div class="label">WAU</div></div>
-    <div class="card"><div class="value" id="mau">–</div><div class="label">MAU</div></div>
+  <div id="dashboardView">
+    <div class="dashboard-bg"></div>
+    <div class="dashboard-inner">
+      <header class="dashboard-header">
+        <h1>Analytics</h1>
+        <button type="button" class="logout-btn" id="logoutBtn">Log out</button>
+      </header>
+      <div class="filters-bar">
+        <label>From <input type="date" id="startDate" /></label>
+        <label>To <input type="date" id="endDate" /></label>
+        <label>Event <input type="text" id="eventName" placeholder="e.g. app_open" /></label>
+        <button type="button" class="apply-btn" id="applyBtn">Apply</button>
+        <button type="button" class="export-btn" id="exportCsv">Export CSV</button>
+      </div>
+      <div class="cards-row">
+        <div class="stat-card"><div class="value" id="dau">–</div><div class="label">DAU</div></div>
+        <div class="stat-card"><div class="value" id="wau">–</div><div class="label">WAU</div></div>
+        <div class="stat-card"><div class="value" id="mau">–</div><div class="label">MAU</div></div>
+        <div class="stat-card"><div class="value" id="tehillimPrivate">–</div><div class="label">Private perakim</div></div>
+        <div class="stat-card"><div class="value" id="tehillimShared">–</div><div class="label">Shared perakim</div></div>
+        <div class="stat-card"><div class="value" id="tehillimPages">–</div><div class="label">Shared pages</div></div>
+      </div>
+      <section class="section">
+        <div class="section-header"><h2>Event counts</h2><span class="hint">Funnel / overview</span></div>
+        <div class="glass-panel"><div id="eventCounts" class="loading">Loading…</div></div>
+      </section>
+      <section class="section">
+        <div class="section-header"><h2>Tehillim</h2><span class="hint">Private = date range; shared = all-time</span></div>
+        <div class="glass-panel"><p class="muted" style="margin:0;">Totals in cards above.</p></div>
+      </section>
+      <section class="section">
+        <div class="section-header"><h2>Daily active users</h2><span class="hint">app_open by day</span></div>
+        <div class="glass-panel"><div id="eventSeries" class="loading">Loading…</div></div>
+      </section>
+      <section class="section">
+        <div class="section-header"><h2>Retention</h2><span class="hint">Cohort by first app_open</span></div>
+        <div class="glass-panel"><div id="retention" class="loading">Loading…</div></div>
+      </section>
+      <section class="section">
+        <div class="section-header"><h2>User explorer</h2><span class="hint">Timeline by anonymous_id</span></div>
+        <div class="explorer-bar">
+          <input type="text" id="explorerAnonymousId" placeholder="Paste anonymous_id" />
+          <button type="button" id="explorerBtn">Load timeline</button>
+        </div>
+        <div class="glass-panel"><div id="explorerEvents" class="loading">Enter an anonymous_id and click Load.</div></div>
+      </section>
+      <section class="section">
+        <div class="section-header"><h2>Recent events</h2></div>
+        <div class="glass-panel">
+          <table id="eventsTable">
+            <thead><tr><th>Time (UTC)</th><th>Event</th><th>anonymous_id</th><th>session_id</th><th>screen</th></tr></thead>
+            <tbody id="eventsBody"></tbody>
+          </table>
+          <div id="eventsStatus" class="loading"></div>
+        </div>
+      </section>
+    </div>
   </div>
-
-  <section>
-    <h2>Event counts (funnel / overview)</h2>
-    <div id="eventCounts" class="loading">Loading…</div>
-  </section>
-
-  <section>
-    <h2>Daily active users (app_open by day)</h2>
-    <div id="eventSeries" class="loading">Loading…</div>
-  </section>
-
-  <section>
-    <h2>Retention (cohort by first app_open)</h2>
-    <div id="retention" class="loading">Loading…</div>
-  </section>
-
-  <section>
-    <h2>User explorer (by anonymous_id)</h2>
-    <div class="filters">
-      <label>anonymous_id <input type="text" id="explorerAnonymousId" placeholder="Paste anonymous_id" style="width: 280px;" /></label>
-      <button type="button" id="explorerBtn">Load timeline</button>
-    </div>
-    <div id="explorerEvents" class="loading">Enter an anonymous_id and click Load.</div>
-  </section>
-
-  <section>
-    <h2>Recent events</h2>
-    <div id="eventsWrap">
-      <table id="eventsTable">
-        <thead><tr><th>Time (UTC)</th><th>Event</th><th>anonymous_id</th><th>session_id</th><th>screen</th></tr></thead>
-        <tbody id="eventsBody"></tbody>
-      </table>
-      <div id="eventsStatus" class="loading"></div>
-    </div>
-  </section>
 
   <script>
+    const ADMIN_PASSWORD = '1234';
+    const AUTH_KEY = 'siddur_admin_auth';
     const base = window.location.origin;
     function qs(id) { return document.getElementById(id); }
     function dateIso(d) { return d ? d.toISOString().slice(0, 10) : ''; }
-    function now() { const d = new Date(); return d.toISOString().slice(0, 19) + 'Z'; }
-    function weekAgo() { const d = new Date(); d.setDate(d.getDate() - 7); return d.toISOString().slice(0, 19) + 'Z'; }
-
-    function getParams() {
-      return {
-        start_date: qs('startDate').value || undefined,
-        end_date: qs('endDate').value || undefined,
-        event_name: qs('eventName').value.trim() || undefined,
-      };
+    function checkAuth() {
+      const authed = sessionStorage.getItem(AUTH_KEY) === 'true';
+      qs('loginView').classList.toggle('hidden', authed);
+      qs('dashboardView').classList.toggle('visible', authed);
+      if (authed) apply();
     }
-
-    async function fetchJson(path, params = {}) {
+    qs('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (qs('password').value === ADMIN_PASSWORD) {
+        qs('loginError').textContent = '';
+        sessionStorage.setItem(AUTH_KEY, 'true');
+        checkAuth();
+      } else {
+        qs('loginError').textContent = 'Incorrect password.';
+      }
+    });
+    qs('logoutBtn').addEventListener('click', function() {
+      sessionStorage.removeItem(AUTH_KEY);
+      qs('password').value = '';
+      checkAuth();
+    });
+    function getParams() {
+      return { start_date: qs('startDate').value || undefined, end_date: qs('endDate').value || undefined, event_name: qs('eventName').value.trim() || undefined };
+    }
+    async function fetchJson(path, params) {
       const u = new URL(path, base);
-      Object.entries(params).forEach(([k, v]) => { if (v != null && v !== '') u.searchParams.set(k, v); });
+      Object.entries(params || {}).forEach(function(kv) { if (kv[1] != null && kv[1] !== '') u.searchParams.set(kv[0], kv[1]); });
       const r = await fetch(u);
       if (!r.ok) throw new Error(r.statusText);
       return r.json();
     }
-
     async function loadActiveUsers() {
       try {
-        const data = await fetchJson('/api/stats/active-users');
+        const data = await fetchJson('/api/stats/active-users', {});
         qs('dau').textContent = data.dau ?? '–';
         qs('wau').textContent = data.wau ?? '–';
         qs('mau').textContent = data.mau ?? '–';
@@ -118,179 +344,106 @@
         console.error(e);
       }
     }
-
     async function loadEventCounts() {
-      const el = qs('eventCounts');
+      var el = qs('eventCounts');
       try {
-        const { start_date, end_date } = getParams();
-        const data = await fetchJson('/api/stats/event-counts', { start_date, end_date });
-        if (!data.counts || data.counts.length === 0) {
-          el.innerHTML = '<p class="muted">No events in range.</p>';
-          return;
-        }
-        el.innerHTML = '<table><thead><tr><th>Event</th><th>Count</th></tr></thead><tbody>' +
-          data.counts.map(({ event_name, count }) => `<tr><td>${escapeHtml(event_name)}</td><td>${count}</td></tr>`).join('') +
-          '</tbody></table>';
+        var p = getParams();
+        var data = await fetchJson('/api/stats/event-counts', { start_date: p.start_date, end_date: p.end_date });
+        if (!data.counts || data.counts.length === 0) { el.innerHTML = '<p class="muted">No events in range.</p>'; return; }
+        el.innerHTML = '<table><thead><tr><th>Event</th><th>Count</th></tr></thead><tbody>' + data.counts.map(function(c) { return '<tr><td>' + escapeHtml(c.event_name) + '</td><td>' + c.count + '</td></tr>'; }).join('') + '</tbody></table>';
+      } catch (e) { el.innerHTML = '<p class="error">Failed to load.</p>'; console.error(e); }
+    }
+    async function loadTehillimStats() {
+      try {
+        var p = getParams();
+        var data = await fetchJson('/api/stats/tehillim', { start_date: p.start_date, end_date: p.end_date });
+        qs('tehillimPrivate').textContent = data.private_perakim_completed ?? '–';
+        qs('tehillimShared').textContent = data.shared_perakim_completed ?? '–';
+        qs('tehillimPages').textContent = data.shared_pages_created ?? '–';
       } catch (e) {
-        el.innerHTML = '<p class="error">Failed to load.</p>';
+        qs('tehillimPrivate').textContent = qs('tehillimShared').textContent = qs('tehillimPages').textContent = '?';
         console.error(e);
       }
     }
-
     async function loadRetention() {
-      const el = qs('retention');
+      var el = qs('retention');
       try {
-        const { start_date, end_date } = getParams();
-        const data = await fetchJson('/api/stats/retention', { start_date, end_date });
-        if (!data.retention || data.retention.length === 0) {
-          el.innerHTML = '<p class="muted">No retention data in range.</p>';
-          return;
-        }
-        const rows = data.retention.map((r) => {
-          const p1 = r.cohort_size ? ((r.retained_1 / r.cohort_size) * 100).toFixed(1) : '–';
-          const p7 = r.cohort_size ? ((r.retained_7 / r.cohort_size) * 100).toFixed(1) : '–';
-          const p30 = r.cohort_size ? ((r.retained_30 / r.cohort_size) * 100).toFixed(1) : '–';
-          return `<tr><td>${escapeHtml(r.cohort_date)}</td><td>${r.cohort_size}</td><td>${r.retained_1} (${p1}%)</td><td>${r.retained_7} (${p7}%)</td><td>${r.retained_30} (${p30}%)</td></tr>`;
+        var p = getParams();
+        var data = await fetchJson('/api/stats/retention', { start_date: p.start_date, end_date: p.end_date });
+        if (!data.retention || data.retention.length === 0) { el.innerHTML = '<p class="muted">No retention data in range.</p>'; return; }
+        var rows = data.retention.map(function(r) {
+          var p1 = r.cohort_size ? ((r.retained_1 / r.cohort_size) * 100).toFixed(1) : '–';
+          var p7 = r.cohort_size ? ((r.retained_7 / r.cohort_size) * 100).toFixed(1) : '–';
+          var p30 = r.cohort_size ? ((r.retained_30 / r.cohort_size) * 100).toFixed(1) : '–';
+          return '<tr><td>' + escapeHtml(r.cohort_date) + '</td><td>' + r.cohort_size + '</td><td>' + r.retained_1 + ' (' + p1 + '%)</td><td>' + r.retained_7 + ' (' + p7 + '%)</td><td>' + r.retained_30 + ' (' + p30 + '%)</td></tr>';
         }).join('');
         el.innerHTML = '<table><thead><tr><th>Cohort date</th><th>Cohort size</th><th>Day 1</th><th>Day 7</th><th>Day 30</th></tr></thead><tbody>' + rows + '</tbody></table>';
-      } catch (e) {
-        el.innerHTML = '<p class="error">Failed to load.</p>';
-        console.error(e);
-      }
+      } catch (e) { el.innerHTML = '<p class="error">Failed to load.</p>'; console.error(e); }
     }
-
     async function loadUserExplorer() {
-      const id = qs('explorerAnonymousId').value.trim();
-      const el = qs('explorerEvents');
-      if (!id) {
-        el.textContent = 'Enter an anonymous_id and click Load.';
-        el.className = 'loading';
-        return;
-      }
-      el.textContent = 'Loading…';
-      el.className = 'loading';
+      var id = qs('explorerAnonymousId').value.trim();
+      var el = qs('explorerEvents');
+      if (!id) { el.textContent = 'Enter an anonymous_id and click Load.'; el.className = 'loading'; return; }
+      el.textContent = 'Loading…'; el.className = 'loading';
       try {
-        const data = await fetchJson('/api/events', { anonymous_id: id, limit: 500 });
-        const events = data.events || [];
-        if (events.length === 0) {
-          el.innerHTML = '<p class="muted">No events for this user.</p>';
-          return;
-        }
-        const rows = events.map((ev) =>
-          '<tr><td>' + escapeHtml((ev.event_time_utc || '').slice(0, 19)) + '</td><td>' + escapeHtml(ev.event_name || '') + '</td><td>' + escapeHtml(ev.screen_name || '–') + '</td></tr>'
-        ).join('');
-        el.innerHTML = '<table><thead><tr><th>Time (UTC)</th><th>Event</th><th>Screen</th></tr></thead><tbody>' + rows + '</tbody></table>';
-      } catch (e) {
-        el.innerHTML = '<p class="error">Failed to load.</p>';
-        el.className = 'error';
-        console.error(e);
-      }
+        var data = await fetchJson('/api/events', { anonymous_id: id, limit: 500 });
+        var events = data.events || [];
+        if (events.length === 0) { el.innerHTML = '<p class="muted">No events for this user.</p>'; return; }
+        el.innerHTML = '<table><thead><tr><th>Time (UTC)</th><th>Event</th><th>Screen</th></tr></thead><tbody>' + events.map(function(ev) { return '<tr><td>' + escapeHtml((ev.event_time_utc || '').slice(0, 19)) + '</td><td>' + escapeHtml(ev.event_name || '') + '</td><td>' + escapeHtml(ev.screen_name || '–') + '</td></tr>'; }).join('') + '</tbody></table>';
+      } catch (e) { el.innerHTML = '<p class="error">Failed to load.</p>'; el.className = 'error'; console.error(e); }
     }
-
     async function loadEventSeries() {
-      const el = qs('eventSeries');
+      var el = qs('eventSeries');
       try {
-        const days = 30;
-        const data = await fetchJson('/api/stats/event-series', { event_name: 'app_open', days });
-        if (!data.by_day || data.by_day.length === 0) {
-          el.innerHTML = '<p class="muted">No daily data for app_open.</p>';
-          return;
-        }
-        const rows = data.by_day.slice().reverse().map(({ date, count }) => `<tr><td>${escapeHtml(date)}</td><td>${count}</td></tr>`).join('');
+        var data = await fetchJson('/api/stats/event-series', { event_name: 'app_open', days: 30 });
+        if (!data.by_day || data.by_day.length === 0) { el.innerHTML = '<p class="muted">No daily data for app_open.</p>'; return; }
+        var rows = data.by_day.slice().reverse().map(function(d) { return '<tr><td>' + escapeHtml(d.date) + '</td><td>' + d.count + '</td></tr>'; }).join('');
         el.innerHTML = '<table><thead><tr><th>Date</th><th>Unique users</th></tr></thead><tbody>' + rows + '</tbody></table>';
-      } catch (e) {
-        el.innerHTML = '<p class="error">Failed to load.</p>';
-        console.error(e);
-      }
+      } catch (e) { el.innerHTML = '<p class="error">Failed to load.</p>'; console.error(e); }
     }
-
     async function loadEvents() {
-      const body = qs('eventsBody');
-      const status = qs('eventsStatus');
+      var body = qs('eventsBody');
+      var status = qs('eventsStatus');
       body.innerHTML = '';
       status.textContent = 'Loading…';
       status.className = 'loading';
       try {
-        const { start_date, end_date, event_name } = getParams();
-        const data = await fetchJson('/api/events', {
-          start_date,
-          end_date,
-          event_name,
-          limit: 200,
-          offset: 0,
-        });
+        var p = getParams();
+        var data = await fetchJson('/api/events', { start_date: p.start_date, end_date: p.end_date, event_name: p.event_name, limit: 200, offset: 0 });
         window._lastEvents = data.events || [];
-        if (window._lastEvents.length === 0) {
-          status.textContent = 'No events in range.';
-          return;
-        }
-        status.textContent = `${window._lastEvents.length} events`;
-        window._lastEvents.forEach((ev) => {
-          const tr = document.createElement('tr');
-          tr.innerHTML =
-            '<td>' + escapeHtml((ev.event_time_utc || '').slice(0, 19)) + '</td>' +
-            '<td>' + escapeHtml(ev.event_name || '') + '</td>' +
-            '<td>' + escapeHtml((ev.anonymous_id || '').slice(0, 8)) + '…</td>' +
-            '<td>' + escapeHtml((ev.session_id || '').slice(0, 8)) + '…</td>' +
-            '<td>' + escapeHtml(ev.screen_name || '–') + '</td>';
+        if (window._lastEvents.length === 0) { status.textContent = 'No events in range.'; return; }
+        status.textContent = window._lastEvents.length + ' events';
+        window._lastEvents.forEach(function(ev) {
+          var tr = document.createElement('tr');
+          tr.innerHTML = '<td>' + escapeHtml((ev.event_time_utc || '').slice(0, 19)) + '</td><td>' + escapeHtml(ev.event_name || '') + '</td><td>' + escapeHtml((ev.anonymous_id || '').slice(0, 8)) + '…</td><td>' + escapeHtml((ev.session_id || '').slice(0, 8)) + '…</td><td>' + escapeHtml(ev.screen_name || '–') + '</td>';
           body.appendChild(tr);
         });
-      } catch (e) {
-        status.textContent = 'Failed to load events.';
-        status.className = 'error';
-        console.error(e);
-      }
+      } catch (e) { status.textContent = 'Failed to load events.'; status.className = 'error'; console.error(e); }
     }
-
-    function escapeHtml(s) {
-      if (s == null) return '';
-      const div = document.createElement('div');
-      div.textContent = s;
-      return div.innerHTML;
-    }
-
+    function escapeHtml(s) { if (s == null) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
     function exportCsv() {
-      const events = window._lastEvents;
-      if (!events || events.length === 0) {
-        alert('Load events first, then export.');
-        return;
-      }
-      const headers = ['event_time_utc', 'event_name', 'anonymous_id', 'user_id', 'session_id', 'screen_name', 'app_version', 'platform'];
-      const rows = events.map((ev) =>
-        headers.map((h) => {
-          const v = ev[h];
-          const str = v == null ? '' : String(v);
-          return str.includes(',') || str.includes('"') ? '"' + str.replace(/"/g, '""') + '"' : str;
-        }).join(',')
-      );
-      const csv = [headers.join(','), ...rows].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const a = document.createElement('a');
+      var events = window._lastEvents;
+      if (!events || events.length === 0) { alert('Load events first, then export.'); return; }
+      var headers = ['event_time_utc', 'event_name', 'anonymous_id', 'user_id', 'session_id', 'screen_name', 'app_version', 'platform'];
+      var rows = events.map(function(ev) { return headers.map(function(h) { var v = ev[h]; var str = v == null ? '' : String(v); return str.indexOf(',') >= 0 || str.indexOf('"') >= 0 ? '"' + str.replace(/"/g, '""') + '"' : str; }).join(','); });
+      var csv = [headers.join(','), rows.join('\n')].join('\n');
+      var blob = new Blob([csv], { type: 'text/csv' });
+      var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'analytics-events-' + new Date().toISOString().slice(0, 10) + '.csv';
       a.click();
       URL.revokeObjectURL(a.href);
     }
-
-    function apply() {
-      loadActiveUsers();
-      loadEventCounts();
-      loadEventSeries();
-      loadRetention();
-      loadEvents();
-    }
-
+    function apply() { loadActiveUsers(); loadEventCounts(); loadTehillimStats(); loadEventSeries(); loadRetention(); loadEvents(); }
     qs('applyBtn').addEventListener('click', apply);
     qs('exportCsv').addEventListener('click', exportCsv);
     qs('explorerBtn').addEventListener('click', loadUserExplorer);
-
-    const end = new Date();
-    const start = new Date(end);
+    var end = new Date();
+    var start = new Date(end);
     start.setDate(start.getDate() - 30);
     qs('startDate').value = dateIso(start);
     qs('endDate').value = dateIso(end);
-
-    apply();
+    checkAuth();
   </script>
 </body>
 </html>
