@@ -23,10 +23,14 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { JewishCalendarService } from '../core/calendar/JewishCalendar';
+import {
+  removeParagraphTitles,
+  AMIDAH_BRACHA_TITLES,
+} from './MinchaTextRules';
 
 const SEFARIA_API_BASE = 'https://www.sefaria.org/api';
 const SEFARIA_V3_TEXTS = 'https://www.sefaria.org/api/v3/texts';
-const CACHE_PREFIX = '@sefaria_cache_';
+const CACHE_PREFIX = '@sefaria_cache_v2_';
 const CACHE_EXPIRY_DAYS = 30;
 /** Max wait per request so we never hang on "Loading prayers..." */
 const FETCH_TIMEOUT_MS = 12_000;
@@ -107,8 +111,9 @@ export class SefariaService {
               ref: data.ref,
             } as SefariaText);
           if (result && (result.hebrew || result.english)) {
-            await this.saveToCache(ref, result);
-            return result;
+            const cleaned = this.stripEndMarkersFromSefariaText(result);
+            await this.saveToCache(ref, cleaned);
+            return cleaned;
           }
           console.warn(`Sefaria [legacy]: ref="${ref}" OK but no hebrew/english in response (encoding: ${label})`);
         } else {
@@ -127,8 +132,9 @@ export class SefariaService {
           const data = await v3Response.json();
           const result = this.normalizeSefariaResponse(data, ref);
           if (result && (result.hebrew || result.english)) {
-            await this.saveToCache(ref, result);
-            return result;
+            const cleaned = this.stripEndMarkersFromSefariaText(result);
+            await this.saveToCache(ref, cleaned);
+            return cleaned;
           }
           console.warn(`Sefaria [v3]: ref="${ref}" OK but no hebrew/english in response (encoding: ${label})`);
         } else {
@@ -170,6 +176,21 @@ export class SefariaService {
       english,
       hebrewTitle,
       ref: data.ref ?? ref,
+    };
+  }
+
+  /**
+   * Strip Sefaria end-of-section markers from a full SefariaText (hebrew/english can be string or string[]).
+   */
+  private static stripEndMarkersFromSefariaText(data: SefariaText): SefariaText {
+    const strip = (v: string | string[]): string | string[] => {
+      if (typeof v === 'string') return this.stripSefariaEndMarkers(v);
+      return v.map((s) => this.stripSefariaEndMarkers(s));
+    };
+    return {
+      ...data,
+      hebrew: strip(data.hebrew),
+      english: data.english != null ? strip(data.english) : undefined,
     };
   }
 
@@ -341,6 +362,43 @@ export class SefariaService {
   };
 
   /**
+   * Sefaria's Mincha Korbanot ref returns Korbanot + Ashrei in one blob.
+   * Split at the first paragraph that starts with "אשרי" so we can show Korbanot only in the collapsible
+   * and Ashrei as its own section.
+   */
+  private static splitMinchaKorbanotAshrei(
+    rawHebrew: string,
+    rawEnglish: string
+  ): { korbanotHebrew: string; korbanotEnglish: string; ashreiHebrew: string; ashreiEnglish: string } {
+    const stripNikkud = (s: string) => s.replace(/[\u0591-\u05C7]/g, '');
+    const hebParas = rawHebrew.split(/\n\s*\n/);
+    const engParas = rawEnglish.split(/\n\s*\n/);
+    let ashreiIdx = -1;
+    for (let i = 0; i < hebParas.length; i++) {
+      const trimmed = hebParas[i].trim();
+      const start = stripNikkud(trimmed);
+      if (start.startsWith('אשרי')) {
+        ashreiIdx = i;
+        break;
+      }
+    }
+    if (ashreiIdx < 0) {
+      return {
+        korbanotHebrew: rawHebrew,
+        korbanotEnglish: rawEnglish,
+        ashreiHebrew: '',
+        ashreiEnglish: '',
+      };
+    }
+    const korbanotHebrew = hebParas.slice(0, ashreiIdx).join('\n\n').trim();
+    const ashreiHebrew = hebParas.slice(ashreiIdx).join('\n\n').trim();
+    const engIdx = Math.min(ashreiIdx, engParas.length);
+    const korbanotEnglish = engParas.slice(0, engIdx).join('\n\n').trim();
+    const ashreiEnglish = engParas.slice(engIdx).join('\n\n').trim();
+    return { korbanotHebrew, korbanotEnglish, ashreiHebrew, ashreiEnglish };
+  }
+
+  /**
    * Fetch a siddur section from Sefaria. Returns straight text (single newlines only).
    * For Sefard, falls back to Ashkenaz refs when Sefard refs fail (Sefaria's Siddur Sefard
    * has a different structure; Netilat Yadayim, Asher Yatzar, Birkot HaTorah etc. use same text).
@@ -358,6 +416,11 @@ export class SefariaService {
       return null;
     }
 
+    // Mincha Ashrei: Sefaria has Ashrei inside Korbanot ref; fetch the combined content and split in code
+    if (sectionKey === 'mincha_ashrei') {
+      ref = refs['mincha_korbanot'] ?? ref;
+    }
+
     console.log(`Sefaria: fetchSiddurSection sectionKey="${sectionKey}" nusach=${nusach} ref="${ref}"`);
     let data = await this.fetchText(ref);
 
@@ -369,8 +432,34 @@ export class SefariaService {
     if (!data) return null;
 
     try {
-      const rawHebrewStr = Array.isArray(data.hebrew) ? data.hebrew.join('\n\n') : (data.hebrew ?? '');
-      const rawEnglishStr = Array.isArray(data.english) ? (data.english ?? []).join('\n\n') : (data.english ?? '');
+      // Ensure we have plain strings; flatten nested arrays (Sefaria can return [[ "p1", "p2" ], [ "p3" ]])
+      const toStr = (v: unknown): string => {
+        if (typeof v === 'string') return v;
+        if (Array.isArray(v)) {
+          return v.map((x) => toStr(x)).join('\n\n');
+        }
+        if (v && typeof v === 'object' && 'text' in v) return String((v as { text: string }).text);
+        return String(v ?? '');
+      };
+      let rawHebrewStr = toStr(data.hebrew);
+      let rawEnglishStr = toStr(data.english);
+      // Amidah: remove bracha title lines (אבות, גבורות, etc.) – shared list in MinchaTextRules
+      if (sectionKey === 'amidah' || sectionKey === 'maariv_amidah' || sectionKey === 'mincha_amidah') {
+        const stripped = removeParagraphTitles(rawHebrewStr, rawEnglishStr, AMIDAH_BRACHA_TITLES);
+        rawHebrewStr = stripped.hebrew;
+        rawEnglishStr = stripped.english;
+      }
+      // Mincha: split Korbanot vs Ashrei (Chatzi Kaddish removal is done in the reader, same as Bentching)
+      if (sectionKey === 'mincha_korbanot' || sectionKey === 'mincha_ashrei') {
+        const split = this.splitMinchaKorbanotAshrei(rawHebrewStr, rawEnglishStr);
+        if (sectionKey === 'mincha_korbanot') {
+          rawHebrewStr = split.korbanotHebrew;
+          rawEnglishStr = split.korbanotEnglish;
+        } else {
+          rawHebrewStr = split.ashreiHebrew;
+          rawEnglishStr = split.ashreiEnglish;
+        }
+      }
       // Preserve paragraph breaks (\n\n) for readability (e.g. Tefillas HaDerech)
       const normalizeParagraphs = (s: string) => s.replace(/\n\s*\n/g, '\n\n').trim();
 
@@ -803,30 +892,42 @@ export class SefariaService {
    */
   private static cleanHtml(text: string): string {
     if (!text) return '';
+    return this.stripSefariaEndMarkers(
+      text
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .replace(/<br\s*\/?>/gi, '\n') // Convert br to newlines
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&thinsp;/g, ' ') // Thin space (Sefaria uses in Tehillim)
+        .replace(/&#x2009;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#x27;/g, "'")
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim()
+    );
+  }
+
+  /**
+   * Remove Sefaria end-of-section markers (e.g. {פ} end of perek, {ס} end of verse).
+   * Handles braces/parens, optional niqqud, and cached data. Call at display time to clean any source.
+   * Also removes English variants like {P}, (P), {S}.
+   */
+  static stripSefariaEndMarkers(text: string): string {
+    if (!text) return '';
     return text
-      .replace(/<[^>]*>/g, '') // Remove HTML tags
-      .replace(/<br\s*\/?>/gi, '\n') // Convert br to newlines
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&thinsp;/g, ' ') // Thin space (Sefaria uses in Tehillim)
-      .replace(/&#x2009;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#x27;/g, "'")
-      .replace(/\s+/g, ' ') // Normalize whitespace
+      .replace(/\s*[{\[\(]\s*[פס][\u0591-\u05C7]*\s*[}\]\)]\s*/g, '')
+      .replace(/\s*[{\[\(]\s*[PSps]\s*[}\]\)]\s*/g, '')
       .trim();
   }
 
   /**
-   * Clean HTML but preserve paragraph breaks for prayer text. Safe: never throws.
+   * Decode common HTML entities in Sefaria text (e.g. &nbsp; &thinsp;) so they don't show as literal.
    */
-  static cleanHtmlForPrayer(text: unknown): string {
-    if (text == null) return '';
-    const s = typeof text === 'string' ? text : String(text);
-    return s
-      .replace(/<[^>]*>/g, '')
-      .replace(/<br\s*\/?>/gi, '\n')
+  static decodeHtmlEntities(text: string): string {
+    if (!text) return '';
+    return text
       .replace(/&nbsp;/g, ' ')
       .replace(/&thinsp;/g, ' ')
       .replace(/&#x2009;/g, ' ')
@@ -835,9 +936,31 @@ export class SefariaService {
       .replace(/&gt;/g, '>')
       .replace(/&quot;/g, '"')
       .replace(/&#x27;/g, "'")
-      .replace(/[ \t]+/g, ' ')
-      .replace(/\n\s*\n\s*/g, '\n\n')
-      .trim();
+      .replace(/\u2009/g, ' ');
+  }
+
+  /**
+   * Clean HTML but preserve paragraph breaks for prayer text. Safe: never throws.
+   */
+  static cleanHtmlForPrayer(text: unknown): string {
+    if (text == null) return '';
+    const s = typeof text === 'string' ? text : String(text);
+    return this.stripSefariaEndMarkers(
+      s
+        .replace(/<[^>]*>/g, '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&thinsp;/g, ' ')
+        .replace(/&#x2009;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#x27;/g, "'")
+        .replace(/[ \t]+/g, ' ')
+        .replace(/\n\s*\n\s*/g, '\n\n')
+        .trim()
+    );
   }
 
   /**

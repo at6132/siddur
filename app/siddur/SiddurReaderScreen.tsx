@@ -30,6 +30,7 @@ import { BackButton } from '../../components/ui/BackButton';
 import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../components/reader/ReaderChrome';
 import { ReaderToolbar } from '../../components/reader/ReaderToolbar';
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
+import { useWebWheelScroll } from '../../components/reader/useWebWheelScroll';
 import type { DisplayPreferences } from '../../src/types/preferences';
 
 interface RouteParams {
@@ -356,7 +357,6 @@ function trimBirkatHamazon(content: PrayerTextData): PrayerTextData {
   }
 
   // Fix backwards "תע" → "עת" in the phrase "בכל עת ובכל שעה" (letters mixed up / out of line in source)
-  hebrew = hebrew.replace(/[\u200E-\u200F\u202A-\u202E]/g, '');
 
   // Join HaRachaman sentences onto same lines (traditional formatting)
   // Find the הרחמן section and process it as a block
@@ -672,8 +672,6 @@ function trimBirkatHamazon(content: PrayerTextData): PrayerTextData {
 
   // Fix reversed תע → עֵת in "תָּמִיד בְּכָל־יוֹם וּבְכָל־עֵת וּבְכָל שָׁעָה:"
   hebrew = hebrew.replace(/(וּבְכָל־)\s*ת[\u0591-\u05C7]*ע(\s+)(?=וּבְכָל\s|שָׁעָה)/g, '$1עֵת$2');
-  // Keep "עֵת וּבְכָל שָׁעָה" on one line on iOS (zero-width word joiner after עֵת)
-  hebrew = hebrew.replace(/עֵת(\s+)(?=וּבְכָל\s)/g, 'עֵת\u2060$1');
   // Insert missing "נָא" between רַחֵם and יְהֹוָה (רַחֵם נָא יְהֹוָה)
   hebrew = hebrew.replace(/(ר[\u0591-\u05C7]*ח[\u0591-\u05C7]*ם)(\s+)(י[\u0591-\u05C7]*ה[\u0591-\u05C7]*ו[\u0591-\u05C7]*ה)/g, '$1 נָא$2$3');
 
@@ -779,6 +777,94 @@ function trimBirkatHamazon(content: PrayerTextData): PrayerTextData {
   hebrewSegments = formatInstructions(hebrewSegments);
 
   return { hebrew, english, hebrewSegments, englishSegments };
+}
+
+/**
+ * Mincha: remove Chatzi Kaddish block (החזן אומר חצי קדיש ... through last ואימרו אמן in that block).
+ * Same pattern as trimBirkatHamazon: work on content.hebrew, strip nikkud, find indices, slice, return new content.
+ */
+function processMinchaSectionContent(key: string, content: PrayerTextData): PrayerTextData {
+  if (key !== 'mincha_korbanot' && key !== 'mincha_ashrei' && key !== 'mincha_amidah') return content;
+  let { hebrew, english, hebrewSegments, englishSegments } = content;
+  const stripNikkud = (s: string) => s.replace(/[\u0591-\u05C7]/g, '');
+  const stripped = stripNikkud(hebrew);
+
+  // Find start of Chatzi Kaddish block. Sefaria uses "ואומר החזן חצי קדיש:" or just "יתגדל".
+  const startMarkers = [
+    'ואומר החזן חצי קדיש', 'החזן אומר חצי קדיש',
+    'השליח ציבור אומר חצי קדיש', 'חצי קדיש', 'יתגדל',
+  ];
+  let startStripped = -1;
+  for (const m of startMarkers) {
+    const i = stripped.indexOf(m);
+    if (i !== -1 && (startStripped === -1 || i < startStripped)) startStripped = i;
+  }
+  if (startStripped === -1) return content;
+
+  // Back up to the start of the line/paragraph so we don't leave orphaned text
+  const prevNewline = stripped.lastIndexOf('\n', startStripped);
+  if (prevNewline !== -1) {
+    const linePrefix = stripped.slice(prevNewline + 1, startStripped).trim();
+    if (linePrefix.length === 0) startStripped = prevNewline + 1;
+  }
+
+  // End: last "ואמרו אמן" variant after start, then to end of paragraph.
+  // Sefaria base text (nikkud-stripped) uses "ואמרו" (no yud); traditional has "ואימרו" (with yud).
+  const endMarkers = ['ואמרו אמן', 'ואימרו אמן', 'ויאמרו אמן', 'אמרו אמן', 'אימרו אמן'];
+  let lastAmenStripped = -1;
+  let usedEndMarkerLen = 0;
+  for (const endMarker of endMarkers) {
+    let pos = stripped.indexOf(endMarker, startStripped);
+    while (pos !== -1) {
+      if (pos > lastAmenStripped) {
+        lastAmenStripped = pos;
+        usedEndMarkerLen = endMarker.length;
+      }
+      pos = stripped.indexOf(endMarker, pos + 1);
+    }
+  }
+  if (lastAmenStripped === -1) return content;
+  let endStripped = lastAmenStripped + usedEndMarkerLen;
+  // Skip trailing colon/punctuation/whitespace
+  while (endStripped < stripped.length && /[:\s.]/.test(stripped[endStripped])) endStripped++;
+  const nextPara = stripped.indexOf('\n\n', endStripped);
+  const endOfBlockStripped = nextPara === -1 ? stripped.length : nextPara + 2;
+
+  const strippedToOriginal: number[] = [];
+  for (let i = 0; i < hebrew.length; i++) {
+    if (!/[\u0591-\u05C7]/.test(hebrew[i])) strippedToOriginal.push(i);
+  }
+  const startOriginal = strippedToOriginal[startStripped] ?? startStripped;
+  const endOriginal =
+    endOfBlockStripped > 0 && endOfBlockStripped <= strippedToOriginal.length
+      ? strippedToOriginal[endOfBlockStripped - 1] + 1
+      : hebrew.length;
+
+  hebrew = (hebrew.slice(0, startOriginal).trimEnd() + '\n\n' + hebrew.slice(endOriginal).trimStart()).replace(/\n\n\n+/g, '\n\n').trim();
+  hebrewSegments = [{ text: hebrew, italic: false }];
+
+  if (english) {
+    const engKaddish = /\b(?:The\s+leader|The\s+chazan|Chazan|leader)\s+(?:says?|recites?)\s+(?:Half\s+)?Kaddish\s*:?/i;
+    const altKaddish = /\bHalf\s+Kaddish\s*:?/i;
+    const m = english.match(engKaddish) || english.match(altKaddish);
+    if (m && m.index !== undefined) {
+      let lastAmenEn = -1;
+      let idx = english.indexOf('Amen', m.index);
+      while (idx !== -1) {
+        lastAmenEn = idx + 4;
+        while (lastAmenEn < english.length && /[.!:\s]/.test(english[lastAmenEn])) lastAmenEn++;
+        idx = english.indexOf('Amen', lastAmenEn);
+      }
+      if (lastAmenEn !== -1) {
+        const nextEn = english.indexOf('\n\n', lastAmenEn);
+        const endEnBlock = nextEn === -1 ? english.length : nextEn + 2;
+        english = (english.slice(0, m.index).trimEnd() + '\n\n' + english.slice(endEnBlock).trimStart()).replace(/\n\n\n+/g, '\n\n').trim();
+        englishSegments = [{ text: english, italic: false }];
+      }
+    }
+  }
+
+  return { ...content, hebrew, english, hebrewSegments, englishSegments };
 }
 
 const SERVICE_TITLES: { [key: string]: { english: string; hebrew: string } } = {
@@ -937,6 +1023,13 @@ export const SiddurReaderScreen: React.FC = () => {
   const contentHeightRef = useRef(0);
   const autoscrollRafRef = useRef<number | null>(null);
 
+  const onWebWheel = useWebWheelScroll(
+    scrollViewRef as React.RefObject<{ scrollTo: (opts: { y?: number; x?: number; animated?: boolean }) => void } | null>,
+    () => scrollYRef.current,
+    () => contentHeightRef.current,
+    height
+  );
+
   const loadPreferences = useCallback(async () => {
     try {
       const prefs = await UserPreferencesService.getPreferences();
@@ -1006,6 +1099,16 @@ export const SiddurReaderScreen: React.FC = () => {
             if (key === 'birchas_hamazon' && data) {
               try {
                 content[key] = trimBirkatHamazon(data);
+              } catch {
+                content[key] = data;
+              }
+            } else if (
+              service === 'mincha' &&
+              data &&
+              (key === 'mincha_korbanot' || key === 'mincha_ashrei' || key === 'mincha_amidah')
+            ) {
+              try {
+                content[key] = processMinchaSectionContent(key, data);
               } catch {
                 content[key] = data;
               }
@@ -1091,6 +1194,14 @@ export const SiddurReaderScreen: React.FC = () => {
           // keep content unchanged if trim fails
         }
       }
+      if (
+        (sectionKey === 'mincha_korbanot' || sectionKey === 'mincha_ashrei' || sectionKey === 'mincha_amidah') &&
+        content
+      ) {
+        try {
+          content = processMinchaSectionContent(sectionKey, content);
+        } catch {}
+      }
       setSectionContent(prev => ({ ...prev, [sectionKey]: content }));
     } catch {
       setSectionContent(prev => ({ ...prev, [sectionKey]: null }));
@@ -1098,6 +1209,35 @@ export const SiddurReaderScreen: React.FC = () => {
       setLoadingSection(null);
     }
   };
+
+  /** Re-fetch a section (e.g. after a failed load). Used in full-scroll when sectionContent[key] is null. */
+  const retrySectionContent = useCallback(
+    async (sectionKey: string) => {
+      setLoadingSection(sectionKey);
+      try {
+        let content = await SefariaService.fetchSiddurSection(sectionKey, nusach);
+        if (sectionKey === 'birchas_hamazon' && content) {
+          try {
+            content = trimBirkatHamazon(content);
+          } catch {}
+        }
+        if (
+          (sectionKey === 'mincha_korbanot' || sectionKey === 'mincha_ashrei' || sectionKey === 'mincha_amidah') &&
+          content
+        ) {
+          try {
+            content = processMinchaSectionContent(sectionKey, content);
+          } catch {}
+        }
+        setSectionContent(prev => ({ ...prev, [sectionKey]: content }));
+      } catch {
+        setSectionContent(prev => ({ ...prev, [sectionKey]: null }));
+      } finally {
+        setLoadingSection(null);
+      }
+    },
+    [nusach]
+  );
 
   const handleSectionPress = (key: string) => {
     (navigation as any).navigate('SiddurReader', { service, sectionKey: key });
@@ -1175,7 +1315,7 @@ export const SiddurReaderScreen: React.FC = () => {
 
       <ScrollView
         ref={scrollViewRef}
-        style={styles.scrollView}
+        style={[styles.scrollView, Platform.OS === 'web' && styles.scrollViewWeb]}
         contentContainerStyle={[
           styles.content,
           { paddingTop: insets.top + READER_CHROME_HEADER_HEIGHT_APPROX + spacing.md, paddingBottom: 24 + 88 + insets.bottom },
@@ -1189,6 +1329,7 @@ export const SiddurReaderScreen: React.FC = () => {
         onContentSizeChange={(_, h) => {
           contentHeightRef.current = h;
         }}
+        onWheel={onWebWheel}
       >
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -1209,6 +1350,11 @@ export const SiddurReaderScreen: React.FC = () => {
               service === 'mincha' &&
               COLLAPSED_BEFORE_ASHREI_MINCHA.includes(section.key) &&
               !expandedBeforeAshrei[section.key];
+
+            const isBeforeAshreiExpanded =
+              service === 'mincha' &&
+              COLLAPSED_BEFORE_ASHREI_MINCHA.includes(section.key) &&
+              expandedBeforeAshrei[section.key];
 
             return (
               <View
@@ -1238,21 +1384,32 @@ export const SiddurReaderScreen: React.FC = () => {
                     <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
                       {section.hebrewTitle}
                     </Text>
-                    <Text style={styles.collapsedBeforeAshreiHint}>Tap to open</Text>
+                    <Text style={styles.collapsedBeforeAshreiChevron}>▼</Text>
                   </TouchableOpacity>
                 ) : sectionContent[section.key] ? (
-                  (() => {
-                    const content = sectionContent[section.key]!;
+                  <>
+                    {isBeforeAshreiExpanded && (
+                      <TouchableOpacity
+                        onPress={() => setExpandedBeforeAshrei(prev => ({ ...prev, [section.key]: false }))}
+                        style={styles.collapsedBeforeAshreiRow}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+                          {section.hebrewTitle}
+                        </Text>
+                        <Text style={styles.collapsedBeforeAshreiChevron}>▲</Text>
+                      </TouchableOpacity>
+                    )}
+                    {(() => {
+                      const content = sectionContent[section.key]!;
                     const hebrewStyle = [
                       styles.hebrewText,
                       { fontSize: HEBREW_FONT_SIZES[textSize], lineHeight: HEBREW_LINE_HEIGHTS[textSize] },
-                      ...(Platform.OS === 'ios' ? [{ letterSpacing: 0 }] : []),
                     ];
                     const hebrewInstructionStyle = [
                       styles.hebrewText,
                       styles.instructionText,
                       { fontSize: HEBREW_FONT_SIZES[textSize] * 0.8, lineHeight: HEBREW_LINE_HEIGHTS[textSize] * 0.9 },
-                      ...(Platform.OS === 'ios' ? [{ letterSpacing: 0 }] : []),
                     ];
                     const renderSegmentsAsBlocks = (
                       segs: { text: string; italic: boolean }[],
@@ -1341,9 +1498,23 @@ export const SiddurReaderScreen: React.FC = () => {
                         {renderEnglish()}
                       </>
                     );
-                  })()
+                  })()}
+                  </>
                 ) : (
-                  <Text style={styles.errorText}>Unable to load this section.</Text>
+                  loadingSection === section.key ? (
+                    <View style={styles.retryRow}>
+                      <ActivityIndicator size="small" color={colors.primary.main} />
+                      <Text style={styles.retryRowText}>Loading…</Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => retrySectionContent(section.key)}
+                      style={styles.retryRow}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.retryRowText}>Tap to load {section.title}</Text>
+                    </TouchableOpacity>
+                  )
                 )}
               </View>
             );
@@ -1436,13 +1607,11 @@ export const SiddurReaderScreen: React.FC = () => {
     const hebrewStyle = [
       styles.hebrewText,
       { fontSize: HEBREW_FONT_SIZES[textSize], lineHeight: HEBREW_LINE_HEIGHTS[textSize] },
-      ...(Platform.OS === 'ios' ? [{ letterSpacing: 0 }] : []),
     ];
     const hebrewInstructionStyle = [
       styles.hebrewText,
       styles.instructionText,
       { fontSize: HEBREW_FONT_SIZES[textSize] * 0.8, lineHeight: HEBREW_LINE_HEIGHTS[textSize] * 0.9 },
-      ...(Platform.OS === 'ios' ? [{ letterSpacing: 0 }] : []),
     ];
     const renderSegmentsAsBlocks = (
       segs: { text: string; italic: boolean }[],
@@ -1545,7 +1714,7 @@ export const SiddurReaderScreen: React.FC = () => {
         </ReaderChrome>
         <ScrollView
           ref={scrollViewRef}
-          style={styles.scrollView}
+          style={[styles.scrollView, Platform.OS === 'web' && styles.scrollViewWeb]}
           contentContainerStyle={[styles.content, { paddingTop: insets.top + READER_CHROME_HEADER_HEIGHT_APPROX + spacing.md, paddingBottom: 120 + 88 }]}
           showsVerticalScrollIndicator={false}
           onScroll={(e) => {
@@ -1556,6 +1725,7 @@ export const SiddurReaderScreen: React.FC = () => {
           onContentSizeChange={(_, h) => {
             contentHeightRef.current = h;
           }}
+          onWheel={onWebWheel}
         >
           {isLoading ? (
             <View style={styles.sectionLoading}>
@@ -1590,7 +1760,7 @@ export const SiddurReaderScreen: React.FC = () => {
         </View>
       </View>
       <ScrollView
-        style={styles.scrollView}
+        style={[styles.scrollView, Platform.OS === 'web' && styles.scrollViewWeb]}
         contentContainerStyle={[styles.content, { paddingTop: spacing.sm, paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
       >
@@ -1646,6 +1816,10 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollViewWeb: {
+    overflow: 'auto',
+    minHeight: 0,
+  },
   staticHeader: {
     position: 'absolute',
     top: 0,
@@ -1674,12 +1848,13 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
   dropdownModeTitleHebrew: {
-    fontFamily: fonts.body.regular,
+    fontFamily: fonts.hebrew.regular,
     fontSize: 18,
     color: colors.text.tertiary,
     marginTop: 4,
     writingDirection: 'rtl',
     textAlign: 'left',
+    letterSpacing: 0,
   },
   content: {
     padding: spacing.xl,
@@ -1739,10 +1914,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.7,
   },
   titleHebrew: {
-    fontFamily: fonts.heading.regular,
+    fontFamily: fonts.hebrew.regular,
     fontSize: 24,
     color: colors.text.secondary,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
     flexShrink: 0,
   },
   toggleRow: {
@@ -1821,26 +1996,35 @@ const styles = StyleSheet.create({
     paddingRight: spacing.md,
   },
   optionalSectionLabel: {
-    fontFamily: fonts.heading.semiBold,
+    fontFamily: fonts.hebrew.semibold,
     color: colors.primary.main,
   },
   collapsedBeforeAshreiRow: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingRight: spacing.sm,
+    gap: 8,
   },
   collapsedBeforeAshreiHebrew: {
-    fontFamily: fonts.heading.semiBold,
-    color: colors.text.primary,
+    fontFamily: fonts.hebrew.semibold,
+    color: colors.primary.main,
+    letterSpacing: 0,
   },
-  collapsedBeforeAshreiHint: {
+  collapsedBeforeAshreiChevron: {
+    fontSize: 12,
+    color: colors.primary.main,
+  },
+  retryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+  },
+  retryRowText: {
     fontFamily: fonts.body.regular,
-    fontSize: 13,
+    fontSize: 14,
     color: colors.text.tertiary,
-    marginTop: 4,
   },
 
   sectionMenuBackdrop: {
@@ -1875,10 +2059,11 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   sectionMenuHebrew: {
-    fontFamily: fonts.heading.semiBold,
+    fontFamily: fonts.hebrew.semibold,
     fontSize: 18,
     color: colors.text.primary,
     marginBottom: 2,
+    letterSpacing: 0,
   },
   sectionMenuEnglish: {
     fontFamily: fonts.body.regular,
@@ -2038,11 +2223,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionHebrewTitle: {
-    fontFamily: fonts.heading.semiBold,
+    fontFamily: fonts.hebrew.semibold,
     fontSize: 20,
     color: colors.text.primary,
     marginBottom: spacing.xs,
-    letterSpacing: 0.2,
+    letterSpacing: 0,
   },
   sectionEnglishTitle: {
     fontFamily: fonts.body.regular,
@@ -2078,13 +2263,13 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   hebrewText: {
-    fontFamily: fonts.heading.regular,
+    fontFamily: fonts.hebrew.regular,
     fontSize: 22,
     color: colors.text.primary,
     lineHeight: 40,
     textAlign: 'right',
     writingDirection: 'rtl',
-    letterSpacing: 0.3,
+    letterSpacing: 0,
   },
   daySpecificHighlight: {
     backgroundColor: 'rgba(212, 165, 184, 0.22)',
