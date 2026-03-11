@@ -71,10 +71,10 @@ export function ReaderChrome({
           )}
         </View>
       </View>
-      <View style={styles.titleRow}>
-        <Text style={styles.title} numberOfLines={1}>{title}</Text>
+      <View style={[styles.titleRow, titleIsHebrew && styles.titleRowRtl]}>
+        <Text style={[styles.title, titleIsHebrew && styles.titleHebrew]} numberOfLines={1}>{title}</Text>
         {titleHebrew ? (
-          <Text style={styles.titleHebrew} numberOfLines={1}>{titleHebrew}</Text>
+          <Text style={styles.titleHebrewSub} numberOfLines={1}>{titleHebrew}</Text>
         ) : null}
       </View>
       <View style={styles.toolbarRow}>
@@ -155,6 +155,10 @@ function createStyles(theme: AppTheme) {
       gap: spacing.xs,
       marginBottom: spacing.md,
     },
+    titleRowRtl: {
+      alignItems: 'flex-end',
+      direction: 'rtl',
+    },
     title: {
       fontFamily: fonts.heading.bold,
       fontSize: 22,
@@ -162,6 +166,13 @@ function createStyles(theme: AppTheme) {
       letterSpacing: -0.5,
     },
     titleHebrew: {
+      fontFamily: fonts.hebrew.regular,
+      fontSize: 20,
+      letterSpacing: 0,
+      writingDirection: 'rtl',
+      textAlign: 'right',
+    },
+    titleHebrewSub: {
       fontFamily: fonts.hebrew.regular,
       fontSize: 20,
       color: theme.colors.text.secondary,
