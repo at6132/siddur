@@ -22,7 +22,7 @@ import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import type { DisplayPreferences } from '../../src/types/preferences';
 import { getAnonymousId } from '../../src/analytics/IdentityService';
-import { completeTehillimPereks } from '../../src/api/tehillimApi';
+import { completeTehillimPereks, sendPrivatePerekCompleted } from '../../src/api/tehillimApi';
 import { analytics } from '../../src/analytics';
 import { TEHILLIM_EVENTS } from '../../src/analytics/types';
 
@@ -117,8 +117,8 @@ export const TehillimReaderScreen: React.FC = () => {
         durationMinutes,
         wordCount,
       });
-      analytics.track(TEHILLIM_EVENTS.PEREK_COMPLETED, { perek_number: psalm, source: 'private' });
-      await analytics.flush();
+      const anonymousId = await getAnonymousId();
+      await sendPrivatePerekCompleted(psalm, anonymousId);
       setIsMarkedComplete(true);
       setIsDailyChapter(true);
     }

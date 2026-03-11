@@ -2,6 +2,14 @@
  * Shared Tehillim campaigns API. Uses same base URL as analytics (analyticsUrl).
  */
 
+function randomUuid(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 async function getBaseUrl(): Promise<string | null> {
   try {
     const { default: Constants } = await import('expo-constants');
@@ -12,6 +20,31 @@ async function getBaseUrl(): Promise<string | null> {
     if (typeof u === 'string' && u.length > 0) return u.replace(/\/$/, '');
   } catch {}
   return null;
+}
+
+/** Send private perek completion to analytics (same backend as campaigns). Ensures dashboard count updates even if analytics queue is not flushed. */
+export async function sendPrivatePerekCompleted(perekNumber: number, anonymousId: string): Promise<void> {
+  const base = await getBaseUrl();
+  if (!base) return;
+  const event = {
+    event_uuid: randomUuid(),
+    event_name: 'tehillim_perek_completed',
+    event_time_utc: new Date().toISOString(),
+    anonymous_id: anonymousId,
+    user_id: null as string | null,
+    session_id: null as string | null,
+    perek_number: perekNumber,
+    source: 'private',
+  };
+  try {
+    await fetch(`${base}/api/events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ events: [event] }),
+    });
+  } catch (_) {
+    // ignore network errors; local progress is already saved
+  }
 }
 
 export interface TehillimCampaign {

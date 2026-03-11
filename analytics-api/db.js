@@ -652,7 +652,7 @@ export async function getPrivateTehillimPerekCount(startDate, endDate) {
   }
   if (endDate) {
     conditions.push(`event_time_utc <= $${i}`);
-    params.push(endDate);
+    params.push(endDate + 'T23:59:59.999Z');
     i++;
   }
   const where = conditions.join(' AND ');
