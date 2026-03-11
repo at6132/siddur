@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWindowDimensions } from 'react-native';
@@ -10,27 +10,33 @@ import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../componen
 import { ReaderToolbar, HEBREW_FONT_SIZES, HEBREW_LINE_HEIGHTS } from '../../components/reader/ReaderToolbar';
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
 import { useAutoscroll } from '../../components/reader/useAutoscroll';
+import { useWebWheelScroll } from '../../components/reader/useWebWheelScroll';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles, fonts } from '../../src/design/typography';
 import { useTheme } from '../../src/design/theme';
 import { TehillimService } from '../../src/content/tehillim/TehillimService';
 import { TehillimChapter, TehillimVerse } from '../../src/content/tehillim/types';
+import { SefariaService } from '../../src/services/SefariaService';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import type { DisplayPreferences } from '../../src/types/preferences';
 import { getAnonymousId } from '../../src/analytics/IdentityService';
 import { completeTehillimPereks } from '../../src/api/tehillimApi';
+import { analytics } from '../../src/analytics';
+import { TEHILLIM_EVENTS } from '../../src/analytics/types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-/** Strip HTML entities that may appear in Sefaria text (e.g. &thinsp;) so they don't show as literal text. */
+/** Strip HTML entities and Sefaria end markers (e.g. {פ}) so they don't show as literal text. */
 function cleanVerseText(text: string | undefined): string {
   if (!text) return '';
-  return text
-    .replace(/&thinsp;/g, ' ')
-    .replace(/&#x2009;/g, ' ')
-    .replace(/\u2009/g, ' ');
+  return SefariaService.stripSefariaEndMarkers(
+    text
+      .replace(/&thinsp;/g, ' ')
+      .replace(/&#x2009;/g, ' ')
+      .replace(/\u2009/g, ' ')
+  );
 }
 
 export const TehillimReaderScreen: React.FC = () => {
@@ -69,6 +75,13 @@ export const TehillimReaderScreen: React.FC = () => {
 
   useAutoscroll(scrollRef, scrollYRef, contentHeightRef, viewportHeight, autoscrollPlaying, autoscrollSpeed);
 
+  const onWebWheel = useWebWheelScroll(
+    scrollRef as React.RefObject<{ scrollTo: (opts: { y?: number; x?: number; animated?: boolean }) => void } | null>,
+    () => scrollYRef.current,
+    () => contentHeightRef.current,
+    viewportHeight
+  );
+
   useEffect(() => {
     readingStartTime.current = Date.now();
     loadChapter(psalm);
@@ -104,6 +117,8 @@ export const TehillimReaderScreen: React.FC = () => {
         durationMinutes,
         wordCount,
       });
+      analytics.track(TEHILLIM_EVENTS.PEREK_COMPLETED, { perek_number: psalm, source: 'private' });
+      await analytics.flush();
       setIsMarkedComplete(true);
       setIsDailyChapter(true);
     }
@@ -115,6 +130,7 @@ export const TehillimReaderScreen: React.FC = () => {
     try {
       const participantId = await getAnonymousId();
       await completeTehillimPereks(campaignId, [psalm], participantId);
+      analytics.track(TEHILLIM_EVENTS.PEREK_COMPLETED, { perek_number: psalm, source: 'shared', campaign_id: campaignId });
       navigation.goBack();
     } catch (e) {
       console.warn('Campaign complete failed:', e);
@@ -150,7 +166,7 @@ export const TehillimReaderScreen: React.FC = () => {
         </Text>
         {showEnglish && verse.english && (
           <Text style={[styles.englishVerse, { fontSize: size * 0.88, lineHeight: lineHeight * 0.9 }]} selectable>
-            {verse.english}
+            {cleanVerseText(verse.english)}
           </Text>
         )}
         <View style={styles.verseLabelRow}>
@@ -210,12 +226,13 @@ export const TehillimReaderScreen: React.FC = () => {
       </ReaderChrome>
       <ScrollView
         ref={scrollRef}
-        style={styles.scrollView}
+        style={[styles.scrollView, Platform.OS === 'web' && styles.scrollViewWeb]}
         contentContainerStyle={[styles.content, { paddingTop: insets.top + READER_CHROME_HEADER_HEIGHT_APPROX + spacing.lg, paddingBottom: 160 + 88 }]}
         showsVerticalScrollIndicator={true}
         onScroll={(e) => {
           scrollYRef.current = e.nativeEvent.contentOffset.y;
         }}
+        onWheel={onWebWheel}
         onContentSizeChange={(_, h) => { contentHeightRef.current = h; }}
         scrollEventThrottle={16}
         bounces={true}
@@ -330,6 +347,10 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollViewWeb: {
+    overflow: 'auto',
+    minHeight: 0,
+  },
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
@@ -440,11 +461,11 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0, 0, 0, 0.06)',
   },
   hebrewVerse: {
-    fontFamily: fonts.heading.regular,
+    fontFamily: fonts.hebrew.regular,
     color: colors.text.primary,
     textAlign: 'right',
     writingDirection: 'rtl',
-    letterSpacing: 0.4,
+    letterSpacing: 0,
     marginBottom: spacing.xs,
   },
   englishVerse: {
