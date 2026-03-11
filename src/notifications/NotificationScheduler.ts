@@ -423,15 +423,40 @@ export class NotificationScheduler {
       preferences.notifications.daveningAddOnsSelichosTime ?? '08:00'
     );
 
-    // Mashiv HaRuach / V'ten Tal: only first 7 days after the winter switch (not all winter).
-    let mashivFirstDayOffset: number | null = null;
+    // Mashiv HaRuach / V'ten Tal: only first 7 days after the winter switch.
+    // Summer (Morid HaTal): only first 7 days after the summer switch.
+    // Both use the same preference and time.
     if (preferences.notifications.daveningAddOnsMashivVtenTal) {
-      for (let d = 0; d < 60; d++) {
-        const check = new Date();
-        check.setDate(check.getDate() + d);
-        if (JewishCalendarService.isMashivHaruach(check)) {
-          mashivFirstDayOffset = d;
-          break;
+      for (let dayOffset = 0; dayOffset < 60; dayOffset++) {
+        const day = new Date();
+        day.setDate(day.getDate() + dayOffset);
+
+        if (JewishCalendarService.isInFirst7DaysOfWinter(day)) {
+          const triggerDate = new Date(day);
+          triggerDate.setHours(mashivTime.hour, mashivTime.minute, 0, 0);
+          if (isFutureDate(triggerDate)) {
+            await scheduleSafe({
+              content: NotificationContentService.getMashivVtenTalContent(),
+              trigger: {
+                type: Notifications.SchedulableTriggerInputTypes.DATE,
+                date: triggerDate,
+              },
+            });
+          }
+        }
+
+        if (JewishCalendarService.isInFirst7DaysOfSummer(day)) {
+          const triggerDate = new Date(day);
+          triggerDate.setHours(mashivTime.hour, mashivTime.minute, 0, 0);
+          if (isFutureDate(triggerDate)) {
+            await scheduleSafe({
+              content: NotificationContentService.getSummerDaveningContent(),
+              trigger: {
+                type: Notifications.SchedulableTriggerInputTypes.DATE,
+                date: triggerDate,
+              },
+            });
+          }
         }
       }
     }
@@ -464,25 +489,6 @@ export class NotificationScheduler {
         if (isFutureDate(triggerDate)) {
           await scheduleSafe({
             content: NotificationContentService.getAlHanissimContent(alHanissim),
-            trigger: {
-              type: Notifications.SchedulableTriggerInputTypes.DATE,
-              date: triggerDate,
-            },
-          });
-        }
-      }
-
-      if (
-        preferences.notifications.daveningAddOnsMashivVtenTal &&
-        mashivFirstDayOffset !== null &&
-        dayOffset >= mashivFirstDayOffset &&
-        dayOffset < mashivFirstDayOffset + 7
-      ) {
-        const triggerDate = new Date(day);
-        triggerDate.setHours(mashivTime.hour, mashivTime.minute, 0, 0);
-        if (isFutureDate(triggerDate)) {
-          await scheduleSafe({
-            content: NotificationContentService.getMashivVtenTalContent(),
             trigger: {
               type: Notifications.SchedulableTriggerInputTypes.DATE,
               date: triggerDate,

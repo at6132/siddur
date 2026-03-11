@@ -221,6 +221,17 @@ export class NotificationContentService {
   }
 
   /**
+   * Summer davening (Morid HaTal) — first 7 days after switch from winter
+   */
+  static getSummerDaveningContent(): NotificationContent {
+    return {
+      title: 'Summer davening',
+      body: 'A gentle reminder — say Morid HaTal (no Mashiv/V\'ten Tal) this season',
+      data: { screen: 'Home', action: 'summerDavening' },
+    };
+  }
+
+  /**
    * Aneinu (fast days) — morning reminder
    */
   static getAneinuContent(): NotificationContent {

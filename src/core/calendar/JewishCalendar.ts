@@ -64,6 +64,18 @@ export class JewishCalendarService {
   }
 
   /**
+   * Get Hebrew date short: day + month in Hebrew only (e.g., "כ״ב אדר" or "כ״ב אדר ב׳")
+   * Adar I shows as "אדר" (no א׳); Adar II shows as "אדר ב׳".
+   */
+  static getHebrewDateShort(date: Date = new Date()): string {
+    const hdate = this.getJewishDate(date);
+    const day = this.numberToHebrew(hdate.getDate());
+    const monthIndex = hdate.getMonth();
+    const month = monthIndex === months.ADAR_I ? 'אדר' : this.getHebrewMonthName(monthIndex);
+    return `${day} ${month}`;
+  }
+
+  /**
    * Get Hebrew day of week
    */
   static getDayOfWeekHebrew(date: Date = new Date()): string {
@@ -654,6 +666,67 @@ export class JewishCalendarService {
    */
   static isMashivHaruach(date: Date = new Date()): boolean {
     return this.getSeason(date) === 'winter';
+  }
+
+  /**
+   * Date of the first day of the winter season (22 Tishrei) that contains the given date.
+   * Winter: from 22 Tishrei through 14 Nisan. Used for "first 7 days of winter" logic.
+   */
+  static getFirstDayOfWinterSeason(date: Date = new Date()): Date | null {
+    if (this.getSeason(date) !== 'winter') return null;
+    const hdate = this.getJewishDate(date);
+    const month = hdate.getMonth();
+    const year = hdate.getFullYear();
+    // Winter spans 22 Tishrei through 14 Nisan. Nisan (day < 15) is still previous Hebrew year's winter.
+    const winterStartYear = month === months.NISAN ? year - 1 : year;
+    try {
+      return new HDate(22, months.TISHREI, winterStartYear).greg();
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Date of the first day of the summer season (15 Nisan) that contains the given date.
+   * Summer: from 15 Nisan through 21 Tishrei. Used for "first 7 days of summer" logic.
+   */
+  static getFirstDayOfSummerSeason(date: Date = new Date()): Date | null {
+    if (this.getSeason(date) !== 'summer') return null;
+    const hdate = this.getJewishDate(date);
+    const year = hdate.getFullYear();
+    try {
+      return new HDate(15, months.NISAN, year).greg();
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * True if the given date is one of the first 7 days of the winter season (switch to Mashiv/V'ten Tal).
+   */
+  static isInFirst7DaysOfWinter(date: Date = new Date()): boolean {
+    const start = this.getFirstDayOfWinterSeason(date);
+    if (!start) return false;
+    const startMidnight = new Date(start);
+    startMidnight.setHours(0, 0, 0, 0);
+    const dayMidnight = new Date(date);
+    dayMidnight.setHours(0, 0, 0, 0);
+    const daysSince = Math.round((dayMidnight.getTime() - startMidnight.getTime()) / (1000 * 60 * 60 * 24));
+    return daysSince >= 0 && daysSince < 7;
+  }
+
+  /**
+   * True if the given date is one of the first 7 days of the summer season (switch to Morid HaTal).
+   */
+  static isInFirst7DaysOfSummer(date: Date = new Date()): boolean {
+    const start = this.getFirstDayOfSummerSeason(date);
+    if (!start) return false;
+    const startMidnight = new Date(start);
+    startMidnight.setHours(0, 0, 0, 0);
+    const dayMidnight = new Date(date);
+    dayMidnight.setHours(0, 0, 0, 0);
+    const daysSince = Math.round((dayMidnight.getTime() - startMidnight.getTime()) / (1000 * 60 * 60 * 24));
+    return daysSince >= 0 && daysSince < 7;
   }
 
   /**
