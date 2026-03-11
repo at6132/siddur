@@ -27,6 +27,7 @@ import {
   removeParagraphTitles,
   AMIDAH_BRACHA_TITLES,
   removeAseretYemeiTeshuvaBlockIfNotToday,
+  removeMashivHaruachInstructionParagraph,
 } from './MinchaTextRules';
 
 const SEFARIA_API_BASE = 'https://www.sefaria.org/api';
@@ -466,6 +467,10 @@ export class SefariaService {
         const noAseret = removeAseretYemeiTeshuvaBlockIfNotToday(rawHebrewStr, rawEnglishStr, new Date());
         rawHebrewStr = noAseret.hebrew;
         rawEnglishStr = noAseret.english;
+        // Remove Mashiv Haruach halacha paragraph (טעה ולא אמר בחורף... קיצור שו"ע יט)
+        const noMashivHalacha = removeMashivHaruachInstructionParagraph(rawHebrewStr, rawEnglishStr);
+        rawHebrewStr = noMashivHalacha.hebrew;
+        rawEnglishStr = noMashivHalacha.english;
       }
       // Mincha: split Korbanot vs Ashrei (Chatzi Kaddish removal is done in the reader, same as Bentching)
       if (sectionKey === 'mincha_korbanot' || sectionKey === 'mincha_ashrei') {
@@ -847,6 +852,12 @@ export class SefariaService {
         english = finalEnglishSegments.map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim();
       }
 
+      // Amidah: render "כי שם ה' אקרא... אדוני שפתי תפתח" in smaller text
+      if (sectionKey === 'amidah' || sectionKey === 'maariv_amidah' || sectionKey === 'mincha_amidah') {
+        finalHebrewSegments = this.markSefataiParagraphSmall(finalHebrewSegments);
+        finalEnglishSegments = this.markSefataiParagraphSmall(finalEnglishSegments);
+      }
+
       return {
         hebrew,
         english,
@@ -979,6 +990,55 @@ export class SefariaService {
         .replace(/\n\s*\n\s*/g, '\n\n')
         .trim()
     );
+  }
+
+  /**
+   * Mark the "כי שם ה' אקרא... אדוני שפתי תפתח" paragraph as smaller (italic) in Amidah segments.
+   * Works for both Hebrew and English (detects by content).
+   */
+  private static markSefataiParagraphSmall(segs: PrayerTextSegment[]): PrayerTextSegment[] {
+    const stripNikkud = (s: string) => s.replace(/[\u0591-\u05C7]/g, '');
+    const full = segs.map((s) => s.text).join('');
+    const stripped = stripNikkud(full);
+    let startStripped: number;
+    let endStripped: number;
+    const isLikelyEnglish = !/[\u0590-\u05FF]/.test(stripped.slice(0, Math.min(200, stripped.length)));
+    if (isLikelyEnglish) {
+      startStripped = stripped.search(/Lord,?\s*open\s+my\s+lips|Open\s+my\s+lips/i);
+      if (startStripped === -1) startStripped = stripped.search(/When I call out the name/i);
+      if (startStripped === -1) return segs;
+      const praiseMatch = stripped.slice(startStripped).match(/Your\s+praise\.?/i);
+      endStripped = praiseMatch
+        ? startStripped + (stripped.slice(startStripped).indexOf(praiseMatch[0]) + praiseMatch[0].length)
+        : stripped.length;
+    } else {
+      const startMarker = 'כי שם';
+      const endMarker = 'תהלתך';
+      startStripped = stripped.indexOf(startMarker);
+      if (startStripped === -1) startStripped = stripped.indexOf('שפתי תפתח');
+      if (startStripped === -1) return segs;
+      endStripped = stripped.indexOf(endMarker, startStripped);
+      if (endStripped === -1) return segs;
+      endStripped += endMarker.length;
+      while (endStripped < stripped.length && /[:\s\u0591-\u05C7]/.test(stripped[endStripped])) endStripped++;
+    }
+    const strippedToOriginal: number[] = [];
+    for (let i = 0; i < full.length; i++) {
+      if (!/[\u0591-\u05C7]/.test(full[i])) strippedToOriginal.push(i);
+    }
+    const startOriginal = strippedToOriginal[startStripped] ?? startStripped;
+    const endOriginal =
+      endStripped > 0 && endStripped <= strippedToOriginal.length
+        ? (strippedToOriginal[endStripped - 1] ?? endStripped - 1) + 1
+        : full.length;
+    const before = full.slice(0, startOriginal);
+    const phrase = full.slice(startOriginal, endOriginal);
+    const after = full.slice(endOriginal);
+    const out: PrayerTextSegment[] = [];
+    if (before.trim()) out.push({ text: before, italic: false });
+    if (phrase.trim()) out.push({ text: phrase, italic: true });
+    if (after.trim()) out.push({ text: after, italic: false });
+    return out.length > 0 ? out : segs;
   }
 
   /**
