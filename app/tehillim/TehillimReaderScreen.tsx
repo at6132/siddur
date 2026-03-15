@@ -10,7 +10,6 @@ import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../componen
 import { ReaderToolbar, HEBREW_FONT_SIZES, HEBREW_LINE_HEIGHTS } from '../../components/reader/ReaderToolbar';
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
 import { useAutoscroll } from '../../components/reader/useAutoscroll';
-import { useWebWheelScroll } from '../../components/reader/useWebWheelScroll';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles, fonts } from '../../src/design/typography';
@@ -74,13 +73,6 @@ export const TehillimReaderScreen: React.FC = () => {
   }, []);
 
   useAutoscroll(scrollRef, scrollYRef, contentHeightRef, viewportHeight, autoscrollPlaying, autoscrollSpeed);
-
-  const onWebWheel = useWebWheelScroll(
-    scrollRef as React.RefObject<{ scrollTo: (opts: { y?: number; x?: number; animated?: boolean }) => void } | null>,
-    () => scrollYRef.current,
-    () => contentHeightRef.current,
-    viewportHeight
-  );
 
   useEffect(() => {
     readingStartTime.current = Date.now();
@@ -232,7 +224,6 @@ export const TehillimReaderScreen: React.FC = () => {
         onScroll={(e) => {
           scrollYRef.current = e.nativeEvent.contentOffset.y;
         }}
-        onWheel={onWebWheel}
         onContentSizeChange={(_, h) => { contentHeightRef.current = h; }}
         scrollEventThrottle={16}
         bounces={true}

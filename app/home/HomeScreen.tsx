@@ -498,8 +498,10 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleReorder = useCallback(async (newPanels: HomePanel[]) => {
-    setPanels(newPanels);
-    await HomePanelsService.reorderPanels(newPanels.map(p => p.id));
+    const userPanels = newPanels.filter(p => !p.id.startsWith('auto-'));
+    userPanels.forEach((p, i) => { p.order = i; });
+    setPanels(userPanels);
+    await HomePanelsService.reorderPanels(userPanels.map(p => p.id));
   }, []);
 
   const handleResizePanel = useCallback(async (panelId: string) => {
@@ -650,7 +652,7 @@ export const HomeScreen: React.FC = () => {
           isUnremovableFn={isUnremovableFn}
           theme={theme}
           headerContent={
-            <View style={styles.scrollContent}>
+            <View style={styles.headerContentWrapper}>
               <View style={styles.headerRow}>
                 <Text style={styles.greeting}>{greeting}</Text>
                 <TouchableOpacity
@@ -807,6 +809,11 @@ function createHomeStyles(theme: AppTheme) {
     padding: spacing.lg,
     paddingTop: spacing['2xl'] + spacing.safeTopInset,
     paddingBottom: 100,
+  },
+  headerContentWrapper: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing['2xl'] + spacing.safeTopInset,
+    paddingBottom: spacing.md,
   },
   headerRow: {
     flexDirection: 'row',

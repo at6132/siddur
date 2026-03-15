@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import type { AnimatedRef } from 'react-native-reanimated';
 import Animated, {
   useSharedValue,
@@ -8,10 +8,10 @@ import Animated, {
 
 interface AutoScrollConfig {
   scrollRef: AnimatedRef<Animated.ScrollView>;
-  edgeThreshold?: number;   // px from edge to trigger (default 80)
-  maxSpeed?: number;        // max px/frame (default 8)
-  scrollViewHeight: number; // visible height of the scroll view
-  contentHeight: number;    // total content height
+  edgeThreshold?: number;
+  maxSpeed?: number;
+  scrollViewHeight: number;
+  contentHeight: number;
 }
 
 export function useAutoScroll({
@@ -22,23 +22,31 @@ export function useAutoScroll({
   contentHeight,
 }: AutoScrollConfig) {
   const isDragging = useSharedValue(false);
-  const dragY = useSharedValue(0);       // y position in scroll view coords
+  const dragY = useSharedValue(0);
   const scrollOffset = useSharedValue(0);
+  const viewHeight = useSharedValue(scrollViewHeight);
+  const totalHeight = useSharedValue(contentHeight);
+
+  // Keep shared values in sync with JS-side values
+  viewHeight.value = scrollViewHeight;
+  totalHeight.value = contentHeight;
 
   const frameCallback = useFrameCallback(() => {
     if (!isDragging.value) return;
 
+    const svHeight = viewHeight.value;
+    const cHeight = totalHeight.value;
+    if (svHeight <= 0) return;
+
     const distFromTop = dragY.value;
-    const distFromBottom = scrollViewHeight - dragY.value;
-    const maxScroll = Math.max(0, contentHeight - scrollViewHeight);
+    const distFromBottom = svHeight - dragY.value;
+    const maxScroll = Math.max(0, cHeight - svHeight);
 
     let speed = 0;
     if (distFromBottom < edgeThreshold && distFromBottom > 0) {
-      // Near bottom edge: scroll down
       const ratio = 1 - distFromBottom / edgeThreshold;
       speed = ratio * maxSpeed;
     } else if (distFromTop < edgeThreshold && distFromTop > 0) {
-      // Near top edge: scroll up
       const ratio = 1 - distFromTop / edgeThreshold;
       speed = -(ratio * maxSpeed);
     }
@@ -48,7 +56,7 @@ export function useAutoScroll({
       scrollOffset.value = newOffset;
       scrollTo(scrollRef, 0, newOffset, false);
     }
-  }, false); // start paused
+  }, false);
 
   const startAutoScroll = useCallback(() => {
     isDragging.value = true;

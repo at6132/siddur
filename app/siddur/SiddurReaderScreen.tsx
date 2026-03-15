@@ -30,7 +30,6 @@ import { BackButton } from '../../components/ui/BackButton';
 import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../components/reader/ReaderChrome';
 import { ReaderToolbar } from '../../components/reader/ReaderToolbar';
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
-import { useWebWheelScroll } from '../../components/reader/useWebWheelScroll';
 import type { DisplayPreferences } from '../../src/types/preferences';
 
 interface RouteParams {
@@ -1023,13 +1022,6 @@ export const SiddurReaderScreen: React.FC = () => {
   const contentHeightRef = useRef(0);
   const autoscrollRafRef = useRef<number | null>(null);
 
-  const onWebWheel = useWebWheelScroll(
-    scrollViewRef as React.RefObject<{ scrollTo: (opts: { y?: number; x?: number; animated?: boolean }) => void } | null>,
-    () => scrollYRef.current,
-    () => contentHeightRef.current,
-    height
-  );
-
   const loadPreferences = useCallback(async () => {
     try {
       const prefs = await UserPreferencesService.getPreferences();
@@ -1329,7 +1321,6 @@ export const SiddurReaderScreen: React.FC = () => {
         onContentSizeChange={(_, h) => {
           contentHeightRef.current = h;
         }}
-        onWheel={onWebWheel}
       >
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -1725,7 +1716,6 @@ export const SiddurReaderScreen: React.FC = () => {
           onContentSizeChange={(_, h) => {
             contentHeightRef.current = h;
           }}
-          onWheel={onWebWheel}
         >
           {isLoading ? (
             <View style={styles.sectionLoading}>

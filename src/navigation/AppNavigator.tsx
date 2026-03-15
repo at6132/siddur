@@ -32,6 +32,7 @@ import { RambamBookScreen } from '../../app/rambam/RambamBookScreen';
 import { RambamSectionScreen } from '../../app/rambam/RambamSectionScreen';
 import { RambamReaderScreen } from '../../app/rambam/RambamReaderScreen';
 import { ChumashScreen } from '../../app/chumash/ChumashScreen';
+import { ChumashParshahPickerScreen } from '../../app/chumash/ChumashParshahPickerScreen';
 import { ChumashReaderScreen } from '../../app/chumash/ChumashReaderScreen';
 import { PirkeiAvosScreen } from '../../app/library/PirkeiAvosScreen';
 import { AddCustomReminderScreen } from '../../app/settings/AddCustomReminderScreen';
@@ -352,6 +353,11 @@ export default function AppNavigator() {
           <Stack.Screen
             name="Chumash"
             component={ChumashScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ChumashParshahPicker"
+            component={ChumashParshahPickerScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen

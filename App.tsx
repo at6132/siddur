@@ -96,6 +96,78 @@ function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
   const { theme } = useTheme();
   const navigationRef = useNavigationContainerRef();
 
+  // Ensure document and root have full height on web so ScrollView gets bounded height
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const root = document.getElementById('root');
+    const style = document.createElement('style');
+    style.textContent = [
+      'html, body { height: 100%; margin: 0; overflow: hidden; }',
+      '#root { height: 100%; min-height: 100%; }',
+      '#app-scroll-container { overflow-y: scroll !important; -webkit-overflow-scrolling: touch; }',
+      '#app-scroll-container::-webkit-scrollbar { width: 10px; }',
+      '#app-scroll-container::-webkit-scrollbar-track { background: rgba(0,0,0,0.06); border-radius: 5px; }',
+      '#app-scroll-container::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.25); border-radius: 5px; }',
+      '#app-scroll-container::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.4); }',
+    ].join(' ');
+    document.head.appendChild(style);
+    if (root) {
+      root.style.height = '100%';
+      root.style.minHeight = '100%';
+    }
+    return () => {
+      document.head.removeChild(style);
+      if (root) {
+        root.style.height = '';
+        root.style.minHeight = '';
+      }
+    };
+  }, []);
+
+  // Web: global wheel listener - find scrollable element under pointer and scroll it
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const handleWheel = (e: WheelEvent) => {
+      const appScroll = document.getElementById('app-scroll-container');
+      // If we have the app scroll container and the pointer is over it, scroll it
+      if (appScroll && appScroll.scrollHeight > appScroll.clientHeight) {
+        const rect = appScroll.getBoundingClientRect();
+        const inside =
+          e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+        if (inside) {
+          const maxScroll = appScroll.scrollHeight - appScroll.clientHeight;
+          const next = Math.max(0, Math.min(maxScroll, appScroll.scrollTop + e.deltaY));
+          if (next !== appScroll.scrollTop) {
+            e.preventDefault();
+            e.stopPropagation();
+            appScroll.scrollTop = next;
+          }
+          return;
+        }
+      }
+      // Fallback: use elements under the pointer
+      const elements = document.elementsFromPoint(e.clientX, e.clientY);
+      for (let i = 0; i < elements.length; i++) {
+        const el = elements[i] as HTMLElement;
+        if (el === document.body || el === document.documentElement) break;
+        const sh = el.scrollHeight;
+        const ch = el.clientHeight;
+        if (sh > ch) {
+          const maxScroll = sh - ch;
+          const next = Math.max(0, Math.min(maxScroll, el.scrollTop + e.deltaY));
+          if (next !== el.scrollTop) {
+            e.preventDefault();
+            e.stopPropagation();
+            el.scrollTop = next;
+          }
+          return;
+        }
+      }
+    };
+    document.addEventListener('wheel', handleWheel, { passive: false, capture: true });
+    return () => document.removeEventListener('wheel', handleWheel, { capture: true });
+  }, []);
+
   useEffect(() => {
     if (Platform.OS === 'web') return;
     const handleNotification = (response: Notifications.NotificationResponse) => {
@@ -203,29 +275,47 @@ function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
     return () => sub.remove();
   }, []);
 
+  const AppWrapper = Platform.OS === 'web' ? View : GestureHandlerRootView;
   return (
-    <GestureHandlerRootView
-      style={[styles.container, { backgroundColor: theme.colors.background.primary }]}
+    <AppWrapper
+      style={[
+        styles.container,
+        Platform.OS === 'web' && styles.containerWeb,
+        { backgroundColor: theme.colors.background.primary },
+      ]}
       onLayout={onLayoutRootView}
     >
-      <NavigationContainer ref={navigationRef} theme={navigationTheme} onStateChange={onNavStateChange}>
-        <AppNavigator />
-        <StatusBar style={theme.statusBarStyle} />
-      </NavigationContainer>
-      {Platform.OS === 'ios' && (
-        <InputAccessoryView nativeID="globalDone">
-          <View style={styles.inputAccessory}>
-            <TouchableOpacity
-              style={styles.inputAccessoryDone}
-              onPress={() => Keyboard.dismiss()}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.inputAccessoryDoneText}>Done</Text>
-            </TouchableOpacity>
+      {Platform.OS === 'web' ? (
+        <>
+          <View style={styles.webScrollWrapper} nativeID="app-scroll-container">
+            <NavigationContainer ref={navigationRef} theme={navigationTheme} onStateChange={onNavStateChange}>
+              <AppNavigator />
+              <StatusBar style={theme.statusBarStyle} />
+            </NavigationContainer>
           </View>
-        </InputAccessoryView>
+        </>
+      ) : (
+        <>
+          <NavigationContainer ref={navigationRef} theme={navigationTheme} onStateChange={onNavStateChange}>
+            <AppNavigator />
+            <StatusBar style={theme.statusBarStyle} />
+          </NavigationContainer>
+          {Platform.OS === 'ios' && (
+            <InputAccessoryView nativeID="globalDone">
+              <View style={styles.inputAccessory}>
+                <TouchableOpacity
+                  style={styles.inputAccessoryDone}
+                  onPress={() => Keyboard.dismiss()}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.inputAccessoryDoneText}>Done</Text>
+                </TouchableOpacity>
+              </View>
+            </InputAccessoryView>
+          )}
+        </>
       )}
-    </GestureHandlerRootView>
+    </AppWrapper>
   );
 }
 
@@ -287,6 +377,17 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  containerWeb: {
+    height: '100vh',
+    overflow: 'hidden',
+  },
+  webScrollWrapper: {
+    flex: 1,
+    height: '100%',
+    overflowY: 'scroll',
+    overflowX: 'hidden',
+    WebkitOverflowScrolling: 'touch',
   },
   inputAccessory: {
     flexDirection: 'row',

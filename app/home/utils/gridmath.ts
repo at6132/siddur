@@ -29,7 +29,6 @@ export function computeGridPositions(
   panels: PanelLayout[],
   config: GridConfig,
 ): Record<string, GridPosition> {
-  'worklet';
   const { containerWidth, columns, gap, defaultItemHeight } = config;
   const colWidth = (containerWidth - gap * (columns - 1)) / columns;
   const positions: Record<string, GridPosition> = {};
@@ -89,7 +88,6 @@ export function hitTestGrid(
   pointY: number,
   excludeId?: string,
 ): string | null {
-  'worklet';
   for (const id in positions) {
     if (id === excludeId) continue;
     const pos = positions[id];
@@ -116,7 +114,6 @@ export function computeDropIndex(
   dragCenterX: number,
   dragCenterY: number,
 ): number {
-  'worklet';
   const draggedIdx = panels.findIndex(p => p.id === draggedId);
   const hitId = hitTestGrid(positions, dragCenterX, dragCenterY, draggedId);
   if (hitId === null) return draggedIdx;
@@ -133,7 +130,6 @@ export function reorderPanels<T>(
   fromIndex: number,
   toIndex: number,
 ): T[] {
-  'worklet';
   if (fromIndex === toIndex) return panels;
   const result = panels.slice();
   const [item] = result.splice(fromIndex, 1);
@@ -147,7 +143,6 @@ export function reorderPanels<T>(
 export function computeGridHeight(
   positions: Record<string, GridPosition>,
 ): number {
-  'worklet';
   let maxBottom = 0;
   for (const id in positions) {
     const pos = positions[id];
