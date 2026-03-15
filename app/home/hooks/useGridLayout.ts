@@ -12,7 +12,7 @@ import {
 
 const GRID_GAP = spacing.sm;
 const COLUMNS = 2;
-const DEFAULT_ITEM_HEIGHT = 120;
+const DEFAULT_ITEM_HEIGHT = 88;
 
 export function useGridLayout() {
   const { width: screenWidth } = Dimensions.get('window');

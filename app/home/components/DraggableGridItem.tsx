@@ -99,19 +99,22 @@ export const DraggableGridItem: React.FC<DraggableGridItemProps> = React.memo(({
 
   const animatedContainerStyle = useAnimatedStyle(() => {
     const pos = positions.value[id];
-    if (!pos) return { position: 'absolute' as const, opacity: 0, left: 0, top: 0, width: 0 };
+    if (!pos) return { position: 'absolute' as const, opacity: 0, left: 0, top: 0, width: 0, height: 0 };
 
     const isActive = activeId.value === id;
     const targetX = pos.x;
     const targetY = pos.y;
+    const slotHeight = pos.h > 0 ? pos.h : 88;
 
     return {
       position: 'absolute' as const,
       left: isActive ? targetX : withSpring(targetX, SPRING_CONFIG),
       top: isActive ? targetY : withSpring(targetY, SPRING_CONFIG),
       width: pos.w,
+      height: slotHeight,
       zIndex: zIndex.value,
       opacity: 1,
+      overflow: 'hidden' as const,
     };
   });
 

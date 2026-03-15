@@ -501,7 +501,11 @@ export const HomeScreen: React.FC = () => {
     const userPanels = newPanels.filter(p => !p.id.startsWith('auto-'));
     userPanels.forEach((p, i) => { p.order = i; });
     setPanels(userPanels);
-    await HomePanelsService.reorderPanels(userPanels.map(p => p.id));
+    try {
+      await HomePanelsService.reorderPanels(userPanels.map(p => p.id));
+    } catch (e) {
+      console.error('Failed to persist panel order:', e);
+    }
   }, []);
 
   const handleResizePanel = useCallback(async (panelId: string) => {

@@ -150,7 +150,8 @@ export const DraggableGrid: React.FC<DraggableGridProps> = ({
       setScrollEnabled(true);
       stopAutoScroll();
       const finalOrder = workingOrder.current.map((p, i) => ({ ...p, order: i }));
-      onReorder(finalOrder);
+      // Defer state update so we're not inside gesture finalize when React setState runs
+      setTimeout(() => onReorder(finalOrder), 0);
     },
     [activeId, stopAutoScroll, onReorder],
   );
