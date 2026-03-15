@@ -249,9 +249,9 @@ export const HubOverviewScreen: React.FC = () => {
           <FadeIn delay={100}>
             <StatTile
               icon="checkmark-circle-outline"
-              iconBg="rgba(16, 185, 129, 0.12)"
-              iconColor="#10B981"
-              accentColor="#10B981"
+              iconBg="rgba(212, 165, 184, 0.12)"
+              iconColor={colors.primary.main}
+              accentColor={colors.primary.main}
               label="Goals"
               value={timeFrame === 'day' 
                 ? `${goalsSummary.completed}/${goalsSummary.total}`
@@ -264,9 +264,9 @@ export const HubOverviewScreen: React.FC = () => {
           <FadeIn delay={150}>
             <StatTile
               icon="book-outline"
-              iconBg="rgba(99, 102, 241, 0.12)"
-              iconColor="#6366F1"
-              accentColor="#6366F1"
+              iconBg="rgba(212, 165, 184, 0.12)"
+              iconColor={colors.primary.main}
+              accentColor={colors.primary.main}
               label="Tehillim"
               value={timeFrame === 'day' 
                 ? `${tehillimProgress.percentComplete}%`
@@ -282,9 +282,9 @@ export const HubOverviewScreen: React.FC = () => {
           <FadeIn delay={200}>
             <StatTile
               icon="sparkles-outline"
-              iconBg="rgba(245, 158, 11, 0.12)"
-              iconColor="#F59E0B"
-              accentColor="#F59E0B"
+              iconBg="rgba(212, 165, 184, 0.12)"
+              iconColor={colors.primary.main}
+              accentColor={colors.primary.main}
               label="Brachos"
               value={`${brachosTotal}`}
               subtitle={`of ${brachosGoal} goal`}
@@ -296,9 +296,9 @@ export const HubOverviewScreen: React.FC = () => {
           <FadeIn delay={250}>
             <StatTile
               icon="heart-outline"
-              iconBg="rgba(236, 72, 153, 0.12)"
-              iconColor="#EC4899"
-              accentColor="#EC4899"
+              iconBg="rgba(212, 165, 184, 0.12)"
+              iconColor={colors.primary.main}
+              accentColor={colors.primary.main}
               label="Tzedakah"
               value={tzedakahTotal > 0 ? `$${tzedakahTotal.toFixed(0)}` : '$0'}
               subtitle={timeFrame === 'day' ? 'given today' : `given this ${timeFrame}`}
