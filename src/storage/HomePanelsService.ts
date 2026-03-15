@@ -107,6 +107,15 @@ const log = (tag: string, ...args: any[]) => {
   if (DEBUG_PANELS) console.log(`[HomePanelsService ${tag}]`, ...args);
 };
 
+/** Ensures only one read-modify-save runs at a time so rapid adds don't overwrite each other. */
+let writeLock: Promise<void> = Promise.resolve();
+function withWriteLock<T>(fn: () => Promise<T>): Promise<T> {
+  const prev = writeLock;
+  let resolve: () => void;
+  writeLock = new Promise<void>(r => { resolve = r; });
+  return prev.then(() => fn()).finally(() => resolve!());
+}
+
 export class HomePanelsService {
   /**
    * Get all configured panels
@@ -159,20 +168,22 @@ export class HomePanelsService {
    * Add a new panel
    */
   static async addPanel(type: PanelType, config?: Record<string, any>): Promise<void> {
-    const panels = await this.getPanels();
-    const definition = PANEL_DEFINITIONS.find(p => p.type === type);
-    
-    const newPanel: HomePanel = {
-      id: `${type}-${Date.now()}`,
-      type,
-      order: panels.length,
-      visible: true,
-      size: definition?.defaultSize || 'half',
-      config,
-    };
-    
-    panels.push(newPanel);
-    await this.savePanels(panels);
+    await withWriteLock(async () => {
+      const panels = await this.getPanels();
+      const definition = PANEL_DEFINITIONS.find(p => p.type === type);
+
+      const newPanel: HomePanel = {
+        id: `${type}-${Date.now()}`,
+        type,
+        order: panels.length,
+        visible: true,
+        size: definition?.defaultSize || 'half',
+        config,
+      };
+
+      panels.push(newPanel);
+      await this.savePanels(panels);
+    });
   }
 
   /** Panel types that cannot be removed (always on home when relevant). */
@@ -182,82 +193,94 @@ export class HomePanelsService {
    * Remove a panel
    */
   static async removePanel(panelId: string): Promise<void> {
-    log('removePanel', 'called', panelId);
-    const panels = await this.getPanels();
-    const panel = panels.find(p => p.id === panelId);
-    if (panel && this.UNREMOVABLE_TYPES.includes(panel.type as any)) {
-      log('removePanel', 'blocked - unremovable type', panel.type);
-      return;
-    }
-    log('removePanel', 'before filter', panels.length, panels.map(p => p.id));
-    const filtered = panels.filter(p => p.id !== panelId);
-    log('removePanel', 'after filter', filtered.length, filtered.map(p => p.id));
-    filtered.forEach((p, i) => p.order = i);
-    await this.savePanels(filtered);
-    log('removePanel', 'savePanels done');
+    await withWriteLock(async () => {
+      log('removePanel', 'called', panelId);
+      const panels = await this.getPanels();
+      const panel = panels.find(p => p.id === panelId);
+      if (panel && this.UNREMOVABLE_TYPES.includes(panel.type as any)) {
+        log('removePanel', 'blocked - unremovable type', panel.type);
+        return;
+      }
+      log('removePanel', 'before filter', panels.length, panels.map(p => p.id));
+      const filtered = panels.filter(p => p.id !== panelId);
+      log('removePanel', 'after filter', filtered.length, filtered.map(p => p.id));
+      filtered.forEach((p, i) => p.order = i);
+      await this.savePanels(filtered);
+      log('removePanel', 'savePanels done');
+    });
   }
 
   /**
    * Update panel order
    */
   static async reorderPanels(panelIds: string[]): Promise<void> {
-    const panels = await this.getPanels();
-    const reordered = panelIds.map((id, index) => {
-      const panel = panels.find(p => p.id === id);
-      if (panel) {
-        panel.order = index;
-      }
-      return panel;
-    }).filter(Boolean) as HomePanel[];
-    
-    await this.savePanels(reordered);
+    await withWriteLock(async () => {
+      const panels = await this.getPanels();
+      const reordered = panelIds.map((id, index) => {
+        const panel = panels.find(p => p.id === id);
+        if (panel) {
+          panel.order = index;
+        }
+        return panel;
+      }).filter(Boolean) as HomePanel[];
+
+      await this.savePanels(reordered);
+    });
   }
 
   /**
    * Toggle panel visibility
    */
   static async togglePanelVisibility(panelId: string): Promise<void> {
-    const panels = await this.getPanels();
-    const panel = panels.find(p => p.id === panelId);
-    if (panel) {
-      panel.visible = !panel.visible;
-      await this.savePanels(panels);
-    }
+    await withWriteLock(async () => {
+      const panels = await this.getPanels();
+      const panel = panels.find(p => p.id === panelId);
+      if (panel) {
+        panel.visible = !panel.visible;
+        await this.savePanels(panels);
+      }
+    });
   }
 
   /**
    * Update panel config
    */
   static async updatePanelConfig(panelId: string, config: Record<string, any>): Promise<void> {
-    const panels = await this.getPanels();
-    const panel = panels.find(p => p.id === panelId);
-    if (panel) {
-      panel.config = { ...panel.config, ...config };
-      await this.savePanels(panels);
-    }
+    await withWriteLock(async () => {
+      const panels = await this.getPanels();
+      const panel = panels.find(p => p.id === panelId);
+      if (panel) {
+        panel.config = { ...panel.config, ...config };
+        await this.savePanels(panels);
+      }
+    });
   }
 
   /**
    * Update panel size
    */
   static async updatePanelSize(panelId: string, size: PanelSize): Promise<void> {
-    log('updatePanelSize', panelId, size);
-    const panels = await this.getPanels();
-    const panel = panels.find(p => p.id === panelId);
-    if (panel) {
-      panel.size = size;
-      await this.savePanels(panels);
-      log('updatePanelSize', 'done');
-    } else {
-      log('updatePanelSize', 'panel not found');
-    }
+    await withWriteLock(async () => {
+      log('updatePanelSize', panelId, size);
+      const panels = await this.getPanels();
+      const panel = panels.find(p => p.id === panelId);
+      if (panel) {
+        panel.size = size;
+        await this.savePanels(panels);
+        log('updatePanelSize', 'done');
+      } else {
+        log('updatePanelSize', 'panel not found');
+      }
+    });
   }
 
   /**
    * Reset to default panels
    */
   static async resetToDefault(): Promise<void> {
-    await this.savePanels(DEFAULT_PANELS);
+    await withWriteLock(async () => {
+      await this.savePanels(DEFAULT_PANELS);
+    });
   }
 
   /**
