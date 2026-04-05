@@ -153,23 +153,29 @@ export const OmerScreen: React.FC = () => {
         </View>
 
         <View style={styles.focal}>
-          <Text style={[styles.nightWhisper, { color: theme.colors.text.tertiary }]}>
-            Night {omerDay} · week {weekNum}
-          </Text>
-          {isLagBaomer && (
-            <Text style={[styles.lagWhisper, { color: theme.colors.primary.dark }]}>
-              Lag BaOmer — a lighter day
+          <View style={styles.focalTop}>
+            <Text style={[styles.nightWhisper, { color: theme.colors.text.tertiary }]}>
+              Night {omerDay} · week {weekNum}
             </Text>
-          )}
-          <Text style={[styles.bigDay, { color: theme.colors.primary.main }]}>{omerDay}</Text>
-          <Text style={[styles.bigDayCaption, { color: theme.colors.text.secondary }]}>of 49</Text>
-          <View style={[styles.progressLine, { backgroundColor: `${theme.colors.primary.main}18` }]}>
-            <View
-              style={[
-                styles.progressLineFill,
-                { width: `${progress}%`, backgroundColor: theme.colors.primary.main },
-              ]}
-            />
+            {isLagBaomer && (
+              <Text style={[styles.lagWhisper, { color: theme.colors.primary.dark }]}>
+                Lag BaOmer — a lighter day
+              </Text>
+            )}
+          </View>
+          <View style={styles.focalDigitWrap}>
+            <Text style={[styles.bigDay, { color: theme.colors.primary.main }]}>{omerDay}</Text>
+          </View>
+          <View style={styles.focalBottom}>
+            <Text style={[styles.bigDayCaption, { color: theme.colors.text.secondary }]}>of 49</Text>
+            <View style={[styles.progressLine, { backgroundColor: `${theme.colors.primary.main}18` }]}>
+              <View
+                style={[
+                  styles.progressLineFill,
+                  { width: `${progress}%`, backgroundColor: theme.colors.primary.main },
+                ]}
+              />
+            </View>
           </View>
         </View>
 
@@ -258,6 +264,10 @@ function createStyles() {
       paddingVertical: spacing.xl,
       paddingHorizontal: spacing.md,
     },
+    focalTop: {
+      alignItems: 'center',
+      width: '100%',
+    },
     nightWhisper: {
       fontFamily: fonts.body.medium,
       fontSize: 13,
@@ -267,18 +277,29 @@ function createStyles() {
     lagWhisper: {
       fontFamily: fonts.body.medium,
       fontSize: 13,
-      marginBottom: spacing.sm,
+      marginBottom: 0,
+    },
+    focalDigitWrap: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: '100%',
+      paddingVertical: spacing.lg + spacing.sm,
+      minHeight: 104,
+    },
+    focalBottom: {
+      alignItems: 'center',
+      width: '100%',
     },
     bigDay: {
       fontFamily: fonts.heading.bold,
       fontSize: 72,
       lineHeight: 76,
       letterSpacing: -2,
+      textAlign: 'center',
     },
     bigDayCaption: {
       fontFamily: fonts.body.regular,
       fontSize: 16,
-      marginTop: -4,
       marginBottom: spacing.lg,
     },
     progressLine: {
