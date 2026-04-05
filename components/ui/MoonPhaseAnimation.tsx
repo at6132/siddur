@@ -6,18 +6,23 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
 
-const MOON_SIZE = 36;
+const MOON_SIZE_DEFAULT = 36;
+const MOON_SIZE_COMPACT = 24;
 const LUNAR_CYCLE = 29.5;
 
 interface MoonPhaseAnimationProps {
   jewishDay: number; // 1–30
   isDark?: boolean;
+  /** Smaller moon for half-width home tiles */
+  compact?: boolean;
 }
 
 export const MoonPhaseAnimation: React.FC<MoonPhaseAnimationProps> = ({
   jewishDay,
   isDark = false,
+  compact = false,
 }) => {
+  const MOON_SIZE = compact ? MOON_SIZE_COMPACT : MOON_SIZE_DEFAULT;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const glowAnim = useRef(new Animated.Value(0.6)).current;
 
@@ -67,11 +72,13 @@ export const MoonPhaseAnimation: React.FC<MoonPhaseAnimationProps> = ({
   const shadowColor = isDark ? 'rgba(20,18,30,0.95)' : 'rgba(230,228,235,0.98)';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, compact && styles.containerCompact]}>
       <Animated.View
         style={[
           styles.moonWrapper,
           {
+            width: MOON_SIZE + 12,
+            height: MOON_SIZE + 12,
             transform: [{ scale: pulseAnim }],
           },
         ]}
@@ -127,11 +134,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 6,
   },
+  containerCompact: {
+    marginBottom: 2,
+  },
   moonWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: MOON_SIZE + 12,
-    height: MOON_SIZE + 12,
   },
   moonCircle: {
     position: 'relative',
