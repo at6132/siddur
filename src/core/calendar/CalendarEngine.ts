@@ -81,8 +81,12 @@ export class CalendarEngine {
       isRoshChodesh
     );
 
-    // Omer: after sunset the halachic Hebrew day advances vs Hebcal's date-at-midnight mapping
-    const omerDay = OmerCalculator.getOmerDay(date, extendedZmanim.sunset ?? null);
+    // Omer: display night stays until tzeit (see getDisplayOmerDay).
+    const omerDay = OmerCalculator.getDisplayOmerDay(
+      date,
+      extendedZmanim.sunset ?? null,
+      extendedZmanim.tzeis ?? null
+    );
     const omerInfo = omerDay ? OmerCalculator.getOmerInfo(omerDay) : null;
 
     const spiritualCue = SpiritualCuesService.generateCue(date, omerDay);

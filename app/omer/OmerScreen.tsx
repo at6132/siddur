@@ -51,9 +51,12 @@ export const OmerScreen: React.FC = () => {
   const { theme } = useTheme();
   const styles = useMemo(() => createStyles(), []);
 
-  const [omerDay, setOmerDay] = useState<number | null>(null);
   const [todayCounted, setTodayCounted] = useState(false);
-  const [tzeis, setTzeis] = useState<Date | null>(null);
+  /** Sunset + tzeit for today; display/count nights derived with clock (see OmerCalculator). */
+  const [omerZmanim, setOmerZmanim] = useState<{
+    sunset: Date | null;
+    tzeis: Date | null;
+  } | null>(null);
   const [clock, setClock] = useState(() => new Date());
   const [checkAnim] = useState(new Animated.Value(0));
   const [showReflection, setShowReflection] = useState(false);
@@ -75,25 +78,41 @@ export const OmerScreen: React.FC = () => {
         timestamp: Date.now(),
       } as LocationObject;
     }
-    const ext = await ZmanimService.calculateExtendedZmanim(new Date(), locationObj);
-    const tz = ext.tzeis;
-    setTzeis(tz instanceof Date && !Number.isNaN(tz.getTime()) ? tz : null);
-
-    const day = await OmerCalculator.getOmerDayAsync(new Date(), locationObj);
-    setOmerDay(day);
-
-    if (day) {
-      const counts = await StorageService.getOmerCounts();
-      setTodayCounted(!!counts?.[day]);
-    } else {
-      setTodayCounted(false);
-    }
+    const now = new Date();
+    const ext = await ZmanimService.calculateExtendedZmanim(now, locationObj);
+    const tz = ext.tzeis instanceof Date && !Number.isNaN(ext.tzeis.getTime()) ? ext.tzeis : null;
+    const ss = ext.sunset instanceof Date && !Number.isNaN(ext.sunset.getTime()) ? ext.sunset : null;
+    setOmerZmanim({ sunset: ss, tzeis: tz });
   }, []);
 
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 30000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (!omerZmanim) {
+      setTodayCounted(false);
+      return;
+    }
+    const { sunset, tzeis } = omerZmanim;
+    const displayN = OmerCalculator.getDisplayOmerDay(clock, sunset, tzeis);
+    const countN = OmerCalculator.getOmerNightToCount(clock, sunset, tzeis);
+    if (displayN == null || countN == null) {
+      setTodayCounted(false);
+      return;
+    }
+    const after = !tzeis || clock >= tzeis;
+    let cancelled = false;
+    StorageService.getOmerCounts().then((counts) => {
+      if (cancelled) return;
+      const done = OmerCalculator.isOmerCaughtUp(after, countN, counts ?? undefined);
+      setTodayCounted(done);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [omerZmanim, clock]);
 
   useFocusEffect(
     useCallback(() => {
@@ -118,16 +137,19 @@ export const OmerScreen: React.FC = () => {
     }
   }, [todayCounted, checkAnim]);
 
+  const tzeis = omerZmanim?.tzeis ?? null;
+  const sunset = omerZmanim?.sunset ?? null;
+  const displayNight =
+    omerZmanim != null
+      ? OmerCalculator.getDisplayOmerDay(clock, sunset, tzeis)
+      : null;
+  const countNight =
+    omerZmanim != null
+      ? OmerCalculator.getOmerNightToCount(clock, sunset, tzeis)
+      : null;
+
   const afterTzeis = !tzeis || clock >= tzeis;
   const waitUntilTzeis = tzeis && !afterTzeis ? formatTimeUntilAt(clock, tzeis) : null;
-  const nextNight = omerDay != null && omerDay < 49 ? omerDay + 1 : null;
-
-  const toggleToday = async () => {
-    if (!omerDay || !afterTzeis) return;
-    const newCounted = !todayCounted;
-    await StorageService.markOmerDay(omerDay, newCounted);
-    setTodayCounted(newCounted);
-  };
 
   const toggleReflection = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -139,7 +161,18 @@ export const OmerScreen: React.FC = () => {
     outputRange: [0, 1.2],
   });
 
-  if (omerDay === null) {
+  if (omerZmanim === null) {
+    return (
+      <View style={styles.root}>
+        <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
+        <View style={[styles.headerMinimal, { paddingTop: insets.top + spacing.xs }]}>
+          <BackButton onPress={() => navigation.goBack()} />
+        </View>
+      </View>
+    );
+  }
+
+  if (displayNight === null) {
     return (
       <View style={styles.root}>
         <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
@@ -160,13 +193,22 @@ export const OmerScreen: React.FC = () => {
     );
   }
 
-  const weekNum = OmerCalculator.getOmerWeek(omerDay);
-  const blessing = OmerCalculator.getOmerBlessing(omerDay);
-  const meditation = OmerCalculator.getSefirahMeditation(omerDay);
+  const brachaNight = countNight ?? displayNight;
+
+  const toggleToday = async () => {
+    if (countNight == null || !afterTzeis) return;
+    const newCounted = !todayCounted;
+    await StorageService.markOmerDay(countNight, newCounted);
+    setTodayCounted(newCounted);
+  };
+
+  const weekNum = OmerCalculator.getOmerWeek(brachaNight);
+  const blessing = OmerCalculator.getOmerBlessing(brachaNight);
+  const meditation = OmerCalculator.getSefirahMeditation(brachaNight);
   const omerTonightTheme =
-    OmerCalculator.getOmerInfo(omerDay)?.meaning ?? meditation?.title ?? '';
-  const progress = (omerDay / 49) * 100;
-  const isLagBaomer = omerDay === 33;
+    OmerCalculator.getOmerInfo(brachaNight)?.meaning ?? meditation?.title ?? '';
+  const progress = (displayNight / 49) * 100;
+  const isLagBaomer = displayNight === 33;
 
   return (
     <View style={styles.root}>
@@ -187,7 +229,7 @@ export const OmerScreen: React.FC = () => {
         <View style={styles.focal}>
           <View style={styles.focalTop}>
             <Text style={[styles.nightWhisper, { color: theme.colors.text.tertiary }]}>
-              Night {omerDay} · week {weekNum}
+              Night {displayNight} · week {weekNum}
             </Text>
             {isLagBaomer && (
               <Text style={[styles.lagWhisper, { color: theme.colors.primary.dark }]}>
@@ -196,7 +238,7 @@ export const OmerScreen: React.FC = () => {
             )}
           </View>
           <View style={styles.focalDigitWrap}>
-            <Text style={[styles.bigDay, { color: theme.colors.primary.main }]}>{omerDay}</Text>
+            <Text style={[styles.bigDay, { color: theme.colors.primary.main }]}>{displayNight}</Text>
           </View>
           <View style={styles.focalBottom}>
             <Text style={[styles.bigDayCaption, { color: theme.colors.text.secondary }]}>of 49</Text>
@@ -224,9 +266,11 @@ export const OmerScreen: React.FC = () => {
 
           {!afterTzeis && (
             <Text style={[styles.doneButtonCaption, { color: theme.colors.text.secondary }]}>
-              {todayCounted && nextNight != null
-                ? `You counted this night. Night ${nextNight} begins after ${formatTimeLocal(tzeis ?? undefined)}${waitUntilTzeis ? ` · ${waitUntilTzeis} from now` : ''}.`
-                : `Say night ${omerDay} after nightfall (${formatTimeLocal(tzeis ?? undefined)})${waitUntilTzeis ? ` · ${waitUntilTzeis} left` : ''}.`}
+              {todayCounted
+                ? `Today is day ${displayNight}. ${waitUntilTzeis ? `In ${waitUntilTzeis}: day ${countNight}` : `Next: day ${countNight}`} (after nightfall ${formatTimeLocal(tzeis ?? undefined)}).`
+                : countNight != null
+                  ? `Today is day ${displayNight}. After nightfall (${formatTimeLocal(tzeis ?? undefined)}): day ${countNight}${waitUntilTzeis ? ` · ${waitUntilTzeis} from now` : ''}.`
+                  : null}
             </Text>
           )}
           <TouchableOpacity
@@ -253,11 +297,9 @@ export const OmerScreen: React.FC = () => {
                   { color: theme.isDark ? '#fff' : theme.colors.text.primary },
                 ]}
               >
-                {todayCounted && waitUntilTzeis
-                  ? `Next night in ${waitUntilTzeis}`
-                  : waitUntilTzeis
-                    ? `Opens in ${waitUntilTzeis}`
-                    : 'Wait for nightfall'}
+                {waitUntilTzeis && countNight != null
+                  ? `Day ${countNight} in ${waitUntilTzeis}`
+                  : 'Wait for nightfall'}
               </Text>
             ) : todayCounted ? (
               <Animated.Text style={[styles.doneButtonText, { transform: [{ scale: checkScale }] }]}>
@@ -283,7 +325,7 @@ export const OmerScreen: React.FC = () => {
               <View>
                 <Text style={[styles.reflectionMeta, { color: theme.colors.text.tertiary }]}>
                   <Text style={{ fontFamily: fonts.body.semiBold, color: theme.colors.text.secondary }}>
-                    You're on night {omerDay}
+                    You're on night {displayNight}
                   </Text>
                   {' '}
                   of the count. Tradition gives this night a focus —{' '}

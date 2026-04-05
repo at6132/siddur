@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import type { AnimatedRef } from 'react-native-reanimated';
 import Animated, {
   useSharedValue,
@@ -27,11 +27,16 @@ export function useAutoScroll({
   const viewHeight = useSharedValue(scrollViewHeight);
   const totalHeight = useSharedValue(contentHeight);
 
-  // Keep shared values in sync with JS-side values
-  viewHeight.value = scrollViewHeight;
-  totalHeight.value = contentHeight;
+  useEffect(() => {
+    viewHeight.value = scrollViewHeight;
+  }, [scrollViewHeight, viewHeight]);
+
+  useEffect(() => {
+    totalHeight.value = contentHeight;
+  }, [contentHeight, totalHeight]);
 
   const frameCallback = useFrameCallback(() => {
+    'worklet';
     if (!isDragging.value) return;
 
     const svHeight = viewHeight.value;

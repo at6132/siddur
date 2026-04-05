@@ -560,7 +560,7 @@ export const HomeScreen: React.FC = () => {
       .filter(p => !p.id.startsWith('auto-'))
       .map((p, i) => ({ ...p, order: i }));
     setPanels(() => [...userPanels]);
-    HomePanelsService.reorderPanels(userPanels.map(p => p.id)).catch(e =>
+    HomePanelsService.savePanelsWithOrder(userPanels).catch(e =>
       console.error('Failed to persist panel order:', e),
     );
   }, []);

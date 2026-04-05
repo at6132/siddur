@@ -12,6 +12,7 @@ import { JewishCalendarService } from '../core/calendar/JewishCalendar';
 import { UserPreferences } from '../types/preferences';
 import { CalendarContext } from '../types/calendar';
 import { OmerCalculator } from '../core/omer/OmerCalculator';
+import { ZmanimService } from '../core/zmanim/ZmanimService';
 import { toLocalDateString } from '../utils/dateUtils';
 import { GratitudeTracker } from '../storage/GratitudeTracker';
 import { DailyTehillimTracker } from '../storage/DailyTehillimTracker';
@@ -275,27 +276,35 @@ export class NotificationScheduler {
   }
 
   /**
-   * Schedule Omer reminders at the user's time (default 22:00) for each evening
-   * that falls in the Omer period in the next ~60 days. Uses DATE triggers so
-   * title/body match that night's count (daily repeat would freeze the day number).
+   * Schedule Omer reminders at nightfall (tzeit) for each evening in the Omer
+   * period over the next ~60 days — aligned with when the app enables counting.
+   * Uses DATE triggers so title/body match that night's count.
    */
   private static async scheduleOmerReminders(preferences: UserPreferences): Promise<void> {
-    const { hour, minute } = parseTime24h(
-      preferences.notifications.sefirasHaomerTime || '22:00'
-    );
     const location = preferencesToLocation(preferences);
     const now = new Date();
     for (let dayOffset = 0; dayOffset < 60; dayOffset++) {
-      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, hour, minute, 0, 0);
-      const omerDay = await OmerCalculator.getOmerDayAsync(d, location);
+      const noon = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate() + dayOffset,
+        12,
+        0,
+        0,
+        0
+      );
+      const ext = await ZmanimService.calculateExtendedZmanim(noon, location);
+      const tzeis = ext.tzeis;
+      if (!tzeis || Number.isNaN(tzeis.getTime())) continue;
+      if (!isFutureDate(tzeis)) continue;
+      const omerDay = await OmerCalculator.getOmerNightToCountAsync(tzeis, location);
       if (omerDay === null) continue;
-      if (!isFutureDate(d)) continue;
       const content = NotificationContentService.getOmerContent(omerDay);
       await scheduleSafe({
         content,
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: d,
+          date: tzeis,
         },
       });
     }

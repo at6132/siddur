@@ -9,6 +9,7 @@ import {
   type GridPosition,
   type PanelLayout,
 } from '../utils/gridmath';
+export { HALF_PANEL_SLOT_HEIGHT } from '../utils/gridLayoutConstants';
 
 const GRID_GAP = spacing.sm;
 const COLUMNS = 2;

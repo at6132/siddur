@@ -32,7 +32,7 @@ export interface PanelDefinition {
   explanation?: string;
 }
 
-// All available panels – two sizes only: half (shorter) or full (taller); all full width
+// All available panels – half = one column (fixed row height, pairs align); full = both columns (height from content)
 export const PANEL_DEFINITIONS: PanelDefinition[] = [
   // === ESSENTIAL ===
   { type: 'date', name: 'Date Card', description: 'Hebrew and Gregorian date with special day info', icon: '📅', category: 'essential', defaultSize: 'full', explanation: 'Shows today\'s Hebrew and secular date, and highlights special days (Rosh Chodesh, fast days, etc.).' },
@@ -229,6 +229,16 @@ export class HomePanelsService {
   }
 
   /**
+   * Save full panel objects (order, config, etc.) from the drag-and-drop result.
+   */
+  static async savePanelsWithOrder(panels: HomePanel[]): Promise<void> {
+    await withWriteLock(async () => {
+      const ordered = panels.map((p, i) => ({ ...p, order: i }));
+      await this.savePanels(ordered);
+    });
+  }
+
+  /**
    * Toggle panel visibility
    */
   static async togglePanelVisibility(panelId: string): Promise<void> {
@@ -252,24 +262,6 @@ export class HomePanelsService {
       if (panel) {
         panel.config = { ...panel.config, ...config };
         await this.savePanels(panels);
-      }
-    });
-  }
-
-  /**
-   * Update panel size
-   */
-  static async updatePanelSize(panelId: string, size: PanelSize): Promise<void> {
-    await withWriteLock(async () => {
-      log('updatePanelSize', panelId, size);
-      const panels = await this.getPanels();
-      const panel = panels.find(p => p.id === panelId);
-      if (panel) {
-        panel.size = size;
-        await this.savePanels(panels);
-        log('updatePanelSize', 'done');
-      } else {
-        log('updatePanelSize', 'panel not found');
       }
     });
   }

@@ -110,6 +110,70 @@ export class OmerCalculator {
   }
 
   /**
+   * Night number shown in the UI (home tile, big digit). Before today's tzeit it uses today's
+   * local noon with sunset — so we do not jump to the next number at civil sunset while still
+   * waiting for nightfall; the label stays on N until tzeit, then moves to the next night.
+   */
+  static getDisplayOmerDay(
+    now: Date,
+    sunset: Date | null | undefined,
+    tzeis: Date | null | undefined
+  ): number | null {
+    const s =
+      sunset instanceof Date && !Number.isNaN(sunset.getTime()) ? sunset : null;
+    const t =
+      tzeis instanceof Date && !Number.isNaN(tzeis.getTime()) ? tzeis : null;
+    if (t && now.getTime() < t.getTime()) {
+      const noon = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        12,
+        0,
+        0,
+        0
+      );
+      return this.getOmerDay(noon, s);
+    }
+    return this.getOmerDay(now, s);
+  }
+
+  /**
+   * Night index for storage / "tap to count" after tzeit. Before tzeit, the night that opens at
+   * the upcoming tzeit (so you can say "night 4 in 19h" while the UI still shows night 3).
+   */
+  static getOmerNightToCount(
+    now: Date,
+    sunset: Date | null | undefined,
+    tzeis: Date | null | undefined
+  ): number | null {
+    const s =
+      sunset instanceof Date && !Number.isNaN(sunset.getTime()) ? sunset : null;
+    const t =
+      tzeis instanceof Date && !Number.isNaN(tzeis.getTime()) ? tzeis : null;
+    if (t && now.getTime() < t.getTime()) {
+      return this.getOmerDay(t, s);
+    }
+    return this.getOmerDay(now, s);
+  }
+
+  /**
+   * "Caught up" for UI: after tzeit, you marked tonight's {@link getOmerNightToCount}.
+   * Before tzeit, you marked the night that already passed ({@code counts[countNight - 1]}),
+   * not {@code counts[displayNight]} (display can still be yesterday's number while countNight is next).
+   */
+  static isOmerCaughtUp(
+    afterTzeit: boolean,
+    countNight: number | null,
+    counts: Record<number, boolean> | null | undefined
+  ): boolean {
+    if (countNight == null) return false;
+    if (afterTzeit) return !!counts?.[countNight];
+    if (countNight <= 1) return false;
+    return !!counts?.[countNight - 1];
+  }
+
+  /**
    * Same as getOmerDay but uses location-based zmanim for sunset (or defaults).
    */
   static async getOmerDayAsync(
@@ -118,6 +182,22 @@ export class OmerCalculator {
   ): Promise<number | null> {
     const ext = await ZmanimService.calculateExtendedZmanim(date, location);
     return OmerCalculator.getOmerDay(date, ext.sunset ?? null);
+  }
+
+  static async getDisplayOmerDayAsync(
+    date: Date = new Date(),
+    location: LocationObject | null,
+  ): Promise<number | null> {
+    const ext = await ZmanimService.calculateExtendedZmanim(date, location);
+    return this.getDisplayOmerDay(date, ext.sunset ?? null, ext.tzeis ?? null);
+  }
+
+  static async getOmerNightToCountAsync(
+    date: Date = new Date(),
+    location: LocationObject | null,
+  ): Promise<number | null> {
+    const ext = await ZmanimService.calculateExtendedZmanim(date, location);
+    return this.getOmerNightToCount(date, ext.sunset ?? null, ext.tzeis ?? null);
   }
 
   /**

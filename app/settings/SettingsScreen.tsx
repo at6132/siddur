@@ -99,7 +99,7 @@ export const SettingsScreen: React.FC = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [reminderMenuId, setReminderMenuId] = useState<string | null>(null);
   const [timePickerFor, setTimePickerFor] = useState<
-    'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'omer' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'dailyGratitude' | 'daveningYaalehVyavo' | 'daveningAlHanissim' | 'daveningMashivVtenTal' | 'daveningAneinu' | 'daveningNachem' | 'daveningAvinuMalkeinu' | 'daveningSelichos' | null
+    'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'dailyGratitude' | 'daveningYaalehVyavo' | 'daveningAlHanissim' | 'daveningMashivVtenTal' | 'daveningAneinu' | 'daveningNachem' | 'daveningAvinuMalkeinu' | 'daveningSelichos' | null
   >(null);
   const [daveningAddOnsExpanded, setDaveningAddOnsExpanded] = useState(false);
   const [timePickerValue, setTimePickerValue] = useState('');
@@ -170,13 +170,12 @@ export const SettingsScreen: React.FC = () => {
   const dateTo24h = (d: Date): string =>
     `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
-  type TimePickerKind = 'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'omer' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'dailyGratitude' | 'daveningYaalehVyavo' | 'daveningAlHanissim' | 'daveningMashivVtenTal' | 'daveningAneinu' | 'daveningNachem' | 'daveningAvinuMalkeinu' | 'daveningSelichos';
+  type TimePickerKind = 'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'dailyGratitude' | 'daveningYaalehVyavo' | 'daveningAlHanissim' | 'daveningMashivVtenTal' | 'daveningAneinu' | 'daveningNachem' | 'daveningAvinuMalkeinu' | 'daveningSelichos';
   const openTimePicker = (which: TimePickerKind) => {
     if (!preferences) return;
     const n = preferences.notifications;
     let initial: string;
     if (which === 'tehillim') initial = formatTehillimTimeForDisplay(n.dailyTehillimTime || '09:00');
-    else if (which === 'omer') initial = formatTehillimTimeForDisplay(n.sefirasHaomerTime || '22:00');
     else if (which === 'hallelAnenu') initial = formatTehillimTimeForDisplay(n.hallelAnenuTime || '08:00');
     else if (which === 'roshChodesh') initial = formatTehillimTimeForDisplay(n.roshChodeshTime || '08:00');
     else if (which === 'fastDays') initial = formatTehillimTimeForDisplay(n.fastDaysTime || '08:00');
@@ -198,7 +197,6 @@ export const SettingsScreen: React.FC = () => {
     if (!preferences || !timePickerFor) return;
     const keyMap: Partial<Record<typeof timePickerFor, keyof NotificationPreferences>> = {
       tehillim: 'dailyTehillimTime',
-      omer: 'sefirasHaomerTime',
       hallelAnenu: 'hallelAnenuTime',
       roshChodesh: 'roshChodeshTime',
       fastDays: 'fastDaysTime',
@@ -1041,14 +1039,9 @@ export const SettingsScreen: React.FC = () => {
                         </View>
                         {preferences.notifications.sefirasHaomer && (
                           <View style={styles.notifSubOption}>
-                            <View style={styles.notifSubOptionRow}>
-                              <Text style={styles.subOptionLabel}>Time</Text>
-                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('omer')}>
-                                <Text style={styles.timeButtonText}>
-                                  {formatTehillimTimeForDisplay(preferences.notifications.sefirasHaomerTime || '22:00')}
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
+                            <Text style={styles.subOptionLabel}>
+                              At tzeit (nightfall) for your location — when the app unlocks counting. Set location under General if needed.
+                            </Text>
                           </View>
                         )}
                       </View>
@@ -1359,7 +1352,7 @@ export const SettingsScreen: React.FC = () => {
           <Pressable style={styles.timePickerBox} onPress={e => e.stopPropagation()}>
             <View style={styles.timePickerHeader}>
               <Text style={styles.timePickerTitle}>
-                {timePickerFor === 'tehillim' ? 'Tehillim' : timePickerFor === 'omer' ? 'Sefiras HaOmer' : timePickerFor === 'hallelAnenu' ? 'Hallel' : timePickerFor === 'roshChodesh' ? 'Rosh Chodesh' : timePickerFor === 'fastDays' ? 'Fast Days' : timePickerFor === 'dailyGratitude' ? 'Daily Gratitude' : timePickerFor === 'daveningYaalehVyavo' ? 'Yaaleh V\'Yavo' : timePickerFor === 'daveningAlHanissim' ? 'Al HaNisim' : timePickerFor === 'daveningMashivVtenTal' ? 'Mashiv HaRuach & V\'ten Tal' : timePickerFor === 'daveningAneinu' ? 'Aneinu' : timePickerFor === 'daveningNachem' ? 'Nachem' : timePickerFor === 'daveningAvinuMalkeinu' ? 'Avinu Malkeinu' : timePickerFor === 'daveningSelichos' ? 'Selichos' : timePickerFor === 'shacharis' ? 'Shacharis' : timePickerFor === 'mincha' ? 'Mincha' : 'Maariv'}
+                {timePickerFor === 'tehillim' ? 'Tehillim' : timePickerFor === 'hallelAnenu' ? 'Hallel' : timePickerFor === 'roshChodesh' ? 'Rosh Chodesh' : timePickerFor === 'fastDays' ? 'Fast Days' : timePickerFor === 'dailyGratitude' ? 'Daily Gratitude' : timePickerFor === 'daveningYaalehVyavo' ? 'Yaaleh V\'Yavo' : timePickerFor === 'daveningAlHanissim' ? 'Al HaNisim' : timePickerFor === 'daveningMashivVtenTal' ? 'Mashiv HaRuach & V\'ten Tal' : timePickerFor === 'daveningAneinu' ? 'Aneinu' : timePickerFor === 'daveningNachem' ? 'Nachem' : timePickerFor === 'daveningAvinuMalkeinu' ? 'Avinu Malkeinu' : timePickerFor === 'daveningSelichos' ? 'Selichos' : timePickerFor === 'shacharis' ? 'Shacharis' : timePickerFor === 'mincha' ? 'Mincha' : 'Maariv'}
               </Text>
               <Text style={styles.timePickerSubtitle}>Set reminder time</Text>
             </View>
