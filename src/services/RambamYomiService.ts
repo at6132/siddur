@@ -189,6 +189,8 @@ export const RAMBAM_BOOKS: {
 export interface RambamYomiResult {
   /** Display title, e.g. "Mishneh Torah, Hilchot Shabbat 1-3" */
   title: string;
+  /** Hebrew title from Hebcal, e.g. "הלכות שבת פרקים א-ג" */
+  titleHebrew?: string;
   /** Sefaria ref for API, e.g. "Mishneh Torah, Hilchot Shabbat 1-3" */
   sefariaRef: string;
   /** Sefaria URL from Hebcal link */
@@ -236,6 +238,7 @@ export async function getRambamYomiForDate(
     if (!item?.title?.trim()) return null;
 
     const title = item.title.trim();
+    const titleHebrew = (item.hebrew as string | undefined)?.trim()?.replace(/^רמב״ם יומי:\s*/, '') || undefined;
     const link = item.link?.trim();
 
     // Build Sefaria ref from link. Hebcal link: .../Mishneh_Torah%2C_Plaintiff_and_Defendant.13-15
@@ -262,7 +265,7 @@ export async function getRambamYomiForDate(
       sefariaRef = `Mishneh Torah, ${title}`;
     }
 
-    return { title, sefariaRef, link };
+    return { title, titleHebrew, sefariaRef, link };
   } catch {
     return null;
   }

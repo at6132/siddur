@@ -44,6 +44,41 @@ import { ShneyimMikraTracker } from '../../src/storage/ShneyimMikraTracker';
 import { DraggableGrid } from './components/DraggableGrid';
 import { renderPanelContent, type PanelRenderContext } from './components/PanelContentRenderer';
 
+function toHebrewNumeral(n: number): string {
+  if (n <= 0) return String(n);
+  const ones = ['', 'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט'];
+  const tens = ['', 'י', 'כ', 'ל', 'מ', 'נ', 'ס', 'ע', 'פ', 'צ'];
+  const hundreds = ['', 'ק', 'ר', 'ש', 'ת'];
+  let result = '';
+  let num = n;
+  if (num >= 400) {
+    const count400 = Math.floor(num / 400);
+    for (let i = 0; i < count400; i++) result += 'ת';
+    num %= 400;
+  }
+  if (num >= 100) {
+    result += hundreds[Math.floor(num / 100)];
+    num %= 100;
+  }
+  if (num === 15) {
+    result += 'טו';
+  } else if (num === 16) {
+    result += 'טז';
+  } else {
+    if (num >= 10) {
+      result += tens[Math.floor(num / 10)];
+      num %= 10;
+    }
+    result += ones[num];
+  }
+  if (result.length === 1) {
+    result += '׳';
+  } else if (result.length > 1) {
+    result = result.slice(0, -1) + '״' + result.slice(-1);
+  }
+  return result;
+}
+
 function hasNotableDaveningChanges(dc: DaveningChanges | null | undefined): boolean {
   if (!dc) return false;
   return (
@@ -382,7 +417,8 @@ export const HomeScreen: React.FC = () => {
       const res = await fetch(`https://www.hebcal.com/hebcal?cfg=json&v=1&F=on&start=${dateStr}&end=${dateStr}`);
       const data = await res.json();
       const item = data?.items?.find((e: { category?: string }) => e.category === 'dafyomi');
-      setDafYomiText(item?.title?.trim() || null);
+      const heb = (item?.hebrew as string | undefined)?.trim()?.replace(/^דף יומי:\s*/, '') || null;
+      setDafYomiText(heb || item?.title?.trim() || null);
     } catch {
       setDafYomiText(null);
     }
@@ -390,17 +426,17 @@ export const HomeScreen: React.FC = () => {
 
   const loadNachYomi = () => {
     const ch = getTodayNachYomi();
-    setNachYomiText(ch ? `${ch.book} ${ch.chapter}` : null);
+    setNachYomiText(ch ? `${ch.bookHebrew} ${toHebrewNumeral(ch.chapter)}` : null);
   };
 
   const loadMishnaYomi = () => {
     const p = getTodayMishnaYomi();
-    setMishnaYomiText(p ? `${p.tractate} ${p.perek}` : null);
+    setMishnaYomiText(p ? `${p.tractateHebrew} פרק ${toHebrewNumeral(p.perek)}` : null);
   };
 
   const loadRambamYomi = async () => {
     const r = await getTodayRambamYomi(3);
-    setRambamYomiText(r?.title ?? null);
+    setRambamYomiText(r?.titleHebrew ?? r?.title ?? null);
   };
 
   const loadShneyimMikra = async () => {
