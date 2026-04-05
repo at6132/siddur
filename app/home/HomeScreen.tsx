@@ -226,10 +226,16 @@ export const HomeScreen: React.FC = () => {
         timestamp: Date.now(),
       } as import('expo-location').LocationObject;
     }
-    const day = await OmerCalculator.getOmerDayAsync(new Date(), locationObj);
-    if (day) {
+    const now = new Date();
+    const ext = await ZmanimService.calculateExtendedZmanim(now, locationObj);
+    const tzeis = ext.tzeis instanceof Date && !Number.isNaN(ext.tzeis.getTime()) ? ext.tzeis : null;
+    const afterTzeis = !tzeis || now >= tzeis;
+    const displayD = OmerCalculator.getDisplayOmerDay(now, ext.sunset ?? null, ext.tzeis ?? null);
+    const countD = OmerCalculator.getOmerNightToCount(now, ext.sunset ?? null, ext.tzeis ?? null);
+    if (displayD != null && countD != null) {
       const counts = await StorageService.getOmerCounts();
-      setOmerCountedToday(!!counts?.[day]);
+      const done = OmerCalculator.isOmerCaughtUp(afterTzeis, countD, counts ?? undefined);
+      setOmerCountedToday(done);
     } else {
       setOmerCountedToday(false);
     }
@@ -513,25 +519,15 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleReorder = useCallback(async (newPanels: HomePanel[]) => {
+  const handleReorder = useCallback((newPanels: HomePanel[]) => {
     const userPanels = newPanels
       .filter(p => !p.id.startsWith('auto-'))
       .map((p, i) => ({ ...p, order: i }));
-    setPanels(userPanels);
-    try {
-      await HomePanelsService.reorderPanels(userPanels.map(p => p.id));
-    } catch (e) {
-      console.error('Failed to persist panel order:', e);
-    }
+    setPanels(() => [...userPanels]);
+    HomePanelsService.reorderPanels(userPanels.map(p => p.id)).catch(e =>
+      console.error('Failed to persist panel order:', e),
+    );
   }, []);
-
-  const handleResizePanel = useCallback(async (panelId: string) => {
-    const panel = panels.find(p => p.id === panelId);
-    if (!panel) return;
-    const newSize = panel.size === 'half' ? 'full' : 'half';
-    await HomePanelsService.updatePanelSize(panelId, newSize);
-    await loadPanels();
-  }, [panels]);
 
   const formatTime = (date: Date | undefined) => {
     if (!date) return '--:--';
@@ -667,7 +663,6 @@ export const HomeScreen: React.FC = () => {
           isEditing={isEditing}
           onReorder={handleReorder}
           onRemove={handleRemovePanel}
-          onResize={handleResizePanel}
           renderPanelContent={handleRenderPanelContent}
           isAutoPanelFn={isAutoPanelFn}
           isUnremovableFn={isUnremovableFn}
@@ -692,7 +687,7 @@ export const HomeScreen: React.FC = () => {
                     Long-press and drag to move • Drop to reorder
                   </Text>
                   <Text style={[styles.editInstructionsText, styles.editInstructionsSubtext]}>
-                    Tap − to remove • Tap ⤢ to resize
+                    Tap − to remove a widget
                   </Text>
                   <TouchableOpacity
                     style={styles.resetButton}
@@ -1231,7 +1226,7 @@ function createHomeStyles(theme: AppTheme) {
     marginTop: 4,
   },
 
-  // Inspiration Quote Panel
+  // Inspiration Quote Panel — content sits on GlassCard blur only (no nested frosted box)
   inspirationPanel: {
     alignItems: 'center',
     paddingVertical: spacing.sm,
@@ -1468,6 +1463,9 @@ function createHomeStyles(theme: AppTheme) {
     marginTop: spacing.sm,
     gap: spacing.sm,
   },
+  omerCheckRowDisabled: {
+    opacity: 0.72,
+  },
   omerCheckbox: {
     width: 22,
     height: 22,
@@ -1481,6 +1479,14 @@ function createHomeStyles(theme: AppTheme) {
     backgroundColor: theme.colors.primary.main,
     borderColor: theme.colors.primary.main,
   },
+  omerCheckboxCheckedWaiting: {
+    backgroundColor: theme.isDark ? theme.colors.neutral[600] : theme.colors.neutral[400],
+    borderColor: theme.isDark ? theme.colors.neutral[500] : theme.colors.neutral[400],
+  },
+  omerCheckboxDisabled: {
+    borderColor: theme.colors.neutral[400],
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+  },
   omerCheckmark: {
     color: '#fff',
     fontSize: 14,
@@ -1490,6 +1496,10 @@ function createHomeStyles(theme: AppTheme) {
     fontFamily: fonts.body.medium,
     fontSize: 13,
     color: theme.colors.text.primary,
+  },
+  omerCheckLabelMuted: {
+    color: theme.colors.text.tertiary,
+    fontSize: 12,
   },
   omerInactive: {
     fontFamily: fonts.body.regular,
@@ -2487,6 +2497,186 @@ function createHomeStyles(theme: AppTheme) {
     fontSize: 12,
     color: theme.colors.text.secondary,
     marginTop: 2,
+  },
+
+  // Half-width tiles (fixed row height): fill slot, tighter type
+  halfPanelInner: {
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
+    justifyContent: 'center',
+  },
+  halfCenterStack: {
+    paddingVertical: 0,
+  },
+  halfEmoji: {
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  halfHeading: {
+    fontSize: 11,
+    marginBottom: 0,
+  },
+  halfBody: {
+    fontSize: 10,
+    lineHeight: 13,
+    marginTop: 2,
+  },
+  zmanimRowHalf: {
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+  },
+  tehillimHalfHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  tehillimHalfIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(212, 165, 184, 0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tehillimHalfIconText: {
+    fontSize: 14,
+  },
+  tehillimHalfInfo: {
+    flex: 1,
+    marginLeft: spacing.xs,
+    minWidth: 0,
+  },
+  tehillimHalfTitle: {
+    fontFamily: fonts.heading.semibold,
+    fontSize: 12,
+    color: theme.colors.text.primary,
+  },
+  tehillimHalfMessage: {
+    fontFamily: fonts.body.regular,
+    fontSize: 10,
+    color: theme.colors.text.secondary,
+    marginTop: 1,
+  },
+  tehillimHalfPercentWrap: {
+    backgroundColor: 'rgba(212, 165, 184, 0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+  },
+  tehillimHalfPercent: {
+    fontFamily: fonts.body.bold,
+    fontSize: 12,
+    color: theme.colors.primary.dark,
+  },
+  tehillimHalfProgressWrap: {
+    marginTop: 4,
+  },
+  tehillimHalfProgressBg: {
+    height: 4,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  tehillimHalfFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  tehillimHalfFooterText: {
+    fontFamily: fonts.body.regular,
+    fontSize: 10,
+    color: theme.colors.text.tertiary,
+    flex: 1,
+    marginRight: spacing.xs,
+  },
+  tehillimHalfContinue: {
+    fontFamily: fonts.body.semibold,
+    fontSize: 10,
+    color: theme.colors.primary.main,
+  },
+  dafYomiButtonHalf: {
+    minHeight: 0,
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+  },
+  dafButtonIconHalf: {
+    fontSize: 15,
+    marginBottom: 2,
+  },
+  dafButtonTitleHalf: {
+    fontSize: 12,
+    marginBottom: 0,
+  },
+  dafButtonSubtextHalf: {
+    fontFamily: fonts.body.medium,
+    fontSize: 10,
+    lineHeight: 13,
+  },
+  fastDayHalfHeader: {
+    marginBottom: spacing.xs,
+  },
+  fastDayHalfIcon: {
+    fontSize: 20,
+    marginRight: spacing.xs,
+  },
+  fastDayHalfTitle: {
+    fontSize: 14,
+  },
+  fastDayHalfSubtitle: {
+    fontSize: 10,
+    marginTop: 1,
+  },
+  fastDayHalfProgressRow: {
+    marginBottom: spacing.xs,
+  },
+  fastProgressBarHalf: {
+    height: 6,
+  },
+  fastTimesRowHalf: {
+    marginTop: 0,
+  },
+  fastTimeValueHalf: {
+    fontSize: 12,
+  },
+  omerCheckRowHalf: {
+    marginTop: spacing.xs,
+    gap: spacing.xs,
+  },
+  omerWaitHalf: {
+    fontSize: 10,
+    lineHeight: 13,
+    marginTop: 2,
+  },
+  omerCheckLabelHalf: {
+    fontSize: 11,
+    flex: 1,
+  },
+  wordPanelHalf: {
+    paddingVertical: 0,
+  },
+  wordHebrewHalf: {
+    fontSize: 16,
+    marginBottom: 2,
+  },
+  wordMeaningHalf: {
+    fontSize: 10,
+  },
+  counterNumberHalf: {
+    fontSize: 18,
+  },
+  counterTextHalf: {
+    fontSize: 10,
+    marginTop: 1,
+  },
+  tzedakahTextHalf: {
+    fontSize: 10,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  statsSubtextHalf: {
+    fontSize: 10,
+    marginTop: 1,
   },
 
   // Hebrew Birthday Modal
