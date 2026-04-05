@@ -176,7 +176,7 @@ export const SettingsScreen: React.FC = () => {
     const n = preferences.notifications;
     let initial: string;
     if (which === 'tehillim') initial = formatTehillimTimeForDisplay(n.dailyTehillimTime || '09:00');
-    else if (which === 'omer') initial = formatTehillimTimeForDisplay(n.sefirasHaomerTime || '20:30');
+    else if (which === 'omer') initial = formatTehillimTimeForDisplay(n.sefirasHaomerTime || '22:00');
     else if (which === 'hallelAnenu') initial = formatTehillimTimeForDisplay(n.hallelAnenuTime || '08:00');
     else if (which === 'roshChodesh') initial = formatTehillimTimeForDisplay(n.roshChodeshTime || '08:00');
     else if (which === 'fastDays') initial = formatTehillimTimeForDisplay(n.fastDaysTime || '08:00');
@@ -1045,7 +1045,7 @@ export const SettingsScreen: React.FC = () => {
                               <Text style={styles.subOptionLabel}>Time</Text>
                               <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('omer')}>
                                 <Text style={styles.timeButtonText}>
-                                  {formatTehillimTimeForDisplay(preferences.notifications.sefirasHaomerTime || '20:30')}
+                                  {formatTehillimTimeForDisplay(preferences.notifications.sefirasHaomerTime || '22:00')}
                                 </Text>
                               </TouchableOpacity>
                             </View>

@@ -113,10 +113,11 @@ export class NotificationContentService {
    */
   static getOmerContent(omerDay: number): NotificationContent {
     const blessing = OmerCalculator.getOmerBlessing(omerDay);
+    const body = `${blessing.count} ${blessing.sefira}`.trim();
 
     return {
-      title: `Tonight is day ${omerDay} of the Omer`,
-      body: blessing.english,
+      title: `Time to count — night ${omerDay} of the Omer`,
+      body: body.length > 0 ? body : "Open the app for tonight's count and bracha.",
       data: { screen: 'Omer', omerDay },
     };
   }

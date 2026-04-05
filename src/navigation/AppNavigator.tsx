@@ -188,16 +188,7 @@ export default function AppNavigator() {
           <Stack.Screen
             name="Omer"
             component={OmerScreen}
-            options={{
-              headerShown: true,
-              headerStyle: {
-                backgroundColor: theme.colors.background.glass,
-              },
-              headerTintColor: theme.colors.text.primary,
-              headerTitleStyle: {
-                ...textStyles.h4,
-              },
-            }}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Habits"

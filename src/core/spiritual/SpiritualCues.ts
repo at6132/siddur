@@ -37,9 +37,13 @@ export class SpiritualCuesService {
   };
 
   /**
-   * Generate a spiritual cue for a given date
+   * Generate a spiritual cue for a given date.
+   * @param resolvedOmerDay - when set (incl. null), skips internal Omer calc; pass from CalendarEngine with sunset-aware day
    */
-  static generateCue(date: Date = new Date()): SpiritualCue | undefined {
+  static generateCue(
+    date: Date = new Date(),
+    resolvedOmerDay?: number | null,
+  ): SpiritualCue | undefined {
     // Check for special days
     if (JewishCalendarService.isShabbos(date)) {
       return {
@@ -55,8 +59,8 @@ export class SpiritualCuesService {
       };
     }
 
-    // Check Omer period
-    const omerDay = OmerCalculator.getOmerDay(date);
+    const omerDay =
+      resolvedOmerDay !== undefined ? resolvedOmerDay : OmerCalculator.getOmerDay(date);
     if (omerDay !== null) {
       return {
         text: `Day ${omerDay} of the Omer`,

@@ -210,7 +210,23 @@ export const HomeScreen: React.FC = () => {
   }, []);
 
   const loadOmerCounted = useCallback(async () => {
-    const day = OmerCalculator.getOmerDay();
+    const prefs = await UserPreferencesService.getPreferences();
+    let locationObj = null;
+    if (prefs?.location) {
+      locationObj = {
+        coords: {
+          latitude: prefs.location.latitude,
+          longitude: prefs.location.longitude,
+          altitude: null,
+          accuracy: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+        },
+        timestamp: Date.now(),
+      } as import('expo-location').LocationObject;
+    }
+    const day = await OmerCalculator.getOmerDayAsync(new Date(), locationObj);
     if (day) {
       const counts = await StorageService.getOmerCounts();
       setOmerCountedToday(!!counts?.[day]);

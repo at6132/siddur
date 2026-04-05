@@ -3,7 +3,9 @@
  * Calculates the day of the Omer count with sefiros
  */
 
-import { HDate } from '@hebcal/core';
+import type { LocationObject } from 'expo-location';
+import { HDate, months } from '@hebcal/core';
+import { ZmanimService } from '../zmanim/ZmanimService';
 
 // The 7 sefiros (middos) of the Omer
 const SEFIROS = [
@@ -67,37 +69,55 @@ export interface OmerInfo {
 
 export class OmerCalculator {
   /**
-   * Get the current Omer day (1-49) or null if not in Omer period
+   * Core Omer index from a Hebrew calendar date (16 Nisan = day 1 … 5 Sivan = day 49).
    */
-  static getOmerDay(date: Date = new Date()): number | null {
-    const hdate = new HDate(date);
-    const year = hdate.getFullYear();
+  private static omerDayFromHebrewDate(hd: HDate): number | null {
+    const hyear = hd.getFullYear();
+    const abs = hd.abs();
 
-    // Omer starts on 16 Nisan (2nd day of Pesach)
-    const omerStart = new HDate(16, 1, year); // 1 = Nisan
-    const omerStartGregorian = omerStart.greg();
+    const beginOmer = HDate.hebrew2abs(hyear, months.NISAN, 16);
+    const endOmer = HDate.hebrew2abs(hyear, months.SIVAN, 5);
 
-    // Shavuos is on 6 Sivan (day 50, so Omer ends on day 49)
-    const shavuos = new HDate(6, 3, year); // 3 = Sivan
-    const shavuosGregorian = shavuos.greg();
-
-    // Check if date is in Omer period
-    if (date < omerStartGregorian || date >= shavuosGregorian) {
+    if (abs < beginOmer || abs > endOmer) {
       return null;
     }
 
-    // Calculate Omer day
-    const daysSinceStart = Math.floor(
-      (date.getTime() - omerStartGregorian.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    const omerDay = daysSinceStart + 1;
-
+    const omerDay = abs - beginOmer + 1;
     if (omerDay < 1 || omerDay > 49) {
       return null;
     }
 
     return omerDay;
+  }
+
+  /**
+   * Omer day for a moment in time.
+   * @param sunset - Shkiah for this **civil** day (from zmanim). When `date` is at or
+   *   after sunset, the halachic Hebrew day has advanced vs Hebcal's plain `new HDate(date)`
+   *   (which ignores clock time), so we use the next Hebrew day — fixes "shows 2, should be 3"
+   *   on weeknights after sunset.
+   */
+  static getOmerDay(date: Date = new Date(), sunset?: Date | null): number | null {
+    let hd = new HDate(date);
+    if (
+      sunset &&
+      !Number.isNaN(sunset.getTime()) &&
+      date.getTime() >= sunset.getTime()
+    ) {
+      hd = hd.add(1, 'days');
+    }
+    return this.omerDayFromHebrewDate(hd);
+  }
+
+  /**
+   * Same as getOmerDay but uses location-based zmanim for sunset (or defaults).
+   */
+  static async getOmerDayAsync(
+    date: Date = new Date(),
+    location: LocationObject | null,
+  ): Promise<number | null> {
+    const ext = await ZmanimService.calculateExtendedZmanim(date, location);
+    return OmerCalculator.getOmerDay(date, ext.sunset ?? null);
   }
 
   /**

@@ -81,12 +81,11 @@ export class CalendarEngine {
       isRoshChodesh
     );
 
-    // Get spiritual cue
-    const spiritualCue = SpiritualCuesService.generateCue(date);
-
-    // Get Omer info
-    const omerDay = OmerCalculator.getOmerDay(date);
+    // Omer: after sunset the halachic Hebrew day advances vs Hebcal's date-at-midnight mapping
+    const omerDay = OmerCalculator.getOmerDay(date, extendedZmanim.sunset ?? null);
     const omerInfo = omerDay ? OmerCalculator.getOmerInfo(omerDay) : null;
+
+    const spiritualCue = SpiritualCuesService.generateCue(date, omerDay);
 
     // Get season
     const season = JewishCalendarService.getSeason(date);

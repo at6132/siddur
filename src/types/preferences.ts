@@ -163,7 +163,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   fastDays: true,
   fastDaysTime: '08:00',
   sefirasHaomer: true,
-  sefirasHaomerTime: '20:30',
+  sefirasHaomerTime: '22:00',
   dailyGratitude: true,
   dailyGratitudeTime: '20:00',
   shekiyaReminder: true,

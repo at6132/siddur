@@ -4,6 +4,7 @@
  */
 
 import { Platform } from 'react-native';
+import type { LocationObject } from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { NotificationContentService } from './NotificationContent';
 import { CalendarEngine } from '../core/calendar/CalendarEngine';
@@ -48,6 +49,23 @@ function parseTime24h(hhmm: string): { hour: number; minute: number } {
 /** iOS rejects dates in the past - ensure trigger is at least 60s in the future */
 function isFutureDate(date: Date): boolean {
   return date.getTime() > Date.now() + 60 * 1000;
+}
+
+function preferencesToLocation(preferences: UserPreferences): LocationObject | null {
+  const loc = preferences.location;
+  if (!loc) return null;
+  return {
+    coords: {
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      altitude: null,
+      accuracy: null,
+      altitudeAccuracy: null,
+      heading: null,
+      speed: null,
+    },
+    timestamp: Date.now(),
+  } as LocationObject;
 }
 
 /** Schedule notification safely - catches iOS/Android trigger errors */
@@ -128,12 +146,9 @@ export class NotificationScheduler {
       await this.scheduleShabbosReminders(preferences, context);
     }
 
-    // Omer (use user's time)
+    // Omer: one notification per evening during the Omer window (correct day in each alert)
     if (preferences.notifications.sefirasHaomer) {
-      const omerDay = OmerCalculator.getOmerDay();
-      if (omerDay !== null) {
-        await this.scheduleOmerReminder(omerDay, preferences);
-      }
+      await this.scheduleOmerReminders(preferences);
     }
 
     // Rosh Chodesh & Fast Days
@@ -260,22 +275,30 @@ export class NotificationScheduler {
   }
 
   /**
-   * Schedule Omer reminder at user's chosen time
+   * Schedule Omer reminders at the user's time (default 22:00) for each evening
+   * that falls in the Omer period in the next ~60 days. Uses DATE triggers so
+   * title/body match that night's count (daily repeat would freeze the day number).
    */
-  private static async scheduleOmerReminder(
-    omerDay: number,
-    preferences: UserPreferences
-  ): Promise<void> {
-    const content = NotificationContentService.getOmerContent(omerDay);
+  private static async scheduleOmerReminders(preferences: UserPreferences): Promise<void> {
     const { hour, minute } = parseTime24h(
-      preferences.notifications.sefirasHaomerTime || '20:30'
+      preferences.notifications.sefirasHaomerTime || '22:00'
     );
-    const trigger = {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute,
-    };
-    await scheduleSafe({ content, trigger });
+    const location = preferencesToLocation(preferences);
+    const now = new Date();
+    for (let dayOffset = 0; dayOffset < 60; dayOffset++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + dayOffset, hour, minute, 0, 0);
+      const omerDay = await OmerCalculator.getOmerDayAsync(d, location);
+      if (omerDay === null) continue;
+      if (!isFutureDate(d)) continue;
+      const content = NotificationContentService.getOmerContent(omerDay);
+      await scheduleSafe({
+        content,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: d,
+        },
+      });
+    }
   }
 
   /**
