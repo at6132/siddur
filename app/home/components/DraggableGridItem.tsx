@@ -30,7 +30,7 @@ export interface DraggableGridItemProps {
   canResize?: boolean;
   currentSize?: 'half' | 'full';
   scrollOffset: SharedValue<number>;
-  containerOffsetY: number;
+  containerOffsetY: SharedValue<number>;
   theme: any;
 }
 
@@ -78,7 +78,7 @@ export const DraggableGridItem: React.FC<DraggableGridItemProps> = React.memo(({
         translateX.value = e.translationX;
         translateY.value = e.translationY + scrollDelta;
         const absX = e.absoluteX;
-        const absY = e.absoluteY + scrollOffset.value - containerOffsetY;
+        const absY = e.absoluteY + scrollOffset.value - containerOffsetY.value;
         runOnJS(onDragMove)(id, absX, absY);
       })
       .onFinalize(() => {
@@ -92,8 +92,13 @@ export const DraggableGridItem: React.FC<DraggableGridItemProps> = React.memo(({
         }
       });
   }, [
-    isEditing, isAutoPanel, id,
-    onDragStart, onDragMove, onDragEnd,
+    isEditing,
+    isAutoPanel,
+    id,
+    onDragStart,
+    onDragMove,
+    onDragEnd,
+    scrollOffset,
     containerOffsetY,
   ]);
 

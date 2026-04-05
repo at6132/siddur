@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, LayoutChangeEvent } from 'react-native';
+import { View, StyleSheet, LayoutChangeEvent, InteractionManager } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -55,10 +55,11 @@ export const DraggableGrid: React.FC<DraggableGridProps> = ({
   const [scrollEnabled, setScrollEnabled] = useState(true);
   const [scrollViewHeight, setScrollViewHeight] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
-  const containerOffsetY = useRef(0);
+  const containerOffsetY = useSharedValue(0);
   const itemHeights = useRef<Record<string, number>>({});
 
   const workingOrder = useRef<HomePanel[]>([]);
+  const pendingReorderCancel = useRef<(() => void) | null>(null);
 
   const { startAutoScroll, stopAutoScroll, updateDragPosition, updateScrollOffset, scrollOffset } =
     useAutoScroll({
@@ -102,8 +103,8 @@ export const DraggableGrid: React.FC<DraggableGridProps> = ({
   );
 
   const handleContainerLayout = useCallback((event: LayoutChangeEvent) => {
-    containerOffsetY.current = event.nativeEvent.layout.y;
-  }, []);
+    containerOffsetY.value = event.nativeEvent.layout.y;
+  }, [containerOffsetY]);
 
   const handleScrollViewLayout = useCallback((event: LayoutChangeEvent) => {
     setScrollViewHeight(event.nativeEvent.layout.height);
@@ -115,6 +116,8 @@ export const DraggableGrid: React.FC<DraggableGridProps> = ({
 
   const handleDragStart = useCallback(
     (id: string) => {
+      pendingReorderCancel.current?.cancel();
+      pendingReorderCancel.current = null;
       activeId.value = id;
       workingOrder.current = [...panels];
       setScrollEnabled(false);
@@ -131,8 +134,14 @@ export const DraggableGrid: React.FC<DraggableGridProps> = ({
       const currentPositions = computeGridPositions(layouts, config);
       const dropIndex = computeDropIndex(layouts, currentPositions, id, absX, absY);
       const currentIndex = workingOrder.current.findIndex(p => p.id === id);
+      const len = workingOrder.current.length;
 
-      if (dropIndex !== currentIndex && dropIndex >= 0) {
+      if (
+        currentIndex >= 0 &&
+        dropIndex >= 0 &&
+        dropIndex < len &&
+        dropIndex !== currentIndex
+      ) {
         const newOrder = reorderPanels(workingOrder.current, currentIndex, dropIndex);
         workingOrder.current = newOrder;
         const newLayouts = panelLayouts(newOrder);
@@ -149,9 +158,13 @@ export const DraggableGrid: React.FC<DraggableGridProps> = ({
       activeId.value = null;
       setScrollEnabled(true);
       stopAutoScroll();
+      pendingReorderCancel.current?.cancel();
       const finalOrder = workingOrder.current.map((p, i) => ({ ...p, order: i }));
-      // Defer state update so we're not inside gesture finalize when React setState runs
-      setTimeout(() => onReorder(finalOrder), 0);
+      const handle = InteractionManager.runAfterInteractions(() => {
+        pendingReorderCancel.current = null;
+        onReorder(finalOrder);
+      });
+      pendingReorderCancel.current = handle.cancel;
     },
     [activeId, stopAutoScroll, onReorder],
   );
@@ -201,7 +214,7 @@ export const DraggableGrid: React.FC<DraggableGridProps> = ({
                   canResize={!isAuto}
                   currentSize={panel.size}
                   scrollOffset={scrollOffset}
-                  containerOffsetY={containerOffsetY.current}
+                  containerOffsetY={containerOffsetY}
                   theme={theme}
                 >
                   <View

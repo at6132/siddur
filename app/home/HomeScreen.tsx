@@ -514,8 +514,9 @@ export const HomeScreen: React.FC = () => {
   };
 
   const handleReorder = useCallback(async (newPanels: HomePanel[]) => {
-    const userPanels = newPanels.filter(p => !p.id.startsWith('auto-'));
-    userPanels.forEach((p, i) => { p.order = i; });
+    const userPanels = newPanels
+      .filter(p => !p.id.startsWith('auto-'))
+      .map((p, i) => ({ ...p, order: i }));
     setPanels(userPanels);
     try {
       await HomePanelsService.reorderPanels(userPanels.map(p => p.id));
