@@ -1,6 +1,6 @@
 {
   "name": "siddur",
-  "version": "1.6",
+  "version": "1.7",
   "main": "expo/AppEntry.js",
   "scripts": {
     "test:sefaria": "node scripts/test-sefaria-api.mjs",
