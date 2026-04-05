@@ -31,6 +31,7 @@ function createStyles(theme: AppTheme) {
       flexDirection: 'row',
       alignItems: 'center',
       marginBottom: spacing.md,
+      direction: 'ltr',
     },
     backButton: {
       paddingVertical: spacing.sm,

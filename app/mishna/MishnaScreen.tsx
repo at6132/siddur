@@ -30,6 +30,7 @@ function createStyles(theme: AppTheme) {
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: spacing.lg,
+      direction: 'ltr',
     },
     backButton: {
       paddingVertical: spacing.sm,

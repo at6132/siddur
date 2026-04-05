@@ -28,6 +28,7 @@ import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import type { AppTheme } from '../../src/design/theme';
 import type { DisplayPreferences } from '../../src/types/preferences';
 import { getTodayMishnaYomi, MISHNA_TRACTATES } from '../../src/services/MishnaYomiService';
+import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
 
 type RouteParams = {
   mishnaYomi?: boolean;
@@ -240,7 +241,8 @@ export const MishnaReaderScreen: React.FC = () => {
   }, [params.mishnaYomi, tractate, perek]);
 
   const tractateIndex = tractate ? MISHNA_TRACTATES.findIndex((m) => m.sefariaName === tractate) : -1;
-  const tractatePerakim = tractateIndex >= 0 ? MISHNA_TRACTATES[tractateIndex].perakim : 0;
+  const tractateInfo = tractateIndex >= 0 ? MISHNA_TRACTATES[tractateIndex] : null;
+  const tractatePerakim = tractateInfo?.perakim ?? 0;
   const hasPrev = tractate && perek != null && (perek > 1 || tractateIndex > 0);
   const hasNext = tractate && perek != null && (perek < tractatePerakim || (tractateIndex >= 0 && tractateIndex < MISHNA_TRACTATES.length - 1));
 
@@ -266,21 +268,39 @@ export const MishnaReaderScreen: React.FC = () => {
     }
   };
 
-  const headerTractateLabel = tractate && perek != null ? `Mishnah ${tractate}` : null;
-  const headerPerekLabel = tractate && perek != null ? `Perek ${perek}` : params.mishnaYomi ? "Today's Mishna Yomi" : 'Mishna';
+  const tractateHebrew =
+    tractate === 'Pirkei Avot' ? 'פרקי אבות' : tractateInfo?.hebrew ?? '';
+  const hebrewPerek = perek != null ? JewishCalendarService.numberToHebrew(perek) : '';
+  const chromeTitleHebrew =
+    tractateInfo && perek != null
+      ? `${tractateHebrew} · פרק ${hebrewPerek}`
+      : params.mishnaYomi
+        ? 'משנה יומי'
+        : 'משנה';
+  const englishMishnaRef =
+    tractate && perek != null
+      ? tractate === 'Pirkei Avot'
+        ? `Pirkei Avot ${perek}`
+        : `Mishnah ${tractate} ${perek}`
+      : '';
+  const chromeSubtitleEnglish = englishMishnaRef
+    ? `${englishMishnaRef}${params.mishnaYomi ? " · Today's Mishna Yomi" : ''}`
+    : params.mishnaYomi
+      ? "Today's Mishna Yomi"
+      : 'Mishna';
 
   const hebrewFontSize = HEBREW_FONT_SIZES[textSize];
   const hebrewLineHeight = HEBREW_LINE_HEIGHTS[textSize];
   const englishFontSize = hebrewFontSize * 0.85;
   const englishLineHeight = hebrewLineHeight * 0.85;
 
-  const chromeTitle = headerTractateLabel ? `${headerTractateLabel} • ${headerPerekLabel}` : headerPerekLabel;
-
   return (
     <View style={[styles.container, { direction: 'rtl' }]}>
       <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
       <ReaderChrome
-        title={chromeTitle}
+        title={chromeTitleHebrew}
+        titleIsHebrew
+        subtitleEnglish={chromeSubtitleEnglish}
         onBack={() => navigation.goBack()}
         topInset={insets.top}
       >

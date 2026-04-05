@@ -9,7 +9,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../src/design/theme';
-import { spacing, borderRadius } from '../../src/design/spacing';
+import { spacing } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { BackButton } from '../ui/BackButton';
 import type { AppTheme } from '../../src/design/theme';
@@ -21,6 +21,8 @@ export interface ReaderChromeProps {
   title: string;
   titleHebrew?: string;
   titleIsHebrew?: boolean;
+  /** Smaller English line under the title (e.g. Nach/Mishna: transliteration + chapter). */
+  subtitleEnglish?: string;
   onBack: () => void;
   topInset: number;
   /** Toolbar row (e.g. ReaderToolbar for text size + English). */
@@ -37,6 +39,7 @@ export function ReaderChrome({
   title,
   titleHebrew,
   titleIsHebrew,
+  subtitleEnglish,
   onBack,
   topInset,
   children,
@@ -73,10 +76,21 @@ export function ReaderChrome({
           )}
         </View>
       </View>
-      <View style={[styles.titleRow, titleIsHebrew && styles.titleRowRtl]}>
-        <Text style={[styles.title, titleIsHebrew && styles.titleHebrew]} numberOfLines={1}>{title}</Text>
-        {titleHebrew ? (
-          <Text style={styles.titleHebrewSub} numberOfLines={1}>{titleHebrew}</Text>
+      <View style={styles.titleRow}>
+        <Text
+          style={[styles.title, titleIsHebrew && styles.titleHebrewPrimary]}
+          numberOfLines={titleIsHebrew ? 2 : 1}
+        >
+          {title}
+        </Text>
+        {subtitleEnglish ? (
+          <Text style={styles.titleSubtitleEnglish} numberOfLines={2}>
+            {subtitleEnglish}
+          </Text>
+        ) : titleHebrew ? (
+          <Text style={styles.titleHebrewSub} numberOfLines={1}>
+            {titleHebrew}
+          </Text>
         ) : null}
       </View>
       <View style={styles.toolbarRow}>
@@ -128,12 +142,14 @@ function createStyles(theme: AppTheme) {
     },
     wrapper: {
       minHeight: 4,
+      direction: 'ltr',
     },
     topRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: spacing.sm,
+      direction: 'ltr',
     },
     backButton: {},
     rightSlot: {
@@ -154,38 +170,48 @@ function createStyles(theme: AppTheme) {
     titleRow: {
       flexDirection: 'column',
       alignItems: 'flex-start',
-      gap: spacing.xs,
+      alignSelf: 'stretch',
+      gap: 2,
       marginBottom: spacing.md,
-    },
-    titleRowRtl: {
-      alignItems: 'flex-end',
-      direction: 'rtl',
+      direction: 'ltr',
     },
     title: {
       fontFamily: fonts.heading.bold,
       fontSize: 22,
       color: theme.colors.text.primary,
       letterSpacing: -0.5,
+      alignSelf: 'stretch',
     },
-    titleHebrew: {
-      fontFamily: fonts.hebrew.regular,
-      fontSize: 20,
+    titleHebrewPrimary: {
+      fontFamily: fonts.hebrew.semibold,
+      fontSize: 24,
       color: theme.colors.text.primary,
       letterSpacing: 0,
       writingDirection: 'rtl',
-      textAlign: 'right',
+      textAlign: 'left',
     },
     titleHebrewSub: {
       fontFamily: fonts.hebrew.regular,
-      fontSize: 20,
+      fontSize: 18,
       color: theme.colors.text.secondary,
       letterSpacing: 0,
+      writingDirection: 'rtl',
+      textAlign: 'left',
+      alignSelf: 'stretch',
+    },
+    titleSubtitleEnglish: {
+      fontFamily: fonts.body.regular,
+      fontSize: 13,
+      lineHeight: 18,
+      color: theme.colors.text.tertiary,
+      alignSelf: 'stretch',
     },
     toolbarRow: {
       flexDirection: 'row',
       alignItems: 'center',
       flexWrap: 'wrap',
       gap: spacing.sm,
+      direction: 'ltr',
     },
   });
 }

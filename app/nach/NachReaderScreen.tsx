@@ -28,6 +28,7 @@ import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import type { AppTheme } from '../../src/design/theme';
 import type { DisplayPreferences } from '../../src/types/preferences';
 import { getTodayNachYomi, NACH_BOOKS } from '../../src/services/NachYomiService';
+import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
 
 type RouteParams = {
   nachYomi?: boolean;
@@ -269,14 +270,24 @@ export const NachReaderScreen: React.FC = () => {
     }
   };
 
-  const headerBookLabel = book && chapter != null ? `${book} ${chapter}` : null;
-  const headerChapterLabel = params.nachYomi ? "Today's Nach Yomi" : 'Nach';
+  const hebrewChapter = chapter != null ? JewishCalendarService.numberToHebrew(chapter) : '';
+  const chromeTitleHebrew =
+    bookInfo && chapter != null
+      ? `${bookInfo.hebrew} · פרק ${hebrewChapter}`
+      : params.nachYomi
+        ? 'נך יומי'
+        : 'נך';
+  const chromeSubtitleEnglish =
+    book && chapter != null
+      ? `${book} ${chapter}${params.nachYomi ? " · Today's Nach Yomi" : ''}`
+      : params.nachYomi
+        ? "Today's Nach Yomi"
+        : 'Nach';
+
   const hebrewFontSize = HEBREW_FONT_SIZES[textSize];
   const hebrewLineHeight = HEBREW_LINE_HEIGHTS[textSize];
   const englishFontSize = hebrewFontSize * 0.85;
   const englishLineHeight = hebrewLineHeight * 0.85;
-
-  const chromeTitle = headerBookLabel ? `${headerBookLabel} • ${headerChapterLabel}` : headerChapterLabel;
 
   return (
     <View style={[styles.container, { direction: 'rtl' }]}>
@@ -285,7 +296,9 @@ export const NachReaderScreen: React.FC = () => {
         style={StyleSheet.absoluteFill}
       />
       <ReaderChrome
-        title={chromeTitle}
+        title={chromeTitleHebrew}
+        titleIsHebrew
+        subtitleEnglish={chromeSubtitleEnglish}
         onBack={() => navigation.goBack()}
         topInset={insets.top}
       >
