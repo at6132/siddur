@@ -20,9 +20,26 @@ import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { useTheme } from '../../src/design/theme';
 import { OmerCalculator } from '../../src/core/omer/OmerCalculator';
+import { ZmanimService } from '../../src/core/zmanim/ZmanimService';
 import { StorageService } from '../../src/storage/StorageService';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import type { LocationObject } from 'expo-location';
+
+function formatTimeUntilAt(now: Date, until: Date): string | null {
+  const ms = until.getTime() - now.getTime();
+  if (ms <= 0) return null;
+  const mins = Math.floor(ms / 60000);
+  const hours = Math.floor(mins / 60);
+  const remainderMins = mins % 60;
+  if (hours > 0 && remainderMins > 0) return `${hours}h ${remainderMins}m`;
+  if (hours > 0) return `${hours}h`;
+  return `${mins}m`;
+}
+
+function formatTimeLocal(date: Date | undefined): string {
+  if (!date) return '--:--';
+  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+}
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -36,6 +53,8 @@ export const OmerScreen: React.FC = () => {
 
   const [omerDay, setOmerDay] = useState<number | null>(null);
   const [todayCounted, setTodayCounted] = useState(false);
+  const [tzeis, setTzeis] = useState<Date | null>(null);
+  const [clock, setClock] = useState(() => new Date());
   const [checkAnim] = useState(new Animated.Value(0));
   const [showReflection, setShowReflection] = useState(false);
 
@@ -56,6 +75,10 @@ export const OmerScreen: React.FC = () => {
         timestamp: Date.now(),
       } as LocationObject;
     }
+    const ext = await ZmanimService.calculateExtendedZmanim(new Date(), locationObj);
+    const tz = ext.tzeis;
+    setTzeis(tz instanceof Date && !Number.isNaN(tz.getTime()) ? tz : null);
+
     const day = await OmerCalculator.getOmerDayAsync(new Date(), locationObj);
     setOmerDay(day);
 
@@ -65,6 +88,11 @@ export const OmerScreen: React.FC = () => {
     } else {
       setTodayCounted(false);
     }
+  }, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setClock(new Date()), 30000);
+    return () => clearInterval(id);
   }, []);
 
   useFocusEffect(
@@ -90,8 +118,12 @@ export const OmerScreen: React.FC = () => {
     }
   }, [todayCounted, checkAnim]);
 
+  const afterTzeis = !tzeis || clock >= tzeis;
+  const waitUntilTzeis = tzeis && !afterTzeis ? formatTimeUntilAt(clock, tzeis) : null;
+  const nextNight = omerDay != null && omerDay < 49 ? omerDay + 1 : null;
+
   const toggleToday = async () => {
-    if (!omerDay) return;
+    if (!omerDay || !afterTzeis) return;
     const newCounted = !todayCounted;
     await StorageService.markOmerDay(omerDay, newCounted);
     setTodayCounted(newCounted);
@@ -190,17 +222,44 @@ export const OmerScreen: React.FC = () => {
             {blessing.countHebrew}
           </Text>
 
+          {!afterTzeis && (
+            <Text style={[styles.doneButtonCaption, { color: theme.colors.text.secondary }]}>
+              {todayCounted && nextNight != null
+                ? `You counted this night. Night ${nextNight} begins after ${formatTimeLocal(tzeis ?? undefined)}${waitUntilTzeis ? ` · ${waitUntilTzeis} from now` : ''}.`
+                : `Say night ${omerDay} after nightfall (${formatTimeLocal(tzeis ?? undefined)})${waitUntilTzeis ? ` · ${waitUntilTzeis} left` : ''}.`}
+            </Text>
+          )}
           <TouchableOpacity
             style={[
               styles.doneButton,
               {
-                backgroundColor: todayCounted ? theme.colors.semantic.success : theme.colors.primary.main,
+                backgroundColor: !afterTzeis
+                  ? theme.isDark
+                    ? theme.colors.neutral[600]
+                    : theme.colors.neutral[200]
+                  : todayCounted
+                    ? theme.colors.semantic.success
+                    : theme.colors.primary.main,
               },
             ]}
             onPress={toggleToday}
-            activeOpacity={0.88}
+            activeOpacity={afterTzeis ? 0.88 : 1}
+            disabled={!afterTzeis}
           >
-            {todayCounted ? (
+            {!afterTzeis ? (
+              <Text
+                style={[
+                  styles.doneButtonText,
+                  { color: theme.isDark ? '#fff' : theme.colors.text.primary },
+                ]}
+              >
+                {todayCounted && waitUntilTzeis
+                  ? `Next night in ${waitUntilTzeis}`
+                  : waitUntilTzeis
+                    ? `Opens in ${waitUntilTzeis}`
+                    : 'Wait for nightfall'}
+              </Text>
+            ) : todayCounted ? (
               <Animated.Text style={[styles.doneButtonText, { transform: [{ scale: checkScale }] }]}>
                 Counted ✓
               </Animated.Text>
@@ -261,7 +320,7 @@ function createStyles() {
     },
     focal: {
       alignItems: 'center',
-      paddingVertical: spacing.xl,
+      paddingVertical: spacing.md,
       paddingHorizontal: spacing.md,
     },
     focalTop: {
@@ -272,7 +331,7 @@ function createStyles() {
       fontFamily: fonts.body.medium,
       fontSize: 13,
       letterSpacing: 0.3,
-      marginBottom: spacing.xs,
+      marginBottom: 2,
     },
     lagWhisper: {
       fontFamily: fonts.body.medium,
@@ -283,8 +342,7 @@ function createStyles() {
       alignItems: 'center',
       justifyContent: 'center',
       width: '100%',
-      paddingVertical: spacing.lg + spacing.sm,
-      minHeight: 104,
+      paddingVertical: spacing.xs,
     },
     focalBottom: {
       alignItems: 'center',
@@ -293,14 +351,15 @@ function createStyles() {
     bigDay: {
       fontFamily: fonts.heading.bold,
       fontSize: 72,
-      lineHeight: 76,
+      lineHeight: 72,
       letterSpacing: -2,
       textAlign: 'center',
     },
     bigDayCaption: {
       fontFamily: fonts.body.regular,
       fontSize: 16,
-      marginBottom: spacing.lg,
+      marginTop: 2,
+      marginBottom: spacing.sm,
     },
     progressLine: {
       width: '100%',
@@ -308,7 +367,7 @@ function createStyles() {
       height: 3,
       borderRadius: 2,
       overflow: 'hidden',
-      marginBottom: spacing.lg,
+      marginBottom: spacing.sm,
     },
     progressLineFill: {
       height: '100%',
@@ -342,6 +401,14 @@ function createStyles() {
       paddingVertical: spacing.md + 4,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    doneButtonCaption: {
+      fontFamily: fonts.body.regular,
+      fontSize: 14,
+      lineHeight: 21,
+      textAlign: 'center',
+      marginBottom: spacing.md,
+      paddingHorizontal: spacing.sm,
     },
     doneButtonText: {
       fontFamily: fonts.body.semiBold,
