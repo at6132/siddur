@@ -1449,10 +1449,6 @@ function createHomeStyles(theme: AppTheme) {
     alignItems: 'center',
     paddingVertical: spacing.sm,
   },
-  omerIcon: {
-    fontSize: 24,
-    marginBottom: spacing.xs,
-  },
   omerTitle: {
     fontFamily: fonts.heading.semibold,
     fontSize: 14,

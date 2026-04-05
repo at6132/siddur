@@ -390,7 +390,6 @@ export function renderPanelContent(
       return (
         <GlassCard onPress={handleOmerPress}>
           <View style={styles.omerPanel}>
-            <Text style={styles.omerIcon}>🌾</Text>
             <Text style={styles.omerTitle}>Day {omerDay} of Omer</Text>
             {!afterTzeis && waitUntil && tzeis ? (
               <Text style={styles.omerWait}>You can't say it yet – wait {waitUntil} until {formatTime(tzeis)}</Text>
