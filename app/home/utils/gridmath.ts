@@ -118,26 +118,6 @@ export function hitTestGrid(
   return null;
 }
 
-/**
- * Compute where a dragged item should be inserted in the panel order,
- * based on which slot its center currently overlaps.
- * @deprecated Prefer computeDropInsertIndex (grid-local coords + half slots)
- */
-export function computeDropIndex(
-  panels: PanelLayout[],
-  positions: Record<string, GridPosition>,
-  draggedId: string,
-  dragCenterX: number,
-  dragCenterY: number,
-): number {
-  const draggedIdx = panels.findIndex(p => p.id === draggedId);
-  const hitId = hitTestGrid(positions, dragCenterX, dragCenterY, draggedId);
-  if (hitId === null) return draggedIdx;
-  const targetIdx = panels.findIndex(p => p.id === hitId);
-  if (targetIdx < 0) return draggedIdx;
-  return targetIdx;
-}
-
 export interface HalfDropSlot {
   x: number;
   y: number;

@@ -9,7 +9,6 @@ import {
   type GridPosition,
   type PanelLayout,
 } from '../utils/gridmath';
-export { HALF_PANEL_SLOT_HEIGHT } from '../utils/gridLayoutConstants';
 
 const GRID_GAP = spacing.sm;
 const COLUMNS = 2;
@@ -29,11 +28,6 @@ export function useGridLayout() {
   const positions = useSharedValue<Record<string, GridPosition>>({});
   const gridHeight = useSharedValue(0);
 
-  const columnWidth = useMemo(
-    () => (containerWidth - GRID_GAP * (COLUMNS - 1)) / COLUMNS,
-    [containerWidth],
-  );
-
   const recalculate = useCallback(
     (panels: PanelLayout[]) => {
       const newPositions = computeGridPositions(panels, config);
@@ -44,13 +38,5 @@ export function useGridLayout() {
     [config, positions, gridHeight],
   );
 
-  return {
-    positions,
-    gridHeight,
-    config,
-    columnWidth,
-    containerWidth,
-    gap: GRID_GAP,
-    recalculate,
-  };
+  return { positions, gridHeight, config, recalculate };
 }

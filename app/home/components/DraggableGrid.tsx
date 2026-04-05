@@ -329,16 +329,12 @@ export const DraggableGrid: React.FC<DraggableGridProps> = ({
                   theme={theme}
                 >
                   <View
-                    style={
-                      panel.size === 'half'
-                        ? { height: HALF_PANEL_SLOT_HEIGHT, width: '100%' }
-                        : undefined
-                    }
+                    style={panel.size === 'half' ? styles.halfSlotWrapper : undefined}
                     onLayout={(e) => handleItemLayout(panel.id, e)}
                     collapsable={false}
                   >
                     {panel.size === 'half' ? (
-                      <View style={{ flex: 1, minHeight: 0, minWidth: 0, width: '100%' }}>{content}</View>
+                      <View style={styles.halfContentFill}>{content}</View>
                     ) : (
                       content
                     )}
@@ -372,5 +368,14 @@ const styles = StyleSheet.create({
   grid: {
     position: 'relative',
     overflow: 'visible',
+  },
+  halfSlotWrapper: {
+    height: HALF_PANEL_SLOT_HEIGHT,
+    width: '100%',
+  },
+  halfContentFill: {
+    flex: 1,
+    minHeight: 0,
+    width: '100%',
   },
 });
