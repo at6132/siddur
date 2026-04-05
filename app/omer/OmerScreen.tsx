@@ -35,10 +35,8 @@ export const OmerScreen: React.FC = () => {
   const styles = useMemo(() => createStyles(), []);
 
   const [omerDay, setOmerDay] = useState<number | null>(null);
-  const [countedDays, setCountedDays] = useState<Set<number>>(new Set());
   const [todayCounted, setTodayCounted] = useState(false);
   const [checkAnim] = useState(new Animated.Value(0));
-  const [showAllNights, setShowAllNights] = useState(false);
   const [showReflection, setShowReflection] = useState(false);
 
   const loadOmerData = useCallback(async () => {
@@ -63,15 +61,8 @@ export const OmerScreen: React.FC = () => {
 
     if (day) {
       const counts = await StorageService.getOmerCounts();
-      const counted = new Set(
-        Object.keys(counts || {})
-          .map(Number)
-          .filter((d) => counts![d])
-      );
-      setCountedDays(counted);
-      setTodayCounted(counted.has(day));
+      setTodayCounted(!!counts?.[day]);
     } else {
-      setCountedDays(new Set());
       setTodayCounted(false);
     }
   }, []);
@@ -104,26 +95,6 @@ export const OmerScreen: React.FC = () => {
     const newCounted = !todayCounted;
     await StorageService.markOmerDay(omerDay, newCounted);
     setTodayCounted(newCounted);
-    const updated = new Set(countedDays);
-    if (newCounted) updated.add(omerDay);
-    else updated.delete(omerDay);
-    setCountedDays(updated);
-  };
-
-  const toggleDay = async (day: number) => {
-    const isCounted = countedDays.has(day);
-    const newCounted = !isCounted;
-    await StorageService.markOmerDay(day, newCounted);
-    const updated = new Set(countedDays);
-    if (newCounted) updated.add(day);
-    else updated.delete(day);
-    setCountedDays(updated);
-    if (day === omerDay) setTodayCounted(newCounted);
-  };
-
-  const toggleAllNights = () => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    setShowAllNights((v) => !v);
   };
 
   const toggleReflection = () => {
@@ -135,8 +106,6 @@ export const OmerScreen: React.FC = () => {
     inputRange: [0, 1],
     outputRange: [0, 1.2],
   });
-
-  const allDays = useMemo(() => Array.from({ length: 49 }, (_, i) => i + 1), []);
 
   if (omerDay === null) {
     return (
@@ -150,8 +119,8 @@ export const OmerScreen: React.FC = () => {
             <Text style={[styles.emptyKicker, { color: theme.colors.text.tertiary }]}>Rest</Text>
             <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>Not counting now</Text>
             <Text style={[styles.emptyBody, { color: theme.colors.text.secondary }]}>
-              Omer is between Pesach and Shavuos. When it starts, this screen stays simple: tonight's words,
-              one tap when you're done, optional grid if you need it.
+              Omer is between Pesach and Shavuos. When it starts, this screen stays simple: tonight's words
+              and one tap when you're done.
             </Text>
           </FadeIn>
         </View>
@@ -162,6 +131,8 @@ export const OmerScreen: React.FC = () => {
   const weekNum = OmerCalculator.getOmerWeek(omerDay);
   const blessing = OmerCalculator.getOmerBlessing(omerDay);
   const meditation = OmerCalculator.getSefirahMeditation(omerDay);
+  const omerTonightTheme =
+    OmerCalculator.getOmerInfo(omerDay)?.meaning ?? meditation?.title ?? '';
   const progress = (omerDay / 49) * 100;
   const isLagBaomer = omerDay === 33;
 
@@ -244,61 +215,25 @@ export const OmerScreen: React.FC = () => {
               </Text>
             </TouchableOpacity>
             {showReflection && (
-              <Text style={[styles.reflectionBody, { color: theme.colors.text.secondary }]}>
-                {meditation.meditation} {meditation.question}
-              </Text>
+              <View>
+                <Text style={[styles.reflectionMeta, { color: theme.colors.text.tertiary }]}>
+                  <Text style={{ fontFamily: fonts.body.semiBold, color: theme.colors.text.secondary }}>
+                    You're on night {omerDay}
+                  </Text>
+                  {' '}
+                  of the count. Tradition gives this night a focus —{' '}
+                  <Text style={{ fontFamily: fonts.body.semiBold, color: theme.colors.text.secondary }}>
+                    {omerTonightTheme}
+                  </Text>
+                  . The lines below are meant as a small, practical way to connect with that idea today.
+                </Text>
+                <Text style={[styles.reflectionBody, { color: theme.colors.text.secondary }]}>
+                  {meditation.meditation} {meditation.question}
+                </Text>
+              </View>
             )}
           </View>
         )}
-
-        <View style={styles.optionalBlock}>
-          <TouchableOpacity onPress={toggleAllNights} activeOpacity={0.7} style={styles.disclosureRow}>
-            <Text style={[styles.disclosureLabel, { color: theme.colors.text.secondary }]}>
-              {showAllNights ? 'Close night list' : 'All 49 nights'}
-            </Text>
-            <Text style={[styles.disclosureChevron, { color: theme.colors.text.tertiary }]}>
-              {showAllNights ? '⌃' : '⌄'}
-            </Text>
-          </TouchableOpacity>
-          {showAllNights && (
-            <View style={styles.gridWrap}>
-              {allDays.map((day) => {
-                const isCounted = countedDays.has(day);
-                const isToday = day === omerDay;
-                return (
-                  <TouchableOpacity
-                    key={day}
-                    style={[
-                      styles.gridDot,
-                      {
-                        borderColor: isToday ? theme.colors.primary.main : 'transparent',
-                        backgroundColor: isCounted
-                          ? `${theme.colors.primary.main}35`
-                          : theme.isDark
-                            ? 'rgba(255,255,255,0.08)'
-                            : 'rgba(255,255,255,0.5)',
-                      },
-                    ]}
-                    onPress={() => toggleDay(day)}
-                    activeOpacity={0.8}
-                  >
-                    <Text
-                      style={[
-                        styles.gridDotNum,
-                        {
-                          color: isToday ? theme.colors.primary.dark : theme.colors.text.secondary,
-                          fontFamily: isToday ? fonts.body.bold : fonts.body.medium,
-                        },
-                      ]}
-                    >
-                      {day}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
-        </View>
       </ScrollView>
     </View>
   );
@@ -410,6 +345,15 @@ function createStyles() {
       fontSize: 14,
       marginTop: 2,
     },
+    reflectionMeta: {
+      fontFamily: fonts.body.regular,
+      fontSize: 13,
+      lineHeight: 20,
+      textAlign: 'center',
+      paddingHorizontal: spacing.md,
+      paddingTop: spacing.sm,
+      marginBottom: spacing.md,
+    },
     reflectionBody: {
       fontFamily: fonts.body.regular,
       fontSize: 15,
@@ -417,25 +361,6 @@ function createStyles() {
       textAlign: 'center',
       paddingHorizontal: spacing.md,
       paddingTop: spacing.sm,
-    },
-    gridWrap: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      gap: 6,
-      paddingTop: spacing.md,
-      paddingHorizontal: spacing.xs,
-    },
-    gridDot: {
-      width: 36,
-      height: 36,
-      borderRadius: 10,
-      borderWidth: 1.5,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    gridDotNum: {
-      fontSize: 11,
     },
     emptyOuter: {
       flex: 1,
