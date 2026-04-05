@@ -10,6 +10,8 @@ import {
   Modal,
   useWindowDimensions,
   PanResponder,
+  Alert,
+  InteractionManager,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/core';
@@ -1046,11 +1048,20 @@ export const SiddurReaderScreen: React.FC = () => {
     return () => clearTimeout(fallback);
   }, [loadPreferences]);
 
-  // Record davening streak when user opens siddur
+  // Record davening streak when user opens siddur; WIP notice for main weekday tefilos
   useFocusEffect(
     useCallback(() => {
       recordDaveningToday();
-    }, [])
+      if (service !== 'shacharis' && service !== 'mincha' && service !== 'maariv') return;
+      const task = InteractionManager.runAfterInteractions(() => {
+        Alert.alert(
+          'Work in progress',
+          'Shacharis, Mincha, and Maariv are still a work in progress. There are many known issues; they will be fixed in subsequent updates.',
+          [{ text: 'OK' }]
+        );
+      });
+      return () => task.cancel();
+    }, [service])
   );
 
   // Persist autoscroll speed when user changes it (not on initial load)
