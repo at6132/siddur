@@ -590,6 +590,9 @@ export class DailyTehillimTracker {
           const wpm = readingSession.wordCount / readingSession.durationMinutes;
           await this.addWpmReading(wpm);
         }
+        if (completed.length >= 150) {
+          await this.recordFullTehillimFinishedAndRestart();
+        }
       } catch (e) {
         console.warn('Error saving whenever Tehillim progress:', e);
       }
@@ -628,12 +631,6 @@ export class DailyTehillimTracker {
         progress.lastUpdated = Date.now();
         await AsyncStorage.setItem(TEHILLIM_PROGRESS_KEY, JSON.stringify(progress));
 
-        if (settings.goalType === 'weekly') {
-          await this.addWeeklyCompleted(chapter);
-        } else if (settings.goalType === 'monthly') {
-          await this.addMonthlyCompleted(chapter);
-        }
-
         if (
           readingSession &&
           readingSession.durationMinutes > 0 &&
@@ -643,6 +640,22 @@ export class DailyTehillimTracker {
           await this.addWpmReading(wpm);
         }
 
+        if (settings.goalType === 'weekly') {
+          await this.addWeeklyCompleted(chapter);
+          const weeklyDone = await this.getWeeklyCompleted();
+          if (weeklyDone.length >= 150) {
+            await this.recordFullTehillimFinishedAndRestart();
+            return;
+          }
+        } else if (settings.goalType === 'monthly') {
+          await this.addMonthlyCompleted(chapter);
+          const monthlyDone = await this.getMonthlyCompleted();
+          if (monthlyDone.length >= 150) {
+            await this.recordFullTehillimFinishedAndRestart();
+            return;
+          }
+        }
+
         if (settings.goalType === 'custom') {
           const remaining = totalChapters.filter(
             (ch) => !progress.chaptersCompleted.includes(ch)
@@ -650,7 +663,11 @@ export class DailyTehillimTracker {
           if (remaining.length === 0) {
             const maxChapter = Math.max(...totalChapters);
             const nextChapter = (maxChapter % 150) + 1;
-            await this.saveCustomProgress(nextChapter);
+            if (maxChapter === 150 && nextChapter === 1) {
+              await this.recordFullTehillimFinishedAndRestart();
+            } else {
+              await this.saveCustomProgress(nextChapter);
+            }
           }
         }
       }

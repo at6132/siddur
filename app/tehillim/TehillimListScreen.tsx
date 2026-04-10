@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   Platform,
-  Animated,
   Dimensions,
   Alert,
 } from 'react-native';
@@ -15,8 +14,6 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/core';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import { GlassPanel } from '../../components/ui/GlassPanel';
 import { ScalePress } from '../../components/animations/ScalePress';
 import { FadeIn } from '../../components/animations/FadeIn';
 import { BackButton } from '../../components/ui/BackButton';
@@ -85,6 +82,7 @@ export const TehillimListScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const [dailyProgress, setDailyProgress] = useState<DailyProgress | null>(null);
   const [overallProgress, setOverallProgress] = useState<OverallProgress | null>(null);
+  const [fullBookCompletionsCount, setFullBookCompletionsCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [myCampaigns, setMyCampaigns] = useState<TehillimCampaign[]>([]);
 
@@ -95,10 +93,12 @@ export const TehillimListScreen: React.FC = () => {
   );
 
   const loadProgress = async () => {
-    const [progress, overall] = await Promise.all([
+    const [progress, overall, fullBookCount] = await Promise.all([
       DailyTehillimTracker.getTodaysProgress(),
       DailyTehillimTracker.getOverallTehillimProgress(),
+      DailyTehillimTracker.getFullTehillimCompletionsCount(),
     ]);
+    setFullBookCompletionsCount(fullBookCount);
     setDailyProgress({
       dayName: progress.dayName,
       totalChapters: progress.totalChapters,
@@ -149,6 +149,24 @@ export const TehillimListScreen: React.FC = () => {
     if (nextChapter) {
       navigation.navigate('TehillimReader' as never, { psalm: nextChapter } as never);
     }
+  };
+
+  const handleResetCurrentBook = () => {
+    Alert.alert(
+      'Reset Sefer Tehillim progress?',
+      'This clears checkmarks for your current run (this week, month, or all 150 perakim, depending on your goal). Your count of siyumei Sefer Tehillim does not change.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            await DailyTehillimTracker.resetCurrentBookProgress();
+            await loadProgress();
+          },
+        },
+      ]
+    );
   };
 
   const handleLeaveCampaign = async (c: TehillimCampaign) => {
@@ -254,80 +272,83 @@ export const TehillimListScreen: React.FC = () => {
 
     return (
       <FadeIn delay={0}>
-        <View style={styles.dailyCardContainer}>
-          {Platform.OS !== 'web' ? (
-            <BlurView intensity={60} style={styles.dailyCardBlur}>
-              <LinearGradient
-                colors={['rgba(212, 165, 184, 0.2)', 'rgba(165, 196, 212, 0.2)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.dailyCardGradient}
-              >
-                {renderDailyCardContent()}
-              </LinearGradient>
-            </BlurView>
-          ) : (
-            <LinearGradient
-              colors={['rgba(212, 165, 184, 0.3)', 'rgba(165, 196, 212, 0.3)']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.dailyCardGradient}
-            >
-              {renderDailyCardContent()}
-            </LinearGradient>
-          )}
-        </View>
+        <View style={styles.dailyCardSurface}>{renderDailyCardContent()}</View>
       </FadeIn>
     );
 
     function renderDailyCardContent() {
       return (
         <View style={styles.dailyCardInner}>
-          <View style={styles.dailyCardHeader}>
-            <View>
-              <Text style={styles.dailyCardTitle}>
-                {isWhenever ? 'Tehillim whenever you can' : `${dayName}'s Tehillim`}
-              </Text>
-              <Text style={styles.dailyCardSubtitle}>
-                {isWhenever
-                  ? `${completedCount} of 150 perakim • Open any perek`
-                  : overallProgress
-                    ? `${completedCount} of ${totalChapters.length} today • ${overallProgress.completed} of ${overallProgress.total} ${overallProgress.label}`
-                    : `Chapters ${startChapter}–${endChapter} • ${totalChapters.length} total`}
+          <Text style={styles.dailyCardTitle}>
+            {isWhenever ? 'Tehillim whenever you can' : `${dayName}'s Tehillim`}
+          </Text>
+          <Text style={styles.dailyCardSubtitle}>
+            {isWhenever
+              ? `${completedCount} of 150 perakim • Open any perek`
+              : overallProgress
+                ? `${completedCount} of ${totalChapters.length} today • ${overallProgress.completed} of ${overallProgress.total} ${overallProgress.label}`
+                : `Chapters ${startChapter}–${endChapter} • ${totalChapters.length} total`}
+          </Text>
+
+          <View style={styles.progressRow}>
+            <View style={styles.progressBarWrap}>
+              <View style={styles.progressBarBg}>
+                <View
+                  style={[
+                    styles.progressBarFill,
+                    {
+                      width: `${overallProgress ? overallProgress.percentComplete : percentComplete}%`,
+                    },
+                  ]}
+                />
+              </View>
+              <View style={styles.progressMetaRow}>
+                <Text style={styles.progressText} numberOfLines={2}>
+                  {overallProgress
+                    ? `${overallProgress.completed} of ${overallProgress.total} (${overallProgress.percentComplete}%)`
+                    : `${percentComplete}% complete`}
+                </Text>
+                <TouchableOpacity
+                  style={styles.progressEditHit}
+                  onPress={() => navigation.navigate('TehillimSettings' as never)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  activeOpacity={0.65}
+                >
+                  <Ionicons name="create-outline" size={14} color={colors.secondary.dark} />
+                  <Text style={styles.progressEditText}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={styles.progressPercentPill}>
+              <Text style={styles.progressPercentPillText}>
+                {overallProgress ? overallProgress.percentComplete : percentComplete}%
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => navigation.navigate('TehillimSettings' as never)}
-            >
-              <Text style={styles.editButtonText}>Edit</Text>
-            </TouchableOpacity>
           </View>
 
-          {/* Progress Bar */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBarBg}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  {
-                    width: `${overallProgress ? overallProgress.percentComplete : percentComplete}%`,
-                  },
-                ]}
-              />
+          <View style={styles.fullBookPanel}>
+            <View style={styles.fullBookPanelHeader}>
+              <Text style={styles.fullBookCountText}>
+                Siyumei Sefer Tehillim: {fullBookCompletionsCount}
+              </Text>
             </View>
-            <Text style={styles.progressText}>
-              {overallProgress
-                ? `${overallProgress.completed} of ${overallProgress.total} (${overallProgress.percentComplete}%)`
-                : `${percentComplete}% complete`}
+            <Text style={styles.fullBookHintText}>
+              Each siyum is completing all 150 perakim; then the count goes up and you begin again. Reset clears only this run.
             </Text>
+            <TouchableOpacity
+              style={styles.resetBookButton}
+              onPress={handleResetCurrentBook}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.resetBookButtonText}>Reset this sefer's progress</Text>
+            </TouchableOpacity>
           </View>
 
           {isWhenever ? (
             <View style={styles.wheneverCta}>
               <Text style={styles.wheneverCtaText}>
                 {chaptersRemaining.length === 0
-                  ? '✓ All 150 perakim complete!'
+                  ? 'All 150 perakim complete'
                   : 'Open any perek below and tap "Complete perek" when done'}
               </Text>
             </View>
@@ -344,7 +365,7 @@ export const TehillimListScreen: React.FC = () => {
           ) : (
             <View style={styles.completeMessage}>
               <Text style={styles.completeMessageText}>
-                ✓ {dayName}'s Tehillim Complete!
+                {dayName}'s Tehillim complete
               </Text>
             </View>
           )}
@@ -604,76 +625,132 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
   },
 
-  // Daily Card - Enhanced with liquid glass
-  dailyCardContainer: {
+  // Daily progress card — light surface (matches home widget tone)
+  dailyCardSurface: {
     marginBottom: spacing.xl,
-    borderRadius: borderRadius['2xl'],
-    overflow: 'hidden',
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.background.primary,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.8)',
-    shadowColor: colors.shadow.medium,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 3,
-  },
-  dailyCardBlur: {
-    overflow: 'hidden',
-  },
-  dailyCardGradient: {
-    overflow: 'hidden',
+    borderColor: 'rgba(212, 165, 184, 0.22)',
+    shadowColor: colors.shadow.light,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
   },
   dailyCardInner: {
-    padding: spacing.xl,
-  },
-  dailyCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.md,
+    padding: spacing.lg,
   },
   dailyCardTitle: {
     fontFamily: fonts.heading.bold,
-    fontSize: 24,
+    fontSize: 20,
     color: colors.text.primary,
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
   dailyCardSubtitle: {
     fontFamily: fonts.body.regular,
-    fontSize: 15,
-    color: colors.text.secondary,
+    fontSize: 14,
+    color: colors.text.tertiary,
     marginTop: spacing.xs,
     lineHeight: 20,
+    marginBottom: spacing.md,
   },
-  editButton: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+    marginBottom: spacing.md,
   },
-  editButtonText: {
+  progressBarWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  progressMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: 2,
+  },
+  progressEditHit: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    flexShrink: 0,
+    paddingVertical: 2,
+    paddingLeft: spacing.xs,
+  },
+  progressEditText: {
     fontFamily: fonts.body.medium,
-    fontSize: 14,
+    fontSize: 11,
     color: colors.secondary.dark,
     textDecorationLine: 'underline',
   },
-  progressContainer: {
-    marginBottom: spacing.md,
-  },
   progressBarBg: {
-    height: 8,
-    backgroundColor: 'rgba(0,0,0,0.08)',
-    borderRadius: 4,
+    height: 6,
+    backgroundColor: 'rgba(0,0,0,0.045)',
+    borderRadius: 3,
     overflow: 'hidden',
     marginBottom: spacing.xs,
   },
   progressBarFill: {
     height: '100%',
     backgroundColor: colors.primary.main,
-    borderRadius: 4,
+    borderRadius: 3,
   },
   progressText: {
-    fontFamily: fonts.body.medium,
+    flex: 1,
+    fontFamily: fonts.body.regular,
+    fontSize: 11,
+    color: colors.text.tertiary,
+    minWidth: 0,
+  },
+  progressPercentPill: {
+    backgroundColor: 'rgba(212, 165, 184, 0.14)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    minWidth: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  progressPercentPillText: {
+    fontFamily: fonts.body.bold,
+    fontSize: 13,
+    color: colors.primary.dark,
+  },
+  fullBookPanel: {
+    backgroundColor: colors.primary.light,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(212, 165, 184, 0.12)',
+  },
+  fullBookPanelHeader: {
+    marginBottom: spacing.xs,
+  },
+  fullBookCountText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 14,
+    color: colors.primary.dark,
+  },
+  fullBookHintText: {
+    fontFamily: fonts.body.regular,
     fontSize: 12,
     color: colors.text.secondary,
+    lineHeight: 17,
+    marginBottom: spacing.sm,
+  },
+  resetBookButton: {
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
+    paddingHorizontal: 0,
+  },
+  resetBookButtonText: {
+    fontFamily: fonts.body.medium,
+    fontSize: 13,
+    color: colors.semantic.error,
+    textDecorationLine: 'underline',
   },
   continueButton: {
     backgroundColor: colors.primary.main,
@@ -688,27 +765,31 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   completeMessage: {
-    backgroundColor: 'rgba(165, 212, 184, 0.3)',
+    backgroundColor: 'rgba(165, 212, 184, 0.2)',
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.full,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(165, 212, 184, 0.35)',
   },
   completeMessageText: {
     fontFamily: fonts.body.semiBold,
-    fontSize: 15,
-    color: colors.text.primary,
+    fontSize: 14,
+    color: colors.text.secondary,
   },
   wheneverCta: {
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     alignItems: 'center',
+    marginBottom: spacing.xs,
   },
   wheneverCtaText: {
     fontFamily: fonts.body.regular,
-    fontSize: 13,
-    color: colors.text.secondary,
+    fontSize: 12,
+    color: colors.text.tertiary,
     textAlign: 'center',
+    lineHeight: 17,
   },
 
   // Grid - 3 per row, RTL so perek א is on the right (Hebrew reading order)
