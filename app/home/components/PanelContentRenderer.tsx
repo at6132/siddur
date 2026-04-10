@@ -19,6 +19,7 @@ import {
   getParshaSummary,
 } from '../../../src/content/HomeWidgetContent';
 import type { DayInfo, DaveningChanges } from '../../../src/types/calendar';
+import { spacing } from '../../../src/design/spacing';
 
 function hasNotableDaveningChanges(dc: DaveningChanges | null | undefined): boolean {
   if (!dc) return false;
@@ -107,28 +108,36 @@ export function renderPanelContent(
   } = ctx;
 
   const panelDef = PANEL_DEFINITIONS.find(p => p.type === panel.type);
+  const half = panel.size === 'half';
 
   switch (panel.type) {
     case 'date':
       if (!dayInfo) return null;
       return (
-        <GlassCard style={styles.dateCard}>
-          <Text style={styles.hebrewDate}>{JewishCalendarService.getHebrewDateShort(dayInfo.gregorianDate)}</Text>
-          <View style={styles.dateDivider} />
-          <Text style={styles.gregorianDate}>
-            {dayInfo.gregorianDate.toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'long',
-              day: 'numeric',
-            })}
-          </Text>
-          {dayInfo.specialDays && dayInfo.specialDays.length > 0 && (
-            <View style={styles.specialBadge}>
-              <Text style={styles.specialBadgeText}>
-                {dayInfo.specialDays[0].name}
-              </Text>
-            </View>
-          )}
+        <GlassCard compact={half} style={styles.dateCard}>
+          <View style={half ? styles.halfPanelInner : undefined}>
+            <Text style={[styles.hebrewDate, half && { fontSize: 18 }]}>
+              {JewishCalendarService.getHebrewDateShort(dayInfo.gregorianDate)}
+            </Text>
+            <View style={[styles.dateDivider, half && { marginVertical: spacing.xs }]} />
+            <Text
+              style={[styles.gregorianDate, half && { fontSize: 11 }]}
+              numberOfLines={half ? 2 : undefined}
+            >
+              {dayInfo.gregorianDate.toLocaleDateString('en-US', {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric',
+              })}
+            </Text>
+            {dayInfo.specialDays && dayInfo.specialDays.length > 0 && (
+              <View style={[styles.specialBadge, half && { marginTop: 2, paddingVertical: 2 }]}>
+                <Text style={[styles.specialBadgeText, half && { fontSize: 10 }]} numberOfLines={1}>
+                  {dayInfo.specialDays[0].name}
+                </Text>
+              </View>
+            )}
+          </View>
         </GlassCard>
       );
 
@@ -137,8 +146,75 @@ export function renderPanelContent(
         inputRange: [0, 100],
         outputRange: ['0%', '100%'],
       });
+      if (half) {
+        const doneToday =
+          (tehillimProgress.totalChapters ?? []).length - (tehillimProgress.chaptersRemaining ?? []).length;
+        const totalToday = (tehillimProgress.totalChapters ?? []).length;
+        const footerMain =
+          tehillimProgress.goalType === 'whenever'
+            ? `${tehillimProgress.overallCompleted}/150`
+            : `${doneToday}/${totalToday} today`;
+        const footerExtra =
+          tehillimProgress.goalType !== 'whenever' && tehillimProgress.overallLabel
+            ? ` · ${tehillimProgress.overallCompleted}/${tehillimProgress.overallTotal}`
+            : '';
+        const continueLabel =
+          tehillimProgress.percentComplete === 100 && tehillimProgress.goalType !== 'whenever'
+            ? 'Done ✓'
+            : tehillimProgress.overallPercent === 100
+              ? '✓'
+              : tehillimProgress.goalType === 'whenever'
+                ? 'Open →'
+                : 'Go →';
+        return (
+          <GlassCard compact={half} style={styles.tehillimCard} onPress={handleTehillimPress}>
+            <View style={styles.halfPanelInner}>
+              <View style={styles.tehillimHalfHeader}>
+                <View style={styles.tehillimHalfIcon}>
+                  <Text style={styles.tehillimHalfIconText}>📖</Text>
+                </View>
+                <View style={styles.tehillimHalfInfo}>
+                  <Text style={styles.tehillimHalfTitle} numberOfLines={1}>
+                    {tehillimProgress.goalType === 'whenever'
+                      ? 'Tehillim'
+                      : `${tehillimProgress.dayName || 'Daily'} Tehillim`}
+                  </Text>
+                  <Text style={styles.tehillimHalfMessage} numberOfLines={1}>
+                    {tehillimProgress.message}
+                  </Text>
+                </View>
+                <View style={styles.tehillimHalfPercentWrap}>
+                  <Text style={styles.tehillimHalfPercent}>{tehillimProgress.overallPercent}%</Text>
+                </View>
+              </View>
+              <View style={styles.tehillimHalfProgressWrap}>
+                <View style={styles.tehillimHalfProgressBg}>
+                  <Animated.View style={[styles.progressBarFill, { width: progressWidth }]} />
+                </View>
+              </View>
+              <View style={styles.tehillimHalfFooter}>
+                <Text style={styles.tehillimHalfFooterText} numberOfLines={1}>
+                  {footerMain}
+                  {footerExtra}
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                  {!isEditing && (
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('TehillimSettings' as never)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={[styles.tehillimEdit, { fontSize: 10 }]}>Edit</Text>
+                    </TouchableOpacity>
+                  )}
+                  {!isEditing && <Text style={styles.tehillimHalfContinue}>{continueLabel}</Text>}
+                </View>
+              </View>
+            </View>
+          </GlassCard>
+        );
+      }
       return (
-        <GlassCard style={styles.tehillimCard} onPress={handleTehillimPress}>
+        <GlassCard compact={half} style={styles.tehillimCard} onPress={handleTehillimPress}>
           <View style={styles.tehillimHeader}>
             <View style={styles.tehillimIcon}>
               <Text style={styles.tehillimIconText}>📖</Text>
@@ -202,21 +278,21 @@ export function renderPanelContent(
     case 'zmanim':
       if (!dayInfo) return null;
       return (
-        <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
-          <View style={styles.zmanimRow}>
+        <GlassCard compact={half} onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
+          <View style={[styles.zmanimRow, half && styles.zmanimRowHalf]}>
             <View style={styles.zmanItem}>
-              <Text style={styles.zmanLabel}>Sunrise</Text>
-              <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.sunrise)}</Text>
+              <Text style={[styles.zmanLabel, half && { fontSize: 10, marginBottom: 0 }]}>Sunrise</Text>
+              <Text style={[styles.zmanTime, half && { fontSize: 12 }]}>{formatTime(dayInfo.extendedZmanim?.sunrise)}</Text>
             </View>
-            <View style={styles.zmanDivider} />
+            <View style={[styles.zmanDivider, half && { height: 22 }]} />
             <View style={styles.zmanItem}>
-              <Text style={styles.zmanLabel}>Shema</Text>
-              <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.sofZmanShemaGRA)}</Text>
+              <Text style={[styles.zmanLabel, half && { fontSize: 10, marginBottom: 0 }]}>Shema</Text>
+              <Text style={[styles.zmanTime, half && { fontSize: 12 }]}>{formatTime(dayInfo.extendedZmanim?.sofZmanShemaGRA)}</Text>
             </View>
-            <View style={styles.zmanDivider} />
+            <View style={[styles.zmanDivider, half && { height: 22 }]} />
             <View style={styles.zmanItem}>
-              <Text style={styles.zmanLabel}>Sunset</Text>
-              <Text style={styles.zmanTime}>{formatTime(dayInfo.extendedZmanim?.sunset)}</Text>
+              <Text style={[styles.zmanLabel, half && { fontSize: 10, marginBottom: 0 }]}>Sunset</Text>
+              <Text style={[styles.zmanTime, half && { fontSize: 12 }]}>{formatTime(dayInfo.extendedZmanim?.sunset)}</Text>
             </View>
           </View>
         </GlassCard>
@@ -233,9 +309,11 @@ export function renderPanelContent(
             ? 'No Tachanun today'
             : dayInfo.daveningChanges?.reason || 'Special davening today';
         return (
-          <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
-            <View style={styles.daveningNote}>
-              <Text style={styles.daveningNoteText}>{message}</Text>
+          <GlassCard compact={half} onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
+            <View style={[styles.daveningNote, half && { paddingVertical: spacing.xs }]}>
+              <Text style={[styles.daveningNoteText, half && { fontSize: 11 }]} numberOfLines={half ? 2 : undefined}>
+                {message}
+              </Text>
             </View>
           </GlassCard>
         );
@@ -243,16 +321,18 @@ export function renderPanelContent(
 
     case 'weekly_parsha':
       return (
-        <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Parsha')}>
-          <View style={styles.parshaPanel}>
-            <Text style={styles.parshaLabel}>This Week's Parsha</Text>
-            <Text style={styles.parshaName} numberOfLines={2}>
+        <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Parsha')}>
+          <View style={[styles.parshaPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.parshaLabel, half && styles.halfHeading]}>This Week's Parsha</Text>
+            <Text style={[styles.parshaName, half && { fontSize: 13 }]} numberOfLines={half ? 1 : 2}>
               {dayInfo?.parsha || 'See calendar'}
             </Text>
             {dayInfo?.parshaHebrew ? (
-              <Text style={styles.parshaHebrew}>{dayInfo.parshaHebrew}</Text>
+              <Text style={[styles.parshaHebrew, half && styles.halfBody]} numberOfLines={1}>
+                {dayInfo.parshaHebrew}
+              </Text>
             ) : dayInfo?.parsha ? null : (
-              <Text style={styles.parshaSubtext}>Tap to open calendar</Text>
+              <Text style={[styles.parshaSubtext, half && styles.halfBody]}>Tap calendar</Text>
             )}
           </View>
         </GlassCard>
@@ -261,12 +341,24 @@ export function renderPanelContent(
     case 'inspiration_quote': {
       const todayQuote = getByDay100(INSPIRATION_QUOTES);
       return (
-        <GlassCard>
-          <View style={styles.inspirationPanel}>
-            <Text style={styles.inspirationIcon}>✨</Text>
-            <Text style={styles.inspirationHebrew}>{todayQuote.text}</Text>
-            <Text style={styles.inspirationTranslation}>{todayQuote.translation}</Text>
-            <Text style={styles.inspirationSource}>— {todayQuote.source}</Text>
+        <GlassCard compact={half}>
+          <View style={[styles.inspirationPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.inspirationIcon, half && styles.halfEmoji]}>✨</Text>
+            <Text
+              style={[styles.inspirationHebrew, half && { fontSize: 13, marginBottom: 2 }]}
+              numberOfLines={half ? 2 : undefined}
+            >
+              {todayQuote.text}
+            </Text>
+            <Text
+              style={[styles.inspirationTranslation, half && { fontSize: 10, lineHeight: 13, marginBottom: 2 }]}
+              numberOfLines={half ? 2 : undefined}
+            >
+              {todayQuote.translation}
+            </Text>
+            <Text style={[styles.inspirationSource, half && { fontSize: 9 }]} numberOfLines={1}>
+              — {todayQuote.source}
+            </Text>
           </View>
         </GlassCard>
       );
@@ -283,8 +375,45 @@ export function renderPanelContent(
           if (!date) return '--:--';
           return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         };
+        if (half) {
+          return (
+            <GlassCard compact={half}>
+              <View style={[styles.fastDayPanel, styles.halfPanelInner]}>
+                <View style={[styles.fastDayHeader, styles.fastDayHalfHeader]}>
+                  <Text style={[styles.fastDayIcon, styles.fastDayHalfIcon]}>🕯️</Text>
+                  <View style={styles.fastDayTitleContainer}>
+                    <Text style={[styles.fastDayTitle, styles.fastDayHalfTitle]} numberOfLines={1}>
+                      {fastDayProgress.fastName}
+                    </Text>
+                    <Text style={[styles.fastDaySubtitle, styles.fastDayHalfSubtitle]} numberOfLines={1}>
+                      {fastDayProgress.percentComplete >= 100 ? 'Fast over — eat' : fastDayProgress.timeRemaining}
+                    </Text>
+                  </View>
+                </View>
+                <View style={[styles.fastProgressContainer, styles.fastDayHalfProgressRow]}>
+                  <View style={[styles.fastProgressBar, styles.fastProgressBarHalf]}>
+                    <Animated.View style={[styles.fastProgressFill, { width: fastProgressWidth }]} />
+                  </View>
+                  <Text style={[styles.fastProgressPercent, { fontSize: 11 }]}>
+                    {Math.round(fastDayProgress.percentComplete)}%
+                  </Text>
+                </View>
+                <View style={[styles.fastTimesRow, styles.fastTimesRowHalf]}>
+                  <View style={styles.fastTimeItem}>
+                    <Text style={[styles.fastTimeLabel, { fontSize: 10 }]}>Began</Text>
+                    <Text style={[styles.fastTimeValue, styles.fastTimeValueHalf]}>{formatFastTime(fastDayProgress.startTime)}</Text>
+                  </View>
+                  <View style={styles.fastTimeItem}>
+                    <Text style={[styles.fastTimeLabel, { fontSize: 10 }]}>Ends</Text>
+                    <Text style={[styles.fastTimeValue, styles.fastTimeValueHalf]}>{formatFastTime(fastDayProgress.endTime)}</Text>
+                  </View>
+                </View>
+              </View>
+            </GlassCard>
+          );
+        }
         return (
-          <GlassCard>
+          <GlassCard compact={half}>
             <View style={styles.fastDayPanel}>
               <View style={styles.fastDayHeader}>
                 <Text style={styles.fastDayIcon}>🕯️</Text>
@@ -329,11 +458,13 @@ export function renderPanelContent(
       const hour = new Date().getHours();
       const greetingText = hour < 12 ? 'Good Morning' : hour < 17 ? 'Good Afternoon' : hour < 21 ? 'Good Evening' : 'Good Night';
       return (
-        <GlassCard>
-          <View style={styles.greetingPanel}>
-            <Text style={styles.greetingEmoji}>{hour < 12 ? '🌅' : hour < 17 ? '☀️' : hour < 21 ? '🌆' : '🌙'}</Text>
-            <Text style={styles.greetingText}>{greetingText}</Text>
-            <Text style={styles.greetingSubtext}>May your day be blessed</Text>
+        <GlassCard compact={half}>
+          <View style={[styles.greetingPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.greetingEmoji, half && styles.halfEmoji]}>{hour < 12 ? '🌅' : hour < 17 ? '☀️' : hour < 21 ? '🌆' : '🌙'}</Text>
+            <Text style={[styles.greetingText, half && { fontSize: 13 }]} numberOfLines={1}>{greetingText}</Text>
+            <Text style={[styles.greetingSubtext, half && styles.halfBody]} numberOfLines={1}>
+              May your day be blessed
+            </Text>
           </View>
         </GlassCard>
       );
@@ -341,18 +472,20 @@ export function renderPanelContent(
 
     case 'shabbos_times':
       return (
-        <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
-          <View style={styles.shabbosPanel}>
-            <Text style={styles.shabbosIcon}>🕯️</Text>
-            <Text style={styles.shabbosTitle}>Shabbos Times</Text>
+        <GlassCard compact={half} onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
+          <View style={[styles.shabbosPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.shabbosIcon, half && styles.halfEmoji]}>🕯️</Text>
+            <Text style={[styles.shabbosTitle, half && { fontSize: 12, marginBottom: spacing.xs }]} numberOfLines={1}>
+              Shabbos Times
+            </Text>
             <View style={styles.shabbosTimesRow}>
               <View style={styles.shabbosTimeItem}>
-                <Text style={styles.shabbosTimeLabel}>Candles</Text>
-                <Text style={styles.shabbosTimeValue}>{formatTime(dayInfo?.upcomingShabbos?.candleLighting ?? undefined)}</Text>
+                <Text style={[styles.shabbosTimeLabel, half && { fontSize: 10 }]}>Candles</Text>
+                <Text style={[styles.shabbosTimeValue, half && { fontSize: 12 }]}>{formatTime(dayInfo?.upcomingShabbos?.candleLighting ?? undefined)}</Text>
               </View>
               <View style={styles.shabbosTimeItem}>
-                <Text style={styles.shabbosTimeLabel}>Havdalah</Text>
-                <Text style={styles.shabbosTimeValue}>{formatTime(dayInfo?.upcomingShabbos?.havdalah ?? undefined)}</Text>
+                <Text style={[styles.shabbosTimeLabel, half && { fontSize: 10 }]}>Havdalah</Text>
+                <Text style={[styles.shabbosTimeValue, half && { fontSize: 12 }]}>{formatTime(dayInfo?.upcomingShabbos?.havdalah ?? undefined)}</Text>
               </View>
             </View>
           </View>
@@ -361,51 +494,128 @@ export function renderPanelContent(
 
     case 'candle_lighting':
       return (
-        <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
-          <View style={styles.candlePanel}>
-            <Text style={styles.candleIcon}>🕯️</Text>
-            <Text style={styles.candleTitle}>Candle Lighting</Text>
-            <Text style={styles.candleTime}>{dayInfo?.upcomingShabbos?.candleLighting ? formatTime(dayInfo.upcomingShabbos.candleLighting) : 'Friday'}</Text>
+        <GlassCard compact={half} onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
+          <View style={[styles.candlePanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.candleIcon, half && styles.halfEmoji]}>🕯️</Text>
+            <Text style={[styles.candleTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Candle Lighting
+            </Text>
+            <Text style={[styles.candleTime, half && { fontSize: 14 }]} numberOfLines={1}>
+              {dayInfo?.upcomingShabbos?.candleLighting ? formatTime(dayInfo.upcomingShabbos.candleLighting) : 'Friday'}
+            </Text>
           </View>
         </GlassCard>
       );
 
     case 'omer_counter': {
-      const omerDay = dayInfo?.omerDay ?? null;
-      const tzeis = dayInfo?.extendedZmanim?.tzeis;
+      const displayNight = dayInfo?.omerDay ?? null;
+      const sunsetRaw = dayInfo?.extendedZmanim?.sunset;
+      const sunset =
+        sunsetRaw instanceof Date && !Number.isNaN(sunsetRaw.getTime()) ? sunsetRaw : null;
+      const tzeisRaw = dayInfo?.extendedZmanim?.tzeis;
+      const tzeis = tzeisRaw instanceof Date && !Number.isNaN(tzeisRaw.getTime()) ? tzeisRaw : null;
       const now = new Date();
-      const afterTzeis = tzeis && now >= tzeis;
+      const afterTzeis = !tzeis || now >= tzeis;
       const waitUntil = tzeis && !afterTzeis ? formatTimeUntil(tzeis) : null;
-      const handleOmerPress = async () => {
-        if (isEditing || !omerDay) return;
-        if (!afterTzeis) return;
-        if (omerCountedToday) {
-          (navigation as any).navigate('Omer');
-          return;
-        }
-        await StorageService.markOmerDay(omerDay, true);
+      const countNight =
+        displayNight != null
+          ? OmerCalculator.getOmerNightToCount(now, sunset, tzeis)
+          : null;
+
+      const openOmer = () => {
+        if (isEditing || !displayNight) return;
+        (navigation as any).navigate('Omer');
+      };
+
+      const handleMarkComplete = async () => {
+        if (isEditing || countNight == null || !afterTzeis || omerCountedToday) return;
+        await StorageService.markOmerDay(countNight, true);
         setOmerCountedToday(true);
         (navigation as any).navigate('Omer');
       };
+
+      const completeRowDisabled = isEditing || !afterTzeis || omerCountedToday;
+      const checkedTonight = !!omerCountedToday && afterTzeis;
+      const countedWaitingNext = !!omerCountedToday && !afterTzeis;
+      const emptyBeforeTzeis = !omerCountedToday && !afterTzeis;
+
+      const omerWaitLong =
+        !afterTzeis && tzeis
+          ? omerCountedToday
+            ? `Today is day ${displayNight}. ${waitUntil ? `In ${waitUntil}: day ${countNight}` : `Next: day ${countNight}`} (after nightfall ${formatTime(tzeis)}).`
+            : countNight != null
+              ? `Today is day ${displayNight}. After nightfall (${formatTime(tzeis)}): day ${countNight}${waitUntil ? ` · ${waitUntil} from now` : ''}.`
+              : null
+          : null;
+      const omerWaitShort =
+        !afterTzeis && tzeis
+          ? omerCountedToday
+            ? (waitUntil ? `Next: day ${countNight} in ${waitUntil}` : `Next: day ${countNight}`)
+            : countNight != null
+              ? `After ${formatTime(tzeis)}: day ${countNight}${waitUntil ? ` · ${waitUntil}` : ''}`
+              : null
+          : null;
+
+      const checkLabelLong =
+        !afterTzeis
+          ? waitUntil && countNight != null
+            ? `Day ${countNight} in ${waitUntil}`
+            : 'Wait for nightfall'
+          : omerCountedToday
+            ? 'Counted for tonight'
+            : 'Have you counted Omer yet?';
+      const checkLabelShort =
+        !afterTzeis
+          ? waitUntil && countNight != null
+            ? `Day ${countNight} · ${waitUntil}`
+            : 'Wait nightfall'
+          : omerCountedToday
+            ? 'Counted ✓'
+            : 'Counted tonight?';
+
       return (
-        <GlassCard onPress={handleOmerPress}>
-          <View style={styles.omerPanel}>
-            <Text style={styles.omerTitle}>Day {omerDay} of Omer</Text>
-            {!afterTzeis && waitUntil && tzeis ? (
-              <Text style={styles.omerWait}>You can't say it yet – wait {waitUntil} until {formatTime(tzeis)}</Text>
-            ) : (
-              <TouchableOpacity
-                style={styles.omerCheckRow}
-                onPress={handleOmerPress}
-                activeOpacity={0.7}
-                disabled={isEditing}
+        <GlassCard compact={half} onPress={openOmer}>
+          <View style={[styles.omerPanel, half && styles.halfPanelInner]}>
+            <Text style={[styles.omerTitle, half && { fontSize: 12 }]} numberOfLines={1}>
+              Today · day {displayNight}
+            </Text>
+            {!afterTzeis && tzeis ? (
+              <Text style={[styles.omerWait, half && styles.omerWaitHalf]} numberOfLines={half ? 2 : undefined}>
+                {half ? omerWaitShort : omerWaitLong}
+              </Text>
+            ) : null}
+            <TouchableOpacity
+              style={[
+                styles.omerCheckRow,
+                half && styles.omerCheckRowHalf,
+                completeRowDisabled && styles.omerCheckRowDisabled,
+              ]}
+              onPress={handleMarkComplete}
+              activeOpacity={completeRowDisabled ? 1 : 0.7}
+              disabled={completeRowDisabled}
+            >
+              <View
+                style={[
+                  styles.omerCheckbox,
+                  half && { width: 20, height: 20, borderRadius: 5 },
+                  checkedTonight && styles.omerCheckboxChecked,
+                  countedWaitingNext && styles.omerCheckboxCheckedWaiting,
+                  emptyBeforeTzeis && styles.omerCheckboxDisabled,
+                ]}
               >
-                <View style={[styles.omerCheckbox, omerCountedToday && styles.omerCheckboxChecked]}>
-                  {omerCountedToday && <Text style={styles.omerCheckmark}>✓</Text>}
-                </View>
-                <Text style={styles.omerCheckLabel}>Have you counted Omer yet?</Text>
-              </TouchableOpacity>
-            )}
+                {omerCountedToday && <Text style={[styles.omerCheckmark, half && { fontSize: 12 }]}>✓</Text>}
+              </View>
+              <Text
+                style={[
+                  styles.omerCheckLabel,
+                  half && styles.omerCheckLabelHalf,
+                  completeRowDisabled && styles.omerCheckLabelMuted,
+                ]}
+                numberOfLines={half ? 2 : undefined}
+              >
+                {half ? checkLabelShort : checkLabelLong}
+              </Text>
+            </TouchableOpacity>
           </View>
         </GlassCard>
       );
@@ -413,11 +623,15 @@ export function renderPanelContent(
 
     case 'rosh_chodesh':
       return (
-        <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
-          <View style={styles.roshChodeshPanel}>
-            <Text style={styles.roshChodeshIcon}>🌙</Text>
-            <Text style={styles.roshChodeshTitle}>Rosh Chodesh</Text>
-            <Text style={styles.roshChodeshText}>{dayInfo?.isRoshChodesh ? 'Today!' : 'View calendar'}</Text>
+        <GlassCard compact={half} onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
+          <View style={[styles.roshChodeshPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.roshChodeshIcon, half && styles.halfEmoji]}>🌙</Text>
+            <Text style={[styles.roshChodeshTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Rosh Chodesh
+            </Text>
+            <Text style={[styles.roshChodeshText, half && styles.halfBody]} numberOfLines={1}>
+              {dayInfo?.isRoshChodesh ? 'Today!' : 'View calendar'}
+            </Text>
           </View>
         </GlassCard>
       );
@@ -432,11 +646,15 @@ export function renderPanelContent(
             : `${daysUntil} days`
         : "Add your birthday";
       return (
-        <GlassCard onPress={() => !isEditing && setHebrewBirthdayModalVisible(true)}>
-          <View style={styles.birthdayPanel}>
-            <Text style={styles.birthdayIcon}>🎂</Text>
-            <Text style={styles.birthdayTitle}>Hebrew Birthday</Text>
-            <Text style={styles.birthdayText}>{birthdayDisplay}</Text>
+        <GlassCard compact={half} onPress={() => !isEditing && setHebrewBirthdayModalVisible(true)}>
+          <View style={[styles.birthdayPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.birthdayIcon, half && styles.halfEmoji]}>🎂</Text>
+            <Text style={[styles.birthdayTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Hebrew Birthday
+            </Text>
+            <Text style={[styles.birthdayText, half && styles.halfBody]} numberOfLines={1}>
+              {birthdayDisplay}
+            </Text>
           </View>
         </GlassCard>
       );
@@ -449,11 +667,15 @@ export function renderPanelContent(
         ? `Yahrzeit: ${gedolimRabbi}`
         : 'No gedolim yahrzeit today';
       return (
-        <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
-          <View style={styles.yahrzeitPanel}>
-            <Text style={styles.yahrzeitIcon}>🕯️</Text>
-            <Text style={styles.yahrzeitTitle}>Yahrzeit</Text>
-            <Text style={styles.yahrzeitText} numberOfLines={3}>{yahrzeitDisplay}</Text>
+        <GlassCard compact={half} onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
+          <View style={[styles.yahrzeitPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.yahrzeitIcon, half && styles.halfEmoji]}>🕯️</Text>
+            <Text style={[styles.yahrzeitTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Yahrzeit
+            </Text>
+            <Text style={[styles.yahrzeitText, half && styles.halfBody]} numberOfLines={half ? 2 : 3}>
+              {yahrzeitDisplay}
+            </Text>
           </View>
         </GlassCard>
       );
@@ -461,30 +683,34 @@ export function renderPanelContent(
 
     case 'nach_yomi':
       return (
-        <GlassCard>
+        <GlassCard compact={half}>
           <TouchableOpacity
             onPress={() => !isEditing && (navigation as any).navigate('NachReader', { nachYomi: true })}
             activeOpacity={0.75}
-            style={styles.dafYomiButton}
+            style={[styles.dafYomiButton, half && styles.dafYomiButtonHalf, half && styles.halfPanelInner]}
           >
-            <Text style={styles.dafButtonIcon}>📖</Text>
-            <Text style={styles.dafButtonTitle}>Nach Yomi</Text>
-            <Text style={styles.dafButtonSubtext} numberOfLines={2} adjustsFontSizeToFit>{nachYomiText ?? "Today's chapter"}</Text>
+            <Text style={[styles.dafButtonIcon, half && styles.dafButtonIconHalf]}>📖</Text>
+            <Text style={[styles.dafButtonTitle, half && styles.dafButtonTitleHalf]}>Nach Yomi</Text>
+            <Text style={[styles.dafButtonSubtext, half && styles.dafButtonSubtextHalf]} numberOfLines={2} adjustsFontSizeToFit>
+              {nachYomiText ?? "Today's chapter"}
+            </Text>
           </TouchableOpacity>
         </GlassCard>
       );
 
     case 'mishna_yomis':
       return (
-        <GlassCard>
+        <GlassCard compact={half}>
           <TouchableOpacity
             onPress={() => !isEditing && (navigation as any).navigate('MishnaReader', { mishnaYomi: true })}
             activeOpacity={0.75}
-            style={styles.dafYomiButton}
+            style={[styles.dafYomiButton, half && styles.dafYomiButtonHalf, half && styles.halfPanelInner]}
           >
-            <Text style={styles.dafButtonIcon}>📕</Text>
-            <Text style={styles.dafButtonTitle}>Mishna Yomi</Text>
-            <Text style={styles.dafButtonSubtext} numberOfLines={2} adjustsFontSizeToFit>{mishnaYomiText ?? "Today's perek"}</Text>
+            <Text style={[styles.dafButtonIcon, half && styles.dafButtonIconHalf]}>📕</Text>
+            <Text style={[styles.dafButtonTitle, half && styles.dafButtonTitleHalf]}>Mishna Yomi</Text>
+            <Text style={[styles.dafButtonSubtext, half && styles.dafButtonSubtextHalf]} numberOfLines={2} adjustsFontSizeToFit>
+              {mishnaYomiText ?? "Today's perek"}
+            </Text>
           </TouchableOpacity>
         </GlassCard>
       );
@@ -493,11 +719,15 @@ export function renderPanelContent(
       const jewishDayMatch = dayInfo?.jewishDateShort?.match(/^\d+/);
       const jewishDay = jewishDayMatch ? parseInt(jewishDayMatch[0], 10) : 15;
       return (
-        <GlassCard onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
-          <View style={styles.moonPanel}>
-            <MoonPhaseAnimation jewishDay={jewishDay} isDark={theme.isDark} />
-            <Text style={styles.moonTitle}>Moon Phase</Text>
-            <Text style={styles.moonText}>Day {jewishDay} of month</Text>
+        <GlassCard compact={half} onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
+          <View style={[styles.moonPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <MoonPhaseAnimation jewishDay={jewishDay} isDark={theme.isDark} compact={half} />
+            <Text style={[styles.moonTitle, half && { fontSize: 11 }]} numberOfLines={1}>
+              Moon Phase
+            </Text>
+            <Text style={[styles.moonText, half && { fontSize: 10, marginTop: 0 }]} numberOfLines={1}>
+              Day {jewishDay} of month
+            </Text>
           </View>
         </GlassCard>
       );
@@ -505,15 +735,21 @@ export function renderPanelContent(
 
     case 'daf_yomi':
       return (
-        <GlassCard>
+        <GlassCard compact={half}>
           <TouchableOpacity
             onPress={() => !isEditing && (navigation as any).navigate('GemaraReader', { dafYomi: true })}
             activeOpacity={0.75}
-            style={styles.dafYomiButton}
+            style={[styles.dafYomiButton, half && styles.dafYomiButtonHalf, half && styles.halfPanelInner]}
           >
-            <Text style={styles.dafButtonIcon}>📚</Text>
-            <Text style={styles.dafButtonTitle}>Daf Yomi</Text>
-            <Text style={styles.dafButtonSubtext} numberOfLines={2} adjustsFontSizeToFit>{dafYomiText ?? "Today's daf"}</Text>
+            <Text style={[styles.dafButtonIcon, half && styles.dafButtonIconHalf]}>📚</Text>
+            <Text style={[styles.dafButtonTitle, half && styles.dafButtonTitleHalf]}>Daf Yomi</Text>
+            <Text
+              style={[styles.dafButtonSubtext, half && styles.dafButtonSubtextHalf]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+            >
+              {dafYomiText ?? "Today's daf"}
+            </Text>
           </TouchableOpacity>
         </GlassCard>
       );
@@ -521,11 +757,15 @@ export function renderPanelContent(
     case 'parsha_summary': {
       const parshaSummaryLine = getParshaSummary(dayInfo?.parsha);
       return (
-        <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Parsha')}>
-          <View style={styles.learningPanel}>
-            <Text style={styles.learningIcon}>📜</Text>
-            <Text style={styles.learningTitle}>{dayInfo?.parsha || 'Parsha'}</Text>
-            <Text style={styles.learningText} numberOfLines={3}>{parshaSummaryLine}</Text>
+        <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Parsha')}>
+          <View style={[styles.learningPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.learningIcon, half && styles.halfEmoji]}>📜</Text>
+            <Text style={[styles.learningTitle, half && styles.halfHeading]} numberOfLines={1}>
+              {dayInfo?.parsha || 'Parsha'}
+            </Text>
+            <Text style={[styles.learningText, half && styles.halfBody]} numberOfLines={3}>
+              {parshaSummaryLine}
+            </Text>
           </View>
         </GlassCard>
       );
@@ -533,26 +773,36 @@ export function renderPanelContent(
 
     case 'mussar':
       return (
-        <GlassCard>
-          <View style={styles.mussarPanel}>
-            <Text style={styles.mussarIcon}>💎</Text>
-            <Text style={styles.mussarTitle}>Daily Mussar</Text>
-            <Text style={styles.mussarText}>{getByDay100(MUSSAR_QUOTES)}</Text>
+        <GlassCard compact={half}>
+          <View style={[styles.mussarPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.mussarIcon, half && styles.halfEmoji]}>💎</Text>
+            <Text style={[styles.mussarTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Daily Mussar
+            </Text>
+            <Text style={[styles.mussarText, half && { fontSize: 10, lineHeight: 13, marginTop: 2 }]} numberOfLines={half ? 3 : undefined}>
+              {getByDay100(MUSSAR_QUOTES)}
+            </Text>
           </View>
         </GlassCard>
       );
 
     case 'rambam_daily':
       return (
-        <GlassCard>
+        <GlassCard compact={half}>
           <TouchableOpacity
             onPress={() => !isEditing && (navigation as any).navigate('RambamReader', { rambamYomi: true })}
             activeOpacity={0.75}
-            style={styles.dafYomiButton}
+            style={[styles.dafYomiButton, half && styles.dafYomiButtonHalf, half && styles.halfPanelInner]}
           >
-            <Text style={styles.dafButtonIcon}>📕</Text>
-            <Text style={styles.dafButtonTitle}>Rambam Daily</Text>
-            <Text style={styles.dafButtonSubtext} numberOfLines={2} adjustsFontSizeToFit>{rambamYomiText ?? "Today's 3 chapters"}</Text>
+            <Text style={[styles.dafButtonIcon, half && styles.dafButtonIconHalf]}>📕</Text>
+            <Text style={[styles.dafButtonTitle, half && styles.dafButtonTitleHalf]}>Rambam Daily</Text>
+            <Text
+              style={[styles.dafButtonSubtext, half && styles.dafButtonSubtextHalf]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+            >
+              {rambamYomiText ?? "Today's 3 chapters"}
+            </Text>
           </TouchableOpacity>
         </GlassCard>
       );
@@ -561,15 +811,17 @@ export function renderPanelContent(
       const sm = shneyimMikraData;
       const smPercent = sm?.percentComplete ?? 0;
       return (
-        <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Chumash')}>
-          <View style={styles.chumashPanelCompact}>
-            <Text style={styles.learningIcon}>📜</Text>
-            <Text style={styles.learningTitle}>Shneyim Mikra</Text>
-            <Text style={styles.learningText} numberOfLines={1}>
+        <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Chumash')}>
+          <View style={[styles.chumashPanelCompact, half && styles.halfPanelInner]}>
+            <Text style={[styles.learningIcon, half && styles.halfEmoji]}>📜</Text>
+            <Text style={[styles.learningTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Shneyim Mikra
+            </Text>
+            <Text style={[styles.learningText, half && styles.halfBody]} numberOfLines={1}>
               {sm ? `${sm.parshaHebrew} • Aliyah ${sm.todayAliyah} (${sm.aliyotCompleted}/7)` : 'Loading...'}
             </Text>
-            <View style={styles.progressBarContainer}>
-              <View style={styles.progressBarBg}>
+            <View style={[styles.progressBarContainer, half && { marginTop: 4 }]}>
+              <View style={[styles.progressBarBg, half && { height: 4 }]}>
                 <View style={[styles.progressBarFill, { width: `${smPercent}%` }]} />
               </View>
             </View>
@@ -581,10 +833,14 @@ export function renderPanelContent(
     case 'word_of_day': {
       const todayWord = getByDay100(HEBREW_WORDS);
       return (
-        <GlassCard>
-          <View style={styles.wordPanel}>
-            <Text style={styles.wordHebrew}>{todayWord.word}</Text>
-            <Text style={styles.wordMeaning}>{todayWord.meaning}</Text>
+        <GlassCard compact={half}>
+          <View style={[styles.wordPanel, half && styles.wordPanelHalf, half && styles.halfPanelInner]}>
+            <Text style={[styles.wordHebrew, half && styles.wordHebrewHalf]} numberOfLines={1}>
+              {todayWord.word}
+            </Text>
+            <Text style={[styles.wordMeaning, half && styles.wordMeaningHalf]} numberOfLines={half ? 2 : undefined}>
+              {todayWord.meaning}
+            </Text>
           </View>
         </GlassCard>
       );
@@ -592,55 +848,75 @@ export function renderPanelContent(
 
     case 'torah_thought':
       return (
-        <GlassCard>
-          <View style={styles.thoughtPanel}>
-            <Text style={styles.thoughtIcon}>💡</Text>
-            <Text style={styles.thoughtTitle}>Torah Thought</Text>
-            <Text style={styles.thoughtText}>{getByDay100(TORAH_THOUGHTS)}</Text>
+        <GlassCard compact={half}>
+          <View style={[styles.thoughtPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.thoughtIcon, half && styles.halfEmoji]}>💡</Text>
+            <Text style={[styles.thoughtTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Torah Thought
+            </Text>
+            <Text style={[styles.thoughtText, half && styles.halfBody]} numberOfLines={half ? 3 : undefined}>
+              {getByDay100(TORAH_THOUGHTS)}
+            </Text>
           </View>
         </GlassCard>
       );
 
     case 'zohar':
       return (
-        <GlassCard>
-          <View style={styles.learningPanel}>
-            <Text style={styles.learningIcon}>🌟</Text>
-            <Text style={styles.learningTitle}>Daily Zohar</Text>
-            <Text style={styles.learningText} numberOfLines={3}>{getByDay100(ZOHAR_CHASSIDUS)}</Text>
+        <GlassCard compact={half}>
+          <View style={[styles.learningPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.learningIcon, half && styles.halfEmoji]}>🌟</Text>
+            <Text style={[styles.learningTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Daily Zohar
+            </Text>
+            <Text style={[styles.learningText, half && styles.halfBody]} numberOfLines={3}>
+              {getByDay100(ZOHAR_CHASSIDUS)}
+            </Text>
           </View>
         </GlassCard>
       );
 
     case 'jewish_history':
       return (
-        <GlassCard>
-          <View style={styles.historyPanel}>
-            <Text style={styles.historyIcon}>📜</Text>
-            <Text style={styles.historyTitle}>On This Day</Text>
-            <Text style={styles.historyText} numberOfLines={3}>{getByDay100(JEWISH_HISTORY_ON_THIS_DAY)}</Text>
+        <GlassCard compact={half}>
+          <View style={[styles.historyPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.historyIcon, half && styles.halfEmoji]}>📜</Text>
+            <Text style={[styles.historyTitle, half && styles.halfHeading]} numberOfLines={1}>
+              On This Day
+            </Text>
+            <Text style={[styles.historyText, half && styles.halfBody]} numberOfLines={3}>
+              {getByDay100(JEWISH_HISTORY_ON_THIS_DAY)}
+            </Text>
           </View>
         </GlassCard>
       );
 
     case 'gedolim_story':
       return (
-        <GlassCard>
-          <View style={styles.storyPanel}>
-            <Text style={styles.storyIcon}>👤</Text>
-            <Text style={styles.storyTitle}>Gedolim Story</Text>
-            <Text style={styles.storyText} numberOfLines={4}>{getByDay100(GEDOLIM_STORIES)}</Text>
+        <GlassCard compact={half}>
+          <View style={[styles.storyPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.storyIcon, half && styles.halfEmoji]}>👤</Text>
+            <Text style={[styles.storyTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Gedolim Story
+            </Text>
+            <Text style={[styles.storyText, half && styles.halfBody]} numberOfLines={half ? 3 : 4}>
+              {getByDay100(GEDOLIM_STORIES)}
+            </Text>
           </View>
         </GlassCard>
       );
 
     case 'mitzvah_of_day':
       return (
-        <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
-          <View style={styles.mitzvahPanel}>
-            <Text style={styles.mitzvahIcon}>⭐</Text>
-            <Text style={styles.mitzvahTitle}>Mitzvah of the Day</Text>
-            <Text style={styles.mitzvahText}>Give tzedakah today—even a small amount. "Tzedakah tatzil mimaves."</Text>
+        <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
+          <View style={[styles.mitzvahPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.mitzvahIcon, half && styles.halfEmoji]}>⭐</Text>
+            <Text style={[styles.mitzvahTitle, half && { fontSize: 11 }]} numberOfLines={2}>
+              Mitzvah of the Day
+            </Text>
+            <Text style={[styles.mitzvahText, half && styles.halfBody]} numberOfLines={half ? 3 : undefined}>
+              Give tzedakah today—even a small amount. "Tzedakah tatzil mimaves."
+            </Text>
           </View>
         </GlassCard>
       );
@@ -648,11 +924,15 @@ export function renderPanelContent(
     case 'middah_of_week': {
       const middos = ['Chesed (Kindness)', 'Gevurah (Strength)', 'Tiferes (Beauty)', 'Netzach (Endurance)', 'Hod (Splendor)', 'Yesod (Foundation)', 'Malchus (Kingship)'];
       return (
-        <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
-          <View style={styles.middahPanel}>
-            <Text style={styles.middahIcon}>💪</Text>
-            <Text style={styles.middahTitle}>Middah of the Week</Text>
-            <Text style={styles.middahText}>{middos[new Date().getDay()]}</Text>
+        <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
+          <View style={[styles.middahPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.middahIcon, half && styles.halfEmoji]}>💪</Text>
+            <Text style={[styles.middahTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Middah of the Week
+            </Text>
+            <Text style={[styles.middahText, half && { fontSize: 12, marginTop: 2 }]} numberOfLines={2}>
+              {middos[new Date().getDay()]}
+            </Text>
           </View>
         </GlassCard>
       );
@@ -660,27 +940,47 @@ export function renderPanelContent(
 
     case 'gratitude':
       return (
-        <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub', { screen: 'Gratitude' })}>
-          <View style={styles.gratitudePanel}>
-            <Text style={styles.gratitudeIcon}>🙏</Text>
-            <Text style={styles.gratitudeTitle}>Daily Gratitude</Text>
-            <Text style={styles.gratitudeText}>What are you thankful for?</Text>
+        <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub', { screen: 'Gratitude' })}>
+          <View style={[styles.gratitudePanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.gratitudeIcon, half && styles.halfEmoji]}>🙏</Text>
+            <Text style={[styles.gratitudeTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Daily Gratitude
+            </Text>
+            <Text style={[styles.gratitudeText, half && styles.halfBody]} numberOfLines={2}>
+              What are you thankful for?
+            </Text>
           </View>
         </GlassCard>
       );
 
     case 'tehillim_stats':
       return (
-        <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
-          <View style={styles.statsPanel}>
-            <Text style={styles.statsIcon}>📊</Text>
-            <Text style={styles.statsTitle}>Tehillim Stats</Text>
-            <Text style={styles.statsText}>{tehillimProgress.overallPercent}% {tehillimProgress.overallLabel || 'today'}</Text>
-            {tehillimStreak > 0 && (
-              <Text style={styles.statsSubtext}>{tehillimStreak} day streak</Text>
-            )}
-            {tehillimAverageWPM != null && (
-              <Text style={styles.statsSubtext}>Avg {tehillimAverageWPM} WPM</Text>
+        <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
+          <View style={[styles.statsPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.statsIcon, half && styles.halfEmoji]}>📊</Text>
+            <Text style={[styles.statsTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Tehillim Stats
+            </Text>
+            <Text style={[styles.statsText, half && { fontSize: 11, marginTop: 2 }]} numberOfLines={1}>
+              {tehillimProgress.overallPercent}% {tehillimProgress.overallLabel || 'today'}
+            </Text>
+            {half ? (
+              (tehillimStreak > 0 || tehillimAverageWPM != null) ? (
+                <Text style={[styles.statsSubtext, styles.statsSubtextHalf]} numberOfLines={2}>
+                  {[tehillimStreak > 0 ? `${tehillimStreak}d streak` : null, tehillimAverageWPM != null ? `Avg ${tehillimAverageWPM} WPM` : null]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
+              ) : null
+            ) : (
+              <>
+                {tehillimStreak > 0 && (
+                  <Text style={styles.statsSubtext}>{tehillimStreak} day streak</Text>
+                )}
+                {tehillimAverageWPM != null && (
+                  <Text style={styles.statsSubtext}>Avg {tehillimAverageWPM} WPM</Text>
+                )}
+              </>
             )}
           </View>
         </GlassCard>
@@ -688,23 +988,35 @@ export function renderPanelContent(
 
     case 'brachos_counter':
       return (
-        <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
-          <View style={styles.counterPanel}>
-            <Text style={styles.counterIcon}>💯</Text>
-            <Text style={styles.counterNumber}>{brachosCount}/100</Text>
-            <Text style={styles.counterText}>Brachos • Tap for today</Text>
+        <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
+          <View style={[styles.counterPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.counterIcon, half && { fontSize: 18, marginBottom: 2 }]}>💯</Text>
+            <Text style={[styles.counterNumber, half && styles.counterNumberHalf]} numberOfLines={1}>
+              {brachosCount}/100
+            </Text>
+            <Text style={[styles.counterText, half && styles.counterTextHalf]} numberOfLines={2}>
+              Brachos • Tap for today
+            </Text>
           </View>
         </GlassCard>
       );
 
     case 'tzedakah_tracker':
       return (
-        <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
-          <View style={styles.tzedakahPanel}>
-            <Text style={styles.tzedakahIcon}>💰</Text>
-            <Text style={styles.tzedakahTitle}>Tzedakah</Text>
-            <Text style={styles.tzedakahText}>
-              Past month: {tzedakahPastMonthTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2, style: 'currency', currency: 'USD' })}
+        <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
+          <View style={[styles.tzedakahPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.tzedakahIcon, half && styles.halfEmoji]}>💰</Text>
+            <Text style={[styles.tzedakahTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Tzedakah
+            </Text>
+            <Text style={[styles.tzedakahText, half && styles.tzedakahTextHalf]} numberOfLines={half ? 2 : undefined}>
+              Past month:{' '}
+              {tzedakahPastMonthTotal.toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+                style: 'currency',
+                currency: 'USD',
+              })}
             </Text>
           </View>
         </GlassCard>
@@ -712,11 +1024,13 @@ export function renderPanelContent(
 
     case 'habits':
       return (
-        <GlassCard onPress={() => !isEditing && (navigation as any).navigate('Hub', { screen: 'DailyGoals' })}>
-          <View style={styles.habitsPanel}>
-            <Text style={styles.habitsIcon}>✓</Text>
-            <Text style={styles.habitsTitle}>Habit Tracker</Text>
-            <Text style={styles.habitsText}>
+        <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub', { screen: 'DailyGoals' })}>
+          <View style={[styles.habitsPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.habitsIcon, half && styles.halfEmoji]}>✓</Text>
+            <Text style={[styles.habitsTitle, half && styles.halfHeading]} numberOfLines={1}>
+              Habit Tracker
+            </Text>
+            <Text style={[styles.habitsText, half && styles.halfBody]} numberOfLines={2}>
               {habitsTodayMarked ? 'Done today ✓' : 'Tap to mark today'}
             </Text>
           </View>
@@ -732,21 +1046,27 @@ export function renderPanelContent(
     case 'dvar_torah_share':
     case 'prayer_request':
       return (
-        <GlassCard>
-          <View style={styles.communityPanel}>
-            <Text style={styles.communityIcon}>{panelDef?.icon || '👥'}</Text>
-            <Text style={styles.communityTitle}>{panelDef?.name || 'Community'}</Text>
-            <Text style={styles.communityText}>Coming soon</Text>
+        <GlassCard compact={half}>
+          <View style={[styles.communityPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.communityIcon, half && styles.halfEmoji]}>{panelDef?.icon || '👥'}</Text>
+            <Text style={[styles.communityTitle, half && styles.halfHeading]} numberOfLines={2}>
+              {panelDef?.name || 'Community'}
+            </Text>
+            <Text style={[styles.communityText, half && styles.halfBody]} numberOfLines={1}>
+              Coming soon
+            </Text>
           </View>
         </GlassCard>
       );
 
     default:
       return (
-        <GlassCard>
-          <View style={styles.placeholderPanel}>
-            <Text style={styles.placeholderIcon}>{panelDef?.icon || '📦'}</Text>
-            <Text style={styles.placeholderText}>{panelDef?.name || panel.type}</Text>
+        <GlassCard compact={half}>
+          <View style={[styles.placeholderPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
+            <Text style={[styles.placeholderIcon, half && styles.halfEmoji]}>{panelDef?.icon || '📦'}</Text>
+            <Text style={[styles.placeholderText, half && styles.halfBody]} numberOfLines={2}>
+              {panelDef?.name || panel.type}
+            </Text>
           </View>
         </GlassCard>
       );

@@ -32,6 +32,7 @@ const TEHILLIM_WHENEVER_COMPLETED_KEY = '@tehillim_whenever_completed';
 const TEHILLIM_WHENEVER_DAYS_KEY = '@tehillim_whenever_days'; // dates when user did at least 1 perek in whenever mode
 const TEHILLIM_WEEKLY_COMPLETED_KEY = '@tehillim_weekly_completed';
 const TEHILLIM_MONTHLY_COMPLETED_KEY = '@tehillim_monthly_completed';
+const TEHILLIM_FULL_BOOK_COMPLETIONS_KEY = '@tehillim_full_book_completions_count';
 
 const ALL_CHAPTERS = Array.from({ length: 150 }, (_, i) => i + 1);
 
@@ -500,6 +501,65 @@ export class DailyTehillimTracker {
       console.warn('Error reading WPM:', e);
       return null;
     }
+  }
+
+  /**
+   * How many times the user has finished all 150 perakim in the current goal mode
+   * (increments automatically when you complete the last perek of a full book).
+   */
+  static async getFullTehillimCompletionsCount(): Promise<number> {
+    try {
+      const raw = await AsyncStorage.getItem(TEHILLIM_FULL_BOOK_COMPLETIONS_KEY);
+      const n = raw != null ? parseInt(raw, 10) : 0;
+      return Number.isFinite(n) && n >= 0 ? n : 0;
+    } catch (e) {
+      console.warn('Error reading full Tehillim completions count:', e);
+      return 0;
+    }
+  }
+
+  private static async bumpFullTehillimCompletionsCount(): Promise<void> {
+    try {
+      const n = await this.getFullTehillimCompletionsCount();
+      await AsyncStorage.setItem(TEHILLIM_FULL_BOOK_COMPLETIONS_KEY, String(n + 1));
+    } catch (e) {
+      console.warn('Error bumping full Tehillim completions count:', e);
+    }
+  }
+
+  /**
+   * Clear all progress for the current "full book" run (checkmarks / weekly set / etc.)
+   * without incrementing the lifetime full-book counter.
+   */
+  static async resetCurrentBookProgress(): Promise<void> {
+    const settings = await this.getSettings();
+    try {
+      if (settings.goalType === 'whenever') {
+        await this.resetWheneverProgress();
+      } else if (settings.goalType === 'weekly') {
+        const weekKey = getWeekKey();
+        await AsyncStorage.setItem(
+          TEHILLIM_WEEKLY_COMPLETED_KEY,
+          JSON.stringify({ periodKey: weekKey, chapters: [] })
+        );
+      } else if (settings.goalType === 'monthly') {
+        const monthKey = getHebrewMonthKey();
+        await AsyncStorage.setItem(
+          TEHILLIM_MONTHLY_COMPLETED_KEY,
+          JSON.stringify({ periodKey: monthKey, chapters: [] })
+        );
+      } else if (settings.goalType === 'custom') {
+        await this.resetCustomProgress();
+      }
+      await this.resetTodaysProgress();
+    } catch (e) {
+      console.warn('Error resetting current book progress:', e);
+    }
+  }
+
+  private static async recordFullTehillimFinishedAndRestart(): Promise<void> {
+    await this.bumpFullTehillimCompletionsCount();
+    await this.resetCurrentBookProgress();
   }
 
   /**

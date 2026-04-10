@@ -193,8 +193,6 @@ export const OmerScreen: React.FC = () => {
     );
   }
 
-  const brachaNight = countNight ?? displayNight;
-
   const toggleToday = async () => {
     if (countNight == null || !afterTzeis) return;
     const newCounted = !todayCounted;
@@ -202,11 +200,11 @@ export const OmerScreen: React.FC = () => {
     setTodayCounted(newCounted);
   };
 
-  const weekNum = OmerCalculator.getOmerWeek(brachaNight);
-  const blessing = OmerCalculator.getOmerBlessing(brachaNight);
-  const meditation = OmerCalculator.getSefirahMeditation(brachaNight);
+  const weekNum = OmerCalculator.getOmerWeek(displayNight);
+  const blessing = OmerCalculator.getOmerBlessing(displayNight);
+  const meditation = OmerCalculator.getSefirahMeditation(displayNight);
   const omerTonightTheme =
-    OmerCalculator.getOmerInfo(brachaNight)?.meaning ?? meditation?.title ?? '';
+    OmerCalculator.getOmerInfo(displayNight)?.meaning ?? meditation?.title ?? '';
   const progress = (displayNight / 49) * 100;
   const isLagBaomer = displayNight === 33;
 
