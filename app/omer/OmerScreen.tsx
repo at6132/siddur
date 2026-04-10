@@ -24,6 +24,11 @@ import { ZmanimService } from '../../src/core/zmanim/ZmanimService';
 import { StorageService } from '../../src/storage/StorageService';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import type { LocationObject } from 'expo-location';
+import {
+  OMER_EXTRA_AFTER_COUNT,
+  OMER_HARACHAMAN_HEBREW,
+  getOmerRibonoShelOlamParagraph,
+} from '../../src/content/omer/postOmerLiturgy';
 
 function formatTimeUntilAt(now: Date, until: Date): string | null {
   const ms = until.getTime() - now.getTime();
@@ -60,6 +65,7 @@ export const OmerScreen: React.FC = () => {
   const [clock, setClock] = useState(() => new Date());
   const [checkAnim] = useState(new Animated.Value(0));
   const [showReflection, setShowReflection] = useState(false);
+  const [showExtraAfterOmer, setShowExtraAfterOmer] = useState(false);
 
   const loadOmerData = useCallback(async () => {
     const prefs = await UserPreferencesService.getPreferences();
@@ -154,6 +160,11 @@ export const OmerScreen: React.FC = () => {
   const toggleReflection = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowReflection((v) => !v);
+  };
+
+  const toggleExtraAfterOmer = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowExtraAfterOmer((v) => !v);
   };
 
   const checkScale = checkAnim.interpolate({
@@ -261,6 +272,47 @@ export const OmerScreen: React.FC = () => {
           <Text style={[styles.countHebrew, { color: theme.colors.text.primary }]}>
             {blessing.countHebrew}
           </Text>
+
+          <View style={[styles.softRule, { backgroundColor: theme.colors.neutral[200] }]} />
+
+          <Text style={[styles.harachamanHebrew, { color: theme.colors.text.primary }]}>
+            {OMER_HARACHAMAN_HEBREW}
+          </Text>
+
+          <View style={styles.extraAfterOmerWrap}>
+            <TouchableOpacity
+              onPress={toggleExtraAfterOmer}
+              activeOpacity={0.7}
+              style={styles.disclosureRow}
+            >
+              <Text style={[styles.disclosureLabel, { color: theme.colors.text.secondary }]}>
+                {showExtraAfterOmer ? 'Hide' : 'More tefillos after Harachaman'}
+              </Text>
+              <Text style={[styles.disclosureChevron, { color: theme.colors.text.tertiary }]}>
+                {showExtraAfterOmer ? '⌃' : '⌄'}
+              </Text>
+            </TouchableOpacity>
+            {showExtraAfterOmer && (
+              <View style={styles.extraAfterOmerBody}>
+                {[
+                  ...OMER_EXTRA_AFTER_COUNT,
+                  {
+                    title: 'רבונו של עולם',
+                    bodyHebrew: getOmerRibonoShelOlamParagraph(blessing.sefiraHebrew),
+                  },
+                ].map((section) => (
+                  <View key={section.title} style={styles.extraLiturgySection}>
+                    <Text style={[styles.extraLiturgyTitle, { color: theme.colors.text.secondary }]}>
+                      {section.title}
+                    </Text>
+                    <Text style={[styles.extraLiturgyHebrew, { color: theme.colors.text.primary }]}>
+                      {section.bodyHebrew}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </View>
 
           {!afterTzeis && (
             <Text style={[styles.doneButtonCaption, { color: theme.colors.text.secondary }]}>
@@ -434,7 +486,38 @@ function createStyles() {
       lineHeight: 34,
       textAlign: 'center',
       writingDirection: 'rtl',
+      marginBottom: 0,
+    },
+    harachamanHebrew: {
+      fontFamily: fonts.hebrew.regular,
+      fontSize: 19,
+      lineHeight: 31,
+      textAlign: 'center',
+      writingDirection: 'rtl',
+      marginBottom: spacing.md,
+    },
+    extraAfterOmerWrap: {
       marginBottom: spacing.lg,
+    },
+    extraAfterOmerBody: {
+      paddingTop: spacing.xs,
+      paddingBottom: spacing.sm,
+    },
+    extraLiturgySection: {
+      marginBottom: spacing.lg,
+    },
+    extraLiturgyTitle: {
+      fontFamily: fonts.body.semiBold,
+      fontSize: 13,
+      textAlign: 'center',
+      marginBottom: spacing.sm,
+    },
+    extraLiturgyHebrew: {
+      fontFamily: fonts.hebrew.regular,
+      fontSize: 17,
+      lineHeight: 28,
+      textAlign: 'center',
+      writingDirection: 'rtl',
     },
     doneButton: {
       borderRadius: borderRadius.lg,
