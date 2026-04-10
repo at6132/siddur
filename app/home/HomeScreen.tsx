@@ -184,7 +184,12 @@ export const HomeScreen: React.FC = () => {
     aliyotCompleted: number;
   } | null>(null);
   const [tzedakahPastMonthTotal, setTzedakahPastMonthTotal] = useState<number>(0);
-  const [omerCountedToday, setOmerCountedToday] = useState(false);
+  /** Same zmanim source as loadOmerCounted so the widget matches storage logic. */
+  const [omerPanelSunset, setOmerPanelSunset] = useState<Date | null>(null);
+  const [omerPanelTzeis, setOmerPanelTzeis] = useState<Date | null>(null);
+  const [omerCountsRecord, setOmerCountsRecord] = useState<Record<number, boolean> | null>(null);
+  /** Omer night last marked complete; widget countdown only with matching counts[night]. */
+  const [omerCountdownAfterNight, setOmerCountdownAfterNight] = useState<number | null>(null);
   const [hebrewBirthday, setHebrewBirthday] = useState<{ day: number; month: number } | null>(null);
   const [hebrewBirthdayModalVisible, setHebrewBirthdayModalVisible] = useState(false);
   const [birthdayForm, setBirthdayForm] = useState({ day: 15, month: 1 }); // 15 Nisan default
@@ -264,15 +269,35 @@ export const HomeScreen: React.FC = () => {
     const now = new Date();
     const ext = await ZmanimService.calculateExtendedZmanim(now, locationObj);
     const tzeis = ext.tzeis instanceof Date && !Number.isNaN(ext.tzeis.getTime()) ? ext.tzeis : null;
+    const sunset = ext.sunset instanceof Date && !Number.isNaN(ext.sunset.getTime()) ? ext.sunset : null;
     const afterTzeis = !tzeis || now >= tzeis;
     const displayD = OmerCalculator.getDisplayOmerDay(now, ext.sunset ?? null, ext.tzeis ?? null);
     const countD = OmerCalculator.getOmerNightToCount(now, ext.sunset ?? null, ext.tzeis ?? null);
     if (displayD != null && countD != null) {
-      const counts = await StorageService.getOmerCounts();
-      const done = OmerCalculator.isOmerCaughtUp(afterTzeis, countD, counts ?? undefined);
-      setOmerCountedToday(done);
+      setOmerPanelSunset(sunset);
+      setOmerPanelTzeis(tzeis);
+      const counts = (await StorageService.getOmerCounts()) ?? {};
+      setOmerCountsRecord(counts);
+      let cdNight = await StorageService.getOmerWidgetCountdownAfterNight();
+      if (cdNight != null && !counts[cdNight]) {
+        cdNight = null;
+      }
+      if (cdNight != null) {
+        if (afterTzeis && !counts[countD]) {
+          cdNight = null;
+        } else if (!afterTzeis && countD !== cdNight + 1) {
+          cdNight = null;
+        }
+      }
+      if (cdNight == null) {
+        await StorageService.setOmerWidgetCountdownAfterNight(null);
+      }
+      setOmerCountdownAfterNight(cdNight);
     } else {
-      setOmerCountedToday(false);
+      setOmerPanelSunset(null);
+      setOmerPanelTzeis(null);
+      setOmerCountsRecord(null);
+      setOmerCountdownAfterNight(null);
     }
   }, []);
 
@@ -623,7 +648,14 @@ export const HomeScreen: React.FC = () => {
     fastDayProgress, fastProgressAnim: fastProgressAnim,
     dafYomiText, nachYomiText, mishnaYomiText, rambamYomiText, shneyimMikraData,
     brachosCount, habitsTodayMarked, tehillimStreak, tehillimAverageWPM, tzedakahPastMonthTotal,
-    omerCountedToday, setOmerCountedToday, hebrewBirthday, setHebrewBirthdayModalVisible,
+    omerPanelSunset,
+    omerPanelTzeis,
+    omerCountsRecord,
+    setOmerCountsRecord,
+    omerCountdownAfterNight,
+    setOmerCountdownAfterNight,
+    hebrewBirthday,
+    setHebrewBirthdayModalVisible,
     formatTime, formatTimeUntil,
   }), [
     dayInfo, isEditing, navigation, styles, theme,
@@ -631,7 +663,11 @@ export const HomeScreen: React.FC = () => {
     fastDayProgress, fastProgressAnim,
     dafYomiText, nachYomiText, mishnaYomiText, rambamYomiText, shneyimMikraData,
     brachosCount, habitsTodayMarked, tehillimStreak, tehillimAverageWPM, tzedakahPastMonthTotal,
-    omerCountedToday, hebrewBirthday,
+    omerPanelSunset,
+    omerPanelTzeis,
+    omerCountsRecord,
+    omerCountdownAfterNight,
+    hebrewBirthday,
   ]);
 
   const handleRenderPanelContent = useCallback(

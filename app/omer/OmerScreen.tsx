@@ -110,10 +110,20 @@ export const OmerScreen: React.FC = () => {
     }
     const after = !tzeis || clock >= tzeis;
     let cancelled = false;
-    StorageService.getOmerCounts().then((counts) => {
+    Promise.all([
+      StorageService.getOmerCounts(),
+      StorageService.getOmerWidgetCountdownAfterNight(),
+    ]).then(([counts, cdNight]) => {
       if (cancelled) return;
-      const done = OmerCalculator.isOmerCaughtUp(after, countN, counts ?? undefined);
-      setTodayCounted(done);
+      const c = counts ?? {};
+      const markedThisNight = after && !!c[countN];
+      const waitingForNextTzeit =
+        !after &&
+        cdNight != null &&
+        cdNight + 1 === countN &&
+        !!c[cdNight];
+      const markedDisplayDayEarly = !after && displayN != null && !!c[displayN];
+      setTodayCounted(markedThisNight || waitingForNextTzeit || markedDisplayDayEarly);
     });
     return () => {
       cancelled = true;
@@ -204,10 +214,15 @@ export const OmerScreen: React.FC = () => {
     );
   }
 
+  /** Before tzeit: marks on-screen day (displayNight). After tzeit: halachic count night. */
+  const nightKeyForMark =
+    (afterTzeis ? countNight : displayNight) ?? countNight ?? displayNight;
+
   const toggleToday = async () => {
-    if (countNight == null || !afterTzeis) return;
+    if (nightKeyForMark == null) return;
     const newCounted = !todayCounted;
-    await StorageService.markOmerDay(countNight, newCounted);
+    await StorageService.markOmerDay(nightKeyForMark, newCounted);
+    await StorageService.setOmerWidgetCountdownAfterNight(newCounted ? nightKeyForMark : null);
     setTodayCounted(newCounted);
   };
 
@@ -314,49 +329,46 @@ export const OmerScreen: React.FC = () => {
             )}
           </View>
 
-          {!afterTzeis && (
+          {!afterTzeis && todayCounted && (
             <Text style={[styles.doneButtonCaption, { color: theme.colors.text.secondary }]}>
-              {todayCounted
-                ? `Today is day ${displayNight}. ${waitUntilTzeis ? `In ${waitUntilTzeis}: day ${countNight}` : `Next: day ${countNight}`} (after nightfall ${formatTimeLocal(tzeis ?? undefined)}).`
-                : countNight != null
-                  ? `Today is day ${displayNight}. After nightfall (${formatTimeLocal(tzeis ?? undefined)}): day ${countNight}${waitUntilTzeis ? ` · ${waitUntilTzeis} from now` : ''}.`
-                  : null}
+              {`Today is day ${displayNight}. ${waitUntilTzeis ? `In ${waitUntilTzeis}: day ${countNight}` : `Next: day ${countNight}`} (after nightfall ${formatTimeLocal(tzeis ?? undefined)}).`}
             </Text>
           )}
           <TouchableOpacity
             style={[
               styles.doneButton,
               {
-                backgroundColor: !afterTzeis
-                  ? theme.isDark
-                    ? theme.colors.neutral[600]
-                    : theme.colors.neutral[200]
-                  : todayCounted
-                    ? theme.colors.semantic.success
-                    : theme.colors.primary.main,
+                backgroundColor: todayCounted
+                  ? !afterTzeis
+                    ? theme.isDark
+                      ? theme.colors.neutral[600]
+                      : theme.colors.neutral[200]
+                    : theme.colors.semantic.success
+                  : theme.colors.primary.main,
               },
             ]}
             onPress={toggleToday}
-            activeOpacity={afterTzeis ? 0.88 : 1}
-            disabled={!afterTzeis}
+            activeOpacity={0.88}
+            disabled={nightKeyForMark == null}
           >
-            {!afterTzeis ? (
-              <Text
+            {todayCounted ? (
+              <Animated.Text
                 style={[
                   styles.doneButtonText,
-                  { color: theme.isDark ? '#fff' : theme.colors.text.primary },
+                  {
+                    color: !afterTzeis
+                      ? theme.isDark
+                        ? '#fff'
+                        : theme.colors.text.primary
+                      : '#fff',
+                    transform: [{ scale: checkScale }],
+                  },
                 ]}
               >
-                {waitUntilTzeis && countNight != null
-                  ? `Day ${countNight} in ${waitUntilTzeis}`
-                  : 'Wait for nightfall'}
-              </Text>
-            ) : todayCounted ? (
-              <Animated.Text style={[styles.doneButtonText, { transform: [{ scale: checkScale }] }]}>
                 Counted ✓
               </Animated.Text>
             ) : (
-              <Text style={styles.doneButtonText}>Tap when you've counted</Text>
+              <Text style={styles.doneButtonText}>Mark as complete</Text>
             )}
           </TouchableOpacity>
         </GlassCard>

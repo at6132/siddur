@@ -76,6 +76,38 @@ export class StorageService {
     return this.setItem('omerCounts', counts);
   }
 
+  private static OMER_WIDGET_CD_NIGHT_KEY = '@omer_widget_cd_after_night';
+  private static OMER_WIDGET_NEXT_COUNTDOWN_LEGACY = '@omer_widget_next_countdown';
+
+  /**
+   * Which Omer night the user last marked complete (widget/Omer). Widget shows "time until next tzeit"
+   * only when current getOmerNightToCount === stored + 1 before tzeit. Stale booleans are cleared.
+   */
+  static async getOmerWidgetCountdownAfterNight(): Promise<number | null> {
+    try {
+      await AsyncStorage.removeItem(this.OMER_WIDGET_NEXT_COUNTDOWN_LEGACY);
+      const v = await AsyncStorage.getItem(this.OMER_WIDGET_CD_NIGHT_KEY);
+      if (v == null) return null;
+      const n = parseInt(v, 10);
+      return Number.isFinite(n) && n >= 1 && n <= 49 ? n : null;
+    } catch {
+      return null;
+    }
+  }
+
+  static async setOmerWidgetCountdownAfterNight(night: number | null): Promise<void> {
+    try {
+      await AsyncStorage.removeItem(this.OMER_WIDGET_NEXT_COUNTDOWN_LEGACY);
+      if (night == null || night < 1 || night > 49) {
+        await AsyncStorage.removeItem(this.OMER_WIDGET_CD_NIGHT_KEY);
+      } else {
+        await AsyncStorage.setItem(this.OMER_WIDGET_CD_NIGHT_KEY, String(night));
+      }
+    } catch (e) {
+      console.warn('setOmerWidgetCountdownAfterNight:', e);
+    }
+  }
+
   // Tehillim Progress
   static async getTehillimProgress() {
     return this.getItem<Record<number, boolean>>('tehillimProgress');

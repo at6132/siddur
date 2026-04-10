@@ -21,6 +21,15 @@ import {
 import type { DayInfo, DaveningChanges } from '../../../src/types/calendar';
 import { spacing } from '../../../src/design/spacing';
 
+function coerceDate(d: unknown): Date | null {
+  if (d instanceof Date && !Number.isNaN(d.getTime())) return d;
+  if (typeof d === 'string' || typeof d === 'number') {
+    const t = new Date(d);
+    return Number.isNaN(t.getTime()) ? null : t;
+  }
+  return null;
+}
+
 function hasNotableDaveningChanges(dc: DaveningChanges | null | undefined): boolean {
   if (!dc) return false;
   return (
@@ -82,9 +91,13 @@ export interface PanelRenderContext {
   tehillimStreak: number;
   tehillimAverageWPM: number | null;
   tzedakahPastMonthTotal: number;
-  // Calendar
-  omerCountedToday: boolean;
-  setOmerCountedToday: (v: boolean) => void;
+  // Calendar / Omer widget (live zmanim + raw counts from HomeScreen — not isOmerCaughtUp)
+  omerPanelSunset: Date | null;
+  omerPanelTzeis: Date | null;
+  omerCountsRecord: Record<number, boolean> | null;
+  setOmerCountsRecord: React.Dispatch<React.SetStateAction<Record<number, boolean> | null>>;
+  omerCountdownAfterNight: number | null;
+  setOmerCountdownAfterNight: (n: number | null) => void;
   hebrewBirthday: { day: number; month: number } | null;
   setHebrewBirthdayModalVisible: (v: boolean) => void;
   // Helpers
@@ -103,7 +116,14 @@ export function renderPanelContent(
     fastDayProgress, fastProgressAnim,
     dafYomiText, nachYomiText, mishnaYomiText, rambamYomiText, shneyimMikraData,
     brachosCount, habitsTodayMarked, tehillimStreak, tehillimAverageWPM, tzedakahPastMonthTotal,
-    omerCountedToday, setOmerCountedToday, hebrewBirthday, setHebrewBirthdayModalVisible,
+    omerPanelSunset,
+    omerPanelTzeis,
+    omerCountsRecord,
+    setOmerCountsRecord,
+    omerCountdownAfterNight,
+    setOmerCountdownAfterNight,
+    hebrewBirthday,
+    setHebrewBirthdayModalVisible,
     formatTime, formatTimeUntil,
   } = ctx;
 
@@ -509,11 +529,10 @@ export function renderPanelContent(
 
     case 'omer_counter': {
       const displayNight = dayInfo?.omerDay ?? null;
-      const sunsetRaw = dayInfo?.extendedZmanim?.sunset;
       const sunset =
-        sunsetRaw instanceof Date && !Number.isNaN(sunsetRaw.getTime()) ? sunsetRaw : null;
-      const tzeisRaw = dayInfo?.extendedZmanim?.tzeis;
-      const tzeis = tzeisRaw instanceof Date && !Number.isNaN(tzeisRaw.getTime()) ? tzeisRaw : null;
+        coerceDate(omerPanelSunset) ?? coerceDate(dayInfo?.extendedZmanim?.sunset);
+      const tzeis = coerceDate(omerPanelTzeis) ?? coerceDate(dayInfo?.extendedZmanim?.tzeis);
+      const counts = omerCountsRecord ?? {};
       const now = new Date();
       const afterTzeis = !tzeis || now >= tzeis;
       const waitUntil = tzeis && !afterTzeis ? formatTimeUntil(tzeis) : null;
@@ -527,51 +546,72 @@ export function renderPanelContent(
         (navigation as any).navigate('Omer');
       };
 
+      /** Storage key: on-screen day before tzeit, halachic "count night" after tzeit. */
+      const markNightKey =
+        (afterTzeis ? countNight : displayNight) ?? countNight ?? displayNight;
+
+      const markedThisNightAfterTzeit =
+        afterTzeis && countNight != null && !!counts[countNight];
+      const waitingNextAfterMark =
+        !afterTzeis &&
+        countNight != null &&
+        omerCountdownAfterNight != null &&
+        omerCountdownAfterNight + 1 === countNight &&
+        !!counts[omerCountdownAfterNight];
+      const markedDisplayDayEarly =
+        !afterTzeis && displayNight != null && !!counts[displayNight];
+      const widgetOmerChecked =
+        markedThisNightAfterTzeit || waitingNextAfterMark || markedDisplayDayEarly;
+
       const handleMarkComplete = async () => {
-        if (isEditing || countNight == null || !afterTzeis || omerCountedToday) return;
-        await StorageService.markOmerDay(countNight, true);
-        setOmerCountedToday(true);
-        (navigation as any).navigate('Omer');
+        if (isEditing || markNightKey == null || widgetOmerChecked) return;
+        await StorageService.markOmerDay(markNightKey, true);
+        await StorageService.setOmerWidgetCountdownAfterNight(markNightKey);
+        setOmerCountsRecord((prev) => ({ ...(prev ?? {}), [markNightKey]: true }));
+        setOmerCountdownAfterNight(markNightKey);
       };
 
-      const completeRowDisabled = isEditing || !afterTzeis || omerCountedToday;
-      const checkedTonight = !!omerCountedToday && afterTzeis;
-      const countedWaitingNext = !!omerCountedToday && !afterTzeis;
-      const emptyBeforeTzeis = !omerCountedToday && !afterTzeis;
+      const completeRowDisabled = isEditing || widgetOmerChecked;
+      const checkedTonight = markedThisNightAfterTzeit;
+      const countedWaitingNext = !afterTzeis && widgetOmerChecked;
+      const emptyBeforeTzeis = !afterTzeis && !widgetOmerChecked;
 
-      const omerWaitLong =
-        !afterTzeis && tzeis
-          ? omerCountedToday
-            ? `Today is day ${displayNight}. ${waitUntil ? `In ${waitUntil}: day ${countNight}` : `Next: day ${countNight}`} (after nightfall ${formatTime(tzeis)}).`
-            : countNight != null
-              ? `Today is day ${displayNight}. After nightfall (${formatTime(tzeis)}): day ${countNight}${waitUntil ? ` · ${waitUntil} from now` : ''}.`
-              : null
-          : null;
-      const omerWaitShort =
-        !afterTzeis && tzeis
-          ? omerCountedToday
-            ? (waitUntil ? `Next: day ${countNight} in ${waitUntil}` : `Next: day ${countNight}`)
-            : countNight != null
-              ? `After ${formatTime(tzeis)}: day ${countNight}${waitUntil ? ` · ${waitUntil}` : ''}`
-              : null
-          : null;
+      /** Countdown only if user marked a night that exists in storage and matches the next count. */
+      const showOmerNextCountdown =
+        !afterTzeis &&
+        tzeis &&
+        countNight != null &&
+        omerCountdownAfterNight != null &&
+        omerCountdownAfterNight + 1 === countNight &&
+        !!counts[omerCountdownAfterNight];
 
-      const checkLabelLong =
-        !afterTzeis
-          ? waitUntil && countNight != null
-            ? `Day ${countNight} in ${waitUntil}`
-            : 'Wait for nightfall'
-          : omerCountedToday
-            ? 'Counted for tonight'
-            : 'Have you counted Omer yet?';
-      const checkLabelShort =
-        !afterTzeis
-          ? waitUntil && countNight != null
-            ? `Day ${countNight} · ${waitUntil}`
-            : 'Wait nightfall'
-          : omerCountedToday
-            ? 'Counted ✓'
-            : 'Counted tonight?';
+      const omerWaitLong = showOmerNextCountdown
+        ? `Today is day ${displayNight}. ${waitUntil ? `In ${waitUntil}: day ${countNight}` : `Next: day ${countNight}`} (after nightfall ${formatTime(tzeis)}).`
+        : null;
+      const omerWaitShort = showOmerNextCountdown
+        ? waitUntil && countNight != null
+          ? `Next: day ${countNight} in ${waitUntil}`
+          : countNight != null
+            ? `Next: day ${countNight}`
+            : null
+        : null;
+
+      const checkLabelLong = !afterTzeis
+        ? widgetOmerChecked
+          ? 'Counted ✓'
+          : 'Mark as complete'
+        : widgetOmerChecked
+          ? 'Counted for tonight'
+          : 'Mark as complete';
+      const checkLabelShort = !afterTzeis
+        ? widgetOmerChecked
+          ? 'Counted ✓'
+          : 'Mark complete'
+        : widgetOmerChecked
+          ? 'Counted ✓'
+          : 'Mark complete';
+
+      const omerWaitDisplay = half ? (omerWaitShort ?? omerWaitLong) : omerWaitLong;
 
       return (
         <GlassCard compact={half} onPress={openOmer}>
@@ -579,9 +619,9 @@ export function renderPanelContent(
             <Text style={[styles.omerTitle, half && { fontSize: 12 }]} numberOfLines={1}>
               Today · day {displayNight}
             </Text>
-            {!afterTzeis && tzeis ? (
+            {omerWaitDisplay != null ? (
               <Text style={[styles.omerWait, half && styles.omerWaitHalf]} numberOfLines={half ? 2 : undefined}>
-                {half ? omerWaitShort : omerWaitLong}
+                {omerWaitDisplay}
               </Text>
             ) : null}
             <TouchableOpacity
@@ -603,7 +643,7 @@ export function renderPanelContent(
                   emptyBeforeTzeis && styles.omerCheckboxDisabled,
                 ]}
               >
-                {omerCountedToday && <Text style={[styles.omerCheckmark, half && { fontSize: 12 }]}>✓</Text>}
+                {widgetOmerChecked && <Text style={[styles.omerCheckmark, half && { fontSize: 12 }]}>✓</Text>}
               </View>
               <Text
                 style={[
