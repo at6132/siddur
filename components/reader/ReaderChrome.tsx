@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import Svg, { Circle, G, Line, Path } from 'react-native-svg';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../src/design/theme';
@@ -50,6 +51,15 @@ export function ReaderChrome({
 }: ReaderChromeProps) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
+  const rose = theme.colors.primary;
+  const dialFill = theme.isDark ? 'rgba(255,210,228,0.14)' : rose.light;
+  const bezelStroke = theme.isDark ? rose.main : rose.dark;
+  const tickStrong = theme.isDark ? 'rgba(255,245,250,0.55)' : rose.dark;
+  const tickSoft = theme.isDark ? 'rgba(255,245,250,0.28)' : rose.main;
+  const northFill = theme.isDark ? rose.light : rose.dark;
+  const southFill = theme.isDark ? 'rgba(180,120,150,0.45)' : theme.colors.background.primary;
+  const pivotRing = theme.isDark ? theme.colors.background.secondary : theme.colors.background.primary;
+  const pivotDot = theme.isDark ? rose.main : rose.main;
 
   const content = (
     <View style={[styles.wrapper, { paddingTop: topInset }]} pointerEvents="box-none">
@@ -61,8 +71,41 @@ export function ReaderChrome({
               onPress={onCompass}
               style={styles.iconButton}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel="Open Mizrach compass"
             >
-              <Text style={styles.compassIcon}>🧭</Text>
+              <View style={styles.compassIconWrap}>
+                <Svg width={28} height={28} viewBox="0 0 28 28">
+                  <Circle cx={14} cy={14} r={12.75} fill={dialFill} stroke={bezelStroke} strokeOpacity={0.55} strokeWidth={1} />
+                  <Circle cx={14} cy={14} r={11.25} fill="none" stroke={rose.main} strokeOpacity={theme.isDark ? 0.2 : 0.22} strokeWidth={0.75} />
+                  {[0, 90, 180, 270].map((deg) => {
+                    const long = deg === 0 || deg === 180;
+                    return (
+                      <G key={deg} transform={`rotate(${deg}, 14, 14)`}>
+                        <Line
+                          x1={14}
+                          y1={long ? 2.6 : 3.4}
+                          x2={14}
+                          y2={long ? 5.8 : 5.1}
+                          stroke={long ? tickStrong : tickSoft}
+                          strokeWidth={long ? 1.65 : 1.15}
+                          strokeLinecap="round"
+                          strokeOpacity={long ? 0.95 : 0.75}
+                        />
+                      </G>
+                    );
+                  })}
+                  <Path d="M 14 4.35 L 16.15 14 L 14 14 L 11.85 14 Z" fill={northFill} fillOpacity={0.98} />
+                  <Path
+                    d="M 14 23.65 L 16.15 14 L 14 14 L 11.85 14 Z"
+                    fill={southFill}
+                    stroke={bezelStroke}
+                    strokeOpacity={0.18}
+                    strokeWidth={0.35}
+                  />
+                  <Circle cx={14} cy={14} r={2.35} fill={pivotRing} stroke={bezelStroke} strokeOpacity={0.35} strokeWidth={0.85} />
+                  <Circle cx={14} cy={14} r={1.05} fill={pivotDot} fillOpacity={0.92} />
+                </Svg>
+              </View>
             </TouchableOpacity>
           )}
           {showHamburger && (
@@ -160,8 +203,11 @@ function createStyles(theme: AppTheme) {
     iconButton: {
       padding: spacing.sm,
     },
-    compassIcon: {
-      fontSize: 22,
+    compassIconWrap: {
+      width: 28,
+      height: 28,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     hamburgerIcon: {
       fontSize: 24,
