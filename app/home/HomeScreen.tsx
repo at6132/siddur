@@ -1136,11 +1136,9 @@ function createHomeStyles(theme: AppTheme) {
     color: theme.colors.primary.main,
   },
 
-  // Zmanim Row
+  // Zmanim Row (no fill — sits inside GlassCard blur)
   zmanimRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.6)',
-    borderRadius: borderRadius.lg,
     padding: spacing.md,
     alignItems: 'center',
   },
