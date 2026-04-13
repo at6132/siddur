@@ -23,16 +23,22 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { JewishCalendarService } from '../core/calendar/JewishCalendar';
+import { UserPreferencesService } from '../storage/UserPreferences';
 import {
   removeParagraphTitles,
   AMIDAH_BRACHA_TITLES,
-  removeAseretYemeiTeshuvaBlockIfNotToday,
-  removeMashivHaruachInstructionParagraph,
+  extractAmidahKedushaFoldout,
+  extractModimDerabananFoldout,
+  stripAmidahEpilogueKaddishLedavid,
+  stripFullKaddishShalemBeforeAleinu,
+  trimAlHanissimInsertionByCalendar,
+  splitMinchaAmidahBeforeStandaloneAleinu,
 } from './MinchaTextRules';
+import { applyWeekdayAmidahTextPipeline } from './AmidahTextPipeline';
 
 const SEFARIA_API_BASE = 'https://www.sefaria.org/api';
 const SEFARIA_V3_TEXTS = 'https://www.sefaria.org/api/v3/texts';
-const CACHE_PREFIX = '@sefaria_cache_v2_';
+const CACHE_PREFIX = '@sefaria_cache_v4_';
 const CACHE_EXPIRY_DAYS = 30;
 /** Max wait per request so we never hang on "Loading prayers..." */
 const FETCH_TIMEOUT_MS = 12_000;
@@ -69,6 +75,20 @@ export interface PrayerTextData {
   /** When present, instructions from Sefaria (<i>, <small>) are marked for italic/smaller rendering. */
   hebrewSegments?: PrayerTextSegment[];
   englishSegments?: PrayerTextSegment[];
+  /** Amidah only: text before kedushaFoldout when the foldout is spliced between גבורות and אתה קדוש. */
+  hebrewBeforeKedushaFoldout?: string;
+  englishBeforeKedushaFoldout?: string;
+  hebrewBeforeKedushaFoldoutSegments?: PrayerTextSegment[];
+  englishBeforeKedushaFoldoutSegments?: PrayerTextSegment[];
+  /** Amidah only: Chazaras ha-shatz Kedushah block (collapsible "קדושה" in the reader). */
+  kedushaFoldout?: PrayerTextData;
+  /** Amidah only: text before `modimDerabananFoldout` when that block is spliced out of Modim. */
+  hebrewBeforeModimDerabananFoldout?: string;
+  englishBeforeModimDerabananFoldout?: string;
+  hebrewBeforeModimDerabananFoldoutSegments?: PrayerTextSegment[];
+  englishBeforeModimDerabananFoldoutSegments?: PrayerTextSegment[];
+  /** Amidah only: Modim deRabbanan paragraph (collapsible "מודים דרבנן" in the reader). */
+  modimDerabananFoldout?: PrayerTextData;
 }
 
 /** Fetch with timeout; throws on timeout or non-OK. */
@@ -79,6 +99,13 @@ function fetchWithTimeout(url: string, ms: number = FETCH_TIMEOUT_MS): Promise<R
 }
 
 export class SefariaService {
+  /** Rough bbox for Israel: ותן טל ומטר from 7 Cheshvan; outside = diaspora (Dec 4/5). */
+  private static isLikelyIsraelLocation(loc?: { latitude: number; longitude: number }): boolean {
+    if (!loc) return false;
+    const { latitude: lat, longitude: lon } = loc;
+    return lat >= 29.3 && lat <= 33.5 && lon >= 34.05 && lon <= 35.9;
+  }
+
   /**
    * Fetch a text from Sefaria API (tries v3 first, then legacy). Times out after FETCH_TIMEOUT_MS.
    */
@@ -291,7 +318,8 @@ export class SefariaService {
     mincha_korbanot: 'Siddur Ashkenaz, Weekday, Mincha, Korbanot',
     mincha_ashrei: 'Siddur Ashkenaz, Weekday, Mincha, Ashrei',
     mincha_amidah: 'Siddur Ashkenaz, Weekday, Mincha, Amidah',
-    mincha_tachanun: 'Siddur Ashkenaz, Weekday, Mincha, Tachanun',
+    /** Same Aleinu as Shacharit concluding child ref (Mincha blob may omit it after processing). */
+    mincha_aleinu: 'Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Alenu',
     // Maariv
     maariv_shema: 'Siddur Ashkenaz, Weekday, Maariv, The Shema',
     maariv_amidah: 'Siddur Ashkenaz, Weekday, Maariv, Amidah',
@@ -327,7 +355,7 @@ export class SefariaService {
     mincha_korbanot: 'Siddur Sefard, Weekday Mincha, Korbanot',
     mincha_ashrei: 'Siddur Sefard, Weekday Mincha, Ashrei',
     mincha_amidah: 'Siddur Sefard, Weekday Mincha, Amidah',
-    mincha_tachanun: 'Siddur Sefard, Weekday Mincha, Tachanun',
+    mincha_aleinu: 'Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Alenu',
     // Maariv
     maariv_shema: 'Siddur Sefard, Weekday Maariv, The Shema',
     maariv_amidah: 'Siddur Sefard, Weekday Maariv, Amidah',
@@ -368,7 +396,7 @@ export class SefariaService {
       { key: 'mincha_korbanot', title: 'Korbanot', hebrewTitle: 'קרבנות' },
       { key: 'mincha_ashrei', title: 'Ashrei', hebrewTitle: 'אשרי' },
       { key: 'mincha_amidah', title: 'Amidah', hebrewTitle: 'עמידה' },
-      { key: 'mincha_tachanun', title: 'Tachanun', hebrewTitle: 'תחנון' },
+      { key: 'mincha_aleinu', title: 'Aleinu', hebrewTitle: 'עלינו' },
     ],
     maariv: [
       { key: 'maariv_shema', title: 'The Shema', hebrewTitle: 'קריאת שמע' },
@@ -447,6 +475,12 @@ export class SefariaService {
     if (!data) return null;
 
     try {
+      let amidahKedushaFoldout: PrayerTextData | undefined;
+      let amidahKedushaPrefixHebrew: string | undefined;
+      let amidahKedushaPrefixEnglish: string | undefined;
+      let amidahModimDerabananFoldout: PrayerTextData | undefined;
+      let amidahModimPrefixHebrew: string | undefined;
+      let amidahModimPrefixEnglish: string | undefined;
       // Ensure we have plain strings; flatten nested arrays (Sefaria can return [[ "p1", "p2" ], [ "p3" ]])
       const toStr = (v: unknown): string => {
         if (typeof v === 'string') return v;
@@ -463,14 +497,62 @@ export class SefariaService {
         const stripped = removeParagraphTitles(rawHebrewStr, rawEnglishStr, AMIDAH_BRACHA_TITLES);
         rawHebrewStr = stripped.hebrew;
         rawEnglishStr = stripped.english;
-        // When NOT during עשרת ימי תשובה (שי"ת), remove the entire בעשי"ת block (Zochreinu + halacha note)
-        const noAseret = removeAseretYemeiTeshuvaBlockIfNotToday(rawHebrewStr, rawEnglishStr, new Date());
-        rawHebrewStr = noAseret.hebrew;
-        rawEnglishStr = noAseret.english;
-        // Remove Mashiv Haruach halacha paragraph (טעה ולא אמר בחורף... קיצור שו"ע יט)
-        const noMashivHalacha = removeMashivHaruachInstructionParagraph(rawHebrewStr, rawEnglishStr);
-        rawHebrewStr = noMashivHalacha.hebrew;
-        rawEnglishStr = noMashivHalacha.english;
+        const amidahDate = new Date();
+        let israelForRain = false;
+        try {
+          const prefs = await UserPreferencesService.getPreferences();
+          israelForRain = SefariaService.isLikelyIsraelLocation(prefs?.location);
+        } catch {
+          /* default diaspora */
+        }
+        const amidahSlot: 'shacharit' | 'mincha' | 'maariv' =
+          sectionKey === 'mincha_amidah' ? 'mincha' : sectionKey === 'maariv_amidah' ? 'maariv' : 'shacharit';
+        const piped = applyWeekdayAmidahTextPipeline(rawHebrewStr, rawEnglishStr, {
+          date: amidahDate,
+          israelForRainInsertion: israelForRain,
+          amidahSlot,
+        });
+        rawHebrewStr = piped.hebrew;
+        rawEnglishStr = piped.english;
+        const kedushaSplit = extractAmidahKedushaFoldout(rawHebrewStr, rawEnglishStr);
+        rawHebrewStr = kedushaSplit.mainHebrew;
+        rawEnglishStr = kedushaSplit.mainEnglish;
+        if (kedushaSplit.mainHebrewBeforeFoldout?.trim()) {
+          amidahKedushaPrefixHebrew = kedushaSplit.mainHebrewBeforeFoldout.trim();
+          amidahKedushaPrefixEnglish = kedushaSplit.mainEnglishBeforeFoldout?.trim() ?? '';
+        }
+        if (kedushaSplit.kedushaHebrew?.trim()) {
+          amidahKedushaFoldout = {
+            hebrew: kedushaSplit.kedushaHebrew.trim(),
+            english: kedushaSplit.kedushaEnglish?.trim() ?? '',
+          };
+        }
+        const epilogued = stripAmidahEpilogueKaddishLedavid(rawHebrewStr, rawEnglishStr, amidahDate);
+        rawHebrewStr = epilogued.hebrew;
+        rawEnglishStr = epilogued.english;
+        const modimSplit = extractModimDerabananFoldout(rawHebrewStr, rawEnglishStr);
+        if (modimSplit.foldoutHebrew?.trim()) {
+          amidahModimPrefixHebrew = modimSplit.prefixHebrew;
+          amidahModimPrefixEnglish = modimSplit.prefixEnglish;
+          const prefixTrim = trimAlHanissimInsertionByCalendar(
+            amidahModimPrefixHebrew,
+            amidahModimPrefixEnglish ?? '',
+            amidahDate
+          );
+          amidahModimPrefixHebrew = prefixTrim.hebrew;
+          amidahModimPrefixEnglish = prefixTrim.english;
+          amidahModimDerabananFoldout = {
+            hebrew: modimSplit.foldoutHebrew.trim(),
+            english: modimSplit.foldoutEnglish?.trim() ?? '',
+          };
+          rawHebrewStr = modimSplit.suffixHebrew.trim();
+          rawEnglishStr = modimSplit.suffixEnglish.trim();
+        }
+      }
+      if (sectionKey === 'concluding' || sectionKey === 'mincha_aleinu') {
+        const noKaddish = stripFullKaddishShalemBeforeAleinu(rawHebrewStr, rawEnglishStr);
+        rawHebrewStr = noKaddish.hebrew;
+        rawEnglishStr = noKaddish.english;
       }
       // Mincha: split Korbanot vs Ashrei (Chatzi Kaddish removal is done in the reader, same as Bentching)
       if (sectionKey === 'mincha_korbanot' || sectionKey === 'mincha_ashrei') {
@@ -494,6 +576,76 @@ export class SefariaService {
         text: normalizeParagraphs(seg.text),
         italic: seg.italic,
       }));
+
+      let finalHebrewBeforeKedushaSegments: PrayerTextSegment[] | undefined;
+      let finalEnglishBeforeKedushaSegments: PrayerTextSegment[] | undefined;
+      if (amidahKedushaPrefixHebrew) {
+        finalHebrewBeforeKedushaSegments = this.parseInstructionSegments(amidahKedushaPrefixHebrew).map((seg) => ({
+          text: normalizeParagraphs(seg.text),
+          italic: seg.italic,
+        }));
+        if (amidahKedushaPrefixEnglish?.trim()) {
+          finalEnglishBeforeKedushaSegments = this.parseInstructionSegments(amidahKedushaPrefixEnglish).map((seg) => ({
+            text: normalizeParagraphs(seg.text),
+            italic: seg.italic,
+          }));
+        }
+      }
+
+      if (amidahKedushaFoldout) {
+        const khSeg = this.parseInstructionSegments(amidahKedushaFoldout.hebrew).map((seg) => ({
+          text: normalizeParagraphs(seg.text),
+          italic: seg.italic,
+        }));
+        const keRaw = amidahKedushaFoldout.english;
+        const keSeg = keRaw.trim()
+          ? this.parseInstructionSegments(keRaw).map((seg) => ({
+              text: normalizeParagraphs(seg.text),
+              italic: seg.italic,
+            }))
+          : undefined;
+        amidahKedushaFoldout = {
+          hebrew: khSeg.map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim(),
+          english: (keSeg ?? []).map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim(),
+          hebrewSegments: khSeg,
+          englishSegments: keSeg,
+        };
+      }
+
+      let finalHebrewBeforeModimSegments: PrayerTextSegment[] | undefined;
+      let finalEnglishBeforeModimSegments: PrayerTextSegment[] | undefined;
+      if (amidahModimPrefixHebrew?.trim()) {
+        finalHebrewBeforeModimSegments = this.parseInstructionSegments(amidahModimPrefixHebrew).map((seg) => ({
+          text: normalizeParagraphs(seg.text),
+          italic: seg.italic,
+        }));
+        if (amidahModimPrefixEnglish?.trim()) {
+          finalEnglishBeforeModimSegments = this.parseInstructionSegments(amidahModimPrefixEnglish).map((seg) => ({
+            text: normalizeParagraphs(seg.text),
+            italic: seg.italic,
+          }));
+        }
+      }
+
+      if (amidahModimDerabananFoldout) {
+        const mhSeg = this.parseInstructionSegments(amidahModimDerabananFoldout.hebrew).map((seg) => ({
+          text: normalizeParagraphs(seg.text),
+          italic: seg.italic,
+        }));
+        const meRaw = amidahModimDerabananFoldout.english;
+        const meSeg = meRaw.trim()
+          ? this.parseInstructionSegments(meRaw).map((seg) => ({
+              text: normalizeParagraphs(seg.text),
+              italic: seg.italic,
+            }))
+          : undefined;
+        amidahModimDerabananFoldout = {
+          hebrew: mhSeg.map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim(),
+          english: (meSeg ?? []).map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim(),
+          hebrewSegments: mhSeg,
+          englishSegments: meSeg,
+        };
+      }
 
       let hebrew = hebrewSegments.map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim();
       let english = englishSegments.map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim();
@@ -614,54 +766,12 @@ export class SefariaService {
             finalEnglishSegments = [{ text: english, italic: false }];
           }
         }
-        // Al HaNissim: by date show nothing / Chanukah only / Purim only
-        const alHanissim = JewishCalendarService.isAlHanissim(new Date());
-        const strippedAl = stripNikkud(hebrew).replace(/\u05BE/g, ' ');
-        const blockStartStripped = strippedAl.indexOf('בחנוכה ופורים') !== -1 ? strippedAl.indexOf('בחנוכה ופורים')
-          : strippedAl.indexOf('בחנוכה אומרים') !== -1 ? strippedAl.indexOf('בחנוכה אומרים')
-          : strippedAl.indexOf('בחנוכה');
-        const idxVeal = strippedAl.indexOf('ועל הכול') !== -1 ? strippedAl.indexOf('ועל הכול') : strippedAl.indexOf('ועל הכל');
-        if (blockStartStripped !== -1 && idxVeal !== -1 && idxVeal > blockStartStripped) {
-          const beforeBlock = strippedAl.slice(0, blockStartStripped);
-          const lastShea = beforeBlock.lastIndexOf('שעה');
-          let endBecholStripped = lastShea !== -1 ? lastShea + 3 : blockStartStripped;
-          if (strippedAl[endBecholStripped] === ':') endBecholStripped += 1;
-          while (endBecholStripped < strippedAl.length && (strippedAl[endBecholStripped] === ' ' || strippedAl[endBecholStripped] === '\n')) endBecholStripped += 1;
-          const strippedToOriginal: number[] = [];
-          for (let i = 0; i < hebrew.length; i++) {
-            if (!/[\u0591-\u05C7]/.test(hebrew[i])) strippedToOriginal.push(i);
-          }
-          const endBecholOriginal = strippedToOriginal[endBecholStripped] ?? endBecholStripped;
-          const vealOriginal = strippedToOriginal[idxVeal] ?? idxVeal;
-          if (alHanissim === false) {
-            hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + hebrew.slice(vealOriginal);
-            finalHebrewSegments = [{ text: hebrew, italic: false }];
-          } else if (alHanissim === 'chanukah') {
-            const chanukahStart = strippedAl.indexOf('בחנוכה אומרים', blockStartStripped);
-            const purimStart = strippedAl.indexOf('בפורים אומרים', blockStartStripped);
-            if (chanukahStart !== -1 && purimStart > chanukahStart) {
-              const chanukahEndOriginal = strippedToOriginal[purimStart] ?? purimStart;
-              const chanukahStartOriginal = strippedToOriginal[chanukahStart] ?? chanukahStart;
-              const chanukahBlock = hebrew.slice(chanukahStartOriginal, chanukahEndOriginal).trim();
-              hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + chanukahBlock + '\n\n' + hebrew.slice(vealOriginal);
-              finalHebrewSegments = [{ text: hebrew, italic: false }];
-            } else {
-              hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + hebrew.slice(vealOriginal);
-              finalHebrewSegments = [{ text: hebrew, italic: false }];
-            }
-          } else if (alHanissim === 'purim') {
-            const purimStart = strippedAl.indexOf('בפורים אומרים', blockStartStripped);
-            if (purimStart !== -1 && purimStart < idxVeal) {
-              const purimStartOriginal = strippedToOriginal[purimStart] ?? purimStart;
-              const purimBlock = hebrew.slice(purimStartOriginal, vealOriginal).trim();
-              hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + purimBlock + '\n\n' + hebrew.slice(vealOriginal);
-              finalHebrewSegments = [{ text: hebrew, italic: false }];
-            } else {
-              hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + hebrew.slice(vealOriginal);
-              finalHebrewSegments = [{ text: hebrew, italic: false }];
-            }
-          }
-        }
+        // Al HaNissim: by date show nothing / Chanukah only / Purim only (shared with amidah pipeline)
+        const alTrim = trimAlHanissimInsertionByCalendar(hebrew, english, new Date());
+        hebrew = alTrim.hebrew;
+        english = alTrim.english;
+        finalHebrewSegments = [{ text: hebrew, italic: false }];
+        finalEnglishSegments = [{ text: english, italic: false }];
         // Remove "בונה ירושלים דוד ושלמה תקנוה..." paragraph through "וכן'." / "וכו'."
         const strippedBoneh = stripNikkud(hebrew);
         const bonehStart = strippedBoneh.indexOf('בונה ירושלים');
@@ -853,9 +963,64 @@ export class SefariaService {
       }
 
       // Amidah: render "כי שם ה' אקרא... אדוני שפתי תפתח" in smaller text
+      let hebrewBeforeKedushaFoldout: string | undefined;
+      let englishBeforeKedushaFoldout: string | undefined;
+      let hebrewBeforeKedushaFoldoutSegments: PrayerTextSegment[] | undefined;
+      let englishBeforeKedushaFoldoutSegments: PrayerTextSegment[] | undefined;
+      let hebrewBeforeModimDerabananFoldout: string | undefined;
+      let englishBeforeModimDerabananFoldout: string | undefined;
+      let hebrewBeforeModimDerabananFoldoutSegments: PrayerTextSegment[] | undefined;
+      let englishBeforeModimDerabananFoldoutSegments: PrayerTextSegment[] | undefined;
       if (sectionKey === 'amidah' || sectionKey === 'maariv_amidah' || sectionKey === 'mincha_amidah') {
+        if (finalHebrewBeforeKedushaSegments?.length) {
+          finalHebrewBeforeKedushaSegments = this.markSefataiParagraphSmall(finalHebrewBeforeKedushaSegments);
+        }
+        if (finalEnglishBeforeKedushaSegments?.length) {
+          finalEnglishBeforeKedushaSegments = this.markSefataiParagraphSmall(finalEnglishBeforeKedushaSegments);
+        }
+        if (finalHebrewBeforeModimSegments?.length) {
+          finalHebrewBeforeModimSegments = this.markSefataiParagraphSmall(finalHebrewBeforeModimSegments);
+        }
+        if (finalEnglishBeforeModimSegments?.length) {
+          finalEnglishBeforeModimSegments = this.markSefataiParagraphSmall(finalEnglishBeforeModimSegments);
+        }
         finalHebrewSegments = this.markSefataiParagraphSmall(finalHebrewSegments);
         finalEnglishSegments = this.markSefataiParagraphSmall(finalEnglishSegments);
+        const collapseParaBreaks = (s: string) =>
+          s.replace(/\n\s*\n/g, '\n\n').replace(/\n{3,}/g, '\n\n').trim();
+        hebrew = collapseParaBreaks(finalHebrewSegments.map((s) => s.text).join(''));
+        english = collapseParaBreaks(finalEnglishSegments.map((s) => s.text).join(''));
+        if (finalHebrewBeforeKedushaSegments?.length) {
+          hebrewBeforeKedushaFoldout = collapseParaBreaks(
+            finalHebrewBeforeKedushaSegments.map((s) => s.text).join('')
+          );
+          hebrewBeforeKedushaFoldoutSegments = finalHebrewBeforeKedushaSegments;
+        }
+        if (finalEnglishBeforeKedushaSegments?.length) {
+          englishBeforeKedushaFoldout = collapseParaBreaks(
+            finalEnglishBeforeKedushaSegments.map((s) => s.text).join('')
+          );
+          englishBeforeKedushaFoldoutSegments = finalEnglishBeforeKedushaSegments;
+        }
+        if (finalHebrewBeforeModimSegments?.length) {
+          hebrewBeforeModimDerabananFoldout = collapseParaBreaks(
+            finalHebrewBeforeModimSegments.map((s) => s.text).join('')
+          );
+          hebrewBeforeModimDerabananFoldoutSegments = finalHebrewBeforeModimSegments;
+        }
+        if (finalEnglishBeforeModimSegments?.length) {
+          englishBeforeModimDerabananFoldout = collapseParaBreaks(
+            finalEnglishBeforeModimSegments.map((s) => s.text).join('')
+          );
+          englishBeforeModimDerabananFoldoutSegments = finalEnglishBeforeModimSegments;
+        }
+        if (sectionKey === 'mincha_amidah') {
+          const splitAleinu = splitMinchaAmidahBeforeStandaloneAleinu(hebrew, english);
+          hebrew = splitAleinu.hebrew;
+          english = splitAleinu.english;
+          finalHebrewSegments = [{ text: hebrew, italic: false }];
+          finalEnglishSegments = [{ text: english, italic: false }];
+        }
       }
 
       return {
@@ -863,6 +1028,24 @@ export class SefariaService {
         english,
         hebrewSegments: finalHebrewSegments.length > 0 ? finalHebrewSegments : undefined,
         englishSegments: finalEnglishSegments.length > 0 ? finalEnglishSegments : undefined,
+        ...(hebrewBeforeKedushaFoldout != null
+          ? {
+              hebrewBeforeKedushaFoldout,
+              englishBeforeKedushaFoldout,
+              hebrewBeforeKedushaFoldoutSegments,
+              englishBeforeKedushaFoldoutSegments,
+            }
+          : {}),
+        ...(hebrewBeforeModimDerabananFoldout != null
+          ? {
+              hebrewBeforeModimDerabananFoldout,
+              englishBeforeModimDerabananFoldout,
+              hebrewBeforeModimDerabananFoldoutSegments,
+              englishBeforeModimDerabananFoldoutSegments,
+            }
+          : {}),
+        ...(amidahKedushaFoldout ? { kedushaFoldout: amidahKedushaFoldout } : {}),
+        ...(amidahModimDerabananFoldout ? { modimDerabananFoldout: amidahModimDerabananFoldout } : {}),
       };
     } catch {
       return null;
@@ -1032,8 +1215,11 @@ export class SefariaService {
         ? (strippedToOriginal[endStripped - 1] ?? endStripped - 1) + 1
         : full.length;
     const before = full.slice(0, startOriginal);
-    const phrase = full.slice(startOriginal, endOriginal);
-    const after = full.slice(endOriginal);
+    let phrase = full.slice(startOriginal, endOriginal);
+    let after = full.slice(endOriginal);
+    // Avoid huge vertical gap: trim extra newlines/spaces between "תהלתך:" and "בָּרוּךְ אַתָּה..."
+    phrase = phrase.replace(/[\n\r\t\u0020]+$/g, '');
+    after = after.replace(/^[\n\r\t\u0020]+/g, '');
     const out: PrayerTextSegment[] = [];
     if (before.trim()) out.push({ text: before, italic: false });
     if (phrase.trim()) out.push({ text: phrase, italic: true });

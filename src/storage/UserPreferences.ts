@@ -11,6 +11,7 @@ import {
   CustomCountdown,
   CustomReminder,
   DisplayPreferences,
+  RefuahPersonalName,
 } from '../types/preferences';
 import { Nusach } from '../types/nusach';
 
@@ -39,6 +40,9 @@ export class UserPreferencesService {
       if (!prefs.customReminders) {
         prefs.customReminders = [];
       }
+      if (!prefs.refuahPersonalNames) {
+        prefs.refuahPersonalNames = [];
+      }
     }
     
     return prefs;
@@ -65,6 +69,9 @@ export class UserPreferencesService {
     if (!updated.customCountdowns) {
       updated.customCountdowns = [];
     }
+    if (!updated.refuahPersonalNames) {
+      updated.refuahPersonalNames = existing?.refuahPersonalNames ?? [];
+    }
     if (!updated.hasCompletedOnboarding) {
       updated.hasCompletedOnboarding = false;
     }
@@ -74,6 +81,10 @@ export class UserPreferencesService {
 
   static async setNusach(nusach: Nusach): Promise<boolean> {
     return this.savePreferences({ nusach });
+  }
+
+  static async setRefuahPersonalNames(names: RefuahPersonalName[]): Promise<boolean> {
+    return this.savePreferences({ refuahPersonalNames: names });
   }
 
   static async setSpiritualGoals(goals: string[]): Promise<boolean> {

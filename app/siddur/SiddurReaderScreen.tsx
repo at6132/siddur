@@ -24,6 +24,10 @@ import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { useTheme } from '../../src/design/theme';
 import { SefariaService, PrayerTextData } from '../../src/services/SefariaService';
+import {
+  injectRefuahIntoAmidahPrayerTextData,
+  trimAlHanissimInsertionByCalendar,
+} from '../../src/services/MinchaTextRules';
 import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { recordDaveningToday } from '../../src/storage/DaveningStreakService';
@@ -140,54 +144,12 @@ function trimBirkatHamazon(content: PrayerTextData): PrayerTextData {
     }
   }
 
-  // Al HaNissim: hide by default; on Chanukah show only Chanukah paragraph, on Purim only Purim; normal day skip straight to ועל הכול
-  const alHanissim = JewishCalendarService.isAlHanissim(new Date());
-  const strippedHeb3 = stripNikkud(hebrew).replace(/\u05BE/g, ' '); // normalize maqaf so "בכל־יום" matches
-  const blockStartStripped = strippedHeb3.indexOf('בחנוכה ופורים') !== -1 ? strippedHeb3.indexOf('בחנוכה ופורים')
-    : strippedHeb3.indexOf('בחנוכה אומרים') !== -1 ? strippedHeb3.indexOf('בחנוכה אומרים')
-    : strippedHeb3.indexOf('בחנוכה');
-  const idxVeal = strippedHeb3.indexOf('ועל הכול') !== -1 ? strippedHeb3.indexOf('ועל הכול') : strippedHeb3.indexOf('ועל הכל');
-  if (blockStartStripped !== -1 && idxVeal !== -1 && idxVeal > blockStartStripped) {
-    const beforeBlock = strippedHeb3.slice(0, blockStartStripped);
-    const lastShea = beforeBlock.lastIndexOf('שעה');
-    let endBecholStripped = lastShea !== -1 ? lastShea + 3 : blockStartStripped;
-    if (strippedHeb3[endBecholStripped] === ':') endBecholStripped += 1;
-    while (endBecholStripped < strippedHeb3.length && (strippedHeb3[endBecholStripped] === ' ' || strippedHeb3[endBecholStripped] === '\n')) endBecholStripped += 1;
-    const strippedToOriginal: number[] = [];
-    for (let i = 0; i < hebrew.length; i++) {
-      if (!/[\u0591-\u05C7]/.test(hebrew[i])) strippedToOriginal.push(i);
-    }
-    const endBecholOriginal = strippedToOriginal[endBecholStripped] ?? endBecholStripped;
-    const vealOriginal = strippedToOriginal[idxVeal] ?? idxVeal;
-    if (alHanissim === false) {
-      hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + hebrew.slice(vealOriginal);
-      hebrewSegments = [{ text: hebrew, italic: false }];
-    } else if (alHanissim === 'chanukah') {
-      const chanukahStart = strippedHeb3.indexOf('בחנוכה אומרים', blockStartStripped);
-      const purimStart = strippedHeb3.indexOf('בפורים אומרים', blockStartStripped);
-      if (chanukahStart !== -1 && purimStart > chanukahStart) {
-        const chanukahEndOriginal = strippedToOriginal[purimStart] ?? purimStart;
-        const chanukahStartOriginal = strippedToOriginal[chanukahStart] ?? chanukahStart;
-        const chanukahBlock = hebrew.slice(chanukahStartOriginal, chanukahEndOriginal).trim();
-        hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + chanukahBlock + '\n\n' + hebrew.slice(vealOriginal);
-        hebrewSegments = [{ text: hebrew, italic: false }];
-      } else {
-        hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + hebrew.slice(vealOriginal);
-        hebrewSegments = [{ text: hebrew, italic: false }];
-      }
-    } else if (alHanissim === 'purim') {
-      const purimStart = strippedHeb3.indexOf('בפורים אומרים', blockStartStripped);
-      if (purimStart !== -1 && purimStart < idxVeal) {
-        const purimStartOriginal = strippedToOriginal[purimStart] ?? purimStart;
-        const purimBlock = hebrew.slice(purimStartOriginal, vealOriginal).trim();
-        hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + purimBlock + '\n\n' + hebrew.slice(vealOriginal);
-        hebrewSegments = [{ text: hebrew, italic: false }];
-      } else {
-        hebrew = hebrew.slice(0, endBecholOriginal).trimEnd() + '\n\n' + hebrew.slice(vealOriginal);
-        hebrewSegments = [{ text: hebrew, italic: false }];
-      }
-    }
-  }
+  // Al HaNissim: calendar trim (ועל הנסים … בחנוכה: / בפורים: or legacy בחנוכה אומרים layout)
+  const alTrim = trimAlHanissimInsertionByCalendar(hebrew, english, new Date());
+  hebrew = alTrim.hebrew;
+  english = alTrim.english;
+  hebrewSegments = [{ text: hebrew, italic: false }];
+  englishSegments = [{ text: english, italic: false }];
 
   // Remove "בונה ירושלים דוד ושלמה תקנוה..." paragraph (who established the bracha) through "וכן'." / "וכו'."
   const strippedBoneh = stripNikkud(hebrew);
@@ -699,7 +661,12 @@ function trimBirkatHamazon(content: PrayerTextData): PrayerTextData {
     const colonIdx = blockText.indexOf(':');
     const instructionEnd = colonIdx !== -1 ? colonIdx + 1 : blockText.indexOf('\n') !== -1 ? blockText.indexOf('\n') : blockText.length;
     const instructionText = blockText.slice(0, instructionEnd).trim();
-    const bodyText = blockText.slice(instructionEnd).trim();
+    const bodyText = blockText
+      .slice(instructionEnd)
+      .trim()
+      .replace(/\s*\r?\n+\s*/g, ' ')
+      .replace(/[ \t]{2,}/g, ' ')
+      .trim();
     const bodyStripped = stripNikkud(bodyText);
     const phrase = JewishCalendarService.getYaalehVyavoPhrase(new Date());
     const segs: { text: string; italic: boolean }[] = [];
@@ -868,6 +835,9 @@ function processMinchaSectionContent(key: string, content: PrayerTextData): Pray
   return { ...content, hebrew, english, hebrewSegments, englishSegments };
 }
 
+/** Amidah text: optional personal names clause in רפאנו (after רפואה שלמה לכל מכותינו). */
+const AMIDAH_SECTION_KEYS_FOR_REFUAH_NAMES = new Set(['amidah', 'mincha_amidah', 'maariv_amidah']);
+
 const SERVICE_TITLES: { [key: string]: { english: string; hebrew: string } } = {
   shacharis: { english: 'Shacharis', hebrew: 'שחרית' },
   mincha: { english: 'Mincha', hebrew: 'מנחה' },
@@ -889,6 +859,9 @@ const AUTOSCROLL_SPEED_MAX = 2;
 const OPTIONAL_SECTIONS = ['tallit', 'tefillin'];
 /** Sections before Ashrei that are collapsed by default; tap to expand. Key = sectionKey. */
 const COLLAPSED_BEFORE_ASHREI_MINCHA: string[] = ['mincha_korbanot'];
+/** Amidah sections that may carry a kedushaFoldout (Chazaras ha-shatz Kedushah). */
+/** Sections that use amidah foldouts (קדושה, מודים דרבנן) in the reader. */
+const AMIDAH_KEYS_FOR_KEDUSHA_FOLDOUT = new Set(['amidah', 'mincha_amidah', 'maariv_amidah']);
 const AUTOSCROLL_PIXELS_PER_SECOND = 45; // at speed 1
 
 const TEXT_SIZES: DisplayPreferences['textSize'][] = ['xsmall', 'small', 'medium', 'large'];
@@ -1017,6 +990,10 @@ export const SiddurReaderScreen: React.FC = () => {
   const [expandedOptionals, setExpandedOptionals] = useState<Record<string, boolean>>({});
   /** "Before Ashrei" sections (e.g. Mincha Korbanot) collapsed by default; tap to expand. */
   const [expandedBeforeAshrei, setExpandedBeforeAshrei] = useState<Record<string, boolean>>({});
+  /** Amidah: Chazaras ha-shatz Kedushah block collapsed by default (tap "קדושה" to expand). */
+  const [expandedAmidahKedusha, setExpandedAmidahKedusha] = useState<Record<string, boolean>>({});
+  /** Amidah: Modim deRabbanan paragraph collapsed by default (tap "מודים דרבנן" to expand). */
+  const [expandedAmidahModimDerabanan, setExpandedAmidahModimDerabanan] = useState<Record<string, boolean>>({});
 
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
@@ -1048,15 +1025,15 @@ export const SiddurReaderScreen: React.FC = () => {
     return () => clearTimeout(fallback);
   }, [loadPreferences]);
 
-  // Record davening streak when user opens siddur; WIP notice for main weekday tefilos
+  // Record davening streak when user opens siddur; WIP notice for Shacharis & Maariv (not Mincha)
   useFocusEffect(
     useCallback(() => {
       recordDaveningToday();
-      if (service !== 'shacharis' && service !== 'mincha' && service !== 'maariv') return;
+      if (service !== 'shacharis' && service !== 'maariv') return;
       const task = InteractionManager.runAfterInteractions(() => {
         Alert.alert(
           'Work in progress',
-          'Shacharis, Mincha, and Maariv are still a work in progress. There are many known issues; they will be fixed in subsequent updates.',
+          'Shacharis and Maariv are still a work in progress. There are many known issues; they will be fixed in subsequent updates.',
           [{ text: 'OK' }]
         );
       });
@@ -1079,6 +1056,85 @@ export const SiddurReaderScreen: React.FC = () => {
     setAutoscrollSpeed(v);
   }, []);
 
+  const postProcessSiddurSectionContent = useCallback(
+    async (sectionKey: string, data: PrayerTextData | null): Promise<PrayerTextData | null> => {
+      if (!data) return null;
+      let content = data;
+      if (sectionKey === 'birchas_hamazon') {
+        try {
+          content = trimBirkatHamazon(content);
+        } catch {
+          /* keep */
+        }
+      }
+      if (
+        service === 'mincha' &&
+        (sectionKey === 'mincha_korbanot' || sectionKey === 'mincha_ashrei' || sectionKey === 'mincha_amidah')
+      ) {
+        try {
+          content = processMinchaSectionContent(sectionKey, content);
+        } catch {
+          /* keep */
+        }
+      }
+      if (AMIDAH_SECTION_KEYS_FOR_REFUAH_NAMES.has(sectionKey)) {
+        const prefs = await UserPreferencesService.getPreferences();
+        const names = prefs?.refuahPersonalNames ?? [];
+        if (names.length > 0) {
+          content = injectRefuahIntoAmidahPrayerTextData(content, names);
+        }
+      }
+      return content;
+    },
+    [service]
+  );
+
+  /** When refuah name list changes in Settings, refetch amidah text so the מי שבירך clause updates. */
+  const lastRefuahNamesJsonRef = useRef<string | null>(null);
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        const prefs = await UserPreferencesService.getPreferences();
+        const j = JSON.stringify(prefs?.refuahPersonalNames ?? []);
+        if (lastRefuahNamesJsonRef.current === null) {
+          lastRefuahNamesJsonRef.current = j;
+          return;
+        }
+        if (j === lastRefuahNamesJsonRef.current) return;
+        lastRefuahNamesJsonRef.current = j;
+        const keysToReload: string[] = [];
+        if (isFullScroll) keysToReload.push(...AMIDAH_SECTION_KEYS_FOR_REFUAH_NAMES);
+        if (
+          isSingleSectionView &&
+          effectiveSectionKey &&
+          AMIDAH_SECTION_KEYS_FOR_REFUAH_NAMES.has(effectiveSectionKey)
+        ) {
+          keysToReload.push(effectiveSectionKey);
+        }
+        const uniqueKeys = [...new Set(keysToReload)];
+        for (const key of uniqueKeys) {
+          try {
+            const raw = await SefariaService.fetchSiddurSection(key, nusach);
+            const c = await postProcessSiddurSectionContent(key, raw);
+            if (!cancelled) setSectionContent((prev) => ({ ...prev, [key]: c }));
+          } catch {
+            if (!cancelled) setSectionContent((prev) => ({ ...prev, [key]: null }));
+          }
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [
+      isFullScroll,
+      isSingleSectionView,
+      effectiveSectionKey,
+      nusach,
+      postProcessSiddurSectionContent,
+    ])
+  );
+
   useEffect(() => {
     if (!prefsLoaded) return;
     if (isFullScroll) {
@@ -1099,25 +1155,7 @@ export const SiddurReaderScreen: React.FC = () => {
           );
           const content: { [key: string]: PrayerTextData | null } = {};
           for (const { key, data } of results) {
-            if (key === 'birchas_hamazon' && data) {
-              try {
-                content[key] = trimBirkatHamazon(data);
-              } catch {
-                content[key] = data;
-              }
-            } else if (
-              service === 'mincha' &&
-              data &&
-              (key === 'mincha_korbanot' || key === 'mincha_ashrei' || key === 'mincha_amidah')
-            ) {
-              try {
-                content[key] = processMinchaSectionContent(key, data);
-              } catch {
-                content[key] = data;
-              }
-            } else {
-              content[key] = data;
-            }
+            content[key] = await postProcessSiddurSectionContent(key, data);
           }
           setSectionContent(content);
         } finally {
@@ -1127,7 +1165,7 @@ export const SiddurReaderScreen: React.FC = () => {
     } else {
       loadServiceStructure();
     }
-  }, [service, nusach, isFullScroll, prefsLoaded]);
+  }, [service, nusach, isFullScroll, prefsLoaded, postProcessSiddurSectionContent]);
 
   // Single-section view: load that section's content when we have effectiveSectionKey
   useEffect(() => {
@@ -1186,25 +1224,12 @@ export const SiddurReaderScreen: React.FC = () => {
   };
 
   const loadSectionContent = async (sectionKey: string) => {
-    if (sectionContent[sectionKey]) return;
+    const isAmidah = AMIDAH_SECTION_KEYS_FOR_REFUAH_NAMES.has(sectionKey);
+    if (sectionContent[sectionKey] && !isAmidah) return;
     setLoadingSection(sectionKey);
     try {
-      let content = await SefariaService.fetchSiddurSection(sectionKey, nusach);
-      if (sectionKey === 'birchas_hamazon' && content) {
-        try {
-          content = trimBirkatHamazon(content);
-        } catch {
-          // keep content unchanged if trim fails
-        }
-      }
-      if (
-        (sectionKey === 'mincha_korbanot' || sectionKey === 'mincha_ashrei' || sectionKey === 'mincha_amidah') &&
-        content
-      ) {
-        try {
-          content = processMinchaSectionContent(sectionKey, content);
-        } catch {}
-      }
+      const raw = await SefariaService.fetchSiddurSection(sectionKey, nusach);
+      const content = await postProcessSiddurSectionContent(sectionKey, raw);
       setSectionContent(prev => ({ ...prev, [sectionKey]: content }));
     } catch {
       setSectionContent(prev => ({ ...prev, [sectionKey]: null }));
@@ -1218,20 +1243,8 @@ export const SiddurReaderScreen: React.FC = () => {
     async (sectionKey: string) => {
       setLoadingSection(sectionKey);
       try {
-        let content = await SefariaService.fetchSiddurSection(sectionKey, nusach);
-        if (sectionKey === 'birchas_hamazon' && content) {
-          try {
-            content = trimBirkatHamazon(content);
-          } catch {}
-        }
-        if (
-          (sectionKey === 'mincha_korbanot' || sectionKey === 'mincha_ashrei' || sectionKey === 'mincha_amidah') &&
-          content
-        ) {
-          try {
-            content = processMinchaSectionContent(sectionKey, content);
-          } catch {}
-        }
+        const raw = await SefariaService.fetchSiddurSection(sectionKey, nusach);
+        const content = await postProcessSiddurSectionContent(sectionKey, raw);
         setSectionContent(prev => ({ ...prev, [sectionKey]: content }));
       } catch {
         setSectionContent(prev => ({ ...prev, [sectionKey]: null }));
@@ -1239,7 +1252,7 @@ export const SiddurReaderScreen: React.FC = () => {
         setLoadingSection(null);
       }
     },
-    [nusach]
+    [nusach, postProcessSiddurSectionContent]
   );
 
   const handleSectionPress = (key: string) => {
@@ -1404,6 +1417,8 @@ export const SiddurReaderScreen: React.FC = () => {
                     )}
                     {(() => {
                       const content = sectionContent[section.key]!;
+                    const k = content.kedushaFoldout;
+                    const m = content.modimDerabananFoldout;
                     const hebrewStyle = [
                       styles.hebrewText,
                       { fontSize: HEBREW_FONT_SIZES[textSize], lineHeight: HEBREW_LINE_HEIGHTS[textSize] },
@@ -1461,6 +1476,26 @@ export const SiddurReaderScreen: React.FC = () => {
                         </View>
                       );
                     };
+                    const renderHebrewBeforeKedusha = () => {
+                      const segs = content.hebrewBeforeKedushaFoldoutSegments;
+                      const h = content.hebrewBeforeKedushaFoldout;
+                      if (segs?.length) {
+                        return renderSegmentsAsBlocks(
+                          segs,
+                          hebrewStyle,
+                          hebrewInstructionStyle,
+                          styles.instructionBlock
+                        );
+                      }
+                      if (h) {
+                        return (
+                          <View style={styles.hebrewSegmentBlock}>
+                            {renderTextWithParagraphs(h, hebrewStyle, spacing.lg, true)}
+                          </View>
+                        );
+                      }
+                      return null;
+                    };
                     const renderEnglish = () => {
                       if (!showEnglish) return null;
                       const engSize = HEBREW_FONT_SIZES[textSize] * 0.85;
@@ -1484,6 +1519,228 @@ export const SiddurReaderScreen: React.FC = () => {
                       }
                       return null;
                     };
+                    const renderEnglishBeforeKedusha = () => {
+                      if (!showEnglish) return null;
+                      const engSize = HEBREW_FONT_SIZES[textSize] * 0.85;
+                      const engLine = HEBREW_LINE_HEIGHTS[textSize] * 0.85;
+                      const engStyle = [styles.englishText, { fontSize: engSize, lineHeight: engLine }];
+                      const segs = content.englishBeforeKedushaFoldoutSegments;
+                      const e = content.englishBeforeKedushaFoldout;
+                      if (segs?.length) {
+                        return (
+                          <View style={styles.englishBlockWrap}>
+                            {segs.map((seg, idx) =>
+                              seg.italic ? (
+                                <Text key={`pre-${idx}`} style={[styles.englishText, styles.instructionText, { fontSize: engSize, lineHeight: engLine }]}>{seg.text}</Text>
+                              ) : (
+                                <Text key={`pre-${idx}`} style={engStyle}>{seg.text}</Text>
+                              )
+                            )}
+                          </View>
+                        );
+                      }
+                      if (e) {
+                        return <Text style={engStyle}>{e}</Text>;
+                      }
+                      return null;
+                    };
+                    const renderHebrewBeforeModim = () => {
+                      const segs = content.hebrewBeforeModimDerabananFoldoutSegments;
+                      const h = content.hebrewBeforeModimDerabananFoldout;
+                      if (segs?.length) {
+                        return renderSegmentsAsBlocks(
+                          segs,
+                          hebrewStyle,
+                          hebrewInstructionStyle,
+                          styles.instructionBlock
+                        );
+                      }
+                      if (h) {
+                        return (
+                          <View style={styles.hebrewSegmentBlock}>
+                            {renderTextWithParagraphs(h, hebrewStyle, spacing.lg, true)}
+                          </View>
+                        );
+                      }
+                      return null;
+                    };
+                    const renderEnglishBeforeModim = () => {
+                      if (!showEnglish) return null;
+                      const engSize = HEBREW_FONT_SIZES[textSize] * 0.85;
+                      const engLine = HEBREW_LINE_HEIGHTS[textSize] * 0.85;
+                      const engStyle = [styles.englishText, { fontSize: engSize, lineHeight: engLine }];
+                      const segs = content.englishBeforeModimDerabananFoldoutSegments;
+                      const e = content.englishBeforeModimDerabananFoldout;
+                      if (segs?.length) {
+                        return (
+                          <View style={styles.englishBlockWrap}>
+                            {segs.map((seg, idx) =>
+                              seg.italic ? (
+                                <Text key={`modpre-${idx}`} style={[styles.englishText, styles.instructionText, { fontSize: engSize, lineHeight: engLine }]}>{seg.text}</Text>
+                              ) : (
+                                <Text key={`modpre-${idx}`} style={engStyle}>{seg.text}</Text>
+                              )
+                            )}
+                          </View>
+                        );
+                      }
+                      if (e) {
+                        return <Text style={engStyle}>{e}</Text>;
+                      }
+                      return null;
+                    };
+                    const renderKedHebrew = () => {
+                      if (!k) return null;
+                      if (k.hebrewSegments?.length) {
+                        return renderSegmentsAsBlocks(
+                          k.hebrewSegments,
+                          hebrewStyle,
+                          hebrewInstructionStyle,
+                          styles.instructionBlock
+                        );
+                      }
+                      return (
+                        <View style={styles.hebrewSegmentBlock}>
+                          {renderTextWithParagraphs(k.hebrew, hebrewStyle, spacing.lg, true)}
+                        </View>
+                      );
+                    };
+                    const renderKedEnglish = () => {
+                      if (!k || !showEnglish) return null;
+                      const engSize = HEBREW_FONT_SIZES[textSize] * 0.85;
+                      const engLine = HEBREW_LINE_HEIGHTS[textSize] * 0.85;
+                      const engStyle = [styles.englishText, { fontSize: engSize, lineHeight: engLine }];
+                      if (k.englishSegments?.length) {
+                        return (
+                          <View style={styles.englishBlockWrap}>
+                            {k.englishSegments.map((seg, idx) =>
+                              seg.italic ? (
+                                <Text key={`ked-${idx}`} style={[styles.englishText, styles.instructionText, { fontSize: engSize, lineHeight: engLine }]}>{seg.text}</Text>
+                              ) : (
+                                <Text key={`ked-${idx}`} style={engStyle}>{seg.text}</Text>
+                              )
+                            )}
+                          </View>
+                        );
+                      }
+                      if (k.english) {
+                        return <Text style={engStyle}>{k.english}</Text>;
+                      }
+                      return null;
+                    };
+                    const renderModHebrew = () => {
+                      if (!m) return null;
+                      if (m.hebrewSegments?.length) {
+                        return renderSegmentsAsBlocks(
+                          m.hebrewSegments,
+                          hebrewStyle,
+                          hebrewInstructionStyle,
+                          styles.instructionBlock
+                        );
+                      }
+                      return (
+                        <View style={styles.hebrewSegmentBlock}>
+                          {renderTextWithParagraphs(m.hebrew, hebrewStyle, spacing.lg, true)}
+                        </View>
+                      );
+                    };
+                    const renderModEnglish = () => {
+                      if (!m || !showEnglish) return null;
+                      const engSize = HEBREW_FONT_SIZES[textSize] * 0.85;
+                      const engLine = HEBREW_LINE_HEIGHTS[textSize] * 0.85;
+                      const engStyle = [styles.englishText, { fontSize: engSize, lineHeight: engLine }];
+                      if (m.englishSegments?.length) {
+                        return (
+                          <View style={styles.englishBlockWrap}>
+                            {m.englishSegments.map((seg, idx) =>
+                              seg.italic ? (
+                                <Text key={`mod-${idx}`} style={[styles.englishText, styles.instructionText, { fontSize: engSize, lineHeight: engLine }]}>{seg.text}</Text>
+                              ) : (
+                                <Text key={`mod-${idx}`} style={engStyle}>{seg.text}</Text>
+                              )
+                            )}
+                          </View>
+                        );
+                      }
+                      if (m.english) {
+                        return <Text style={engStyle}>{m.english}</Text>;
+                      }
+                      return null;
+                    };
+                    const kedushaFoldoutBetweenMain =
+                      !!(content.hebrewBeforeKedushaFoldout?.trim() ||
+                        content.hebrewBeforeKedushaFoldoutSegments?.length);
+                    const modimFoldoutBetweenMain =
+                      !!(content.hebrewBeforeModimDerabananFoldout?.trim() ||
+                        content.hebrewBeforeModimDerabananFoldoutSegments?.length);
+                    const showModimFoldout =
+                      !!m?.hebrew?.trim() && AMIDAH_KEYS_FOR_KEDUSHA_FOLDOUT.has(section.key);
+                    const hasModim = showModimFoldout;
+                    const amidahKedushaFoldoutUi =
+                      k && AMIDAH_KEYS_FOR_KEDUSHA_FOLDOUT.has(section.key) ? (
+                        <>
+                          {!expandedAmidahKedusha[section.key] ? (
+                            <TouchableOpacity
+                              onPress={() => setExpandedAmidahKedusha((prev) => ({ ...prev, [section.key]: true }))}
+                              style={styles.collapsedBeforeAshreiRow}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+                                קדושה
+                              </Text>
+                              <Text style={styles.collapsedBeforeAshreiChevron}>▼</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <>
+                              <TouchableOpacity
+                                onPress={() => setExpandedAmidahKedusha((prev) => ({ ...prev, [section.key]: false }))}
+                                style={styles.collapsedBeforeAshreiRow}
+                                activeOpacity={0.7}
+                              >
+                                <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+                                  קדושה
+                                </Text>
+                                <Text style={styles.collapsedBeforeAshreiChevron}>▲</Text>
+                              </TouchableOpacity>
+                              {renderKedHebrew()}
+                              {renderKedEnglish()}
+                            </>
+                          )}
+                        </>
+                      ) : null;
+                    const amidahModimDerabananFoldoutUi = showModimFoldout ? (
+                      <>
+                        {!expandedAmidahModimDerabanan[section.key] ? (
+                          <TouchableOpacity
+                            onPress={() => setExpandedAmidahModimDerabanan((prev) => ({ ...prev, [section.key]: true }))}
+                            style={styles.collapsedBeforeAshreiRow}
+                            activeOpacity={0.7}
+                            accessibilityLabel="Modim derabanan, מודים דרבנן"
+                          >
+                            <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+                              מודים דרבנן
+                            </Text>
+                            <Text style={styles.collapsedBeforeAshreiChevron}>▼</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <>
+                            <TouchableOpacity
+                              onPress={() => setExpandedAmidahModimDerabanan((prev) => ({ ...prev, [section.key]: false }))}
+                              style={styles.collapsedBeforeAshreiRow}
+                              activeOpacity={0.7}
+                              accessibilityLabel="Modim derabanan, מודים דרבנן"
+                            >
+                              <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+                                מודים דרבנן
+                              </Text>
+                              <Text style={styles.collapsedBeforeAshreiChevron}>▲</Text>
+                            </TouchableOpacity>
+                            {renderModHebrew()}
+                            {renderModEnglish()}
+                          </>
+                        )}
+                      </>
+                    ) : null;
                     return (
                       <>
                         {isOptional && (
@@ -1496,8 +1753,39 @@ export const SiddurReaderScreen: React.FC = () => {
                             </Text>
                           </TouchableOpacity>
                         )}
-                        {renderHebrew()}
-                        {renderEnglish()}
+                        {kedushaFoldoutBetweenMain ? (
+                          <>
+                            {renderHebrewBeforeKedusha()}
+                            {amidahKedushaFoldoutUi}
+                            {hasModim && modimFoldoutBetweenMain ? (
+                              <>
+                                {renderHebrewBeforeModim()}
+                                {amidahModimDerabananFoldoutUi}
+                              </>
+                            ) : hasModim ? (
+                              amidahModimDerabananFoldoutUi
+                            ) : null}
+                            {renderHebrew()}
+                            {renderEnglishBeforeKedusha()}
+                            {hasModim && modimFoldoutBetweenMain ? renderEnglishBeforeModim() : null}
+                            {renderEnglish()}
+                          </>
+                        ) : (
+                          <>
+                            {hasModim && modimFoldoutBetweenMain ? (
+                              <>
+                                {renderHebrewBeforeModim()}
+                                {amidahModimDerabananFoldoutUi}
+                              </>
+                            ) : hasModim ? (
+                              amidahModimDerabananFoldoutUi
+                            ) : null}
+                            {renderHebrew()}
+                            {hasModim && modimFoldoutBetweenMain ? renderEnglishBeforeModim() : null}
+                            {renderEnglish()}
+                            {amidahKedushaFoldoutUi}
+                          </>
+                        )}
                       </>
                     );
                   })()}
@@ -1605,7 +1893,8 @@ export const SiddurReaderScreen: React.FC = () => {
     );
   };
 
-  const renderSectionContent = (content: PrayerTextData) => {
+  const renderSectionContent = (content: PrayerTextData, sectionKey?: string) => {
+    const k = content.kedushaFoldout;
     const hebrewStyle = [
       styles.hebrewText,
       { fontSize: HEBREW_FONT_SIZES[textSize], lineHeight: HEBREW_LINE_HEIGHTS[textSize] },
@@ -1646,10 +1935,10 @@ export const SiddurReaderScreen: React.FC = () => {
       }
       return <>{nodes}</>;
     };
-    const renderHebrew = () => {
-      if (content.hebrewSegments?.length) {
+    const renderHebrewFrom = (c: PrayerTextData) => {
+      if (c.hebrewSegments?.length) {
         return renderSegmentsAsBlocks(
-          content.hebrewSegments,
+          c.hebrewSegments,
           hebrewStyle,
           hebrewInstructionStyle,
           styles.instructionBlock
@@ -1657,20 +1946,51 @@ export const SiddurReaderScreen: React.FC = () => {
       }
       return (
         <View style={styles.hebrewSegmentBlock}>
-          {renderTextWithParagraphs(content.hebrew, hebrewStyle, spacing.lg, true)}
+          {renderTextWithParagraphs(c.hebrew, hebrewStyle, spacing.lg, true)}
         </View>
       );
     };
-    const renderEnglish = () => {
+    const renderHebrewBeforeKedusha = () => {
+      const segs = content.hebrewBeforeKedushaFoldoutSegments;
+      const h = content.hebrewBeforeKedushaFoldout;
+      if (segs?.length) {
+        return renderSegmentsAsBlocks(segs, hebrewStyle, hebrewInstructionStyle, styles.instructionBlock);
+      }
+      if (h) {
+        return (
+          <View style={styles.hebrewSegmentBlock}>
+            {renderTextWithParagraphs(h, hebrewStyle, spacing.lg, true)}
+          </View>
+        );
+      }
+      return null;
+    };
+    const renderHebrew = () => renderHebrewFrom(content);
+    const renderHebrewBeforeModim = () => {
+      const segs = content.hebrewBeforeModimDerabananFoldoutSegments;
+      const h = content.hebrewBeforeModimDerabananFoldout;
+      if (segs?.length) {
+        return renderSegmentsAsBlocks(segs, hebrewStyle, hebrewInstructionStyle, styles.instructionBlock);
+      }
+      if (h) {
+        return (
+          <View style={styles.hebrewSegmentBlock}>
+            {renderTextWithParagraphs(h, hebrewStyle, spacing.lg, true)}
+          </View>
+        );
+      }
+      return null;
+    };
+    const renderEnglishFrom = (c: PrayerTextData) => {
       if (!showEnglish) return null;
       const engSize = HEBREW_FONT_SIZES[textSize] * 0.85;
       const engLine = HEBREW_LINE_HEIGHTS[textSize] * 0.85;
       const engStyle = [styles.englishText, { fontSize: engSize, lineHeight: engLine }];
       const engInstructionStyle = [styles.englishText, styles.instructionText, { fontSize: engSize, lineHeight: engLine }];
-      if (content.englishSegments?.length) {
+      if (c.englishSegments?.length) {
         return (
           <View style={styles.englishBlockWrap}>
-            {content.englishSegments.map((seg, idx) => (
+            {c.englishSegments.map((seg, idx) => (
               <View key={idx} style={seg.italic ? styles.instructionBlock : undefined}>
                 {renderTextWithParagraphs(
                   seg.text,
@@ -1682,16 +2002,193 @@ export const SiddurReaderScreen: React.FC = () => {
           </View>
         );
       }
-      if (content.english) {
+      if (c.english) {
         return (
           <View style={styles.englishBlockWrap}>
-            {renderTextWithParagraphs(content.english, engStyle, spacing.lg)}
+            {renderTextWithParagraphs(c.english, engStyle, spacing.lg)}
           </View>
         );
       }
       return null;
     };
-    return <>{renderHebrew()}{renderEnglish()}</>;
+    const renderEnglishBeforeKedusha = () => {
+      if (!showEnglish) return null;
+      const engSize = HEBREW_FONT_SIZES[textSize] * 0.85;
+      const engLine = HEBREW_LINE_HEIGHTS[textSize] * 0.85;
+      const engStyle = [styles.englishText, { fontSize: engSize, lineHeight: engLine }];
+      const engInstructionStyle = [styles.englishText, styles.instructionText, { fontSize: engSize, lineHeight: engLine }];
+      const segs = content.englishBeforeKedushaFoldoutSegments;
+      const e = content.englishBeforeKedushaFoldout;
+      if (segs?.length) {
+        return (
+          <View style={styles.englishBlockWrap}>
+            {segs.map((seg, idx) => (
+              <View key={`pre-${idx}`} style={seg.italic ? styles.instructionBlock : undefined}>
+                {renderTextWithParagraphs(
+                  seg.text,
+                  seg.italic ? engInstructionStyle : engStyle,
+                  seg.italic ? spacing.sm : spacing.lg
+                )}
+              </View>
+            ))}
+          </View>
+        );
+      }
+      if (e) {
+        return (
+          <View style={styles.englishBlockWrap}>
+            {renderTextWithParagraphs(e, engStyle, spacing.lg)}
+          </View>
+        );
+      }
+      return null;
+    };
+    const renderEnglishBeforeModim = () => {
+      if (!showEnglish) return null;
+      const engSize = HEBREW_FONT_SIZES[textSize] * 0.85;
+      const engLine = HEBREW_LINE_HEIGHTS[textSize] * 0.85;
+      const engStyle = [styles.englishText, { fontSize: engSize, lineHeight: engLine }];
+      const engInstructionStyle = [styles.englishText, styles.instructionText, { fontSize: engSize, lineHeight: engLine }];
+      const segs = content.englishBeforeModimDerabananFoldoutSegments;
+      const e = content.englishBeforeModimDerabananFoldout;
+      if (segs?.length) {
+        return (
+          <View style={styles.englishBlockWrap}>
+            {segs.map((seg, idx) => (
+              <View key={`modpre-${idx}`} style={seg.italic ? styles.instructionBlock : undefined}>
+                {renderTextWithParagraphs(
+                  seg.text,
+                  seg.italic ? engInstructionStyle : engStyle,
+                  seg.italic ? spacing.sm : spacing.lg
+                )}
+              </View>
+            ))}
+          </View>
+        );
+      }
+      if (e) {
+        return (
+          <View style={styles.englishBlockWrap}>
+            {renderTextWithParagraphs(e, engStyle, spacing.lg)}
+          </View>
+        );
+      }
+      return null;
+    };
+    const renderEnglish = () => renderEnglishFrom(content);
+    const m = content.modimDerabananFoldout;
+    const showModimFoldout =
+      !!m?.hebrew?.trim() && sectionKey && AMIDAH_KEYS_FOR_KEDUSHA_FOLDOUT.has(sectionKey);
+    const modimFoldoutBetweenMain =
+      !!(content.hebrewBeforeModimDerabananFoldout?.trim() ||
+        content.hebrewBeforeModimDerabananFoldoutSegments?.length);
+    const showKedushaFoldout =
+      !!k && sectionKey && AMIDAH_KEYS_FOR_KEDUSHA_FOLDOUT.has(sectionKey);
+    const kedushaFoldoutBetweenMain =
+      !!(content.hebrewBeforeKedushaFoldout?.trim() ||
+        content.hebrewBeforeKedushaFoldoutSegments?.length);
+    const amidahKedushaFoldoutUi = showKedushaFoldout ? (
+      <>
+        {!expandedAmidahKedusha[sectionKey!] ? (
+          <TouchableOpacity
+            onPress={() => setExpandedAmidahKedusha((prev) => ({ ...prev, [sectionKey!]: true }))}
+            style={styles.collapsedBeforeAshreiRow}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+              קדושה
+            </Text>
+            <Text style={styles.collapsedBeforeAshreiChevron}>▼</Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            <TouchableOpacity
+              onPress={() => setExpandedAmidahKedusha((prev) => ({ ...prev, [sectionKey!]: false }))}
+              style={styles.collapsedBeforeAshreiRow}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+                קדושה
+              </Text>
+              <Text style={styles.collapsedBeforeAshreiChevron}>▲</Text>
+            </TouchableOpacity>
+            {renderHebrewFrom(k)}
+            {renderEnglishFrom(k)}
+          </>
+        )}
+      </>
+    ) : null;
+    const amidahModimDerabananFoldoutUi = showModimFoldout ? (
+      <>
+        {!expandedAmidahModimDerabanan[sectionKey!] ? (
+          <TouchableOpacity
+            onPress={() => setExpandedAmidahModimDerabanan((prev) => ({ ...prev, [sectionKey!]: true }))}
+            style={styles.collapsedBeforeAshreiRow}
+            activeOpacity={0.7}
+            accessibilityLabel="Modim derabanan, מודים דרבנן"
+          >
+            <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+              מודים דרבנן
+            </Text>
+            <Text style={styles.collapsedBeforeAshreiChevron}>▼</Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            <TouchableOpacity
+              onPress={() => setExpandedAmidahModimDerabanan((prev) => ({ ...prev, [sectionKey!]: false }))}
+              style={styles.collapsedBeforeAshreiRow}
+              activeOpacity={0.7}
+              accessibilityLabel="Modim derabanan, מודים דרבנן"
+            >
+              <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+                מודים דרבנן
+              </Text>
+              <Text style={styles.collapsedBeforeAshreiChevron}>▲</Text>
+            </TouchableOpacity>
+            {renderHebrewFrom(m!)}
+            {renderEnglishFrom(m!)}
+          </>
+        )}
+      </>
+    ) : null;
+    const hasModim = showModimFoldout;
+    return (
+      <>
+        {kedushaFoldoutBetweenMain ? (
+          <>
+            {renderHebrewBeforeKedusha()}
+            {amidahKedushaFoldoutUi}
+            {hasModim && modimFoldoutBetweenMain ? (
+              <>
+                {renderHebrewBeforeModim()}
+                {amidahModimDerabananFoldoutUi}
+              </>
+            ) : hasModim ? (
+              amidahModimDerabananFoldoutUi
+            ) : null}
+            {renderHebrew()}
+            {renderEnglishBeforeKedusha()}
+            {hasModim && modimFoldoutBetweenMain ? renderEnglishBeforeModim() : null}
+            {renderEnglish()}
+          </>
+        ) : (
+          <>
+            {hasModim && modimFoldoutBetweenMain ? (
+              <>
+                {renderHebrewBeforeModim()}
+                {amidahModimDerabananFoldoutUi}
+              </>
+            ) : hasModim ? (
+              amidahModimDerabananFoldoutUi
+            ) : null}
+            {renderHebrew()}
+            {hasModim && modimFoldoutBetweenMain ? renderEnglishBeforeModim() : null}
+            {renderEnglish()}
+            {amidahKedushaFoldoutUi}
+          </>
+        )}
+      </>
+    );
   };
 
   const renderSingleSectionView = () => {
@@ -1734,7 +2231,7 @@ export const SiddurReaderScreen: React.FC = () => {
               <Text style={styles.sectionLoadingText}>Loading text...</Text>
             </View>
           ) : content ? (
-            <View style={styles.sectionContent}>{renderSectionContent(content)}</View>
+            <View style={styles.sectionContent}>{renderSectionContent(content, effectiveSectionKey ?? undefined)}</View>
           ) : (
             <Text style={styles.errorText}>Unable to load this section.</Text>
           )}

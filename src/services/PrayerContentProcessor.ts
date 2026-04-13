@@ -12,7 +12,10 @@ export interface PrayerSegment {
 /** Day-specific prefixes in Hebrew (Amidah and similar). Show only when the day matches. */
 const DAY_SPECIFIC_PREFIXES: { pattern: RegExp; check: (date: Date) => boolean }[] = [
   // בעשי"ת / בעשרת ימי תשובה – Ten Days of Repentance
-  { pattern: /^בעשי"ת\s*:|^בעשרת ימי תשובה\s*:/i, check: (d) => JewishCalendarService.isAseretYemeiTeshuva(d) },
+  {
+    pattern: /^בעשי["״\u05F4]ת\s*:|^בעשרת ימי תשובה\s*:/i,
+    check: (d) => JewishCalendarService.isAseretYemeiTeshuva(d),
+  },
   // בראש חודש – Rosh Chodesh
   { pattern: /^בראש חודש\s*:/i, check: (d) => JewishCalendarService.isRoshChodesh(d) },
   // בחול המועד – Chol Hamoed
@@ -36,6 +39,7 @@ const INSTRUCTION_MARKERS: string[] = [
   'פירוש המילות שהוא מוציא', // meaning of the words he utters
   'שיחשוב בשעת התפילה',    // that he should think during the prayer
   'מכניעים את הלב',        // humble the heart (instruction context)
+  'אם שכח לומר מי כמוך',   // halacha note in Amidah (Sefaria), not tefilla
   'אפילו לקדיש וקדושה',    // even for kaddish and kedusha (instruction)
   'ואינו פוסק',            // and he does not interrupt
   'מיד כשיעור משנתו',      // immediately upon waking from his sleep
@@ -49,6 +53,27 @@ const INSTRUCTION_MARKERS: string[] = [
 function isInstructionParagraph(hebrew: string): boolean {
   const t = hebrew.trim();
   if (!t) return true;
+  const noNik = t.replace(/[\u0591-\u05C7]/g, '').replace(/\s+/g, ' ');
+  if (
+    /אם טעה וסיים האל הקדוש אם נזכר/.test(noNik) ||
+    (/אם טעה וסיים האל הקדוש/.test(noNik) &&
+      /המלך הקדוש/.test(noNik) &&
+      (/תוך כדי די?בור/.test(noNik) || /לחזור לראש התפלה/.test(noNik)))
+  ) {
+    return true;
+  }
+  if (/מסיים/.test(noNik) && /המלך הקדוש/.test(noNik) && /בעשי/.test(noNik) && /ברוך אתה/.test(noNik)) {
+    return true;
+  }
+  if (
+    /אם\s*לא\s*אמר\s*זכרנו/.test(noNik) &&
+    (/מלך\s*עוזר/.test(noNik) || /וכתבנו/.test(noNik) || /בא"י|בא״י/.test(noNik))
+  ) {
+    return true;
+  }
+  if (/הטועה\s*ומזכיר\s*זכרנו/.test(noNik) && /ראש\s*התפלה/.test(noNik)) {
+    return true;
+  }
   // Entirely in parentheses (source/commentary)
   if (/^\([^)]*\)$/.test(t)) return true;
   // Halacha-style: "אם לא אמר", "הטועה", "נזכר", "פוסק", "חוזר לראש"
@@ -56,6 +81,42 @@ function isInstructionParagraph(hebrew: string): boolean {
   if (/\(דה"ח\)|\(שו"ע\)|\(משנ"ב\)/.test(t)) return true;
   // Long parenthetical at end (common for instructions)
   if (/\([^)]{40,}\)/.test(t)) return true;
+  // Sefaria: "בראש חודש ובחול המועד אומרים זה:" before יעלה ויבא (not the prayer itself)
+  if (
+    (/בראש חודש|בראש חדש/.test(noNik)) &&
+    /בחול המועד/.test(noNik) &&
+    /אומרים זה|אומר זה/.test(noNik) &&
+    !/יעלה ויבא/.test(noNik) &&
+    noNik.length < 120
+  ) {
+    return true;
+  }
+  if (
+    /שכח/.test(noNik) &&
+    /יעלה\s*ויבא/.test(noNik) &&
+    /יהיו\s*לרצון|מחזיר\s*שכינתו\s*לציון|חוזר\s*לראש\s*התפלה/.test(noNik) &&
+    noNik.length < 2200
+  ) {
+    return true;
+  }
+  if (
+    /כשאומר\s*מודים/.test(noNik) &&
+    /כאגמון/.test(noNik) &&
+    (/כורע|זוקף/.test(noNik)) &&
+    noNik.length < 900
+  ) {
+    return true;
+  }
+  if (
+    /כשיגיע/.test(noNik) &&
+    /מודים/.test(noNik) &&
+    /שליח/.test(noNik) &&
+    /צבור|ציבור/.test(noNik) &&
+    /(?:הודאה\s*קטנה|אבודרהם|עול\s*מלכות)/.test(noNik) &&
+    noNik.length < 2600
+  ) {
+    return true;
+  }
   // "How to daven" / kavana instructions (e.g. המתפלל צריך שיכוין... ויזהר להתפלל בלחש)
   for (const marker of INSTRUCTION_MARKERS) {
     if (t.includes(marker)) return true;
@@ -97,6 +158,22 @@ export function processPrayerContent(
     const e = englishParas[i] ?? '';
 
     if (isInstructionParagraph(h)) continue;
+
+    if (!JewishCalendarService.isFastDay(date)) {
+      const nk = h.replace(/[\u0591-\u05C7]/g, '').replace(/\s+/g, ' ');
+      if (
+        /בתענית/.test(nk) &&
+        /ציבור/.test(nk) &&
+        /עננו/.test(nk) &&
+        (/עננו יהוה/.test(nk) || /עונה לעמו/.test(nk) || /לעמו ישראל/.test(nk))
+      ) {
+        continue;
+      }
+      const nkFlat = h.replace(/[\u0591-\u05C7]/g, '').replace(/\s+/g, '');
+      if (nkFlat.includes('בתענית') && nkFlat.includes('עננויהוה')) {
+        continue;
+      }
+    }
 
     const dayMatch = getDaySpecificMatch(h, date);
     if (dayMatch === false) continue; // day-specific but not today – skip

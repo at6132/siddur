@@ -194,6 +194,18 @@ export class JewishCalendarService {
   }
 
   /**
+   * מראש חודש אלול עד הושענא רבא — common season for מזמור לדוד (Tehillim 27) after tefillah.
+   */
+  static isLedavidAfterTefillahSeason(date: Date = new Date()): boolean {
+    const hdate = this.getJewishDate(date);
+    const m = hdate.getMonth();
+    const d = hdate.getDate();
+    if (m === months.ELUL) return true;
+    if (m === months.TISHREI && d <= 21) return true;
+    return false;
+  }
+
+  /**
    * Get Rosh Chodesh name
    */
   static getRoshChodeshName(date: Date = new Date()): string | undefined {

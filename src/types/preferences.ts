@@ -1,5 +1,17 @@
 import { Nusach } from './nusach';
 
+/** For personal מי שבירך clause in רפאנו (Amidah), after רפואה שלמה לכל מכותינו */
+export type RefuahPersonalNameGender = 'male' | 'female';
+
+export interface RefuahPersonalName {
+  id: string;
+  gender: RefuahPersonalNameGender;
+  /** Sick person’s Hebrew name */
+  nameHebrew: string;
+  /** Mother’s Hebrew name (בן/בת …) */
+  motherNameHebrew: string;
+}
+
 export type ThemePreference = 'system' | 'light' | 'dark';
 
 export type SpiritualGoal = 
@@ -123,6 +135,8 @@ export interface DisplayPreferences {
 
 export interface UserPreferences {
   nusach: Nusach;
+  /** Optional names appended in רפאנו after רפואה שלמה לכל מכותינו (Amidah only). */
+  refuahPersonalNames?: RefuahPersonalName[];
   spiritualGoals: SpiritualGoal[];
   notifications: NotificationPreferences;
   display: DisplayPreferences;

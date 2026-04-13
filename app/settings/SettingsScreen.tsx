@@ -12,6 +12,7 @@ import {
   Platform,
   Modal,
   Pressable,
+  TextInput,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Constants from 'expo-constants';
@@ -35,6 +36,8 @@ import {
   DisplayPreferences,
   CustomCountdown,
   CustomReminder,
+  RefuahPersonalName,
+  RefuahPersonalNameGender,
 } from '../../src/types/preferences';
 import { useTheme } from '../../src/design/theme';
 import type { AppTheme } from '../../src/design/theme';
@@ -102,6 +105,11 @@ export const SettingsScreen: React.FC = () => {
     'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'dailyGratitude' | 'daveningYaalehVyavo' | 'daveningAlHanissim' | 'daveningMashivVtenTal' | 'daveningAneinu' | 'daveningNachem' | 'daveningAvinuMalkeinu' | 'daveningSelichos' | null
   >(null);
   const [daveningAddOnsExpanded, setDaveningAddOnsExpanded] = useState(false);
+  const [refuahNameModalVisible, setRefuahNameModalVisible] = useState(false);
+  const [refuahEditingId, setRefuahEditingId] = useState<string | null>(null);
+  const [refuahDraftGender, setRefuahDraftGender] = useState<RefuahPersonalNameGender>('male');
+  const [refuahDraftName, setRefuahDraftName] = useState('');
+  const [refuahDraftMother, setRefuahDraftMother] = useState('');
   const [timePickerValue, setTimePickerValue] = useState('');
   const [pickerDate, setPickerDate] = useState(() => new Date());
   const [shekiyaMinutesPickerOpen, setShekiyaMinutesPickerOpen] = useState(false);
@@ -291,6 +299,57 @@ export const SettingsScreen: React.FC = () => {
   ) => {
     if (!preferences) return;
     await UserPreferencesService.setDisplayPreferences({ [key]: value });
+    loadPreferences();
+  };
+
+  const openRefuahNameModal = (entry?: RefuahPersonalName) => {
+    if (entry) {
+      setRefuahEditingId(entry.id);
+      setRefuahDraftGender(entry.gender);
+      setRefuahDraftName(entry.nameHebrew);
+      setRefuahDraftMother(entry.motherNameHebrew);
+    } else {
+      setRefuahEditingId(null);
+      setRefuahDraftGender('male');
+      setRefuahDraftName('');
+      setRefuahDraftMother('');
+    }
+    setRefuahNameModalVisible(true);
+  };
+
+  const saveRefuahNameModal = async () => {
+    if (!preferences) return;
+    const nm = refuahDraftName.trim();
+    const mo = refuahDraftMother.trim();
+    if (!nm || !mo) {
+      Alert.alert('Missing names', "Enter the choleh's Hebrew name and the mother's Hebrew name.");
+      return;
+    }
+    const list = [...(preferences.refuahPersonalNames ?? [])];
+    const id =
+      refuahEditingId ?? `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const row: RefuahPersonalName = {
+      id,
+      gender: refuahDraftGender,
+      nameHebrew: nm,
+      motherNameHebrew: mo,
+    };
+    if (refuahEditingId) {
+      const i = list.findIndex((x) => x.id === refuahEditingId);
+      if (i >= 0) list[i] = row;
+      else list.push(row);
+    } else {
+      list.push(row);
+    }
+    await UserPreferencesService.setRefuahPersonalNames(list);
+    setRefuahNameModalVisible(false);
+    loadPreferences();
+  };
+
+  const deleteRefuahName = async (id: string) => {
+    if (!preferences) return;
+    const list = (preferences.refuahPersonalNames ?? []).filter((x) => x.id !== id);
+    await UserPreferencesService.setRefuahPersonalNames(list);
     loadPreferences();
   };
 
@@ -1120,6 +1179,53 @@ export const SettingsScreen: React.FC = () => {
           </GlassCard>
         </FadeIn>
 
+        {/* ============ REFUAH NAMES (רפאנו) ============ */}
+        <FadeIn delay={100}>
+          <GlassCard style={styles.card}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Text style={styles.sectionIcon}>💙</Text>
+                <Text style={styles.sectionTitle}>Refuah names</Text>
+              </View>
+              <Text style={styles.sectionSubtitle}>Optional in רְפָאֵנוּ</Text>
+            </View>
+            <View style={styles.sectionContent}>
+              <Text style={styles.optionDescription}>
+                After &quot;רְפוּאָה שְׁלֵמָה לְכָל מַכּוֹתֵינוּ&quot; in the Amidah, a short paragraph is added
+                for each person you list (Hebrew names only). Choose male (בן) or female (בת), then enter the
+                choleh&apos;s name and the mother&apos;s name.
+              </Text>
+              {(preferences.refuahPersonalNames ?? []).map((entry) => (
+                <View key={entry.id} style={styles.refuahNameRow}>
+                  <View style={styles.refuahNameRowText}>
+                    <Text style={styles.refuahNamePreview}>
+                      {entry.gender === 'female'
+                        ? `${entry.nameHebrew} בת ${entry.motherNameHebrew}`
+                        : `${entry.nameHebrew} בן ${entry.motherNameHebrew}`}
+                    </Text>
+                    <Text style={styles.refuahNameSub}>
+                      {entry.gender === 'female' ? 'Female (בת)' : 'Male (בן)'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => openRefuahNameModal(entry)} style={styles.refuahNameEditBtn}>
+                    <Text style={styles.refuahNameEditTxt}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => deleteRefuahName(entry.id)} style={styles.refuahNameDeleteBtn}>
+                    <Ionicons name="trash-outline" size={20} color={theme.colors.semantic.error} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity
+                style={styles.addRefuahButton}
+                onPress={() => openRefuahNameModal()}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.addRefuahButtonText}>+ Add name</Text>
+              </TouchableOpacity>
+            </View>
+          </GlassCard>
+        </FadeIn>
+
         {/* ============ LOCATION SECTION ============ */}
         <FadeIn delay={150}>
           <GlassCard style={styles.card}>
@@ -1281,7 +1387,16 @@ export const SettingsScreen: React.FC = () => {
           <GlassCard style={styles.card}>
             <View style={styles.supportSection}>
               <Text style={styles.supportTitle}>Support</Text>
-              <Text style={styles.supportText}>Call or text 9739341031 for support</Text>
+              <Text style={styles.supportText}>
+                Email{' '}
+                <Text
+                  style={styles.link}
+                  onPress={() => Linking.openURL('mailto:shevastudios@gmail.com')}
+                >
+                  shevastudios@gmail.com
+                </Text>
+                {' '}for support
+              </Text>
               <Text style={styles.supportCredit}>Project by Avi Taub at Sheva Studios</Text>
             </View>
           </GlassCard>
@@ -1340,6 +1455,68 @@ export const SettingsScreen: React.FC = () => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      <Modal
+        visible={refuahNameModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRefuahNameModalVisible(false)}
+      >
+        <Pressable style={styles.timePickerOverlay} onPress={() => setRefuahNameModalVisible(false)}>
+          <Pressable style={styles.refuahModalBox} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.timePickerTitle}>{refuahEditingId ? 'Edit name' : 'Add name'}</Text>
+            <Text style={[styles.optionDescription, { marginBottom: spacing.sm }]}>Gender (בן / בת)</Text>
+            <View style={styles.refuahGenderRow}>
+              <TouchableOpacity
+                style={[styles.refuahGenderChip, refuahDraftGender === 'male' && styles.refuahGenderChipActive]}
+                onPress={() => setRefuahDraftGender('male')}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.refuahGenderChipText}>Male · בן</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.refuahGenderChip, refuahDraftGender === 'female' && styles.refuahGenderChipActive]}
+                onPress={() => setRefuahDraftGender('female')}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.refuahGenderChipText}>Female · בת</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.optionDescription, { marginBottom: spacing.xs }]}>Choleh&apos;s Hebrew name</Text>
+            <TextInput
+              value={refuahDraftName}
+              onChangeText={setRefuahDraftName}
+              placeholder="e.g. שְׁמוּאֵל"
+              style={[styles.refuahTextInput, { color: theme.colors.text.primary }]}
+              placeholderTextColor={theme.colors.neutral[500]}
+              textAlign="right"
+              writingDirection="rtl"
+            />
+            <Text style={[styles.optionDescription, { marginBottom: spacing.xs }]}>Mother&apos;s Hebrew name</Text>
+            <TextInput
+              value={refuahDraftMother}
+              onChangeText={setRefuahDraftMother}
+              placeholder="e.g. שָׂרָה"
+              style={[styles.refuahTextInput, { color: theme.colors.text.primary }]}
+              placeholderTextColor={theme.colors.neutral[500]}
+              textAlign="right"
+              writingDirection="rtl"
+            />
+            <View style={styles.timePickerActions}>
+              <TouchableOpacity
+                style={styles.timePickerCancel}
+                onPress={() => setRefuahNameModalVisible(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.timePickerCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.timePickerSave} onPress={saveRefuahNameModal} activeOpacity={0.8}>
+                <Text style={styles.timePickerSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* Time picker for notification reminders */}
       <Modal
@@ -2159,6 +2336,98 @@ function createSettingsStyles(theme: AppTheme) {
     fontFamily: fonts.body.medium,
     fontSize: 14,
     color: '#D45555',
+  },
+
+  refuahModalBox: {
+    marginHorizontal: spacing.lg,
+    maxWidth: 420,
+    width: '100%' as const,
+    alignSelf: 'center',
+    backgroundColor: theme.isDark ? 'rgba(28,26,40,0.98)' : '#fff',
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+  },
+  refuahNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+  },
+  refuahNameRowText: {
+    flex: 1,
+  },
+  refuahNamePreview: {
+    fontFamily: fonts.body.medium,
+    fontSize: 17,
+    color: theme.colors.text.primary,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+  },
+  refuahNameSub: {
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+    marginTop: 2,
+  },
+  refuahNameEditBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  refuahNameEditTxt: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 14,
+    color: theme.colors.primary.main,
+  },
+  refuahNameDeleteBtn: {
+    padding: spacing.sm,
+  },
+  addRefuahButton: {
+    marginTop: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+    alignItems: 'center',
+  },
+  addRefuahButtonText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 15,
+    color: theme.colors.primary.main,
+  },
+  refuahGenderRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  refuahGenderChip: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  refuahGenderChipActive: {
+    borderColor: theme.colors.primary.main,
+    backgroundColor: theme.isDark ? 'rgba(124,92,255,0.12)' : 'rgba(124,92,255,0.08)',
+  },
+  refuahGenderChipText: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 14,
+    color: theme.colors.text.primary,
+  },
+  refuahTextInput: {
+    fontFamily: fonts.body.regular,
+    fontSize: 18,
+    borderWidth: 1,
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)',
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
   },
 
   // Branding
