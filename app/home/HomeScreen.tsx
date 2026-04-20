@@ -580,15 +580,29 @@ export const HomeScreen: React.FC = () => {
     }
   };
 
-  const handleReorder = useCallback((newPanels: HomePanel[]) => {
-    const userPanels = newPanels
-      .filter(p => !p.id.startsWith('auto-'))
-      .map((p, i) => ({ ...p, order: i }));
-    setPanels(() => [...userPanels]);
-    HomePanelsService.savePanelsWithOrder(userPanels).catch(e =>
-      console.error('Failed to persist panel order:', e),
-    );
-  }, []);
+  const handleReorder = useCallback(
+    (newPanels: HomePanel[]) => {
+      setPanels(prev => {
+        const userFromGrid = newPanels
+          .filter(p => !p.id.startsWith('auto-'))
+          .map((p, i) => ({ ...p, order: i }));
+        const hideDaveningNote =
+          dayInfo != null && !hasNotableDaveningChanges(dayInfo.daveningChanges);
+        const hiddenDavening = hideDaveningNote
+          ? prev.filter(p => p.type === 'davening_note')
+          : [];
+        const mergedUser =
+          hiddenDavening.length === 0
+            ? userFromGrid
+            : [...userFromGrid, ...hiddenDavening].map((p, i) => ({ ...p, order: i }));
+        HomePanelsService.savePanelsWithOrder(mergedUser).catch(e =>
+          console.error('Failed to persist panel order:', e),
+        );
+        return mergedUser;
+      });
+    },
+    [dayInfo],
+  );
 
   const formatTime = (date: Date | undefined) => {
     if (!date) return '--:--';
@@ -634,6 +648,12 @@ export const HomeScreen: React.FC = () => {
     () => [...panels, ...autoPanelsForToday],
     [panels, autoPanelsForToday],
   );
+
+  /** Omit davening_note when today has nothing to show so the grid does not reserve an empty slot. */
+  const panelsForGrid = useMemo(() => {
+    if (!dayInfo || hasNotableDaveningChanges(dayInfo.daveningChanges)) return displayOrder;
+    return displayOrder.filter(p => p.type !== 'davening_note');
+  }, [displayOrder, dayInfo]);
 
   const isAutoPanelFn = useCallback((panel: HomePanel) => panel.id.startsWith('auto-'), []);
   const isUnremovableFn = useCallback(
@@ -731,7 +751,7 @@ export const HomeScreen: React.FC = () => {
       {/* Draggable Grid with all panels */}
       <View style={styles.contentWrapper}>
         <DraggableGrid
-          panels={displayOrder}
+          panels={panelsForGrid}
           isEditing={isEditing}
           onReorder={handleReorder}
           onRemove={handleRemovePanel}
