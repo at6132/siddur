@@ -122,9 +122,6 @@ export class NotificationScheduler {
       await this.scheduleCustomReminders(preferences);
     }
 
-    // Get today's info
-    const todayInfo = await CalendarEngine.getTodayInfo(context);
-
     // Daily Tehillim (use user's time)
     if (preferences.notifications.dailyTehillim) {
       await this.scheduleDailyTehillim(preferences);
@@ -133,14 +130,9 @@ export class NotificationScheduler {
     // Daily prayer reminders at user-chosen times (Shacharis, Mincha, Maariv)
     await this.schedulePrayerReminders(preferences);
 
-    // Contextual: Hallel / Anenu (user's time)
+    // Hallel / Anenu: one DATE trigger per applicable day (not DAILY — that would repeat after Rosh Chodesh etc.)
     if (preferences.notifications.hallelAnenu) {
-      if (todayInfo.daveningChanges.hallel) {
-        await this.scheduleHallel(preferences);
-      }
-      if (todayInfo.daveningChanges.anenu) {
-        await this.scheduleAnenu(preferences);
-      }
+      await this.scheduleHallelAndAnenuReminders(preferences);
     }
 
     if (preferences.notifications.shabbosReminders) {
@@ -193,39 +185,48 @@ export class NotificationScheduler {
   }
 
   /**
-   * Schedule Hallel reminder at user's chosen time
+   * Schedule Hallel and Anenu (fast day) reminders for the next 60 days at the user's time.
+   * Uses DATE triggers only on calendar days that need them — unlike DAILY, which would keep firing after Rosh Chodesh.
    */
-  private static async scheduleHallel(preferences: UserPreferences): Promise<void> {
-    const content = NotificationContentService.getHallelContent();
+  private static async scheduleHallelAndAnenuReminders(
+    preferences: UserPreferences
+  ): Promise<void> {
     const { hour, minute } = parseTime24h(
       preferences.notifications.hallelAnenuTime || '08:00'
     );
-    await scheduleSafe({
-      content,
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour,
-        minute,
-      },
-    });
-  }
 
-  /**
-   * Schedule Anenu reminder (fast days) at user's chosen time
-   */
-  private static async scheduleAnenu(preferences: UserPreferences): Promise<void> {
-    const content = NotificationContentService.getAnenuContent();
-    const { hour, minute } = parseTime24h(
-      preferences.notifications.hallelAnenuTime || '08:00'
-    );
-    await scheduleSafe({
-      content,
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DAILY,
-        hour,
-        minute,
-      },
-    });
+    for (let dayOffset = 0; dayOffset < 60; dayOffset++) {
+      const day = new Date();
+      day.setDate(day.getDate() + dayOffset);
+
+      if (JewishCalendarService.getHallelType(day)) {
+        const triggerDate = new Date(day);
+        triggerDate.setHours(hour, minute, 0, 0);
+        if (isFutureDate(triggerDate)) {
+          await scheduleSafe({
+            content: NotificationContentService.getHallelContent(),
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: triggerDate,
+            },
+          });
+        }
+      }
+
+      if (JewishCalendarService.isFastDay(day)) {
+        const triggerDate = new Date(day);
+        triggerDate.setHours(hour, minute, 0, 0);
+        if (isFutureDate(triggerDate)) {
+          await scheduleSafe({
+            content: NotificationContentService.getAnenuContent(),
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: triggerDate,
+            },
+          });
+        }
+      }
+    }
   }
 
   /**
