@@ -6,6 +6,12 @@
 import { Platform } from 'react-native';
 import type { LocationObject } from 'expo-location';
 import * as Notifications from 'expo-notifications';
+import {
+  AndroidImportance,
+  AndroidNotificationPriority,
+  setNotificationChannelAsync,
+} from 'expo-notifications';
+import { EXPO_WEEKLY_SATURDAY, SHABBOS_CLOCK_ANDROID_CHANNEL, SHABBOS_CLOCK_BUNDLE_SOUND } from './shabbosClockConstants';
 import { NotificationContentService } from './NotificationContent';
 import { CalendarEngine } from '../core/calendar/CalendarEngine';
 import { JewishCalendarService } from '../core/calendar/JewishCalendar';
@@ -112,7 +118,12 @@ export class NotificationScheduler {
     // Cancel existing notifications first
     await this.cancelAllNotifications();
 
-    // If master switch is off, don't schedule anything
+    // Erev Shabbos clock — runs even if master notifications are off
+    if (preferences.notifications.shabbosClockEnabled) {
+      await this.scheduleShabbosClock(preferences, context);
+    }
+
+    // If master switch is off, only Shabbos clock (above) was scheduled
     if (!preferences.notifications.enabled) {
       return;
     }
@@ -271,6 +282,132 @@ export class NotificationScheduler {
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: candleReminderAt,
+        },
+      });
+    }
+  }
+
+  /** Next N Fridays at local noon (for zmanim / Erev Shabbos prep) */
+  private static getUpcomingFridays(count: number): Date[] {
+    const out: Date[] = [];
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    let daysToAdd = (5 - dayOfWeek + 7) % 7;
+    if (daysToAdd === 0) {
+      if (now.getHours() >= 21) daysToAdd = 7;
+    }
+    const first = new Date(now);
+    first.setDate(first.getDate() + daysToAdd);
+    first.setHours(12, 0, 0, 0);
+    for (let i = 0; i < count; i++) {
+      const d = new Date(first);
+      d.setDate(d.getDate() + i * 7);
+      d.setHours(12, 0, 0, 0);
+      out.push(d);
+    }
+    return out;
+  }
+
+  private static addMinutesToTime(
+    hour: number,
+    minute: number,
+    add: number
+  ): { hour: number; minute: number } {
+    const total = hour * 60 + minute + add;
+    const norm = ((total % (24 * 60)) + 24 * 60) % (24 * 60);
+    return { hour: Math.floor(norm / 60), minute: norm % 60 };
+  }
+
+  private static async ensureShabbosClockAndroidChannel(): Promise<void> {
+    if (Platform.OS !== 'android') return;
+    try {
+      await setNotificationChannelAsync(SHABBOS_CLOCK_ANDROID_CHANNEL, {
+        name: 'Shabbos alarm',
+        description: 'Loud Shabbos morning wake alarm (bundled sound)',
+        importance: AndroidImportance.MAX,
+        sound: SHABBOS_CLOCK_BUNDLE_SOUND,
+        enableVibrate: true,
+        vibrationPattern: [0, 500, 200, 500, 200, 500, 200, 1000],
+      });
+    } catch (e) {
+      console.warn('Shabbos clock Android channel failed:', e);
+    }
+  }
+
+  private static shabbosClockAlarmRequestContent(chimeIndex: number, chimeTotal: number) {
+    const c = NotificationContentService.getShabbosClockAlarmContent(chimeIndex, chimeTotal);
+    return {
+      title: c.title!,
+      body: c.body!,
+      data: c.data,
+      sound: SHABBOS_CLOCK_BUNDLE_SOUND,
+      priority: AndroidNotificationPriority.MAX,
+      vibrate: [0, 500, 200, 500, 200, 1000, 200, 1500],
+      interruptionLevel: 'timeSensitive' as const,
+    };
+  }
+
+  /**
+   * Erev Shabbos: prep 30 min before candle (zmanim) — “tomorrow morning” + ringer + airplane.
+   * Shabbos: loud weekly wake alarm, only for “ring for” length; refills future preps on reschedule.
+   */
+  private static async scheduleShabbosClock(
+    preferences: UserPreferences,
+    context: CalendarContext
+  ): Promise<void> {
+    await this.ensureShabbosClockAndroidChannel();
+
+    const n = preferences.notifications;
+    const { hour, minute } = parseTime24h(n.shabbosClockTime || '08:00');
+    let dMin = Math.floor(n.shabbosClockRingDurationMin ?? 1);
+    let dSec = Math.floor(n.shabbosClockRingDurationSec ?? 0);
+    dMin = Math.max(0, Math.min(5, dMin));
+    dSec = Math.max(0, Math.min(59, dSec));
+    if (dMin === 5) dSec = 0;
+    let totalSec = dMin * 60 + dSec;
+    if (totalSec < 15) totalSec = 15;
+    if (totalSec > 300) totalSec = 300;
+    const ringChimeCount = Math.min(5, Math.max(1, Math.ceil(totalSec / 60)));
+
+    const alarmLabel = (() => {
+      const t = new Date();
+      t.setHours(hour, minute, 0, 0);
+      return t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    })();
+
+    const prepWeeks = 24;
+    let prepIdx = 0;
+    for (const friday of this.getUpcomingFridays(prepWeeks)) {
+      const fridayInfo = await CalendarEngine.getDayInfo(friday, context);
+      const candle = fridayInfo?.zmanim?.candleLighting;
+      if (candle && candle instanceof Date) {
+        const prepAt = new Date(candle.getTime() - 30 * 60000);
+        if (isFutureDate(prepAt)) {
+          const prep = NotificationContentService.getShabbosClockPrepContent(alarmLabel);
+          await scheduleSafe({
+            identifier: `shabbos_clock_prep_w${prepIdx++}`,
+            content: { ...prep, sound: true },
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: prepAt,
+            },
+          });
+        }
+      }
+    }
+
+    for (let m = 0; m < ringChimeCount; m++) {
+      if (hour * 60 + minute + m >= 24 * 60) break;
+      const t = this.addMinutesToTime(hour, minute, m);
+      await scheduleSafe({
+        identifier: `shabbos_clock_alarm_${m}`,
+        content: this.shabbosClockAlarmRequestContent(m + 1, ringChimeCount),
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+          channelId: Platform.OS === 'android' ? SHABBOS_CLOCK_ANDROID_CHANNEL : undefined,
+          weekday: EXPO_WEEKLY_SATURDAY,
+          hour: t.hour,
+          minute: t.minute,
         },
       });
     }

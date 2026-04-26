@@ -9,6 +9,8 @@ export type NotificationType =
   | 'anenu'
   | 'shabbos_coming'
   | 'candle_lighting'
+  | 'shabbos_clock_prep'
+  | 'shabbos_clock_alarm'
   | 'sefiras_haomer'
   | 'neshama_reminder';
 

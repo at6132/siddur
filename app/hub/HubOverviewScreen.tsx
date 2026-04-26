@@ -232,7 +232,34 @@ export const HubOverviewScreen: React.FC = () => {
     <View style={styles.container}>
       <LinearGradient colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']} style={StyleSheet.absoluteFill} />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        
+        <FadeIn delay={0}>
+          <TouchableOpacity
+            style={styles.featureBannerWrap}
+            activeOpacity={0.9}
+            onPress={() => (navigation as any).navigate('Settings', { scrollTo: 'shabbosAlarm' })}
+            accessibilityRole="button"
+            accessibilityLabel="New feature: Shabbos alarm can ring briefly each Shabbos morning. Opens Settings to Shabbos alarm."
+          >
+            <LinearGradient
+              colors={['rgba(212, 165, 184, 0.4)', 'rgba(99, 102, 241, 0.15)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.featureBanner}
+            >
+              <View style={styles.featureBannerIconWrap}>
+                <Ionicons name="sparkles" size={20} color={colors.primary.main} />
+              </View>
+              <View style={styles.featureBannerTextCol}>
+                <Text style={styles.featureBannerTitle}>New Feature</Text>
+                <Text style={styles.featureBannerSub}>
+                  The Shabbos alarm can ring for just a few seconds every Shabbos morning
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.text.tertiary} />
+            </LinearGradient>
+          </TouchableOpacity>
+        </FadeIn>
+
         {/* Header */}
         <FadeIn delay={0}>
           <Text style={styles.greeting}>Good {getTimeOfDay()}</Text>
@@ -407,6 +434,45 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flex: 1 },
   content: { padding: spacing.lg, paddingTop: spacing.xl + spacing.safeTopInset },
+
+  featureBannerWrap: {
+    marginBottom: spacing.md,
+  },
+  featureBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.06)',
+    gap: spacing.sm,
+    ...Platform.select({
+      ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
+      android: { elevation: 2 },
+    }),
+  },
+  featureBannerIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureBannerTextCol: { flex: 1 },
+  featureBannerTitle: {
+    fontFamily: fonts.heading.semibold,
+    fontSize: 15,
+    color: colors.text.primary,
+    marginBottom: 2,
+  },
+  featureBannerSub: {
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    color: colors.text.secondary,
+    lineHeight: 16,
+  },
   
   // Header
   greeting: {

@@ -15,6 +15,7 @@ import {
   TextInput,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Slider from '@react-native-community/slider';
 import Constants from 'expo-constants';
 import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -86,7 +87,7 @@ const GlassCard: React.FC<{
 };
 
 type SettingsRouteParams = {
-  scrollTo?: 'dailyGratitude';
+  scrollTo?: 'dailyGratitude' | 'shabbosAlarm';
 };
 
 export const SettingsScreen: React.FC = () => {
@@ -97,12 +98,29 @@ export const SettingsScreen: React.FC = () => {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
+  const shabbosAlarmBlockRef = useRef<View>(null);
   const [downloadingContent, setDownloadingContent] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [locationLoading, setLocationLoading] = useState(false);
   const [reminderMenuId, setReminderMenuId] = useState<string | null>(null);
   const [timePickerFor, setTimePickerFor] = useState<
-    'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'dailyGratitude' | 'daveningYaalehVyavo' | 'daveningAlHanissim' | 'daveningMashivVtenTal' | 'daveningAneinu' | 'daveningNachem' | 'daveningAvinuMalkeinu' | 'daveningSelichos' | null
+    | 'shacharis'
+    | 'mincha'
+    | 'maariv'
+    | 'tehillim'
+    | 'hallelAnenu'
+    | 'roshChodesh'
+    | 'fastDays'
+    | 'dailyGratitude'
+    | 'daveningYaalehVyavo'
+    | 'daveningAlHanissim'
+    | 'daveningMashivVtenTal'
+    | 'daveningAneinu'
+    | 'daveningNachem'
+    | 'daveningAvinuMalkeinu'
+    | 'daveningSelichos'
+    | 'shabbosClock'
+    | null
   >(null);
   const [daveningAddOnsExpanded, setDaveningAddOnsExpanded] = useState(false);
   const [refuahNameModalVisible, setRefuahNameModalVisible] = useState(false);
@@ -113,6 +131,9 @@ export const SettingsScreen: React.FC = () => {
   const [timePickerValue, setTimePickerValue] = useState('');
   const [pickerDate, setPickerDate] = useState(() => new Date());
   const [shekiyaMinutesPickerOpen, setShekiyaMinutesPickerOpen] = useState(false);
+  /** Shabbos alarm ring duration (sliders) — local until saved onSlidingComplete */
+  const [shabbosRingMin, setShabbosRingMin] = useState(1);
+  const [shabbosRingSec, setShabbosRingSec] = useState(0);
   type SettingsTab = 'notifications' | 'general' | 'data' | 'about';
   const [activeTab, setActiveTab] = useState<SettingsTab>('notifications');
 
@@ -178,12 +199,29 @@ export const SettingsScreen: React.FC = () => {
   const dateTo24h = (d: Date): string =>
     `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
-  type TimePickerKind = 'shacharis' | 'mincha' | 'maariv' | 'tehillim' | 'hallelAnenu' | 'roshChodesh' | 'fastDays' | 'dailyGratitude' | 'daveningYaalehVyavo' | 'daveningAlHanissim' | 'daveningMashivVtenTal' | 'daveningAneinu' | 'daveningNachem' | 'daveningAvinuMalkeinu' | 'daveningSelichos';
+  type TimePickerKind =
+    | 'shacharis'
+    | 'mincha'
+    | 'maariv'
+    | 'tehillim'
+    | 'hallelAnenu'
+    | 'roshChodesh'
+    | 'fastDays'
+    | 'dailyGratitude'
+    | 'daveningYaalehVyavo'
+    | 'daveningAlHanissim'
+    | 'daveningMashivVtenTal'
+    | 'daveningAneinu'
+    | 'daveningNachem'
+    | 'daveningAvinuMalkeinu'
+    | 'daveningSelichos'
+    | 'shabbosClock';
   const openTimePicker = (which: TimePickerKind) => {
     if (!preferences) return;
     const n = preferences.notifications;
     let initial: string;
-    if (which === 'tehillim') initial = formatTehillimTimeForDisplay(n.dailyTehillimTime || '09:00');
+    if (which === 'shabbosClock') initial = formatTehillimTimeForDisplay(n.shabbosClockTime || '08:00');
+    else if (which === 'tehillim') initial = formatTehillimTimeForDisplay(n.dailyTehillimTime || '09:00');
     else if (which === 'hallelAnenu') initial = formatTehillimTimeForDisplay(n.hallelAnenuTime || '08:00');
     else if (which === 'roshChodesh') initial = formatTehillimTimeForDisplay(n.roshChodeshTime || '08:00');
     else if (which === 'fastDays') initial = formatTehillimTimeForDisplay(n.fastDaysTime || '08:00');
@@ -203,7 +241,7 @@ export const SettingsScreen: React.FC = () => {
 
   const saveTimePicker = async () => {
     if (!preferences || !timePickerFor) return;
-    const keyMap: Partial<Record<typeof timePickerFor, keyof NotificationPreferences>> = {
+    const keyMap: Partial<Record<NonNullable<typeof timePickerFor>, keyof NotificationPreferences>> = {
       tehillim: 'dailyTehillimTime',
       hallelAnenu: 'hallelAnenuTime',
       roshChodesh: 'roshChodeshTime',
@@ -216,6 +254,7 @@ export const SettingsScreen: React.FC = () => {
       daveningNachem: 'daveningAddOnsNachemTime',
       daveningAvinuMalkeinu: 'daveningAddOnsAvinuMalkeinuTime',
       daveningSelichos: 'daveningAddOnsSelichosTime',
+      shabbosClock: 'shabbosClockTime',
     };
     const key = keyMap[timePickerFor];
     if (key) {
@@ -255,13 +294,43 @@ export const SettingsScreen: React.FC = () => {
 
   // Handle scroll to section from navigation params
   useEffect(() => {
-    if (route.params?.scrollTo === 'dailyGratitude' && !loading) {
-      setTimeout(() => {
-        // Scroll to approximately where "Other Reminders" / Daily Gratitude section is
+    const st = route.params?.scrollTo;
+    if (!st || loading) return;
+
+    setActiveTab('notifications');
+
+    const clearScrollParam = () => {
+      (navigation as { setParams: (p: Record<string, unknown>) => void }).setParams({ scrollTo: undefined });
+    };
+
+    if (st === 'dailyGratitude') {
+      const t = setTimeout(() => {
         scrollViewRef.current?.scrollTo({ y: 580, animated: true });
+        clearScrollParam();
       }, 400);
+      return () => clearTimeout(t);
     }
-  }, [route.params?.scrollTo, loading]);
+
+    if (st === 'shabbosAlarm') {
+      const t = setTimeout(() => {
+        const block = shabbosAlarmBlockRef.current;
+        const scroller = scrollViewRef.current;
+        if (block && scroller) {
+          block.measureInWindow((ex, ey) => {
+            scroller.measureInWindow((sx, sy) => {
+              const y = Math.max(0, ey - sy - 12);
+              scroller.scrollTo({ y, animated: true });
+              clearScrollParam();
+            });
+          });
+        } else {
+          scroller?.scrollTo({ y: 960, animated: true });
+          clearScrollParam();
+        }
+      }, 500);
+      return () => clearTimeout(t);
+    }
+  }, [route.params?.scrollTo, loading, navigation]);
 
   // Refresh when returning from Add Custom Reminder (or any sub-screen) so new reminders show
   useFocusEffect(
@@ -269,6 +338,34 @@ export const SettingsScreen: React.FC = () => {
       loadPreferences();
     }, [loadPreferences])
   );
+
+  useEffect(() => {
+    if (!preferences) return;
+    const m = Math.max(0, Math.min(5, Math.floor(preferences.notifications.shabbosClockRingDurationMin ?? 1)));
+    const s = m === 5 ? 0 : Math.max(0, Math.min(59, Math.floor(preferences.notifications.shabbosClockRingDurationSec ?? 0)));
+    setShabbosRingMin(m);
+    setShabbosRingSec(s);
+  }, [
+    preferences?.notifications.shabbosClockRingDurationMin,
+    preferences?.notifications.shabbosClockRingDurationSec,
+  ]);
+
+  const saveShabbosRingDuration = async (min: number, sec: number) => {
+    if (!preferences) return;
+    const m = Math.max(0, Math.min(5, Math.floor(min)));
+    const s = m === 5 ? 0 : Math.max(0, Math.min(59, Math.floor(sec)));
+    setShabbosRingMin(m);
+    setShabbosRingSec(s);
+    const updated = { ...preferences.notifications, shabbosClockRingDurationMin: m, shabbosClockRingDurationSec: s };
+    setPreferences(p => (p ? { ...p, notifications: updated } : null));
+    try {
+      await UserPreferencesService.setNotificationPreferences(updated);
+      await NotificationService.reschedule();
+    } catch (e) {
+      console.warn('Shabbos ring duration save failed:', e);
+      loadPreferences();
+    }
+  };
 
   const updateNotificationPreference = async (
     key: keyof NotificationPreferences,
@@ -290,6 +387,17 @@ export const SettingsScreen: React.FC = () => {
     } catch (e) {
       console.warn('Notification preference update failed:', e);
       loadPreferences(); // Revert on error
+    }
+  };
+
+  const onShabbosClockEnabledChange = async (value: boolean) => {
+    await updateNotificationPreference('shabbosClockEnabled', value);
+    if (value) {
+      Alert.alert(
+        'Heads up',
+        "To make the alarm work, you need the ringer on. To keep other apps from interrupting you, you can use Airplane mode, or set up a custom Focus mode and only allow notifications from this app.",
+        [{ text: 'OK' }],
+      );
     }
   };
 
@@ -841,6 +949,103 @@ export const SettingsScreen: React.FC = () => {
                           <Text style={styles.subOptionLabel}>Based on your location’s zmanim (candle lighting and Friday reminder)</Text>
                         </View>
                       )}
+                    </View>
+
+                    <View ref={shabbosAlarmBlockRef} collapsable={false} style={styles.shabbosClockCardOuter}>
+                      <LinearGradient
+                        colors={
+                          theme.isDark
+                            ? ['rgba(48, 36, 70, 0.95)', 'rgba(32, 26, 48, 0.98)']
+                            : ['#FFF7ED', '#EEF2FF', '#FDF4FF']
+                        }
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.shabbosClockGradient}
+                      >
+                        <View style={styles.shabbosClockHeaderRow}>
+                          <View style={styles.shabbosClockIconBubble}>
+                            <Ionicons name="alarm" size={22} color={theme.colors.primary.main} />
+                          </View>
+                          <View style={styles.shabbosClockTitleBlock}>
+                            <Text style={styles.shabbosClockTitle}>Shabbos alarm</Text>
+                          </View>
+                          <Switch
+                            value={preferences.notifications.shabbosClockEnabled}
+                            onValueChange={onShabbosClockEnabledChange}
+                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                            thumbColor={preferences.notifications.shabbosClockEnabled ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          />
+                        </View>
+                        {preferences.notifications.shabbosClockEnabled && (
+                          <>
+                            <View style={styles.shabbosClockDivider} />
+                            <TouchableOpacity
+                              style={styles.shabbosClockTimeRowSolo}
+                              onPress={() => openTimePicker('shabbosClock')}
+                              activeOpacity={0.85}
+                            >
+                              <Text style={styles.shabbosClockTimeButtonTextSolo}>
+                                {formatTehillimTimeForDisplay(
+                                  preferences.notifications.shabbosClockTime || '08:00'
+                                )}
+                              </Text>
+                              <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
+                            </TouchableOpacity>
+                            <Text style={styles.shabbosDurationSectionLabelPad}>How long it will ring</Text>
+                            <View style={styles.shabbosDurationSliderBlock}>
+                              <View style={styles.shabbosDurationSliderRow}>
+                                <Text style={styles.shabbosDurationMeta}>Minutes</Text>
+                                <Text style={styles.shabbosDurationValue}>{shabbosRingMin}</Text>
+                              </View>
+                              <Slider
+                                style={styles.shabbosDurationSlider}
+                                minimumValue={0}
+                                maximumValue={5}
+                                step={1}
+                                value={shabbosRingMin}
+                                onValueChange={v => {
+                                  const m = Math.round(v);
+                                  setShabbosRingMin(m);
+                                  if (m === 5) setShabbosRingSec(0);
+                                }}
+                                onSlidingComplete={v => {
+                                  const m = Math.round(v);
+                                  const s = m === 5 ? 0 : shabbosRingSec;
+                                  void saveShabbosRingDuration(m, s);
+                                }}
+                                minimumTrackTintColor={theme.colors.primary.main}
+                                maximumTrackTintColor={theme.colors.neutral[300]}
+                                thumbTintColor={theme.colors.primary.main}
+                              />
+                            </View>
+                            <View style={styles.shabbosDurationSliderBlock}>
+                              <View style={styles.shabbosDurationSliderRow}>
+                                <Text style={styles.shabbosDurationMeta}>Seconds</Text>
+                                <Text style={styles.shabbosDurationValue}>{shabbosRingMin >= 5 ? 0 : shabbosRingSec}</Text>
+                              </View>
+                              <Slider
+                                style={styles.shabbosDurationSlider}
+                                minimumValue={0}
+                                maximumValue={shabbosRingMin >= 5 ? 0 : 59}
+                                step={1}
+                                value={shabbosRingMin >= 5 ? 0 : shabbosRingSec}
+                                disabled={shabbosRingMin >= 5}
+                                onValueChange={v => {
+                                  if (shabbosRingMin >= 5) return;
+                                  setShabbosRingSec(Math.round(v));
+                                }}
+                                onSlidingComplete={v => {
+                                  if (shabbosRingMin >= 5) return;
+                                  void saveShabbosRingDuration(shabbosRingMin, Math.round(v));
+                                }}
+                                minimumTrackTintColor={theme.colors.primary.main}
+                                maximumTrackTintColor={theme.colors.neutral[300]}
+                                thumbTintColor={theme.colors.primary.main}
+                              />
+                            </View>
+                          </>
+                        )}
+                      </LinearGradient>
                     </View>
 
                     {/* Shekiya (sunset) reminder — N minutes before sunset every day */}
@@ -1529,9 +1734,11 @@ export const SettingsScreen: React.FC = () => {
           <Pressable style={styles.timePickerBox} onPress={e => e.stopPropagation()}>
             <View style={styles.timePickerHeader}>
               <Text style={styles.timePickerTitle}>
-                {timePickerFor === 'tehillim' ? 'Tehillim' : timePickerFor === 'hallelAnenu' ? 'Hallel' : timePickerFor === 'roshChodesh' ? 'Rosh Chodesh' : timePickerFor === 'fastDays' ? 'Fast Days' : timePickerFor === 'dailyGratitude' ? 'Daily Gratitude' : timePickerFor === 'daveningYaalehVyavo' ? 'Yaaleh V\'Yavo' : timePickerFor === 'daveningAlHanissim' ? 'Al HaNisim' : timePickerFor === 'daveningMashivVtenTal' ? 'Mashiv HaRuach & V\'ten Tal' : timePickerFor === 'daveningAneinu' ? 'Aneinu' : timePickerFor === 'daveningNachem' ? 'Nachem' : timePickerFor === 'daveningAvinuMalkeinu' ? 'Avinu Malkeinu' : timePickerFor === 'daveningSelichos' ? 'Selichos' : timePickerFor === 'shacharis' ? 'Shacharis' : timePickerFor === 'mincha' ? 'Mincha' : 'Maariv'}
+                {timePickerFor === 'shabbosClock' ? 'Shabbos alarm' : timePickerFor === 'tehillim' ? 'Tehillim' : timePickerFor === 'hallelAnenu' ? 'Hallel' : timePickerFor === 'roshChodesh' ? 'Rosh Chodesh' : timePickerFor === 'fastDays' ? 'Fast Days' : timePickerFor === 'dailyGratitude' ? 'Daily Gratitude' : timePickerFor === 'daveningYaalehVyavo' ? 'Yaaleh V\'Yavo' : timePickerFor === 'daveningAlHanissim' ? 'Al HaNisim' : timePickerFor === 'daveningMashivVtenTal' ? 'Mashiv HaRuach & V\'ten Tal' : timePickerFor === 'daveningAneinu' ? 'Aneinu' : timePickerFor === 'daveningNachem' ? 'Nachem' : timePickerFor === 'daveningAvinuMalkeinu' ? 'Avinu Malkeinu' : timePickerFor === 'daveningSelichos' ? 'Selichos' : timePickerFor === 'shacharis' ? 'Shacharis' : timePickerFor === 'mincha' ? 'Mincha' : 'Maariv'}
               </Text>
-              <Text style={styles.timePickerSubtitle}>Set reminder time</Text>
+              {timePickerFor !== 'shabbosClock' && (
+                <Text style={styles.timePickerSubtitle}>Set reminder time</Text>
+              )}
             </View>
             <View style={styles.timePickerWheelWrap}>
               <DateTimePicker
@@ -1743,6 +1950,95 @@ function createSettingsStyles(theme: AppTheme) {
     height: 1,
     backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
     marginVertical: spacing.md,
+  },
+  shabbosClockCardOuter: {
+    marginBottom: spacing.lg,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: theme.isDark ? 'rgba(199, 181, 255, 0.2)' : 'rgba(99, 102, 241, 0.35)',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: theme.isDark ? 0.2 : 0.12,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  shabbosClockGradient: {
+    padding: spacing.lg,
+    borderRadius: borderRadius.xl,
+  },
+  shabbosClockHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  shabbosClockIconBubble: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.85)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shabbosClockTitleBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  shabbosClockTitle: {
+    fontFamily: fonts.heading.semibold,
+    fontSize: 17,
+    color: theme.colors.text.primary,
+  },
+  shabbosClockDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+    marginBottom: spacing.md,
+  },
+  shabbosClockTimeRowSolo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(99, 102, 241, 0.12)',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
+  },
+  shabbosClockTimeButtonTextSolo: {
+    fontFamily: fonts.heading.semibold,
+    fontSize: 20,
+    color: theme.colors.primary.main,
+  },
+  shabbosDurationSectionLabelPad: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+    marginTop: spacing.lg,
+    marginBottom: spacing.xs,
+  },
+  shabbosDurationSliderBlock: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  shabbosDurationSliderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  shabbosDurationMeta: {
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+  },
+  shabbosDurationValue: {
+    fontFamily: fonts.heading.semibold,
+    fontSize: 16,
+    color: theme.colors.text.primary,
+  },
+  shabbosDurationSlider: {
+    width: '100%' as any,
+    height: 40,
   },
   notifOption: {
     marginBottom: spacing.md,

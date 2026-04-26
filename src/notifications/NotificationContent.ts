@@ -84,8 +84,28 @@ export class NotificationContentService {
   }
 
   /**
-   * Generate content for candle lighting reminder
+   * Erev, 30 min before candle: tomorrow’s wake time, ringer on for this app’s sound, and airplane mode.
+   * Intent: with ringer off, the user might miss the alarm; with ringer on but not airplane, other stuff can
+   * interrupt all night — airplane knocks out most “through the air” stuff while our alert is a local schedule.
    */
+  static getShabbosClockPrepContent(alarmTimeDisplay: string): NotificationContent {
+    return {
+      title: '30 minutes to Shabbos',
+      body: `Shabbos morning wake: ${alarmTimeDisplay} tomorrow. Ringer/alert for this app must be on, or the alarm can be missed. Airplane mode: cuts most of what would buzz you (calls, texts, many apps’ internet pushes) so the night is quieter, while the alarm in this app is a local schedule and usually still fires. A few other local alerts are still possible depending on the phone — check if needed.`,
+      data: { screen: 'Settings', type: 'shabbos_clock_prep' },
+    };
+  }
+
+  /** Shabbos morning — loud alarm, then auto-stops after the chosen run length */
+  static getShabbosClockAlarmContent(chimeIndex: number, chimeTotal: number): NotificationContent {
+    const part = chimeTotal > 1 ? `(${chimeIndex} of ${chimeTotal}) ` : '';
+    return {
+      title: 'Shabbos — wake up',
+      body: `${part}Loud Shabbos morning alarm. Stops on its own after a few minutes. Tap to open the app.`,
+      data: { screen: 'Settings', type: 'shabbos_clock_alarm', chimeIndex, chimeTotal },
+    };
+  }
+
   static getCandleLightingContent(dayInfo: DayInfo): NotificationContent {
     const candleTime = dayInfo.zmanim.candleLighting;
     if (!candleTime) {

@@ -89,6 +89,14 @@ export interface NotificationPreferences {
   
   // Custom countdowns
   customCountdowns: boolean;
+
+  /** Erev Shabbos only: alarm at chosen time, prep nudge 30 min before candle */
+  shabbosClockEnabled: boolean;
+  /** 24h HH:MM, local time on Shabbos morning (Saturday) */
+  shabbosClockTime: string;
+  /** Ring duration: minutes 0–5, seconds 0–59; max 5:00, min ~15s enforced when scheduling */
+  shabbosClockRingDurationMin: number;
+  shabbosClockRingDurationSec: number;
 }
 
 export interface CustomCountdown {
@@ -198,6 +206,10 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   daveningAddOnsAvinuMalkeinuTime: '08:00',
   daveningAddOnsSelichos: true,
   daveningAddOnsSelichosTime: '08:00',
+  shabbosClockEnabled: false,
+  shabbosClockTime: '08:00',
+  shabbosClockRingDurationMin: 1,
+  shabbosClockRingDurationSec: 0,
 };
 
 export const DEFAULT_DISPLAY_PREFERENCES: DisplayPreferences = {

@@ -28,6 +28,18 @@ export class UserPreferencesService {
       } else {
         // Merge with defaults for any missing fields
         prefs.notifications = { ...DEFAULT_NOTIFICATION_PREFERENCES, ...prefs.notifications };
+        const n = prefs.notifications as any;
+        if (typeof n.shabbosClockRingDurationMin !== 'number') {
+          const oldM = n.shabbosClockRingMinutes;
+          n.shabbosClockRingDurationMin =
+            typeof oldM === 'number' && oldM >= 0 && oldM <= 5 ? oldM : 1;
+          n.shabbosClockRingDurationSec = 0;
+        }
+        if (typeof n.shabbosClockRingDurationSec !== 'number') n.shabbosClockRingDurationSec = 0;
+        n.shabbosClockRingDurationMin = Math.max(0, Math.min(5, Math.floor(n.shabbosClockRingDurationMin)));
+        n.shabbosClockRingDurationSec = Math.max(0, Math.min(59, Math.floor(n.shabbosClockRingDurationSec)));
+        if (n.shabbosClockRingDurationMin === 5) n.shabbosClockRingDurationSec = 0;
+        delete n.shabbosClockRingMinutes;
       }
       if (!prefs.display) {
         prefs.display = DEFAULT_DISPLAY_PREFERENCES;
