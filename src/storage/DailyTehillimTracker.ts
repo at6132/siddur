@@ -32,6 +32,7 @@ const TEHILLIM_WHENEVER_COMPLETED_KEY = '@tehillim_whenever_completed';
 const TEHILLIM_WHENEVER_DAYS_KEY = '@tehillim_whenever_days'; // dates when user did at least 1 perek in whenever mode
 const TEHILLIM_WEEKLY_COMPLETED_KEY = '@tehillim_weekly_completed';
 const TEHILLIM_MONTHLY_COMPLETED_KEY = '@tehillim_monthly_completed';
+const TEHILLIM_CURRENT_BOOK_COMPLETED_KEY = '@tehillim_current_book_completed';
 const TEHILLIM_FULL_BOOK_COMPLETIONS_KEY = '@tehillim_full_book_completions_count';
 
 const ALL_CHAPTERS = Array.from({ length: 150 }, (_, i) => i + 1);
@@ -100,6 +101,55 @@ const DEFAULT_SETTINGS: TehillimSettings = {
 };
 
 export class DailyTehillimTracker {
+  private static normalizeChapterList(chapters: number[]): number[] {
+    return [...new Set(chapters)]
+      .filter((n) => Number.isInteger(n) && n >= 1 && n <= 150)
+      .sort((a, b) => a - b);
+  }
+
+  private static async saveCurrentBookCompleted(chapters: number[]): Promise<void> {
+    await AsyncStorage.setItem(
+      TEHILLIM_CURRENT_BOOK_COMPLETED_KEY,
+      JSON.stringify(this.normalizeChapterList(chapters))
+    );
+  }
+
+  /**
+   * Chapters completed in the current sefer run (persists across goal mode changes).
+   */
+  static async getCurrentBookCompleted(): Promise<number[]> {
+    try {
+      const raw = await AsyncStorage.getItem(TEHILLIM_CURRENT_BOOK_COMPLETED_KEY);
+      if (raw) {
+        return this.normalizeChapterList(JSON.parse(raw));
+      }
+    } catch (e) {
+      console.warn('Error reading current-book Tehillim progress:', e);
+    }
+
+    // Backward-compat migration from older mode-specific stores.
+    const [weekly, monthly, whenever, dailyStored, customCount] = await Promise.all([
+      this.getWeeklyCompleted(),
+      this.getMonthlyCompleted(),
+      this.getWheneverCompleted(),
+      AsyncStorage.getItem(TEHILLIM_PROGRESS_KEY),
+      this.getCustomCycleCompleted(),
+    ]);
+    let daily: number[] = [];
+    try {
+      if (dailyStored) {
+        const parsed: DailyProgress = JSON.parse(dailyStored);
+        daily = Array.isArray(parsed.chaptersCompleted) ? parsed.chaptersCompleted : [];
+      }
+    } catch {}
+    const custom = Array.from({ length: Math.max(0, Math.min(150, customCount)) }, (_, i) => i + 1);
+    const merged = this.normalizeChapterList([...weekly, ...monthly, ...whenever, ...daily, ...custom]);
+    if (merged.length > 0) {
+      await this.saveCurrentBookCompleted(merged);
+    }
+    return merged;
+  }
+
   /**
    * Get today's date key
    */
@@ -128,25 +178,12 @@ export class DailyTehillimTracker {
    */
   static async saveSettings(settings: TehillimSettings): Promise<void> {
     try {
-      if (settings.goalType === 'whenever') {
-        const previous = await this.getSettings();
-        let toTransfer: number[] = [];
-        if (previous.goalType === 'weekly') {
-          toTransfer = await this.getWeeklyCompleted();
-        } else if (previous.goalType === 'monthly') {
-          toTransfer = await this.getMonthlyCompleted();
-        } else if (previous.goalType === 'custom') {
-          const n = await this.getCustomCycleCompleted();
-          toTransfer = Array.from({ length: n }, (_, i) => i + 1);
-        }
-        if (toTransfer.length > 0) {
-          const existing = await this.getWheneverCompleted();
-          const merged = [...new Set([...existing, ...toTransfer])].filter(
-            (c) => c >= 1 && c <= 150
-          );
-          await this.saveWheneverCompleted(merged);
-          await this.addWheneverCompletedDay(this.getDateKey());
-        }
+      const currentBook = await this.getCurrentBookCompleted();
+      if (settings.goalType === 'whenever' && currentBook.length > 0) {
+        const existing = await this.getWheneverCompleted();
+        const merged = this.normalizeChapterList([...existing, ...currentBook]);
+        await this.saveWheneverCompleted(merged);
+        await this.addWheneverCompletedDay(this.getDateKey());
       }
       await AsyncStorage.setItem(TEHILLIM_SETTINGS_KEY, JSON.stringify(settings));
     } catch (e) {
@@ -346,10 +383,11 @@ export class DailyTehillimTracker {
   }> {
     const dateKey = this.getDateKey();
     const settings = await this.getSettings();
+    const currentBookCompleted = await this.getCurrentBookCompleted();
 
     // "Whenever you can" mode: progress = % of all 150 perakim completed (any order)
     if (settings.goalType === 'whenever') {
-      const completed = await this.getWheneverCompleted();
+      const completed = currentBookCompleted;
       const chaptersRemaining = ALL_CHAPTERS.filter((ch) => !completed.includes(ch));
       const percentComplete = Math.round((completed.length / 150) * 100);
       return {
@@ -384,7 +422,7 @@ export class DailyTehillimTracker {
               : 0;
 
           return {
-            chaptersCompleted: progress.chaptersCompleted.filter((ch) =>
+            chaptersCompleted: currentBookCompleted.filter((ch) =>
               totalChapters.includes(ch)
             ),
             totalChapters,
@@ -400,10 +438,17 @@ export class DailyTehillimTracker {
     }
 
     return {
-      chaptersCompleted: [],
+      chaptersCompleted: currentBookCompleted.filter((ch) => totalChapters.includes(ch)),
       totalChapters,
-      percentComplete: 0,
-      chaptersRemaining: totalChapters,
+      percentComplete:
+        totalChapters.length > 0
+          ? Math.round(
+              (currentBookCompleted.filter((ch) => totalChapters.includes(ch)).length /
+                totalChapters.length) *
+                100
+            )
+          : 0,
+      chaptersRemaining: totalChapters.filter((ch) => !currentBookCompleted.includes(ch)),
       dayName,
       goalType: settings.goalType,
     };
@@ -421,9 +466,9 @@ export class DailyTehillimTracker {
   }> {
     const total = 150;
     const settings = await this.getSettings();
+    const completed = await this.getCurrentBookCompleted();
     switch (settings.goalType) {
       case 'whenever': {
-        const completed = await this.getWheneverCompleted();
         return {
           completed: completed.length,
           total,
@@ -432,39 +477,35 @@ export class DailyTehillimTracker {
         };
       }
       case 'weekly': {
-        const chapters = await this.getWeeklyCompleted();
         return {
-          completed: chapters.length,
+          completed: completed.length,
           total,
           label: 'this week',
-          percentComplete: Math.round((chapters.length / total) * 100),
+          percentComplete: Math.round((completed.length / total) * 100),
         };
       }
       case 'monthly': {
-        const chapters = await this.getMonthlyCompleted();
         return {
-          completed: chapters.length,
+          completed: completed.length,
           total,
           label: 'this month',
-          percentComplete: Math.round((chapters.length / total) * 100),
+          percentComplete: Math.round((completed.length / total) * 100),
         };
       }
       case 'custom': {
-        const completed = await this.getCustomCycleCompleted();
         return {
-          completed,
+          completed: completed.length,
           total,
           label: 'in cycle',
-          percentComplete: Math.round((completed / total) * 100),
+          percentComplete: Math.round((completed.length / total) * 100),
         };
       }
       default: {
-        const chapters = await this.getWeeklyCompleted();
         return {
-          completed: chapters.length,
+          completed: completed.length,
           total,
           label: 'this week',
-          percentComplete: Math.round((chapters.length / total) * 100),
+          percentComplete: Math.round((completed.length / total) * 100),
         };
       }
     }
@@ -551,6 +592,7 @@ export class DailyTehillimTracker {
       } else if (settings.goalType === 'custom') {
         await this.resetCustomProgress();
       }
+      await AsyncStorage.removeItem(TEHILLIM_CURRENT_BOOK_COMPLETED_KEY);
       await this.resetTodaysProgress();
     } catch (e) {
       console.warn('Error resetting current book progress:', e);
@@ -573,13 +615,14 @@ export class DailyTehillimTracker {
     if (chapter < 1 || chapter > 150) return;
 
     const settings = await this.getSettings();
+    const currentBookCompleted = await this.getCurrentBookCompleted();
+    if (currentBookCompleted.includes(chapter)) return;
 
     // "Whenever you can" mode: persist to overall completed set (any order)
     if (settings.goalType === 'whenever') {
       try {
-        const completed = await this.getWheneverCompleted();
-        if (completed.includes(chapter)) return;
-        completed.push(chapter);
+        const completed = [...currentBookCompleted, chapter];
+        await this.saveCurrentBookCompleted(completed);
         await this.saveWheneverCompleted(completed);
         await this.addWheneverCompletedDay(this.getDateKey());
         if (
@@ -627,6 +670,7 @@ export class DailyTehillimTracker {
       }
 
       if (!progress.chaptersCompleted.includes(chapter)) {
+        await this.saveCurrentBookCompleted([...currentBookCompleted, chapter]);
         progress.chaptersCompleted.push(chapter);
         progress.lastUpdated = Date.now();
         await AsyncStorage.setItem(TEHILLIM_PROGRESS_KEY, JSON.stringify(progress));
@@ -728,6 +772,7 @@ export class DailyTehillimTracker {
   static async resetWheneverProgress(): Promise<void> {
     await AsyncStorage.removeItem(TEHILLIM_WHENEVER_COMPLETED_KEY);
     await AsyncStorage.removeItem(TEHILLIM_WHENEVER_DAYS_KEY);
+    await AsyncStorage.removeItem(TEHILLIM_CURRENT_BOOK_COMPLETED_KEY);
   }
 
   /**
@@ -735,6 +780,7 @@ export class DailyTehillimTracker {
    */
   static async resetCustomProgress(): Promise<void> {
     await AsyncStorage.removeItem(TEHILLIM_CUSTOM_PROGRESS_KEY);
+    await AsyncStorage.removeItem(TEHILLIM_CURRENT_BOOK_COMPLETED_KEY);
   }
 
   /**
