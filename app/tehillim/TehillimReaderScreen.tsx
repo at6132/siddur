@@ -15,7 +15,7 @@ import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles, fonts } from '../../src/design/typography';
 import { useTheme } from '../../src/design/theme';
 import { TehillimService } from '../../src/content/tehillim/TehillimService';
-import { TehillimChapter, TehillimVerse } from '../../src/content/tehillim/types';
+import { TehillimChapter, TehillimVerse, TehillimGoalType } from '../../src/content/tehillim/types';
 import { SefariaService } from '../../src/services/SefariaService';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
@@ -54,6 +54,7 @@ export const TehillimReaderScreen: React.FC = () => {
   const [isMarkedComplete, setIsMarkedComplete] = useState(false);
   const [isDailyChapter, setIsDailyChapter] = useState(false);
   const [isWheneverMode, setIsWheneverMode] = useState(false);
+  const [goalType, setGoalType] = useState<TehillimGoalType>('weekly');
   const [autoscrollPlaying, setAutoscrollPlaying] = useState(false);
   const [autoscrollSpeed, setAutoscrollSpeed] = useState(1);
   const [campaignMarking, setCampaignMarking] = useState(false);
@@ -82,6 +83,7 @@ export const TehillimReaderScreen: React.FC = () => {
 
   const checkIfDailyChapter = async (chapterNum: number) => {
     const progress = await DailyTehillimTracker.getTodaysProgress();
+    setGoalType(progress.goalType);
     const whenever = progress.goalType === 'whenever';
     setIsWheneverMode(whenever);
     setIsDailyChapter(whenever || progress.totalChapters.includes(chapterNum));
@@ -98,7 +100,12 @@ export const TehillimReaderScreen: React.FC = () => {
 
   const markChapterComplete = async () => {
     const progress = await DailyTehillimTracker.getTodaysProgress();
-    const inSchedule = progress.goalType === 'whenever' || progress.totalChapters.includes(psalm);
+    const canCompleteOutsideSchedule =
+      progress.goalType === 'weekly' || progress.goalType === 'monthly';
+    const inSchedule =
+      progress.goalType === 'whenever' ||
+      progress.totalChapters.includes(psalm) ||
+      canCompleteOutsideSchedule;
     const alreadyComplete = progress.chaptersCompleted?.includes(psalm) ?? false;
     if (inSchedule && !alreadyComplete) {
       const start = readingStartTime.current ?? Date.now();
@@ -112,7 +119,9 @@ export const TehillimReaderScreen: React.FC = () => {
       const anonymousId = await getAnonymousId();
       await sendPrivatePerekCompleted(psalm, anonymousId);
       setIsMarkedComplete(true);
-      setIsDailyChapter(true);
+      if (progress.goalType === 'whenever' || progress.totalChapters.includes(psalm)) {
+        setIsDailyChapter(true);
+      }
     }
   };
 
@@ -197,6 +206,9 @@ export const TehillimReaderScreen: React.FC = () => {
     );
   }
 
+  const showFlexibleCompletion = goalType === 'weekly' || goalType === 'monthly';
+  const showPersonalCompletion = isDailyChapter || isMarkedComplete || showFlexibleCompletion;
+
   return (
     <GestureHandlerRootView style={styles.container}>
       <LinearGradient
@@ -267,7 +279,7 @@ export const TehillimReaderScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
           </FadeIn>
-        ) : isDailyChapter ? (
+        ) : showPersonalCompletion ? (
           <FadeIn delay={0}>
             <View style={[styles.dailyBadge, isMarkedComplete && styles.dailyBadgeComplete]}>
               <Text style={[styles.dailyBadgeText, isMarkedComplete && styles.dailyBadgeCompleteText]}>
@@ -275,7 +287,9 @@ export const TehillimReaderScreen: React.FC = () => {
                   ? (isWheneverMode ? '✓ Perek complete' : '✓ Completed Today')
                   : isWheneverMode
                     ? 'Say this perek whenever you can'
-                    : 'Today\'s Tehillim'}
+                    : isDailyChapter
+                      ? 'Today\'s Tehillim'
+                      : 'Outside today\'s cycle'}
               </Text>
               {!isMarkedComplete && (
                 <TouchableOpacity
