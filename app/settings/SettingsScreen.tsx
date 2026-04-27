@@ -607,714 +607,763 @@ export const SettingsScreen: React.FC = () => {
         {/* ============ NOTIFICATIONS TAB ============ */}
         {activeTab === 'notifications' && (
         <>
-        {/* ============ NOTIFICATIONS SECTION ============ */}
+        {/* Master Toggle */}
         <FadeIn delay={50}>
-          <GlassCard style={styles.card}>
+          <GlassCard>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <Text style={styles.sectionIcon}>🔔</Text>
                 <Text style={styles.sectionTitle}>Notifications</Text>
               </View>
             </View>
-
             <View style={styles.sectionContent}>
-                {/* Master Toggle */}
-                <View style={styles.masterToggle}>
-                  <View>
-                    <Text style={styles.optionLabel}>Enable Notifications</Text>
-                    <Text style={styles.optionDescription}>Turn all reminders on or off</Text>
-                  </View>
-                  <Switch
-                    value={preferences.notifications.enabled}
-                    onValueChange={(value) => updateNotificationPreference('enabled', value)}
-                    trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                    thumbColor={preferences.notifications.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
-                  />
+              <View style={styles.masterToggle}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.optionLabel}>Enable Notifications</Text>
+                  <Text style={styles.optionDescription}>Turn all reminders on or off</Text>
                 </View>
-
-                {preferences.notifications.enabled && (
-                  <>
-                    <View style={styles.divider} />
-
-                    {/* Prayer Reminders Section */}
-                    <Text style={styles.subSectionTitle}>Daily Prayer Reminders</Text>
-                    
-                    {/* Shacharis */}
-                    <View style={styles.notifOption}>
-                      <View style={styles.notifOptionMain}>
-                        <View style={styles.prayerLabelRow}>
-                          <Text style={styles.prayerIcon}>🌅</Text>
-                          <View>
-                            <Text style={styles.optionLabel}>Shacharis</Text>
-                            <Text style={styles.optionDescriptionSmall}>Morning prayers</Text>
-                          </View>
-                        </View>
-                        <Switch
-                          value={preferences.notifications.prayerReminders?.shacharis?.enabled || false}
-                          onValueChange={async (value) => {
-                            const updated = {
-                              ...preferences.notifications,
-                              prayerReminders: {
-                                ...preferences.notifications.prayerReminders,
-                                shacharis: {
-                                  ...preferences.notifications.prayerReminders?.shacharis,
-                                  enabled: value,
-                                },
-                              },
-                            };
-                            await UserPreferencesService.setNotificationPreferences(updated);
-                            await NotificationService.reschedule();
-                            loadPreferences();
-                          }}
-                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                          thumbColor={preferences.notifications.prayerReminders?.shacharis?.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
-                        />
-                      </View>
-                      {preferences.notifications.prayerReminders?.shacharis?.enabled && (
-                        <View style={styles.notifSubOption}>
-                          <View style={styles.notifSubOptionRow}>
-                            <Text style={styles.subOptionLabel}>Daily at</Text>
-                            <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('shacharis')}>
-                              <Text style={styles.timeButtonText}>
-                                {preferences.notifications.prayerReminders?.shacharis?.time || '7:00 AM'}
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Mincha */}
-                    <View style={styles.notifOption}>
-                      <View style={styles.notifOptionMain}>
-                        <View style={styles.prayerLabelRow}>
-                          <Text style={styles.prayerIcon}>☀️</Text>
-                          <View>
-                            <Text style={styles.optionLabel}>Mincha</Text>
-                            <Text style={styles.optionDescriptionSmall}>Afternoon prayers</Text>
-                          </View>
-                        </View>
-                        <Switch
-                          value={preferences.notifications.prayerReminders?.mincha?.enabled || false}
-                          onValueChange={async (value) => {
-                            const updated = {
-                              ...preferences.notifications,
-                              prayerReminders: {
-                                ...preferences.notifications.prayerReminders,
-                                mincha: {
-                                  ...preferences.notifications.prayerReminders?.mincha,
-                                  enabled: value,
-                                },
-                              },
-                            };
-                            await UserPreferencesService.setNotificationPreferences(updated);
-                            await NotificationService.reschedule();
-                            loadPreferences();
-                          }}
-                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                          thumbColor={preferences.notifications.prayerReminders?.mincha?.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
-                        />
-                      </View>
-                      {preferences.notifications.prayerReminders?.mincha?.enabled && (
-                        <View style={styles.notifSubOption}>
-                          <View style={styles.notifSubOptionRow}>
-                            <Text style={styles.subOptionLabel}>Daily at</Text>
-                            <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('mincha')}>
-                              <Text style={styles.timeButtonText}>
-                                {preferences.notifications.prayerReminders?.mincha?.time || '1:00 PM'}
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Maariv */}
-                    <View style={styles.notifOption}>
-                      <View style={styles.notifOptionMain}>
-                        <View style={styles.prayerLabelRow}>
-                          <Text style={styles.prayerIcon}>🌙</Text>
-                          <View>
-                            <Text style={styles.optionLabel}>Maariv</Text>
-                            <Text style={styles.optionDescriptionSmall}>Evening prayers</Text>
-                          </View>
-                        </View>
-                        <Switch
-                          value={preferences.notifications.prayerReminders?.maariv?.enabled || false}
-                          onValueChange={async (value) => {
-                            const updated = {
-                              ...preferences.notifications,
-                              prayerReminders: {
-                                ...preferences.notifications.prayerReminders,
-                                maariv: {
-                                  ...preferences.notifications.prayerReminders?.maariv,
-                                  enabled: value,
-                                },
-                              },
-                            };
-                            await UserPreferencesService.setNotificationPreferences(updated);
-                            await NotificationService.reschedule();
-                            loadPreferences();
-                          }}
-                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                          thumbColor={preferences.notifications.prayerReminders?.maariv?.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
-                        />
-                      </View>
-                      {preferences.notifications.prayerReminders?.maariv?.enabled && (
-                        <View style={styles.notifSubOption}>
-                          <View style={styles.notifSubOptionRow}>
-                            <Text style={styles.subOptionLabel}>Daily at</Text>
-                            <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('maariv')}>
-                              <Text style={styles.timeButtonText}>
-                                {preferences.notifications.prayerReminders?.maariv?.time || '8:00 PM'}
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.divider} />
-                    <Text style={styles.subSectionTitle}>Other Reminders</Text>
-
-                    {/* Daily Gratitude */}
-                    <View style={styles.notifOption}>
-                      <View style={styles.notifOptionMain}>
-                        <Text style={styles.optionLabel}>Daily Gratitude</Text>
-                        <Switch
-                          value={preferences.notifications.dailyGratitude}
-                          onValueChange={(value) => updateNotificationPreference('dailyGratitude', value)}
-                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                          thumbColor={preferences.notifications.dailyGratitude ? theme.colors.primary.main : theme.colors.neutral[400]}
-                        />
-                      </View>
-                      {preferences.notifications.dailyGratitude && (
-                        <View style={styles.notifSubOption}>
-                          <View style={styles.notifSubOptionRow}>
-                            <Text style={styles.subOptionLabel}>Remind me at</Text>
-                            <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('dailyGratitude')}>
-                              <Text style={styles.timeButtonText}>
-                                {formatTehillimTimeForDisplay(preferences.notifications.dailyGratitudeTime || '20:00')}
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Daily Tehillim */}
-                    <View style={styles.notifOption}>
-                      <View style={styles.notifOptionMain}>
-                        <Text style={styles.optionLabel}>Daily Tehillim</Text>
-                        <Switch
-                          value={preferences.notifications.dailyTehillim}
-                          onValueChange={(value) => updateNotificationPreference('dailyTehillim', value)}
-                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                          thumbColor={preferences.notifications.dailyTehillim ? theme.colors.primary.main : theme.colors.neutral[400]}
-                        />
-                      </View>
-                      {preferences.notifications.dailyTehillim && (
-                        <View style={styles.notifSubOption}>
-                          <View style={styles.notifSubOptionRow}>
-                            <Text style={styles.subOptionLabel}>Remind me at</Text>
-                            <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('tehillim')}>
-                              <Text style={styles.timeButtonText}>
-                                {formatTehillimTimeForDisplay(preferences.notifications.dailyTehillimTime || '09:00')}
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Custom Reminders Section */}
-                    <View style={styles.divider} />
-                    <View style={styles.customRemindersHeader}>
-                      <Text style={styles.subSectionTitle}>Custom Reminders</Text>
-                      <TouchableOpacity 
-                        style={styles.addReminderButton}
-                        onPress={() => navigation.navigate('AddCustomReminder' as never)}
-                      >
-                        <Text style={styles.addReminderButtonText}>+ Add</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* Custom Reminders List */}
-                    {(preferences.customReminders || []).length > 0 ? (
-                      (preferences.customReminders || []).map((reminder) => (
-                        <View key={reminder.id} style={styles.customReminderItem}>
-                          <View style={styles.customReminderLeft}>
-                            <Text style={styles.customReminderTitle}>{reminder.title}</Text>
-                            <Text style={styles.customReminderTime}>{reminder.time}</Text>
-                          </View>
-                          <View style={styles.customReminderRight}>
-                            <Switch
-                              value={reminder.enabled}
-                              onValueChange={async (value) => {
-                                await UserPreferencesService.updateCustomReminder(reminder.id, { enabled: value });
-                                const prefs = await UserPreferencesService.getPreferences();
-                                await NotificationService.reschedule(prefs ?? undefined);
-                                loadPreferences();
-                              }}
-                              trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                              thumbColor={reminder.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
-                            />
-                            <TouchableOpacity
-                              style={styles.reminderMenuButton}
-                              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                              onPress={() => setReminderMenuId(reminder.id)}
-                            >
-                              <Text style={styles.reminderMenuButtonText}>⋮</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      ))
-                    ) : (
-                      <View style={styles.noRemindersMessage}>
-                        <Text style={styles.noRemindersText}>No custom reminders yet</Text>
-                        <Text style={styles.noRemindersSubtext}>Tap + Add to create one</Text>
-                      </View>
-                    )}
-
-                    {/* 3-dot menu for a reminder: Edit / Delete */}
-                    <Modal visible={reminderMenuId != null} transparent animationType="fade">
-                      <Pressable style={styles.reminderMenuBackdrop} onPress={() => setReminderMenuId(null)}>
-                        <Pressable style={styles.reminderMenuBox} onPress={() => {}}>
-                          {(() => {
-                            const reminder = (preferences?.customReminders || []).find(r => r.id === reminderMenuId);
-                            if (!reminder) return null;
-                            return (
-                              <>
-                                <TouchableOpacity
-                                  style={styles.reminderMenuItem}
-                                  onPress={() => {
-                                    setReminderMenuId(null);
-                                    (navigation as any).navigate('AddCustomReminder', { reminder });
-                                  }}
-                                >
-                                  <Text style={styles.reminderMenuItemTitle}>Edit</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  style={[styles.reminderMenuItem, styles.reminderMenuItemLast]}
-                                  onPress={() => {
-                                    setReminderMenuId(null);
-                                    Alert.alert(
-                                      'Delete Reminder',
-                                      `Delete "${reminder.title}"?`,
-                                      [
-                                        { text: 'Cancel', style: 'cancel' },
-                                        {
-                                          text: 'Delete',
-                                          style: 'destructive',
-                                          onPress: async () => {
-                                            try {
-                                              await UserPreferencesService.deleteCustomReminder(reminder.id);
-                                              const prefs = await UserPreferencesService.getPreferences();
-                                              await NotificationService.reschedule(prefs ?? undefined);
-                                            } catch (e) {
-                                              console.error('Delete reminder failed:', e);
-                                            }
-                                            loadPreferences();
-                                          },
-                                        },
-                                      ]
-                                    );
-                                  }}
-                                >
-                                  <Text style={[styles.reminderMenuItemTitle, styles.reminderMenuItemDestructive]}>Delete</Text>
-                                </TouchableOpacity>
-                              </>
-                            );
-                          })()}
-                        </Pressable>
-                      </Pressable>
-                    </Modal>
-
-                    <View style={styles.divider} />
-                    <Text style={styles.subSectionTitle}>Shabbos & Special Days</Text>
-
-                    {/* Shabbos Reminders (zman-based: candle lighting + Friday afternoon) */}
-                    <View style={styles.notifOption}>
-                      <View style={styles.notifOptionMain}>
-                        <Text style={styles.optionLabel}>Shabbos Reminders</Text>
-                        <Switch
-                          value={preferences.notifications.shabbosReminders}
-                          onValueChange={(value) => updateNotificationPreference('shabbosReminders', value)}
-                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                          thumbColor={preferences.notifications.shabbosReminders ? theme.colors.primary.main : theme.colors.neutral[400]}
-                        />
-                      </View>
-                      {preferences.notifications.shabbosReminders && (
-                        <View style={styles.notifSubOption}>
-                          <Text style={styles.subOptionLabel}>Based on your location’s zmanim (candle lighting and Friday reminder)</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View ref={shabbosAlarmBlockRef} collapsable={false} style={styles.shabbosClockCardOuter}>
-                      <LinearGradient
-                        colors={
-                          theme.isDark
-                            ? ['rgba(48, 36, 70, 0.95)', 'rgba(32, 26, 48, 0.98)']
-                            : ['#FFF7ED', '#EEF2FF', '#FDF4FF']
-                        }
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.shabbosClockGradient}
-                      >
-                        <View style={styles.shabbosClockHeaderRow}>
-                          <View style={styles.shabbosClockIconBubble}>
-                            <Ionicons name="alarm" size={22} color={theme.colors.primary.main} />
-                          </View>
-                          <View style={styles.shabbosClockTitleBlock}>
-                            <Text style={styles.shabbosClockTitle}>Shabbos alarm</Text>
-                          </View>
-                          <Switch
-                            value={preferences.notifications.shabbosClockEnabled}
-                            onValueChange={onShabbosClockEnabledChange}
-                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                            thumbColor={preferences.notifications.shabbosClockEnabled ? theme.colors.primary.main : theme.colors.neutral[400]}
-                          />
-                        </View>
-                        {preferences.notifications.shabbosClockEnabled && (
-                          <>
-                            <View style={styles.shabbosClockDivider} />
-                            <TouchableOpacity
-                              style={styles.shabbosClockTimeRowSolo}
-                              onPress={() => openTimePicker('shabbosClock')}
-                              activeOpacity={0.85}
-                            >
-                              <Text style={styles.shabbosClockTimeButtonTextSolo}>
-                                {formatTehillimTimeForDisplay(
-                                  preferences.notifications.shabbosClockTime || '08:00'
-                                )}
-                              </Text>
-                              <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
-                            </TouchableOpacity>
-                            <Text style={styles.shabbosDurationSectionLabelPad}>How long it will ring</Text>
-                            <View style={styles.shabbosDurationSliderBlock}>
-                              <View style={styles.shabbosDurationSliderRow}>
-                                <Text style={styles.shabbosDurationMeta}>Minutes</Text>
-                                <Text style={styles.shabbosDurationValue}>{shabbosRingMin}</Text>
-                              </View>
-                              <Slider
-                                style={styles.shabbosDurationSlider}
-                                minimumValue={0}
-                                maximumValue={5}
-                                step={1}
-                                value={shabbosRingMin}
-                                onValueChange={v => {
-                                  const m = Math.round(v);
-                                  setShabbosRingMin(m);
-                                  if (m === 5) setShabbosRingSec(0);
-                                }}
-                                onSlidingComplete={v => {
-                                  const m = Math.round(v);
-                                  const s = m === 5 ? 0 : shabbosRingSec;
-                                  void saveShabbosRingDuration(m, s);
-                                }}
-                                minimumTrackTintColor={theme.colors.primary.main}
-                                maximumTrackTintColor={theme.colors.neutral[300]}
-                                thumbTintColor={theme.colors.primary.main}
-                              />
-                            </View>
-                            <View style={styles.shabbosDurationSliderBlock}>
-                              <View style={styles.shabbosDurationSliderRow}>
-                                <Text style={styles.shabbosDurationMeta}>Seconds</Text>
-                                <Text style={styles.shabbosDurationValue}>{shabbosRingMin >= 5 ? 0 : shabbosRingSec}</Text>
-                              </View>
-                              <Slider
-                                style={styles.shabbosDurationSlider}
-                                minimumValue={0}
-                                maximumValue={shabbosRingMin >= 5 ? 0 : 59}
-                                step={1}
-                                value={shabbosRingMin >= 5 ? 0 : shabbosRingSec}
-                                disabled={shabbosRingMin >= 5}
-                                onValueChange={v => {
-                                  if (shabbosRingMin >= 5) return;
-                                  setShabbosRingSec(Math.round(v));
-                                }}
-                                onSlidingComplete={v => {
-                                  if (shabbosRingMin >= 5) return;
-                                  void saveShabbosRingDuration(shabbosRingMin, Math.round(v));
-                                }}
-                                minimumTrackTintColor={theme.colors.primary.main}
-                                maximumTrackTintColor={theme.colors.neutral[300]}
-                                thumbTintColor={theme.colors.primary.main}
-                              />
-                            </View>
-                          </>
-                        )}
-                      </LinearGradient>
-                    </View>
-
-                    {/* Shekiya (sunset) reminder — N minutes before sunset every day */}
-                    <View style={styles.notifOption}>
-                      <View style={styles.notifOptionMain}>
-                        <Text style={styles.optionLabel}>Shekiya (Sunset) Reminder</Text>
-                        <Switch
-                          value={preferences.notifications.shekiyaReminder}
-                          onValueChange={(value) => updateNotificationPreference('shekiyaReminder', value)}
-                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                          thumbColor={preferences.notifications.shekiyaReminder ? theme.colors.primary.main : theme.colors.neutral[400]}
-                        />
-                      </View>
-                      {preferences.notifications.shekiyaReminder && (
-                        <View style={styles.notifSubOption}>
-                          <View style={styles.notifSubOptionRow}>
-                            <Text style={styles.subOptionLabel}>Remind me</Text>
-                            <TouchableOpacity style={styles.timeButton} onPress={() => setShekiyaMinutesPickerOpen(true)}>
-                              <Text style={styles.timeButtonText}>
-                                {preferences.notifications.shekiyaMinutesBefore ?? 15} min before sunset
-                              </Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Davening add-ons: Yaaleh V'Yavo days & Al HaNisim (Chanukah, Purim) — morning reminders */}
-                    <TouchableOpacity
-                      style={styles.notifOption}
-                      onPress={() => setDaveningAddOnsExpanded(!daveningAddOnsExpanded)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.notifOptionMain}>
-                        <View style={styles.daveningAddOnsTitleRow}>
-                          <Ionicons
-                            name={daveningAddOnsExpanded ? 'chevron-down' : 'chevron-forward'}
-                            size={20}
-                            color={theme.colors.text.tertiary}
-                            style={styles.daveningAddOnsChevron}
-                          />
-                          <Text style={styles.optionLabel}>Davening add-ons</Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }} onStartShouldSetResponder={() => true}>
-                          <Switch
-                            value={preferences.notifications.daveningAddOns}
-                            onValueChange={(value) => updateNotificationPreference('daveningAddOns', value)}
-                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                            thumbColor={preferences.notifications.daveningAddOns ? theme.colors.primary.main : theme.colors.neutral[400]}
-                          />
-                        </View>
-                      </View>
-                      {daveningAddOnsExpanded && (
-                        <View style={styles.daveningAddOnsDropdown}>
-                          <View style={styles.daveningAddOnsRow}>
-                            <Text style={styles.daveningAddOnsRowLabel}>Yaaleh V'Yavo</Text>
-                            <View style={styles.daveningAddOnsRowControls}>
-                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningYaalehVyavo')}>
-                                <Text style={styles.timeButtonText}>
-                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsYaalehVyavoTime ?? '08:00')}
-                                </Text>
-                              </TouchableOpacity>
-                              <Switch
-                                value={preferences.notifications.daveningAddOnsYaalehVyavo}
-                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsYaalehVyavo', value)}
-                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                                thumbColor={preferences.notifications.daveningAddOnsYaalehVyavo ? theme.colors.primary.main : theme.colors.neutral[400]}
-                              />
-                            </View>
-                          </View>
-                          <View style={styles.daveningAddOnsRow}>
-                            <Text style={styles.daveningAddOnsRowLabel}>Al HaNisim</Text>
-                            <View style={styles.daveningAddOnsRowControls}>
-                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningAlHanissim')}>
-                                <Text style={styles.timeButtonText}>
-                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsAlHanissimTime ?? '08:00')}
-                                </Text>
-                              </TouchableOpacity>
-                              <Switch
-                                value={preferences.notifications.daveningAddOnsAlHanissim}
-                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsAlHanissim', value)}
-                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                                thumbColor={preferences.notifications.daveningAddOnsAlHanissim ? theme.colors.primary.main : theme.colors.neutral[400]}
-                              />
-                            </View>
-                          </View>
-                          <View style={styles.daveningAddOnsRow}>
-                            <Text style={styles.daveningAddOnsRowLabel}>Mashiv HaRuach & V'ten Tal Umatar</Text>
-                            <View style={styles.daveningAddOnsRowControls}>
-                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningMashivVtenTal')}>
-                                <Text style={styles.timeButtonText}>
-                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsMashivVtenTalTime ?? '08:00')}
-                                </Text>
-                              </TouchableOpacity>
-                              <Switch
-                                value={preferences.notifications.daveningAddOnsMashivVtenTal}
-                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsMashivVtenTal', value)}
-                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                                thumbColor={preferences.notifications.daveningAddOnsMashivVtenTal ? theme.colors.primary.main : theme.colors.neutral[400]}
-                              />
-                            </View>
-                          </View>
-                          <View style={styles.daveningAddOnsRow}>
-                            <Text style={styles.daveningAddOnsRowLabel}>Aneinu</Text>
-                            <View style={styles.daveningAddOnsRowControls}>
-                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningAneinu')}>
-                                <Text style={styles.timeButtonText}>
-                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsAneinuTime ?? '08:00')}
-                                </Text>
-                              </TouchableOpacity>
-                              <Switch
-                                value={preferences.notifications.daveningAddOnsAneinu}
-                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsAneinu', value)}
-                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                                thumbColor={preferences.notifications.daveningAddOnsAneinu ? theme.colors.primary.main : theme.colors.neutral[400]}
-                              />
-                            </View>
-                          </View>
-                          <View style={styles.daveningAddOnsRow}>
-                            <Text style={styles.daveningAddOnsRowLabel}>Nachem</Text>
-                            <View style={styles.daveningAddOnsRowControls}>
-                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningNachem')}>
-                                <Text style={styles.timeButtonText}>
-                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsNachemTime ?? '08:00')}
-                                </Text>
-                              </TouchableOpacity>
-                              <Switch
-                                value={preferences.notifications.daveningAddOnsNachem}
-                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsNachem', value)}
-                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                                thumbColor={preferences.notifications.daveningAddOnsNachem ? theme.colors.primary.main : theme.colors.neutral[400]}
-                              />
-                            </View>
-                          </View>
-                          <View style={styles.daveningAddOnsRow}>
-                            <Text style={styles.daveningAddOnsRowLabel}>Avinu Malkeinu</Text>
-                            <View style={styles.daveningAddOnsRowControls}>
-                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningAvinuMalkeinu')}>
-                                <Text style={styles.timeButtonText}>
-                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsAvinuMalkeinuTime ?? '08:00')}
-                                </Text>
-                              </TouchableOpacity>
-                              <Switch
-                                value={preferences.notifications.daveningAddOnsAvinuMalkeinu}
-                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsAvinuMalkeinu', value)}
-                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                                thumbColor={preferences.notifications.daveningAddOnsAvinuMalkeinu ? theme.colors.primary.main : theme.colors.neutral[400]}
-                              />
-                            </View>
-                          </View>
-                          <View style={[styles.daveningAddOnsRow, styles.daveningAddOnsRowLast]}>
-                            <Text style={styles.daveningAddOnsRowLabel}>Selichos</Text>
-                            <View style={styles.daveningAddOnsRowControls}>
-                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningSelichos')}>
-                                <Text style={styles.timeButtonText}>
-                                  {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsSelichosTime ?? '08:00')}
-                                </Text>
-                              </TouchableOpacity>
-                              <Switch
-                                value={preferences.notifications.daveningAddOnsSelichos}
-                                onValueChange={(value) => updateNotificationPreference('daveningAddOnsSelichos', value)}
-                                trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                                thumbColor={preferences.notifications.daveningAddOnsSelichos ? theme.colors.primary.main : theme.colors.neutral[400]}
-                              />
-                            </View>
-                          </View>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-
-                    <View style={styles.divider} />
-                    <Text style={styles.additionalRemindersSectionTitle}>Additional Reminders</Text>
-                    <View style={styles.additionalRemindersContainer}>
-                      <View style={styles.additionalReminderItem}>
-                        <View style={styles.notifOptionMain}>
-                          <Text style={styles.optionLabel}>Hallel</Text>
-                          <Switch
-                            value={preferences.notifications.hallelAnenu}
-                            onValueChange={(value) => updateNotificationPreference('hallelAnenu', value)}
-                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                            thumbColor={preferences.notifications.hallelAnenu ? theme.colors.primary.main : theme.colors.neutral[400]}
-                          />
-                        </View>
-                        {preferences.notifications.hallelAnenu && (
-                          <View style={styles.notifSubOption}>
-                            <View style={styles.notifSubOptionRow}>
-                              <Text style={styles.subOptionLabel}>Time</Text>
-                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('hallelAnenu')}>
-                                <Text style={styles.timeButtonText}>
-                                  {formatTehillimTimeForDisplay(preferences.notifications.hallelAnenuTime || '08:00')}
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        )}
-                      </View>
-
-                      <View style={styles.additionalReminderItem}>
-                        <View style={styles.notifOptionMain}>
-                          <Text style={styles.optionLabel}>Rosh Chodesh</Text>
-                          <Switch
-                            value={preferences.notifications.roshChodesh}
-                            onValueChange={(value) => updateNotificationPreference('roshChodesh', value)}
-                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                            thumbColor={preferences.notifications.roshChodesh ? theme.colors.primary.main : theme.colors.neutral[400]}
-                          />
-                        </View>
-                        {preferences.notifications.roshChodesh && (
-                          <View style={styles.notifSubOption}>
-                            <View style={styles.notifSubOptionRow}>
-                              <Text style={styles.subOptionLabel}>Time</Text>
-                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('roshChodesh')}>
-                                <Text style={styles.timeButtonText}>
-                                  {formatTehillimTimeForDisplay(preferences.notifications.roshChodeshTime || '08:00')}
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        )}
-                      </View>
-
-                      <View style={styles.additionalReminderItem}>
-                        <View style={styles.notifOptionMain}>
-                          <Text style={styles.optionLabel}>Fast Days</Text>
-                          <Switch
-                            value={preferences.notifications.fastDays}
-                            onValueChange={(value) => updateNotificationPreference('fastDays', value)}
-                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                            thumbColor={preferences.notifications.fastDays ? theme.colors.primary.main : theme.colors.neutral[400]}
-                          />
-                        </View>
-                        {preferences.notifications.fastDays && (
-                          <View style={styles.notifSubOption}>
-                            <View style={styles.notifSubOptionRow}>
-                              <Text style={styles.subOptionLabel}>Time</Text>
-                              <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('fastDays')}>
-                                <Text style={styles.timeButtonText}>
-                                  {formatTehillimTimeForDisplay(preferences.notifications.fastDaysTime || '08:00')}
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        )}
-                      </View>
-
-                      <View style={[styles.additionalReminderItem, styles.additionalReminderItemLast]}>
-                        <View style={styles.notifOptionMain}>
-                          <Text style={styles.optionLabel}>Sefiras HaOmer</Text>
-                          <Switch
-                            value={preferences.notifications.sefirasHaomer}
-                            onValueChange={(value) => updateNotificationPreference('sefirasHaomer', value)}
-                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                            thumbColor={preferences.notifications.sefirasHaomer ? theme.colors.primary.main : theme.colors.neutral[400]}
-                          />
-                        </View>
-                        {preferences.notifications.sefirasHaomer && (
-                          <View style={styles.notifSubOption}>
-                            <Text style={styles.subOptionLabel}>
-                              At tzeit (nightfall) for your location — when the app unlocks counting. Set location under General if needed.
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                  </>
-                )}
+                <Switch
+                  value={preferences.notifications.enabled}
+                  onValueChange={(value) => updateNotificationPreference('enabled', value)}
+                  trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                  thumbColor={preferences.notifications.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
+                />
+              </View>
             </View>
           </GlassCard>
         </FadeIn>
+
+        {/* ══════ SHABBOS ALARM — Always visible ══════ */}
+        <FadeIn delay={75}>
+          <View ref={shabbosAlarmBlockRef} collapsable={false} style={styles.shabbosClockCardOuter}>
+              <LinearGradient
+                colors={
+                  theme.isDark
+                    ? ['rgba(48, 36, 70, 0.95)', 'rgba(32, 26, 48, 0.98)']
+                    : ['#FFF7ED', '#EEF2FF', '#FDF4FF']
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.shabbosClockGradient}
+              >
+                <View style={styles.shabbosClockHeaderRow}>
+                  <View style={styles.shabbosClockIconBubble}>
+                    <Ionicons name="alarm" size={22} color={theme.colors.primary.main} />
+                  </View>
+                  <View style={styles.shabbosClockTitleBlock}>
+                    <Text style={styles.shabbosClockTitle}>Shabbos Alarm</Text>
+                    <Text style={styles.shabbosClockSubtitle}>Wake up without touching your phone</Text>
+                  </View>
+                  <Switch
+                    value={preferences.notifications.shabbosClockEnabled}
+                    onValueChange={onShabbosClockEnabledChange}
+                    trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                    thumbColor={preferences.notifications.shabbosClockEnabled ? theme.colors.primary.main : theme.colors.neutral[400]}
+                  />
+                </View>
+                {preferences.notifications.shabbosClockEnabled && (
+                  <>
+                    <View style={styles.shabbosClockDivider} />
+                    <TouchableOpacity
+                      style={styles.shabbosClockTimeRowSolo}
+                      onPress={() => openTimePicker('shabbosClock')}
+                      activeOpacity={0.85}
+                    >
+                      <View>
+                        <Text style={styles.shabbosClockTimeLabel}>Wake-up time</Text>
+                        <Text style={styles.shabbosClockTimeButtonTextSolo}>
+                          {formatTehillimTimeForDisplay(
+                            preferences.notifications.shabbosClockTime || '08:00'
+                          )}
+                        </Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
+                    </TouchableOpacity>
+                    <Text style={styles.shabbosDurationSectionLabelPad}>How long it will ring</Text>
+                    <View style={styles.shabbosDurationSliderBlock}>
+                      <View style={styles.shabbosDurationSliderRow}>
+                        <Text style={styles.shabbosDurationMeta}>Minutes</Text>
+                        <Text style={styles.shabbosDurationValue}>{shabbosRingMin}</Text>
+                      </View>
+                      <Slider
+                        style={styles.shabbosDurationSlider}
+                        minimumValue={0}
+                        maximumValue={5}
+                        step={1}
+                        value={shabbosRingMin}
+                        onValueChange={v => {
+                          const m = Math.round(v);
+                          setShabbosRingMin(m);
+                          if (m === 5) setShabbosRingSec(0);
+                        }}
+                        onSlidingComplete={v => {
+                          const m = Math.round(v);
+                          const s = m === 5 ? 0 : shabbosRingSec;
+                          void saveShabbosRingDuration(m, s);
+                        }}
+                        minimumTrackTintColor={theme.colors.primary.main}
+                        maximumTrackTintColor={theme.colors.neutral[300]}
+                        thumbTintColor={theme.colors.primary.main}
+                      />
+                    </View>
+                    <View style={styles.shabbosDurationSliderBlock}>
+                      <View style={styles.shabbosDurationSliderRow}>
+                        <Text style={styles.shabbosDurationMeta}>Seconds</Text>
+                        <Text style={styles.shabbosDurationValue}>{shabbosRingMin >= 5 ? 0 : shabbosRingSec}</Text>
+                      </View>
+                      <Slider
+                        style={styles.shabbosDurationSlider}
+                        minimumValue={0}
+                        maximumValue={shabbosRingMin >= 5 ? 0 : 59}
+                        step={1}
+                        value={shabbosRingMin >= 5 ? 0 : shabbosRingSec}
+                        disabled={shabbosRingMin >= 5}
+                        onValueChange={v => {
+                          if (shabbosRingMin >= 5) return;
+                          setShabbosRingSec(Math.round(v));
+                        }}
+                        onSlidingComplete={v => {
+                          if (shabbosRingMin >= 5) return;
+                          void saveShabbosRingDuration(shabbosRingMin, Math.round(v));
+                        }}
+                        minimumTrackTintColor={theme.colors.primary.main}
+                        maximumTrackTintColor={theme.colors.neutral[300]}
+                        thumbTintColor={theme.colors.primary.main}
+                      />
+                    </View>
+                    <View style={styles.shabbosClockHintBox}>
+                      <Ionicons name="information-circle-outline" size={16} color={theme.colors.text.tertiary} />
+                      <Text style={styles.shabbosClockHint}>Keep ringer on. Use Airplane mode or Focus to block other notifications overnight.</Text>
+                    </View>
+                  </>
+                )}
+              </LinearGradient>
+            </View>
+          </FadeIn>
+
+        {preferences.notifications.enabled && (
+          <>
+          {/* ══════ DAILY PRAYERS ══════ */}
+          <FadeIn delay={100}>
+            <GlassCard>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleRow}>
+                  <Text style={styles.sectionIcon}>🕊️</Text>
+                  <Text style={styles.sectionTitle}>Daily Prayers</Text>
+                </View>
+                <Text style={styles.sectionSubtitle}>Shacharis, Mincha & Maariv</Text>
+              </View>
+              <View style={styles.sectionContent}>
+                <View style={styles.notifOption}>
+                  <View style={styles.notifOptionMain}>
+                    <View style={styles.prayerLabelRow}>
+                      <Text style={styles.prayerIcon}>🌅</Text>
+                      <View>
+                        <Text style={styles.optionLabel}>Shacharis</Text>
+                        <Text style={styles.optionDescriptionSmall}>Morning prayers</Text>
+                      </View>
+                    </View>
+                    <Switch
+                      value={preferences.notifications.prayerReminders?.shacharis?.enabled || false}
+                      onValueChange={async (value) => {
+                        const updated = {
+                          ...preferences.notifications,
+                          prayerReminders: {
+                            ...preferences.notifications.prayerReminders,
+                            shacharis: {
+                              ...preferences.notifications.prayerReminders?.shacharis,
+                              enabled: value,
+                            },
+                          },
+                        };
+                        await UserPreferencesService.setNotificationPreferences(updated);
+                        await NotificationService.reschedule();
+                        loadPreferences();
+                      }}
+                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                      thumbColor={preferences.notifications.prayerReminders?.shacharis?.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
+                    />
+                  </View>
+                  {preferences.notifications.prayerReminders?.shacharis?.enabled && (
+                    <View style={styles.notifSubOption}>
+                      <View style={styles.notifSubOptionRow}>
+                        <Text style={styles.subOptionLabel}>Daily at</Text>
+                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('shacharis')}>
+                          <Text style={styles.timeButtonText}>
+                            {preferences.notifications.prayerReminders?.shacharis?.time || '7:00 AM'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.notifOption}>
+                  <View style={styles.notifOptionMain}>
+                    <View style={styles.prayerLabelRow}>
+                      <Text style={styles.prayerIcon}>☀️</Text>
+                      <View>
+                        <Text style={styles.optionLabel}>Mincha</Text>
+                        <Text style={styles.optionDescriptionSmall}>Afternoon prayers</Text>
+                      </View>
+                    </View>
+                    <Switch
+                      value={preferences.notifications.prayerReminders?.mincha?.enabled || false}
+                      onValueChange={async (value) => {
+                        const updated = {
+                          ...preferences.notifications,
+                          prayerReminders: {
+                            ...preferences.notifications.prayerReminders,
+                            mincha: {
+                              ...preferences.notifications.prayerReminders?.mincha,
+                              enabled: value,
+                            },
+                          },
+                        };
+                        await UserPreferencesService.setNotificationPreferences(updated);
+                        await NotificationService.reschedule();
+                        loadPreferences();
+                      }}
+                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                      thumbColor={preferences.notifications.prayerReminders?.mincha?.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
+                    />
+                  </View>
+                  {preferences.notifications.prayerReminders?.mincha?.enabled && (
+                    <View style={styles.notifSubOption}>
+                      <View style={styles.notifSubOptionRow}>
+                        <Text style={styles.subOptionLabel}>Daily at</Text>
+                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('mincha')}>
+                          <Text style={styles.timeButtonText}>
+                            {preferences.notifications.prayerReminders?.mincha?.time || '1:00 PM'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                <View style={[styles.notifOption, styles.notifOptionLast]}>
+                  <View style={styles.notifOptionMain}>
+                    <View style={styles.prayerLabelRow}>
+                      <Text style={styles.prayerIcon}>🌙</Text>
+                      <View>
+                        <Text style={styles.optionLabel}>Maariv</Text>
+                        <Text style={styles.optionDescriptionSmall}>Evening prayers</Text>
+                      </View>
+                    </View>
+                    <Switch
+                      value={preferences.notifications.prayerReminders?.maariv?.enabled || false}
+                      onValueChange={async (value) => {
+                        const updated = {
+                          ...preferences.notifications,
+                          prayerReminders: {
+                            ...preferences.notifications.prayerReminders,
+                            maariv: {
+                              ...preferences.notifications.prayerReminders?.maariv,
+                              enabled: value,
+                            },
+                          },
+                        };
+                        await UserPreferencesService.setNotificationPreferences(updated);
+                        await NotificationService.reschedule();
+                        loadPreferences();
+                      }}
+                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                      thumbColor={preferences.notifications.prayerReminders?.maariv?.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
+                    />
+                  </View>
+                  {preferences.notifications.prayerReminders?.maariv?.enabled && (
+                    <View style={styles.notifSubOption}>
+                      <View style={styles.notifSubOptionRow}>
+                        <Text style={styles.subOptionLabel}>Daily at</Text>
+                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('maariv')}>
+                          <Text style={styles.timeButtonText}>
+                            {preferences.notifications.prayerReminders?.maariv?.time || '8:00 PM'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </GlassCard>
+          </FadeIn>
+
+          {/* ══════ DAILY REMINDERS ══════ */}
+          <FadeIn delay={150}>
+            <GlassCard>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleRow}>
+                  <Text style={styles.sectionIcon}>✨</Text>
+                  <Text style={styles.sectionTitle}>Daily Reminders</Text>
+                </View>
+                <Text style={styles.sectionSubtitle}>Tehillim & gratitude</Text>
+              </View>
+              <View style={styles.sectionContent}>
+                <View style={styles.notifOption}>
+                  <View style={styles.notifOptionMain}>
+                    <Text style={styles.optionLabel}>Daily Tehillim</Text>
+                    <Switch
+                      value={preferences.notifications.dailyTehillim}
+                      onValueChange={(value) => updateNotificationPreference('dailyTehillim', value)}
+                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                      thumbColor={preferences.notifications.dailyTehillim ? theme.colors.primary.main : theme.colors.neutral[400]}
+                    />
+                  </View>
+                  {preferences.notifications.dailyTehillim && (
+                    <View style={styles.notifSubOption}>
+                      <View style={styles.notifSubOptionRow}>
+                        <Text style={styles.subOptionLabel}>Remind me at</Text>
+                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('tehillim')}>
+                          <Text style={styles.timeButtonText}>
+                            {formatTehillimTimeForDisplay(preferences.notifications.dailyTehillimTime || '09:00')}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                <View style={[styles.notifOption, styles.notifOptionLast]}>
+                  <View style={styles.notifOptionMain}>
+                    <Text style={styles.optionLabel}>Daily Gratitude</Text>
+                    <Switch
+                      value={preferences.notifications.dailyGratitude}
+                      onValueChange={(value) => updateNotificationPreference('dailyGratitude', value)}
+                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                      thumbColor={preferences.notifications.dailyGratitude ? theme.colors.primary.main : theme.colors.neutral[400]}
+                    />
+                  </View>
+                  {preferences.notifications.dailyGratitude && (
+                    <View style={styles.notifSubOption}>
+                      <View style={styles.notifSubOptionRow}>
+                        <Text style={styles.subOptionLabel}>Remind me at</Text>
+                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('dailyGratitude')}>
+                          <Text style={styles.timeButtonText}>
+                            {formatTehillimTimeForDisplay(preferences.notifications.dailyGratitudeTime || '20:00')}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </GlassCard>
+          </FadeIn>
+
+          {/* ══════ SHABBOS & ZMANIM ══════ */}
+          <FadeIn delay={200}>
+            <GlassCard>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleRow}>
+                  <Text style={styles.sectionIcon}>🕯️</Text>
+                  <Text style={styles.sectionTitle}>Shabbos & Zmanim</Text>
+                </View>
+                <Text style={styles.sectionSubtitle}>Candle lighting, sunset & Shabbos prep</Text>
+              </View>
+              <View style={styles.sectionContent}>
+                <View style={styles.notifOption}>
+                  <View style={styles.notifOptionMain}>
+                    <Text style={styles.optionLabel}>Shabbos Reminders</Text>
+                    <Switch
+                      value={preferences.notifications.shabbosReminders}
+                      onValueChange={(value) => updateNotificationPreference('shabbosReminders', value)}
+                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                      thumbColor={preferences.notifications.shabbosReminders ? theme.colors.primary.main : theme.colors.neutral[400]}
+                    />
+                  </View>
+                  {preferences.notifications.shabbosReminders && (
+                    <View style={styles.notifSubOption}>
+                      <Text style={styles.subOptionLabel}>Candle lighting and Friday afternoon reminders based on your location's zmanim</Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={[styles.notifOption, styles.notifOptionLast]}>
+                  <View style={styles.notifOptionMain}>
+                    <Text style={styles.optionLabel}>Shekiya (Sunset)</Text>
+                    <Switch
+                      value={preferences.notifications.shekiyaReminder}
+                      onValueChange={(value) => updateNotificationPreference('shekiyaReminder', value)}
+                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                      thumbColor={preferences.notifications.shekiyaReminder ? theme.colors.primary.main : theme.colors.neutral[400]}
+                    />
+                  </View>
+                  {preferences.notifications.shekiyaReminder && (
+                    <View style={styles.notifSubOption}>
+                      <View style={styles.notifSubOptionRow}>
+                        <Text style={styles.subOptionLabel}>Remind me</Text>
+                        <TouchableOpacity style={styles.timeButton} onPress={() => setShekiyaMinutesPickerOpen(true)}>
+                          <Text style={styles.timeButtonText}>
+                            {preferences.notifications.shekiyaMinutesBefore ?? 15} min before sunset
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              </View>
+            </GlassCard>
+          </FadeIn>
+
+          {/* ══════ CALENDAR & SEASONAL ══════ */}
+          <FadeIn delay={250}>
+            <GlassCard>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionTitleRow}>
+                  <Text style={styles.sectionIcon}>📅</Text>
+                  <Text style={styles.sectionTitle}>Calendar & Seasonal</Text>
+                </View>
+                <Text style={styles.sectionSubtitle}>Hallel, Rosh Chodesh, fast days & more</Text>
+              </View>
+              <View style={styles.sectionContent}>
+                <View style={styles.notifOption}>
+                  <View style={styles.notifOptionMain}>
+                    <Text style={styles.optionLabel}>Hallel</Text>
+                    <Switch
+                      value={preferences.notifications.hallelAnenu}
+                      onValueChange={(value) => updateNotificationPreference('hallelAnenu', value)}
+                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                      thumbColor={preferences.notifications.hallelAnenu ? theme.colors.primary.main : theme.colors.neutral[400]}
+                    />
+                  </View>
+                  {preferences.notifications.hallelAnenu && (
+                    <View style={styles.notifSubOption}>
+                      <View style={styles.notifSubOptionRow}>
+                        <Text style={styles.subOptionLabel}>Remind me at</Text>
+                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('hallelAnenu')}>
+                          <Text style={styles.timeButtonText}>
+                            {formatTehillimTimeForDisplay(preferences.notifications.hallelAnenuTime || '08:00')}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.notifOption}>
+                  <View style={styles.notifOptionMain}>
+                    <Text style={styles.optionLabel}>Rosh Chodesh</Text>
+                    <Switch
+                      value={preferences.notifications.roshChodesh}
+                      onValueChange={(value) => updateNotificationPreference('roshChodesh', value)}
+                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                      thumbColor={preferences.notifications.roshChodesh ? theme.colors.primary.main : theme.colors.neutral[400]}
+                    />
+                  </View>
+                  {preferences.notifications.roshChodesh && (
+                    <View style={styles.notifSubOption}>
+                      <View style={styles.notifSubOptionRow}>
+                        <Text style={styles.subOptionLabel}>Remind me at</Text>
+                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('roshChodesh')}>
+                          <Text style={styles.timeButtonText}>
+                            {formatTehillimTimeForDisplay(preferences.notifications.roshChodeshTime || '08:00')}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.notifOption}>
+                  <View style={styles.notifOptionMain}>
+                    <Text style={styles.optionLabel}>Fast Days</Text>
+                    <Switch
+                      value={preferences.notifications.fastDays}
+                      onValueChange={(value) => updateNotificationPreference('fastDays', value)}
+                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                      thumbColor={preferences.notifications.fastDays ? theme.colors.primary.main : theme.colors.neutral[400]}
+                    />
+                  </View>
+                  {preferences.notifications.fastDays && (
+                    <View style={styles.notifSubOption}>
+                      <View style={styles.notifSubOptionRow}>
+                        <Text style={styles.subOptionLabel}>Remind me at</Text>
+                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('fastDays')}>
+                          <Text style={styles.timeButtonText}>
+                            {formatTehillimTimeForDisplay(preferences.notifications.fastDaysTime || '08:00')}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.notifOption}>
+                  <View style={styles.notifOptionMain}>
+                    <Text style={styles.optionLabel}>Sefiras HaOmer</Text>
+                    <Switch
+                      value={preferences.notifications.sefirasHaomer}
+                      onValueChange={(value) => updateNotificationPreference('sefirasHaomer', value)}
+                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                      thumbColor={preferences.notifications.sefirasHaomer ? theme.colors.primary.main : theme.colors.neutral[400]}
+                    />
+                  </View>
+                  {preferences.notifications.sefirasHaomer && (
+                    <View style={styles.notifSubOption}>
+                      <Text style={styles.subOptionLabel}>At tzeit (nightfall) for your location</Text>
+                    </View>
+                  )}
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.notifOption, styles.notifOptionLast]}
+                  onPress={() => setDaveningAddOnsExpanded(!daveningAddOnsExpanded)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.notifOptionMain}>
+                    <View style={styles.daveningAddOnsTitleRow}>
+                      <Ionicons
+                        name={daveningAddOnsExpanded ? 'chevron-down' : 'chevron-forward'}
+                        size={20}
+                        color={theme.colors.text.tertiary}
+                        style={styles.daveningAddOnsChevron}
+                      />
+                      <View>
+                        <Text style={styles.optionLabel}>Davening Add-ons</Text>
+                        <Text style={styles.optionDescriptionSmall}>Yaaleh V'Yavo, Al HaNisim & more</Text>
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }} onStartShouldSetResponder={() => true}>
+                      <Switch
+                        value={preferences.notifications.daveningAddOns}
+                        onValueChange={(value) => updateNotificationPreference('daveningAddOns', value)}
+                        trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                        thumbColor={preferences.notifications.daveningAddOns ? theme.colors.primary.main : theme.colors.neutral[400]}
+                      />
+                    </View>
+                  </View>
+                  {daveningAddOnsExpanded && (
+                    <View style={styles.daveningAddOnsDropdown}>
+                      <View style={styles.daveningAddOnsRow}>
+                        <Text style={styles.daveningAddOnsRowLabel}>Yaaleh V'Yavo</Text>
+                        <View style={styles.daveningAddOnsRowControls}>
+                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningYaalehVyavo')}>
+                            <Text style={styles.timeButtonText}>
+                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsYaalehVyavoTime ?? '08:00')}
+                            </Text>
+                          </TouchableOpacity>
+                          <Switch
+                            value={preferences.notifications.daveningAddOnsYaalehVyavo}
+                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsYaalehVyavo', value)}
+                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                            thumbColor={preferences.notifications.daveningAddOnsYaalehVyavo ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          />
+                        </View>
+                      </View>
+                      <View style={styles.daveningAddOnsRow}>
+                        <Text style={styles.daveningAddOnsRowLabel}>Al HaNisim</Text>
+                        <View style={styles.daveningAddOnsRowControls}>
+                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningAlHanissim')}>
+                            <Text style={styles.timeButtonText}>
+                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsAlHanissimTime ?? '08:00')}
+                            </Text>
+                          </TouchableOpacity>
+                          <Switch
+                            value={preferences.notifications.daveningAddOnsAlHanissim}
+                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsAlHanissim', value)}
+                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                            thumbColor={preferences.notifications.daveningAddOnsAlHanissim ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          />
+                        </View>
+                      </View>
+                      <View style={styles.daveningAddOnsRow}>
+                        <Text style={styles.daveningAddOnsRowLabel}>Mashiv HaRuach & V'ten Tal Umatar</Text>
+                        <View style={styles.daveningAddOnsRowControls}>
+                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningMashivVtenTal')}>
+                            <Text style={styles.timeButtonText}>
+                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsMashivVtenTalTime ?? '08:00')}
+                            </Text>
+                          </TouchableOpacity>
+                          <Switch
+                            value={preferences.notifications.daveningAddOnsMashivVtenTal}
+                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsMashivVtenTal', value)}
+                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                            thumbColor={preferences.notifications.daveningAddOnsMashivVtenTal ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          />
+                        </View>
+                      </View>
+                      <View style={styles.daveningAddOnsRow}>
+                        <Text style={styles.daveningAddOnsRowLabel}>Aneinu</Text>
+                        <View style={styles.daveningAddOnsRowControls}>
+                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningAneinu')}>
+                            <Text style={styles.timeButtonText}>
+                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsAneinuTime ?? '08:00')}
+                            </Text>
+                          </TouchableOpacity>
+                          <Switch
+                            value={preferences.notifications.daveningAddOnsAneinu}
+                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsAneinu', value)}
+                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                            thumbColor={preferences.notifications.daveningAddOnsAneinu ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          />
+                        </View>
+                      </View>
+                      <View style={styles.daveningAddOnsRow}>
+                        <Text style={styles.daveningAddOnsRowLabel}>Nachem</Text>
+                        <View style={styles.daveningAddOnsRowControls}>
+                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningNachem')}>
+                            <Text style={styles.timeButtonText}>
+                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsNachemTime ?? '08:00')}
+                            </Text>
+                          </TouchableOpacity>
+                          <Switch
+                            value={preferences.notifications.daveningAddOnsNachem}
+                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsNachem', value)}
+                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                            thumbColor={preferences.notifications.daveningAddOnsNachem ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          />
+                        </View>
+                      </View>
+                      <View style={styles.daveningAddOnsRow}>
+                        <Text style={styles.daveningAddOnsRowLabel}>Avinu Malkeinu</Text>
+                        <View style={styles.daveningAddOnsRowControls}>
+                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningAvinuMalkeinu')}>
+                            <Text style={styles.timeButtonText}>
+                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsAvinuMalkeinuTime ?? '08:00')}
+                            </Text>
+                          </TouchableOpacity>
+                          <Switch
+                            value={preferences.notifications.daveningAddOnsAvinuMalkeinu}
+                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsAvinuMalkeinu', value)}
+                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                            thumbColor={preferences.notifications.daveningAddOnsAvinuMalkeinu ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          />
+                        </View>
+                      </View>
+                      <View style={[styles.daveningAddOnsRow, styles.daveningAddOnsRowLast]}>
+                        <Text style={styles.daveningAddOnsRowLabel}>Selichos</Text>
+                        <View style={styles.daveningAddOnsRowControls}>
+                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningSelichos')}>
+                            <Text style={styles.timeButtonText}>
+                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsSelichosTime ?? '08:00')}
+                            </Text>
+                          </TouchableOpacity>
+                          <Switch
+                            value={preferences.notifications.daveningAddOnsSelichos}
+                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsSelichos', value)}
+                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                            thumbColor={preferences.notifications.daveningAddOnsSelichos ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          />
+                        </View>
+                      </View>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </GlassCard>
+          </FadeIn>
+
+          {/* ══════ CUSTOM REMINDERS ══════ */}
+          <FadeIn delay={300}>
+            <GlassCard>
+              <View style={styles.sectionHeader}>
+                <View style={[styles.sectionTitleRow, { flex: 1 }]}>
+                  <Text style={styles.sectionIcon}>⏰</Text>
+                  <Text style={[styles.sectionTitle, { flex: 1 }]}>Custom Reminders</Text>
+                  <TouchableOpacity
+                    style={styles.addReminderButton}
+                    onPress={() => navigation.navigate('AddCustomReminder' as never)}
+                  >
+                    <Text style={styles.addReminderButtonText}>+ Add</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={styles.sectionContent}>
+                {(preferences.customReminders || []).length > 0 ? (
+                  (preferences.customReminders || []).map((reminder) => (
+                    <View key={reminder.id} style={styles.customReminderItem}>
+                      <View style={styles.customReminderLeft}>
+                        <Text style={styles.customReminderTitle}>{reminder.title}</Text>
+                        <Text style={styles.customReminderTime}>{reminder.time}</Text>
+                      </View>
+                      <View style={styles.customReminderRight}>
+                        <Switch
+                          value={reminder.enabled}
+                          onValueChange={async (value) => {
+                            await UserPreferencesService.updateCustomReminder(reminder.id, { enabled: value });
+                            const prefs = await UserPreferencesService.getPreferences();
+                            await NotificationService.reschedule(prefs ?? undefined);
+                            loadPreferences();
+                          }}
+                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                          thumbColor={reminder.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
+                        />
+                        <TouchableOpacity
+                          style={styles.reminderMenuButton}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                          onPress={() => setReminderMenuId(reminder.id)}
+                        >
+                          <Text style={styles.reminderMenuButtonText}>⋮</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))
+                ) : (
+                  <View style={styles.noRemindersMessage}>
+                    <Text style={styles.noRemindersText}>No custom reminders yet</Text>
+                    <Text style={styles.noRemindersSubtext}>Tap + Add to create one</Text>
+                  </View>
+                )}
+              </View>
+            </GlassCard>
+          </FadeIn>
+
+          {/* Custom reminder edit/delete modal */}
+          <Modal visible={reminderMenuId != null} transparent animationType="fade">
+            <Pressable style={styles.reminderMenuBackdrop} onPress={() => setReminderMenuId(null)}>
+              <Pressable style={styles.reminderMenuBox} onPress={() => {}}>
+                {(() => {
+                  const reminder = (preferences?.customReminders || []).find(r => r.id === reminderMenuId);
+                  if (!reminder) return null;
+                  return (
+                    <>
+                      <TouchableOpacity
+                        style={styles.reminderMenuItem}
+                        onPress={() => {
+                          setReminderMenuId(null);
+                          (navigation as any).navigate('AddCustomReminder', { reminder });
+                        }}
+                      >
+                        <Text style={styles.reminderMenuItemTitle}>Edit</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.reminderMenuItem, styles.reminderMenuItemLast]}
+                        onPress={() => {
+                          setReminderMenuId(null);
+                          Alert.alert(
+                            'Delete Reminder',
+                            `Delete "${reminder.title}"?`,
+                            [
+                              { text: 'Cancel', style: 'cancel' },
+                              {
+                                text: 'Delete',
+                                style: 'destructive',
+                                onPress: async () => {
+                                  try {
+                                    await UserPreferencesService.deleteCustomReminder(reminder.id);
+                                    const prefs = await UserPreferencesService.getPreferences();
+                                    await NotificationService.reschedule(prefs ?? undefined);
+                                  } catch (e) {
+                                    console.error('Delete reminder failed:', e);
+                                  }
+                                  loadPreferences();
+                                },
+                              },
+                            ]
+                          );
+                        }}
+                      >
+                        <Text style={[styles.reminderMenuItemTitle, styles.reminderMenuItemDestructive]}>Delete</Text>
+                      </TouchableOpacity>
+                    </>
+                  );
+                })()}
+              </Pressable>
+            </Pressable>
+          </Modal>
+          </>
+        )}
         </>
         )}
 
@@ -1989,6 +2038,12 @@ function createSettingsStyles(theme: AppTheme) {
     fontSize: 17,
     color: theme.colors.text.primary,
   },
+  shabbosClockSubtitle: {
+    fontFamily: fonts.body.regular,
+    fontSize: 13,
+    color: theme.colors.text.secondary,
+    marginTop: 2,
+  },
   shabbosClockDivider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
@@ -2008,6 +2063,12 @@ function createSettingsStyles(theme: AppTheme) {
     fontFamily: fonts.heading.semibold,
     fontSize: 20,
     color: theme.colors.primary.main,
+  },
+  shabbosClockTimeLabel: {
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    marginBottom: 2,
   },
   shabbosDurationSectionLabelPad: {
     fontFamily: fonts.body.semiBold,
@@ -2040,11 +2101,32 @@ function createSettingsStyles(theme: AppTheme) {
     width: '100%' as any,
     height: 40,
   },
+  shabbosClockHintBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+  },
+  shabbosClockHint: {
+    flex: 1,
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    color: theme.colors.text.tertiary,
+    lineHeight: 17,
+  },
   notifOption: {
     marginBottom: spacing.md,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  notifOptionLast: {
+    borderBottomWidth: 0,
+    marginBottom: 0,
+    paddingBottom: 0,
   },
   notifOptionMain: {
     flexDirection: 'row',
