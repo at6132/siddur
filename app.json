@@ -19,7 +19,7 @@
       "buildNumber": "18",
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "We need your location to calculate accurate prayer times (zmanim).",
-        "NSUserNotificationsUsageDescription": "We'll send gentle reminders to help you stay consistent with your davening.",
+        "NSUserNotificationsUsageDescription": "We'll send reminders for davening, zmanim, and the features you turn on.",
         "UIBackgroundModes": [
           "fetch",
           "remote-notification",

@@ -82,6 +82,7 @@ export const TehillimListScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const [dailyProgress, setDailyProgress] = useState<DailyProgress | null>(null);
   const [overallProgress, setOverallProgress] = useState<OverallProgress | null>(null);
+  const [completedPerakim, setCompletedPerakim] = useState<number[]>([]);
   const [fullBookCompletionsCount, setFullBookCompletionsCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
   const [myCampaigns, setMyCampaigns] = useState<TehillimCampaign[]>([]);
@@ -93,10 +94,11 @@ export const TehillimListScreen: React.FC = () => {
   );
 
   const loadProgress = async () => {
-    const [progress, overall, fullBookCount] = await Promise.all([
+    const [progress, overall, fullBookCount, currentBookCompleted] = await Promise.all([
       DailyTehillimTracker.getTodaysProgress(),
       DailyTehillimTracker.getOverallTehillimProgress(),
       DailyTehillimTracker.getFullTehillimCompletionsCount(),
+      DailyTehillimTracker.getCurrentBookCompleted(),
     ]);
     setFullBookCompletionsCount(fullBookCount);
     setDailyProgress({
@@ -108,6 +110,7 @@ export const TehillimListScreen: React.FC = () => {
       goalType: progress.goalType,
     });
     setOverallProgress(overall);
+    setCompletedPerakim(currentBookCompleted);
     try {
       const pid = await getAnonymousId();
       const { campaigns } = await listMyTehillimCampaigns(pid);
@@ -142,7 +145,7 @@ export const TehillimListScreen: React.FC = () => {
     (dailyProgress?.totalChapters.includes(chapterNum) ?? false);
 
   const isCompleted = (chapterNum: number) =>
-    dailyProgress?.chaptersCompleted.includes(chapterNum) || false;
+    completedPerakim.includes(chapterNum);
 
   const handleContinueDaily = async () => {
     const nextChapter = await DailyTehillimTracker.getNextChapter();

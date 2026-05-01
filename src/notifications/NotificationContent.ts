@@ -1,6 +1,6 @@
 /**
  * Notification Content Generator
- * Creates soft, supportive notification copy
+ * Short, direct copy for scheduled notifications
  */
 
 import { NotificationContent } from './types';
@@ -13,26 +13,9 @@ export class NotificationContentService {
    */
   static getDailyTehillimContent(): NotificationContent {
     return {
-      title: 'A moment for Tehillim',
-      body: 'A gentle reminder for your daily Tehillim',
+      title: 'Daily Tehillim',
+      body: 'Time for your daily Tehillim',
       data: { screen: 'TehillimList' },
-    };
-  }
-
-  /**
-   * Generate content for Mincha reminder
-   */
-  static getMinchaContent(dayInfo: DayInfo): NotificationContent {
-    const minchaTime = dayInfo.zmanim.mincha;
-    const timeStr = minchaTime.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-
-    return {
-      title: 'Mincha time',
-      body: `Mincha is at ${timeStr}`,
-      data: { screen: 'Home', action: 'mincha' },
     };
   }
 
@@ -42,7 +25,7 @@ export class NotificationContentService {
   static getHallelContent(): NotificationContent {
     return {
       title: 'Hallel today',
-      body: 'A gentle reminder to say Hallel',
+      body: 'Say Hallel today',
       data: { screen: 'Home', action: 'hallel' },
     };
   }
@@ -53,7 +36,7 @@ export class NotificationContentService {
   static getAnenuContent(): NotificationContent {
     return {
       title: 'Anenu today',
-      body: 'A gentle reminder for Anenu on this fast day',
+      body: 'Don’t forget Anenu on this fast day',
       data: { screen: 'Home', action: 'anenu' },
     };
   }
@@ -98,10 +81,9 @@ export class NotificationContentService {
 
   /** Shabbos morning — loud alarm, then auto-stops after the chosen run length */
   static getShabbosClockAlarmContent(chimeIndex: number, chimeTotal: number): NotificationContent {
-    const part = chimeTotal > 1 ? `(${chimeIndex} of ${chimeTotal}) ` : '';
     return {
       title: 'Shabbos — wake up',
-      body: `${part}Loud Shabbos morning alarm. Stops on its own after a few minutes. Tap to open the app.`,
+      body: 'Alarm',
       data: { screen: 'Settings', type: 'shabbos_clock_alarm', chimeIndex, chimeTotal },
     };
   }
@@ -143,23 +125,12 @@ export class NotificationContentService {
   }
 
   /**
-   * Generate content for Neshama reminder
-   */
-  static getNeshamaContent(): NotificationContent {
-    return {
-      title: 'A moment for your Neshama',
-      body: 'A gentle reminder for your spiritual practice',
-      data: { screen: 'habits' },
-    };
-  }
-
-  /**
    * Generate content for Rosh Chodesh reminder
    */
   static getRoshChodeshContent(): NotificationContent {
     return {
       title: 'Rosh Chodesh today',
-      body: 'A gentle reminder for Rosh Chodesh',
+      body: 'It’s Rosh Chodesh today',
       data: { screen: 'Home', action: 'roshChodesh' },
     };
   }
@@ -170,7 +141,7 @@ export class NotificationContentService {
   static getFastDayContent(): NotificationContent {
     return {
       title: 'Fast day today',
-      body: 'A gentle reminder for today\'s fast',
+      body: 'Remember your fasting today!',
       data: { screen: 'Home', action: 'fastDay' },
     };
   }
@@ -196,7 +167,7 @@ export class NotificationContentService {
   static getDailyGratitudeContent(): NotificationContent {
     return {
       title: 'Daily Gratitude',
-      body: 'A moment to add something you\'re grateful for',
+      body: 'Add something you’re grateful for',
       data: { screen: 'Gratitude' },
     };
   }
@@ -207,7 +178,7 @@ export class NotificationContentService {
   static getYaalehVyavoContent(): NotificationContent {
     return {
       title: 'Yaaleh V\'Yavo today',
-      body: 'A gentle reminder — today we add Yaaleh V\'Yavo in Birkat Hamazon and the Amidah',
+      body: 'Add Yaaleh V\'Yavo in Birkat Hamazon and the Amidah today',
       data: { screen: 'Home', action: 'yaalehVyavo' },
     };
   }
@@ -219,13 +190,13 @@ export class NotificationContentService {
     if (type === 'chanukah') {
       return {
         title: 'Al HaNisim — Chanukah',
-        body: 'A gentle reminder — today we add Al HaNisim for Chanukah',
+        body: 'Add Al HaNisim for Chanukah today',
         data: { screen: 'Home', action: 'alHanissimChanukah' },
       };
     }
     return {
       title: 'Al HaNisim — Purim',
-      body: 'A gentle reminder — today we add Al HaNisim for Purim',
+      body: 'Add Al HaNisim for Purim today',
       data: { screen: 'Home', action: 'alHanissimPurim' },
     };
   }
@@ -236,7 +207,7 @@ export class NotificationContentService {
   static getMashivVtenTalContent(): NotificationContent {
     return {
       title: 'Mashiv HaRuach / V\'ten Tal Umatar',
-      body: 'A gentle reminder — winter davening additions today',
+      body: 'Winter insertions: Mashiv HaRuach and V\'ten Tal Umatar',
       data: { screen: 'Home', action: 'mashivVtenTal' },
     };
   }
@@ -247,7 +218,7 @@ export class NotificationContentService {
   static getSummerDaveningContent(): NotificationContent {
     return {
       title: 'Summer davening',
-      body: 'A gentle reminder — say Morid HaTal (no Mashiv/V\'ten Tal) this season',
+      body: 'Say Morid HaTal (no Mashiv / V\'ten Tal) this season',
       data: { screen: 'Home', action: 'summerDavening' },
     };
   }
@@ -258,7 +229,7 @@ export class NotificationContentService {
   static getAneinuContent(): NotificationContent {
     return {
       title: 'Aneinu today',
-      body: 'A gentle reminder — add Aneinu in the Amidah on this fast day',
+      body: 'Add Aneinu in the Amidah on this fast day',
       data: { screen: 'Home', action: 'aneinu' },
     };
   }
@@ -269,7 +240,7 @@ export class NotificationContentService {
   static getNachemContent(): NotificationContent {
     return {
       title: 'Nachem today',
-      body: 'A gentle reminder — add Nachem in the Amidah on Tisha B\'Av',
+      body: 'Add Nachem in the Amidah on Tisha B\'Av',
       data: { screen: 'Home', action: 'nachem' },
     };
   }
@@ -280,7 +251,7 @@ export class NotificationContentService {
   static getAvinuMalkeinuContent(): NotificationContent {
     return {
       title: 'Avinu Malkeinu today',
-      body: 'A gentle reminder — we say Avinu Malkeinu today',
+      body: 'We say Avinu Malkeinu today',
       data: { screen: 'Home', action: 'avinuMalkeinu' },
     };
   }
@@ -291,7 +262,7 @@ export class NotificationContentService {
   static getSelichosContent(): NotificationContent {
     return {
       title: 'Selichos today',
-      body: 'A gentle reminder — Selichos are said today',
+      body: 'Selichos are said today',
       data: { screen: 'Home', action: 'selichos' },
     };
   }
@@ -304,18 +275,18 @@ export class NotificationContentService {
   ): NotificationContent {
     const config = {
       tehillim: {
-        title: 'Your Tehillim streak is waiting',
-        body: 'A quick moment today keeps your streak going 💜',
+        title: 'Tehillim streak',
+        body: 'Log today to keep your streak',
         screen: 'TehillimList',
       },
       gratitude: {
-        title: 'Your gratitude streak is waiting',
-        body: 'Add one thing you\'re grateful for today',
+        title: 'Gratitude streak',
+        body: 'Add an entry today to keep your streak',
         screen: 'Gratitude',
       },
       habits: {
-        title: 'Your habit streak is waiting',
-        body: 'Show up today — even just a little',
+        title: 'Habit streak',
+        body: 'Check in today to keep your streak',
         screen: 'Habits',
       },
     };

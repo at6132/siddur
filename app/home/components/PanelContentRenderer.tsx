@@ -20,6 +20,7 @@ import {
 } from '../../../src/content/HomeWidgetContent';
 import type { DayInfo, DaveningChanges } from '../../../src/types/calendar';
 import { spacing } from '../../../src/design/spacing';
+import { navigateOrComingSoon, isPanelLibraryPhase2ComingSoon } from '../../../src/feature/LibraryFeatureAccess';
 
 function coerceDate(d: unknown): Date | null {
   if (d instanceof Date && !Number.isNaN(d.getTime())) return d;
@@ -129,6 +130,7 @@ export function renderPanelContent(
 
   const panelDef = PANEL_DEFINITIONS.find(p => p.type === panel.type);
   const half = panel.size === 'half';
+  const phase2CardStyle = isPanelLibraryPhase2ComingSoon(panel.type) ? ({ opacity: 0.52 } as const) : undefined;
 
   switch (panel.type) {
     case 'date':
@@ -341,7 +343,11 @@ export function renderPanelContent(
 
     case 'weekly_parsha':
       return (
-        <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Parsha')}>
+        <GlassCard
+          compact={half}
+          style={phase2CardStyle}
+          onPress={() => !isEditing && navigateOrComingSoon(navigation, { type: 'screen', name: 'Parsha' })}
+        >
           <View style={[styles.parshaPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
             <Text style={[styles.parshaLabel, half && styles.halfHeading]}>This Week's Parsha</Text>
             <Text style={[styles.parshaName, half && { fontSize: 13 }]} numberOfLines={half ? 1 : 2}>
@@ -723,9 +729,9 @@ export function renderPanelContent(
 
     case 'nach_yomi':
       return (
-        <GlassCard compact={half}>
+        <GlassCard compact={half} style={phase2CardStyle}>
           <TouchableOpacity
-            onPress={() => !isEditing && (navigation as any).navigate('NachReader', { nachYomi: true })}
+            onPress={() => !isEditing && navigateOrComingSoon(navigation, { type: 'screen', name: 'NachReader', params: { nachYomi: true } })}
             activeOpacity={0.75}
             style={[styles.dafYomiButton, half && styles.dafYomiButtonHalf, half && styles.halfPanelInner]}
           >
@@ -740,9 +746,9 @@ export function renderPanelContent(
 
     case 'mishna_yomis':
       return (
-        <GlassCard compact={half}>
+        <GlassCard compact={half} style={phase2CardStyle}>
           <TouchableOpacity
-            onPress={() => !isEditing && (navigation as any).navigate('MishnaReader', { mishnaYomi: true })}
+            onPress={() => !isEditing && navigateOrComingSoon(navigation, { type: 'screen', name: 'MishnaReader', params: { mishnaYomi: true } })}
             activeOpacity={0.75}
             style={[styles.dafYomiButton, half && styles.dafYomiButtonHalf, half && styles.halfPanelInner]}
           >
@@ -775,9 +781,9 @@ export function renderPanelContent(
 
     case 'daf_yomi':
       return (
-        <GlassCard compact={half}>
+        <GlassCard compact={half} style={phase2CardStyle}>
           <TouchableOpacity
-            onPress={() => !isEditing && (navigation as any).navigate('GemaraReader', { dafYomi: true })}
+            onPress={() => !isEditing && navigateOrComingSoon(navigation, { type: 'screen', name: 'GemaraReader', params: { dafYomi: true } })}
             activeOpacity={0.75}
             style={[styles.dafYomiButton, half && styles.dafYomiButtonHalf, half && styles.halfPanelInner]}
           >
@@ -797,7 +803,11 @@ export function renderPanelContent(
     case 'parsha_summary': {
       const parshaSummaryLine = getParshaSummary(dayInfo?.parsha);
       return (
-        <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Parsha')}>
+        <GlassCard
+          compact={half}
+          style={phase2CardStyle}
+          onPress={() => !isEditing && navigateOrComingSoon(navigation, { type: 'screen', name: 'Parsha' })}
+        >
           <View style={[styles.learningPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
             <Text style={[styles.learningIcon, half && styles.halfEmoji]}>📜</Text>
             <Text style={[styles.learningTitle, half && styles.halfHeading]} numberOfLines={1}>
@@ -828,9 +838,9 @@ export function renderPanelContent(
 
     case 'rambam_daily':
       return (
-        <GlassCard compact={half}>
+        <GlassCard compact={half} style={phase2CardStyle}>
           <TouchableOpacity
-            onPress={() => !isEditing && (navigation as any).navigate('RambamReader', { rambamYomi: true })}
+            onPress={() => !isEditing && navigateOrComingSoon(navigation, { type: 'screen', name: 'RambamReader', params: { rambamYomi: true } })}
             activeOpacity={0.75}
             style={[styles.dafYomiButton, half && styles.dafYomiButtonHalf, half && styles.halfPanelInner]}
           >
@@ -851,7 +861,11 @@ export function renderPanelContent(
       const sm = shneyimMikraData;
       const smPercent = sm?.percentComplete ?? 0;
       return (
-        <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Chumash')}>
+        <GlassCard
+          compact={half}
+          style={phase2CardStyle}
+          onPress={() => !isEditing && navigateOrComingSoon(navigation, { type: 'screen', name: 'Chumash' })}
+        >
           <View style={[styles.chumashPanelCompact, half && styles.halfPanelInner]}>
             <Text style={[styles.learningIcon, half && styles.halfEmoji]}>📜</Text>
             <Text style={[styles.learningTitle, half && styles.halfHeading]} numberOfLines={1}>

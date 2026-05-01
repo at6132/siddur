@@ -83,11 +83,12 @@ export const TehillimReaderScreen: React.FC = () => {
 
   const checkIfDailyChapter = async (chapterNum: number) => {
     const progress = await DailyTehillimTracker.getTodaysProgress();
+    const currentBookCompleted = await DailyTehillimTracker.getCurrentBookCompleted();
     setGoalType(progress.goalType);
     const whenever = progress.goalType === 'whenever';
     setIsWheneverMode(whenever);
     setIsDailyChapter(whenever || progress.totalChapters.includes(chapterNum));
-    setIsMarkedComplete(progress.chaptersCompleted?.includes(chapterNum) ?? false);
+    setIsMarkedComplete(currentBookCompleted.includes(chapterNum));
   };
 
   const getWordCount = (): number => {
@@ -100,13 +101,14 @@ export const TehillimReaderScreen: React.FC = () => {
 
   const markChapterComplete = async () => {
     const progress = await DailyTehillimTracker.getTodaysProgress();
+    const currentBookCompleted = await DailyTehillimTracker.getCurrentBookCompleted();
     const canCompleteOutsideSchedule =
       progress.goalType === 'weekly' || progress.goalType === 'monthly';
     const inSchedule =
       progress.goalType === 'whenever' ||
       progress.totalChapters.includes(psalm) ||
       canCompleteOutsideSchedule;
-    const alreadyComplete = progress.chaptersCompleted?.includes(psalm) ?? false;
+    const alreadyComplete = currentBookCompleted.includes(psalm);
     if (inSchedule && !alreadyComplete) {
       const start = readingStartTime.current ?? Date.now();
       const durationMs = Math.max(1000, Date.now() - start);

@@ -11,6 +11,11 @@
  *
  * ## Caller
  * `SefariaService.fetchSiddurSection` for `amidah` | `mincha_amidah` | `maariv_amidah` only.
+ *
+ * ## Other Shacharit / siddur sections
+ * Non-Amidah Shacharit string cuts (e.g. concluding Aleinu / Kaddish) live in `ShacharitSectionPipelines.ts`.
+ *
+ * **English:** Same shape as Shacharit pipelines — `english` is carried for compatibility; Hebrew is what we maintain.
  */
 
 import {

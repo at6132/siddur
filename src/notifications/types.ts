@@ -4,15 +4,13 @@
 
 export type NotificationType =
   | 'daily_tehillim'
-  | 'mincha_time'
   | 'hallel'
   | 'anenu'
   | 'shabbos_coming'
   | 'candle_lighting'
   | 'shabbos_clock_prep'
   | 'shabbos_clock_alarm'
-  | 'sefiras_haomer'
-  | 'neshama_reminder';
+  | 'sefiras_haomer';
 
 export interface NotificationConfig {
   id: string;

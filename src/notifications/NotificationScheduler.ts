@@ -175,7 +175,7 @@ export class NotificationScheduler {
       await this.scheduleShekiyaReminder(preferences, context);
     }
 
-    // Streak reminders (invisible, not in settings - gentle nudge if about to lose streak)
+    // Streak reminders (invisible, not in settings — nudge if about to lose streak)
     await this.scheduleStreakReminders();
   }
 
@@ -456,9 +456,9 @@ export class NotificationScheduler {
     if (!pr) return;
 
     const items: Array<{ key: 'shacharis' | 'mincha' | 'maariv'; title: string; body: string }> = [
-      { key: 'shacharis', title: 'Shacharis', body: 'A gentle reminder for Shacharis' },
-      { key: 'mincha', title: 'Mincha', body: 'A gentle reminder for Mincha' },
-      { key: 'maariv', title: 'Maariv', body: 'A gentle reminder for Maariv' },
+      { key: 'shacharis', title: 'Shacharis', body: 'Time for Shacharis' },
+      { key: 'mincha', title: 'Mincha', body: 'Time for Mincha' },
+      { key: 'maariv', title: 'Maariv', body: 'Time for Maariv' },
     ];
 
     for (const { key, title, body } of items) {
@@ -784,7 +784,7 @@ export class NotificationScheduler {
 
   /**
    * Schedule streak nudges (invisible in settings). If user did Tehillim/Gratitude/Habits
-   * yesterday but not today, schedule one gentle reminder for 8 PM today.
+   * yesterday but not today, schedule one reminder for 8 PM today.
    */
   private static async scheduleStreakReminders(): Promise<void> {
     const now = new Date();

@@ -13,12 +13,12 @@ import { MESECHTAS } from '../gemara/GemaraScreen';
 import { MISHNA_TRACTATES } from '../../src/services/MishnaYomiService';
 import { NACH_BOOKS } from '../../src/services/NachYomiService';
 import { RAMBAM_BOOKS } from '../../src/services/RambamStructure';
+import { navigateOrComingSoon, LIBRARY_GRID_COMING_SOON_IDS } from '../../src/feature/LibraryFeatureAccess';
 
 interface PrayerItem {
   id: string;
   title: string;
   hebrewTitle: string;
-  subtitle: string;
   icon: string;
   service: 'shacharis' | 'mincha' | 'maariv';
   color: string;
@@ -28,10 +28,11 @@ interface PrayerItem {
 interface LibraryItem {
   id: string;
   title: string;
-  subtitle: string;
   icon: string;
   screen: string;
   color: string;
+  /** Hidden; powers Library search only */
+  searchKeywords: string;
 }
 
 const LIBRARY_QUICK_ACCESS_KEY = '@library_quick_access_perakim';
@@ -70,7 +71,6 @@ const PRAYER_ITEMS: PrayerItem[] = [
     id: 'shacharis',
     title: 'Shacharis',
     hebrewTitle: 'שחרית',
-    subtitle: 'Morning prayers',
     icon: '🌅',
     service: 'shacharis',
     color: 'rgba(255, 200, 120, 0.3)',
@@ -80,7 +80,6 @@ const PRAYER_ITEMS: PrayerItem[] = [
     id: 'mincha',
     title: 'Mincha',
     hebrewTitle: 'מנחה',
-    subtitle: 'Afternoon prayers',
     icon: '☀️',
     service: 'mincha',
     color: 'rgba(255, 180, 100, 0.3)',
@@ -90,7 +89,6 @@ const PRAYER_ITEMS: PrayerItem[] = [
     id: 'maariv',
     title: 'Maariv',
     hebrewTitle: 'מעריב',
-    subtitle: 'Evening prayers',
     icon: '🌙',
     service: 'maariv',
     color: 'rgba(100, 120, 180, 0.3)',
@@ -99,95 +97,93 @@ const PRAYER_ITEMS: PrayerItem[] = [
 ];
 
 const LIBRARY_ITEMS: LibraryItem[] = [
-  // Most used first
   {
     id: 'asher_yatzar',
     title: 'Asher Yatzar',
-    subtitle: 'Blessing after using the bathroom',
     icon: '💧',
     screen: 'AsherYatzar',
     color: 'rgba(165, 212, 196, 0.3)',
+    searchKeywords: 'asher yatzar bathroom blessing ברכה',
   },
   {
     id: 'bedtime',
     title: 'Bedtime Shema',
-    subtitle: 'Kriyas Shema al haMitah • Before sleep',
     icon: '📿',
     screen: 'SiddurReader',
     color: 'rgba(165, 180, 212, 0.3)',
+    searchKeywords: 'bedtime shema kriyat mitah sleep קריאת שמע המטה',
   },
   {
     id: 'tehillim',
     title: 'Tehillim',
-    subtitle: '150 chapters • Set daily or weekly goals',
     icon: '📖',
     screen: 'TehillimList',
     color: 'rgba(212, 165, 184, 0.3)',
+    searchKeywords: 'tehillim psalms chapters perakim goals תהלים',
   },
   {
     id: 'tefilas_haderech',
     title: 'Tefillas HaDerech',
-    subtitle: 'Traveler’s prayer • Safe journey',
     icon: '✈️',
     screen: 'TefillasHaDerech',
     color: 'rgba(196, 212, 232, 0.3)',
+    searchKeywords: 'tefillas haderech travel journey דרך',
   },
   {
     id: 'bentching',
     title: 'Bentching',
-    subtitle: 'Birkas Hamazon • Grace after meals',
     icon: '🍞',
     screen: 'Bentching',
     color: 'rgba(212, 196, 165, 0.3)',
+    searchKeywords: 'bentching birkas hamazon grace meals ברכת המזון',
   },
-  // Rest of library
   {
     id: 'gemara',
     title: 'Gemara',
-    subtitle: 'Talmud Bavli • Daf Yomi & masechtos',
     icon: '📚',
     screen: 'Gemara',
     color: 'rgba(180, 160, 255, 0.3)',
+    searchKeywords: 'gemara talmud bavli daf yomi masechta מסכת גמרא',
   },
   {
     id: 'nach',
     title: 'Nach',
-    subtitle: 'Neviim & Ketuvim • Nach Yomi & chapters',
     icon: '📖',
     screen: 'Nach',
     color: 'rgba(160, 180, 255, 0.3)',
+    searchKeywords: 'nach neviim ketuvim tanakh yomi פרקים נביאים כתובים',
   },
   {
     id: 'mishna',
     title: 'Mishna',
-    subtitle: '6 sedarim • Mishna Yomi & perakim',
     icon: '📕',
     screen: 'Mishna',
     color: 'rgba(200, 165, 165, 0.3)',
+    searchKeywords: 'mishna mishnah seder yomi משנה',
   },
   {
     id: 'rambam',
     title: 'Rambam',
-    subtitle: 'Mishneh Torah • Rambam Yomi (3 perakim)',
     icon: '📕',
     screen: 'Rambam',
     color: 'rgba(180, 140, 100, 0.3)',
+    searchKeywords: 'rambam mishneh torah hilchot yomi רמבם הלכות',
   },
   {
     id: 'chumash',
     title: 'Chumash',
-    subtitle: 'Five Books • Shneyim Mikra VeChad Targum',
     icon: '📜',
     screen: 'Chumash',
     color: 'rgba(165, 200, 165, 0.3)',
+    searchKeywords: 'chumash torah five books shneyim mikra targum חומש שניים מקרא',
   },
   {
     id: 'pirkei_avos',
     title: 'Pirkei Avos',
-    subtitle: 'Ethics of the Fathers • 6 perakim',
     icon: '📖',
     screen: 'PirkeiAvos',
     color: 'rgba(165, 180, 165, 0.3)',
+    searchKeywords: 'pirkei avos avot ethics fathers פרקי אבות',
   },
 ];
 
@@ -195,7 +191,6 @@ const LIBRARY_ITEMS: LibraryItem[] = [
 type SearchableItem = {
   id: string;
   title: string;
-  subtitle: string;
   keywords: string;
   icon: string;
   color: string;
@@ -213,92 +208,76 @@ function buildSearchableItems(
     ...PRAYER_ITEMS.map((p) => ({
       id: p.id,
       title: p.title,
-      subtitle: p.subtitle,
-      keywords: `${p.title} ${p.hebrewTitle} ${p.subtitle} שחרית מנחה מעריב morning afternoon evening prayer`,
+      keywords: `${p.title} ${p.hebrewTitle} שחרית מנחה מעריב morning afternoon evening prayer`,
       icon: p.icon,
       color: p.color,
       onPress: () => handlePrayerPress(p),
     })),
-    // Quick Links (unique ids to avoid key collision with LIBRARY_ITEMS)
-    { id: 'quick_asher_yatzar', title: 'Asher Yatzar', subtitle: 'Blessing after bathroom', keywords: 'asher yatzar bathroom blessing ברכה', icon: '💧', color: 'rgba(165, 212, 196, 0.3)', onPress: () => nav.navigate('SiddurReader', { service: 'asher_yatzar' }) },
-    { id: 'quick_tehillim', title: 'Tehillim', subtitle: '150 perakim', keywords: 'tehillim psalm perek תהלים', icon: '📖', color: 'rgba(212, 165, 184, 0.3)', onPress: () => nav.navigate('TehillimList') },
-    { id: 'quick_bentching', title: 'Bentching', subtitle: 'Birkas Hamazon', keywords: 'bentching birkas hamazon grace meals ברכת המזון', icon: '🍞', color: 'rgba(212, 196, 165, 0.3)', onPress: () => nav.navigate('SiddurReader', { service: 'bentching' }) },
-    // Parsha
-    { id: 'parsha', title: 'Parsha', subtitle: 'Weekly Torah portion', keywords: 'parsha torah portion weekly פרשה', icon: '📜', color: 'rgba(165, 200, 165, 0.3)', onPress: () => nav.navigate('Parsha') },
-    { id: 'chumash_search', title: 'Chumash', subtitle: 'Shneyim Mikra VeChad Targum', keywords: 'chumash torah five books shneyim mikra chad targum חומש שניים מקרא', icon: '📜', color: 'rgba(165, 200, 165, 0.3)', onPress: () => nav.navigate('Chumash') },
-    // More Texts
+    { id: 'quick_asher_yatzar', title: 'Asher Yatzar', keywords: 'asher yatzar bathroom blessing ברכה', icon: '💧', color: 'rgba(165, 212, 196, 0.3)', onPress: () => nav.navigate('SiddurReader', { service: 'asher_yatzar' }) },
+    { id: 'quick_tehillim', title: 'Tehillim', keywords: 'tehillim psalm perakim 150 תהלים', icon: '📖', color: 'rgba(212, 165, 184, 0.3)', onPress: () => nav.navigate('TehillimList') },
+    { id: 'quick_bentching', title: 'Bentching', keywords: 'bentching birkas hamazon grace meals ברכת המזון', icon: '🍞', color: 'rgba(212, 196, 165, 0.3)', onPress: () => nav.navigate('SiddurReader', { service: 'bentching' }) },
+    { id: 'parsha', title: 'Parsha', keywords: 'parsha torah portion weekly sedra פרשה', icon: '📜', color: 'rgba(165, 200, 165, 0.3)', onPress: () => navigateOrComingSoon(nav, { type: 'screen', name: 'Parsha' }) },
+    { id: 'chumash_search', title: 'Chumash', keywords: 'chumash torah five books shneyim mikra targum חומש שניים מקרא', icon: '📜', color: 'rgba(165, 200, 165, 0.3)', onPress: () => navigateOrComingSoon(nav, { type: 'screen', name: 'Chumash' }) },
     ...LIBRARY_ITEMS.map((i) => ({
       id: i.id,
       title: i.title,
-      subtitle: i.subtitle,
-      keywords: `${i.title} ${i.subtitle} gemara talmud nach mishna rambam chumash torah shneyim mikra parsha pirkei avos tehillim brachos bentching bedtime tefilas haderech`,
+      keywords: `${i.title} ${i.searchKeywords} gemara talmud nach mishna rambam chumash torah parsha pirkei avos tehillim brachos bentching bedtime tefilas haderech`,
       icon: i.icon,
       color: i.color,
       onPress: () => handleItemPress(i),
     })),
-    // Gemara masechtos
     ...MESECHTAS.map((m) => ({
       id: `gemara_${m.name}`,
       title: m.name,
-      subtitle: `Gemara • ${m.dapim} דפים`,
-      keywords: `gemara talmud daf ${m.name} ${m.hebrew} מסכת`,
+      keywords: `gemara talmud daf ${m.dapim} ${m.name} ${m.hebrew} מסכת דפים`,
       icon: '📚',
       color: 'rgba(180, 160, 255, 0.3)',
-      onPress: () => nav.navigate('GemaraTractate', { tractate: m.name }),
+      onPress: () => navigateOrComingSoon(nav, { type: 'screen', name: 'GemaraTractate', params: { tractate: m.name } }),
     })),
-    // Mishna tractates
     ...MISHNA_TRACTATES.map((t) => ({
       id: `mishna_${t.sefariaName}`,
       title: t.sefariaName,
-      subtitle: `Mishna • ${t.perakim} פרקים`,
-      keywords: `mishna mishnah ${t.sefariaName} ${t.hebrew} מסכת`,
+      keywords: `mishna mishnah ${t.perakim} ${t.sefariaName} ${t.hebrew} מסכת פרקים`,
       icon: '📕',
       color: 'rgba(200, 165, 165, 0.3)',
-      onPress: () => nav.navigate('MishnaTractate', { tractate: t.sefariaName }),
+      onPress: () => navigateOrComingSoon(nav, { type: 'screen', name: 'MishnaTractate', params: { tractate: t.sefariaName } }),
     })),
-    // Nach books
     ...NACH_BOOKS.map((b) => ({
       id: `nach_${b.sefariaName}`,
       title: b.sefariaName,
-      subtitle: `Nach • ${b.chapters} פרקים`,
-      keywords: `nach tanakh neviim ketuvim ${b.sefariaName} ${b.hebrew} נביאים כתובים`,
+      keywords: `nach tanakh neviim ketuvim ${b.chapters} ${b.sefariaName} ${b.hebrew} נביאים כתובים פרקים`,
       icon: '📖',
       color: 'rgba(160, 180, 255, 0.3)',
-      onPress: () => nav.navigate('NachBook', { book: b.sefariaName }),
+      onPress: () => navigateOrComingSoon(nav, { type: 'screen', name: 'NachBook', params: { book: b.sefariaName } }),
     })),
-    // Rambam sections (Hilchot)
     ...RAMBAM_BOOKS.flatMap((book) =>
       book.sections.map((s) => ({
         id: `rambam_${s.sefariaName.replace(/\s+/g, '_')}`,
         title: s.hebrew,
-        subtitle: `Rambam ${book.english} • ${s.chapters} פרקים`,
-        keywords: `rambam mishneh torah hilchos ${s.sefariaName} ${s.hebrew} ${book.english} הלכות`,
+        keywords: `rambam mishneh torah hilchos ${s.chapters} ${s.sefariaName} ${s.hebrew} ${book.english} הלכות פרקים`,
         icon: '📕',
         color: 'rgba(180, 140, 100, 0.3)',
-        onPress: () => nav.navigate('RambamSection', { sefariaName: s.sefariaName }),
+        onPress: () => navigateOrComingSoon(nav, { type: 'screen', name: 'RambamSection', params: { sefariaName: s.sefariaName } }),
       }))
     ),
-    // Pirkei Avos perakim
     ...[1, 2, 3, 4, 5, 6].map((p) => ({
       id: `pirkei_avos_${p}`,
       title: `Pirkei Avos ${p}`,
-      subtitle: 'Perek ' + p,
-      keywords: `pirkei avos avot perek ${p} פרקי אבות`,
+      keywords: `pirkei avos avot perek ${p} פרקי אבות פרק`,
       icon: '📖',
       color: 'rgba(165, 180, 165, 0.3)',
-      onPress: () => nav.navigate('MishnaReader', { tractate: 'Pirkei Avot', perek: p }),
+      onPress: () => navigateOrComingSoon(nav, { type: 'screen', name: 'MishnaReader', params: { tractate: 'Pirkei Avot', perek: p } }),
     })),
-    // Quick Access
-    { id: 'tehillim_23', title: 'Tehillim 23', subtitle: 'Psalm 23', keywords: 'tehillim psalm 23 mizmor תהלים', icon: '🌟', color: 'rgba(212, 165, 184, 0.3)', onPress: () => nav.navigate('TehillimReader', { psalm: 23 }) },
-    { id: 'tehillim_91', title: 'Tehillim 91', subtitle: 'Psalm 91', keywords: 'tehillim psalm 91 mizmor תהלים', icon: '🛡️', color: 'rgba(212, 165, 184, 0.3)', onPress: () => nav.navigate('TehillimReader', { psalm: 91 }) },
-    { id: 'tehillim_121', title: 'Tehillim 121', subtitle: 'Psalm 121', keywords: 'tehillim psalm 121 mizmor תהלים', icon: '⛰️', color: 'rgba(212, 165, 184, 0.3)', onPress: () => nav.navigate('TehillimReader', { psalm: 121 }) },
+    { id: 'tehillim_23', title: 'Tehillim 23', keywords: 'tehillim psalm 23 mizmor תהלים', icon: '🌟', color: 'rgba(212, 165, 184, 0.3)', onPress: () => nav.navigate('TehillimReader', { psalm: 23 }) },
+    { id: 'tehillim_91', title: 'Tehillim 91', keywords: 'tehillim psalm 91 mizmor תהלים', icon: '🛡️', color: 'rgba(212, 165, 184, 0.3)', onPress: () => nav.navigate('TehillimReader', { psalm: 91 }) },
+    { id: 'tehillim_121', title: 'Tehillim 121', keywords: 'tehillim psalm 121 mizmor תהלים', icon: '⛰️', color: 'rgba(212, 165, 184, 0.3)', onPress: () => nav.navigate('TehillimReader', { psalm: 121 }) },
   ];
 }
 
 function matchesSearch(item: SearchableItem, q: string): boolean {
   if (!q.trim()) return true;
   const words = q.toLowerCase().trim().split(/\s+/);
-  const searchable = `${item.title} ${item.subtitle} ${item.keywords}`.toLowerCase();
+  const searchable = `${item.title} ${item.keywords}`.toLowerCase();
   return words.every((word) => searchable.includes(word));
 }
 
@@ -308,24 +287,26 @@ const GlassCard: React.FC<{
   style?: any;
   onPress?: () => void;
   bgColor?: string;
-}> = ({ children, style, onPress, bgColor }) => {
+  compact?: boolean;
+}> = ({ children, style, onPress, bgColor, compact }) => {
   const cardStyles = useStyles();
+  const inner = [
+    cardStyles.glassInner,
+    compact && cardStyles.glassInnerCompact,
+    bgColor && { backgroundColor: bgColor },
+  ];
   const content = (
     <View style={[cardStyles.glassCard, style]}>
       {Platform.OS !== 'web' ? (
         <BlurView intensity={50} style={cardStyles.glassBlur}>
-          <View style={[cardStyles.glassInner, bgColor && { backgroundColor: bgColor }]}>
-            {children}
-          </View>
+          <View style={inner}>{children}</View>
         </BlurView>
       ) : (
         <LinearGradient
           colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
           style={cardStyles.glassBlur}
         >
-          <View style={[cardStyles.glassInner, bgColor && { backgroundColor: bgColor }]}>
-            {children}
-          </View>
+          <View style={inner}>{children}</View>
         </LinearGradient>
       )}
     </View>
@@ -346,35 +327,34 @@ export const LibraryScreen: React.FC = () => {
   const { theme } = useTheme();
   const styles = useStyles();
 
-  const handlePrayerPress = (item: PrayerItem) => {
+  const handlePrayerPress = useCallback((item: PrayerItem) => {
     navigation.navigate('SiddurReader' as never, { service: item.service } as never);
-  };
+  }, [navigation]);
 
-  const handleItemPress = (item: LibraryItem) => {
-    if (item.id === 'parsha') {
-      navigation.navigate('Parsha' as never);
-    } else if (item.id === 'gemara') {
-      navigation.navigate('Gemara' as never);
-    } else if (item.id === 'nach') {
-      navigation.navigate('Nach' as never);
-    } else if (item.id === 'mishna') {
-      navigation.navigate('Mishna' as never);
-    } else if (item.id === 'rambam') {
-      navigation.navigate('Rambam' as never);
-    } else if (item.id === 'chumash') {
-      navigation.navigate('Chumash' as never);
-    } else if (item.id === 'pirkei_avos') {
-      navigation.navigate('PirkeiAvos' as never);
-    } else if (item.id === 'tehillim' || item.id === 'tehillim_more') {
-      navigation.navigate('TehillimList' as never);
-    } else if (item.id === 'bentching') {
-      navigation.navigate('SiddurReader' as never, { service: 'bentching' } as never);
-    } else if (item.id === 'bedtime') {
-      navigation.navigate('SiddurReader' as never, { service: 'bedtime' } as never);
-    } else {
-      navigation.navigate('SiddurReader' as never, { service: item.id } as never);
-    }
-  };
+  const handleItemPress = useCallback(
+    (item: LibraryItem) => {
+      const nav = navigation as any;
+      if (item.id === 'tehillim' || item.id === 'tehillim_more') {
+        nav.navigate('TehillimList');
+        return;
+      }
+      const screenById: Record<string, string> = {
+        gemara: 'Gemara',
+        nach: 'Nach',
+        mishna: 'Mishna',
+        rambam: 'Rambam',
+        chumash: 'Chumash',
+        pirkei_avos: 'PirkeiAvos',
+      };
+      const screen = screenById[item.id];
+      if (screen) {
+        navigateOrComingSoon(nav, { type: 'screen', name: screen });
+        return;
+      }
+      navigateOrComingSoon(nav, { type: 'siddur', service: item.id });
+    },
+    [navigation],
+  );
 
   const [searchQuery, setSearchQuery] = useState('');
   const [quickAccessPerakim, setQuickAccessPerakim] = useState<number[]>(DEFAULT_QUICK_ACCESS_PERAKIM);
@@ -473,6 +453,7 @@ export const LibraryScreen: React.FC = () => {
                   key={item.id}
                   style={styles.searchResultCard}
                   bgColor={item.color}
+                  compact
                   onPress={item.onPress}
                 >
                   <TouchableOpacity
@@ -484,7 +465,6 @@ export const LibraryScreen: React.FC = () => {
                       <Text style={styles.prayerIcon}>{item.icon}</Text>
                       <View style={styles.prayerInfo}>
                         <Text style={styles.prayerTitle}>{item.title}</Text>
-                        <Text style={styles.prayerSubtitle}>{item.subtitle}</Text>
                       </View>
                     </View>
                     <Text style={styles.prayerArrow}>→</Text>
@@ -505,7 +485,7 @@ export const LibraryScreen: React.FC = () => {
         <View style={styles.prayerCards}>
           {PRAYER_ITEMS.map((item, index) => (
             <FadeIn key={item.id} delay={100 + index * 50}>
-              <GlassCard style={styles.prayerCard} bgColor={item.color}>
+              <GlassCard style={styles.prayerCard} bgColor={item.color} compact>
                 <TouchableOpacity
                   style={styles.prayerCardContent}
                   onPress={() => handlePrayerPress(item)}
@@ -518,7 +498,6 @@ export const LibraryScreen: React.FC = () => {
                         <Text style={styles.prayerTitle}>{item.title}</Text>
                         <Text style={styles.prayerHebrew}>{item.hebrewTitle}</Text>
                       </View>
-                      <Text style={styles.prayerSubtitle}>{item.subtitle}</Text>
                     </View>
                   </View>
                   <Text style={styles.prayerArrow}>→</Text>
@@ -534,7 +513,7 @@ export const LibraryScreen: React.FC = () => {
           <View style={styles.quickLinksRow}>
             <View style={styles.quickLinkCardWrapper}>
               <View style={styles.quickLinkCardFill}>
-                <GlassCard style={styles.quickLinkCard} bgColor="rgba(165, 212, 196, 0.3)" onPress={() => navigation.navigate('SiddurReader' as never, { service: 'asher_yatzar' } as never)}>
+                <GlassCard style={styles.quickLinkCard} bgColor="rgba(165, 212, 196, 0.3)" compact onPress={() => navigation.navigate('SiddurReader' as never, { service: 'asher_yatzar' } as never)}>
                   <View style={styles.quickLinkCardInner}>
                     <Text style={styles.itemIcon}>💧</Text>
                     <Text style={styles.quickLinkTitle} numberOfLines={1}>Asher Yatzar</Text>
@@ -544,7 +523,7 @@ export const LibraryScreen: React.FC = () => {
             </View>
             <View style={styles.quickLinkCardWrapper}>
               <View style={styles.quickLinkCardFill}>
-                <GlassCard style={styles.quickLinkCard} bgColor="rgba(212, 165, 184, 0.3)" onPress={() => navigation.navigate('TehillimList' as never)}>
+                <GlassCard style={styles.quickLinkCard} bgColor="rgba(212, 165, 184, 0.3)" compact onPress={() => navigation.navigate('TehillimList' as never)}>
                   <View style={styles.quickLinkCardInner}>
                     <Text style={styles.itemIcon}>📖</Text>
                     <Text style={styles.quickLinkTitle} numberOfLines={1}>Tehillim</Text>
@@ -554,7 +533,7 @@ export const LibraryScreen: React.FC = () => {
             </View>
             <View style={styles.quickLinkCardWrapper}>
               <View style={styles.quickLinkCardFill}>
-                <GlassCard style={styles.quickLinkCard} bgColor="rgba(212, 196, 165, 0.3)" onPress={() => navigation.navigate('SiddurReader' as never, { service: 'bentching' } as never)}>
+                <GlassCard style={styles.quickLinkCard} bgColor="rgba(212, 196, 165, 0.3)" compact onPress={() => navigation.navigate('SiddurReader' as never, { service: 'bentching' } as never)}>
                   <View style={styles.quickLinkCardInner}>
                     <Text style={styles.itemIcon}>🍞</Text>
                     <Text style={styles.quickLinkTitle} numberOfLines={1}>Bentching</Text>
@@ -569,13 +548,17 @@ export const LibraryScreen: React.FC = () => {
 
         {/* Parsha */}
         <FadeIn delay={250}>
-          <GlassCard style={styles.prayerCard} bgColor="rgba(165, 200, 165, 0.3)" onPress={() => navigation.navigate('Parsha' as never)}>
+          <GlassCard
+            style={[styles.prayerCard, styles.libraryCardMuted]}
+            bgColor="rgba(165, 200, 165, 0.3)"
+            compact
+            onPress={() => navigateOrComingSoon(navigation as any, { type: 'screen', name: 'Parsha' })}
+          >
             <View style={styles.prayerCardContent}>
               <View style={styles.prayerCardLeft}>
                 <Text style={styles.prayerIcon}>📜</Text>
                 <View style={styles.prayerInfo}>
                   <Text style={styles.prayerTitle}>Parsha</Text>
-                  <Text style={styles.prayerSubtitle}>Weekly Torah portion</Text>
                 </View>
               </View>
               <Text style={styles.prayerArrow}>→</Text>
@@ -593,14 +576,14 @@ export const LibraryScreen: React.FC = () => {
             <View key={item.id} style={styles.gridItemWrapper}>
               <FadeIn delay={350 + index * 30}>
                 <GlassCard
-                  style={styles.itemCard}
+                  style={[styles.itemCard, LIBRARY_GRID_COMING_SOON_IDS.has(item.id) && styles.libraryCardMuted]}
+                  compact
                   onPress={() => handleItemPress(item)}
                   bgColor={item.color}
                 >
                   <View style={styles.itemCardInner}>
                     <Text style={styles.itemIcon}>{item.icon}</Text>
-                    <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
-                    <Text style={styles.itemSubtitle} numberOfLines={2}>{item.subtitle}</Text>
+                    <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
                   </View>
                 </GlassCard>
               </FadeIn>
@@ -749,7 +732,7 @@ function createLibraryStyles(theme: AppTheme) {
     marginTop: spacing.lg,
   },
   prayerCards: {
-    gap: spacing.md,
+    gap: spacing.sm,
     marginBottom: spacing.md,
   },
   sectionDivider: {
@@ -775,11 +758,11 @@ function createLibraryStyles(theme: AppTheme) {
   quickLinkCardFill: {
     flex: 1,
     width: '100%',
-    minHeight: 90,
+    minHeight: 76,
   },
   quickLinkCard: {
     flex: 1,
-    minHeight: 90,
+    minHeight: 76,
   },
   quickLinkCardInner: {
     flex: 1,
@@ -811,7 +794,14 @@ function createLibraryStyles(theme: AppTheme) {
     padding: spacing.md,
     backgroundColor: theme.isDark ? 'rgba(10,10,15,0.55)' : 'rgba(255,255,255,0.4)',
   },
+  glassInnerCompact: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
   prayerCard: {},
+  libraryCardMuted: {
+    opacity: 0.52,
+  },
   prayerCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -823,8 +813,8 @@ function createLibraryStyles(theme: AppTheme) {
     flex: 1,
   },
   prayerIcon: {
-    fontSize: 36,
-    marginRight: spacing.md,
+    fontSize: 32,
+    marginRight: spacing.sm + 2,
   },
   prayerInfo: {
     flex: 1,
@@ -844,12 +834,6 @@ function createLibraryStyles(theme: AppTheme) {
     fontSize: 16,
     color: theme.colors.text.secondary,
     letterSpacing: 0,
-  },
-  prayerSubtitle: {
-    fontFamily: fonts.body.regular,
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-    marginTop: 2,
   },
   prayerArrow: {
     fontFamily: fonts.body.bold,
@@ -873,28 +857,22 @@ function createLibraryStyles(theme: AppTheme) {
   },
   itemCard: {
     width: '100%',
-    minHeight: 130,
+    minHeight: 88,
     overflow: 'hidden',
   },
   itemCardInner: {
     flex: 1,
-    minHeight: 100,
+    minHeight: 72,
+    justifyContent: 'center',
   },
   itemIcon: {
-    fontSize: 26,
-    marginBottom: spacing.sm,
+    fontSize: 24,
+    marginBottom: spacing.xs,
   },
   itemTitle: {
     fontFamily: fonts.heading.semiBold,
-    fontSize: 15,
+    fontSize: 14,
     color: theme.colors.text.primary,
-    marginBottom: 4,
-  },
-  itemSubtitle: {
-    fontFamily: fonts.body.regular,
-    fontSize: 11,
-    color: theme.isDark ? theme.colors.text.secondary : theme.colors.neutral[700],
-    lineHeight: 15,
   },
   quickAccessRow: {
     flexDirection: 'row',

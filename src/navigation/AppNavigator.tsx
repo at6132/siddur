@@ -14,6 +14,7 @@ import { TehillimSettingsScreen } from '../../app/tehillim/TehillimSettingsScree
 import { CreateSharedTehillimScreen } from '../../app/tehillim/CreateSharedTehillimScreen';
 import { SharedTehillimViewScreen } from '../../app/tehillim/SharedTehillimViewScreen';
 import { LibraryScreen } from '../../app/library/LibraryScreen';
+import { ComingSoonScreen } from '../../app/library/ComingSoonScreen';
 import { ParshaScreen } from '../../app/library/ParshaScreen';
 import { CustomizeHome } from '../../app/home/CustomizeHome';
 import { PanelsMarketplace } from '../../app/home/PanelsMarketplace';
@@ -270,6 +271,11 @@ export default function AppNavigator() {
             options={{
               headerShown: false,
             }}
+          />
+          <Stack.Screen
+            name="ComingSoon"
+            component={ComingSoonScreen}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Parsha"

@@ -994,6 +994,8 @@ export const SiddurReaderScreen: React.FC = () => {
   const [expandedAmidahKedusha, setExpandedAmidahKedusha] = useState<Record<string, boolean>>({});
   /** Amidah: Modim deRabbanan paragraph collapsed by default (tap "מודים דרבנן" to expand). */
   const [expandedAmidahModimDerabanan, setExpandedAmidahModimDerabanan] = useState<Record<string, boolean>>({});
+  /** Birchot HaShachar: optional long Zichronos / הרחבת ברכות השחר block collapsed by default. */
+  const [expandedBirchosHashacharExpansion, setExpandedBirchosHashacharExpansion] = useState<Record<string, boolean>>({});
 
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollYRef = useRef(0);
@@ -1741,6 +1743,158 @@ export const SiddurReaderScreen: React.FC = () => {
                         )}
                       </>
                     ) : null;
+                    const bhExp = content.birchosHashacharExpansionFoldout;
+                    const birchosHashacharExpBetweenMain = !!(
+                      content.hebrewBeforeBirchosHashacharExpansionFoldout?.trim() ||
+                      content.hebrewBeforeBirchosHashacharExpansionFoldoutSegments?.length
+                    );
+                    const showBirchosHashacharExpansion = !!bhExp?.hebrew?.trim();
+                    const renderHebrewBeforeBirchosHashacharExpansion = () => {
+                      const segs = content.hebrewBeforeBirchosHashacharExpansionFoldoutSegments;
+                      const h = content.hebrewBeforeBirchosHashacharExpansionFoldout;
+                      if (segs?.length) {
+                        return renderSegmentsAsBlocks(
+                          segs,
+                          hebrewStyle,
+                          hebrewInstructionStyle,
+                          styles.instructionBlock
+                        );
+                      }
+                      if (h?.trim()) {
+                        return (
+                          <View style={styles.hebrewSegmentBlock}>
+                            {renderTextWithParagraphs(h, hebrewStyle, spacing.lg, true)}
+                          </View>
+                        );
+                      }
+                      return null;
+                    };
+                    const renderEnglishBeforeBirchosHashacharExpansion = () => {
+                      if (!showEnglish) return null;
+                      const engSize = HEBREW_FONT_SIZES[textSize] * 0.85;
+                      const engLine = HEBREW_LINE_HEIGHTS[textSize] * 0.85;
+                      const engStyle = [styles.englishText, { fontSize: engSize, lineHeight: engLine }];
+                      const segs = content.englishBeforeBirchosHashacharExpansionFoldoutSegments;
+                      const e = content.englishBeforeBirchosHashacharExpansionFoldout;
+                      if (segs?.length) {
+                        return (
+                          <View style={styles.englishBlockWrap}>
+                            {segs.map((seg, idx) =>
+                              seg.italic ? (
+                                <Text
+                                  key={`tachpre-${idx}`}
+                                  style={[styles.englishText, styles.instructionText, { fontSize: engSize, lineHeight: engLine }]}
+                                >
+                                  {seg.text}
+                                </Text>
+                              ) : (
+                                <Text key={`tachpre-${idx}`} style={engStyle}>
+                                  {seg.text}
+                                </Text>
+                              )
+                            )}
+                          </View>
+                        );
+                      }
+                      if (e?.trim()) {
+                        return (
+                          <View style={styles.englishBlockWrap}>
+                            <Text style={engStyle}>{e}</Text>
+                          </View>
+                        );
+                      }
+                      return null;
+                    };
+                    const renderBhExpHebrew = () => {
+                      if (!bhExp) return null;
+                      if (bhExp.hebrewSegments?.length) {
+                        return renderSegmentsAsBlocks(
+                          bhExp.hebrewSegments,
+                          hebrewStyle,
+                          hebrewInstructionStyle,
+                          styles.instructionBlock
+                        );
+                      }
+                      return (
+                        <View style={styles.hebrewSegmentBlock}>
+                          {renderTextWithParagraphs(bhExp.hebrew, hebrewStyle, spacing.lg, true)}
+                        </View>
+                      );
+                    };
+                    const renderBhExpEnglish = () => {
+                      if (!bhExp || !showEnglish) return null;
+                      const engSize = HEBREW_FONT_SIZES[textSize] * 0.85;
+                      const engLine = HEBREW_LINE_HEIGHTS[textSize] * 0.85;
+                      const engStyle = [styles.englishText, { fontSize: engSize, lineHeight: engLine }];
+                      if (bhExp.englishSegments?.length) {
+                        return (
+                          <View style={styles.englishBlockWrap}>
+                            {bhExp.englishSegments.map((seg, idx) =>
+                              seg.italic ? (
+                                <Text
+                                  key={`bhexp-${idx}`}
+                                  style={[styles.englishText, styles.instructionText, { fontSize: engSize, lineHeight: engLine }]}
+                                >
+                                  {seg.text}
+                                </Text>
+                              ) : (
+                                <Text key={`bhexp-${idx}`} style={engStyle}>
+                                  {seg.text}
+                                </Text>
+                              )
+                            )}
+                          </View>
+                        );
+                      }
+                      if (bhExp.english) {
+                        return (
+                          <View style={styles.englishBlockWrap}>
+                            <Text style={engStyle}>{bhExp.english}</Text>
+                          </View>
+                        );
+                      }
+                      return null;
+                    };
+                    const birchosHashacharExpansionFoldoutUi = showBirchosHashacharExpansion ? (
+                      <>
+                        {!expandedBirchosHashacharExpansion[section.key] ? (
+                          <TouchableOpacity
+                            onPress={() => setExpandedBirchosHashacharExpansion((prev) => ({ ...prev, [section.key]: true }))}
+                            style={styles.collapsedBeforeAshreiRow}
+                            activeOpacity={0.7}
+                            accessibilityLabel="הרחבת ברכות השחר"
+                          >
+                            <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+                              הרחבת ברכות השחר
+                            </Text>
+                            <Text style={styles.collapsedBeforeAshreiChevron}>▼</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <>
+                            <TouchableOpacity
+                              onPress={() => setExpandedBirchosHashacharExpansion((prev) => ({ ...prev, [section.key]: false }))}
+                              style={styles.collapsedBeforeAshreiRow}
+                              activeOpacity={0.7}
+                              accessibilityLabel="הרחבת ברכות השחר"
+                            >
+                              <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+                                הרחבת ברכות השחר
+                              </Text>
+                              <Text style={styles.collapsedBeforeAshreiChevron}>▲</Text>
+                            </TouchableOpacity>
+                            {renderBhExpHebrew()}
+                            {renderBhExpEnglish()}
+                          </>
+                        )}
+                      </>
+                    ) : null;
+                    const birchosHashacharPrefixBlock =
+                      birchosHashacharExpBetweenMain ? (
+                        <>
+                          {renderHebrewBeforeBirchosHashacharExpansion()}
+                          {renderEnglishBeforeBirchosHashacharExpansion()}
+                        </>
+                      ) : null;
                     return (
                       <>
                         {isOptional && (
@@ -1755,6 +1909,8 @@ export const SiddurReaderScreen: React.FC = () => {
                         )}
                         {kedushaFoldoutBetweenMain ? (
                           <>
+                            {birchosHashacharPrefixBlock}
+                            {birchosHashacharExpansionFoldoutUi}
                             {renderHebrewBeforeKedusha()}
                             {amidahKedushaFoldoutUi}
                             {hasModim && modimFoldoutBetweenMain ? (
@@ -1772,6 +1928,8 @@ export const SiddurReaderScreen: React.FC = () => {
                           </>
                         ) : (
                           <>
+                            {birchosHashacharPrefixBlock}
+                            {birchosHashacharExpansionFoldoutUi}
                             {hasModim && modimFoldoutBetweenMain ? (
                               <>
                                 {renderHebrewBeforeModim()}
@@ -1850,10 +2008,12 @@ export const SiddurReaderScreen: React.FC = () => {
               showsVerticalScrollIndicator={true}
               keyboardShouldPersistTaps="handled"
             >
-              {sections.map((s, idx) => (
+              {sections
+                .filter((s) => s.key !== 'preparatory')
+                .map((s, idx, arr) => (
                 <TouchableOpacity
                   key={s.key}
-                  style={[styles.sectionMenuItem, idx === sections.length - 1 && styles.sectionMenuItemLast]}
+                  style={[styles.sectionMenuItem, idx === arr.length - 1 && styles.sectionMenuItemLast]}
                   onPress={() => scrollToSection(s.key)}
                 >
                   <Text style={styles.sectionMenuHebrew}>{s.hebrewTitle}</Text>
@@ -2151,11 +2311,107 @@ export const SiddurReaderScreen: React.FC = () => {
         )}
       </>
     ) : null;
+    const bhExp = content.birchosHashacharExpansionFoldout;
+    const birchosHashacharExpBetweenMain = !!(
+      content.hebrewBeforeBirchosHashacharExpansionFoldout?.trim() ||
+      content.hebrewBeforeBirchosHashacharExpansionFoldoutSegments?.length
+    );
+    const showBirchosHashacharExpansion = !!bhExp?.hebrew?.trim();
+    const sk = sectionKey ?? '';
+    const renderHebrewBeforeBirchosHashacharExpansionSingle = () => {
+      const segs = content.hebrewBeforeBirchosHashacharExpansionFoldoutSegments;
+      const h = content.hebrewBeforeBirchosHashacharExpansionFoldout;
+      if (segs?.length) {
+        return renderSegmentsAsBlocks(segs, hebrewStyle, hebrewInstructionStyle, styles.instructionBlock);
+      }
+      if (h?.trim()) {
+        return (
+          <View style={styles.hebrewSegmentBlock}>
+            {renderTextWithParagraphs(h, hebrewStyle, spacing.lg, true)}
+          </View>
+        );
+      }
+      return null;
+    };
+    const renderEnglishBeforeBirchosHashacharExpansionSingle = () => {
+      if (!showEnglish) return null;
+      const engSize = HEBREW_FONT_SIZES[textSize] * 0.85;
+      const engLine = HEBREW_LINE_HEIGHTS[textSize] * 0.85;
+      const engStyle = [styles.englishText, { fontSize: engSize, lineHeight: engLine }];
+      const engInstructionStyle = [styles.englishText, styles.instructionText, { fontSize: engSize, lineHeight: engLine }];
+      const segs = content.englishBeforeBirchosHashacharExpansionFoldoutSegments;
+      const e = content.englishBeforeBirchosHashacharExpansionFoldout;
+      if (segs?.length) {
+        return (
+          <View style={styles.englishBlockWrap}>
+            {segs.map((seg, idx) => (
+              <View key={`tachpre-s-${idx}`} style={seg.italic ? styles.instructionBlock : undefined}>
+                {renderTextWithParagraphs(
+                  seg.text,
+                  seg.italic ? engInstructionStyle : engStyle,
+                  seg.italic ? spacing.sm : spacing.lg
+                )}
+              </View>
+            ))}
+          </View>
+        );
+      }
+      if (e?.trim()) {
+        return (
+          <View style={styles.englishBlockWrap}>
+            {renderTextWithParagraphs(e, engStyle, spacing.lg)}
+          </View>
+        );
+      }
+      return null;
+    };
+    const birchosHashacharExpansionFoldoutUiSingle = showBirchosHashacharExpansion ? (
+      <>
+        {!expandedBirchosHashacharExpansion[sk] ? (
+          <TouchableOpacity
+            onPress={() => setExpandedBirchosHashacharExpansion((prev) => ({ ...prev, [sk]: true }))}
+            style={styles.collapsedBeforeAshreiRow}
+            activeOpacity={0.7}
+            accessibilityLabel="הרחבת ברכות השחר"
+          >
+            <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+              הרחבת ברכות השחר
+            </Text>
+            <Text style={styles.collapsedBeforeAshreiChevron}>▼</Text>
+          </TouchableOpacity>
+        ) : (
+          <>
+            <TouchableOpacity
+              onPress={() => setExpandedBirchosHashacharExpansion((prev) => ({ ...prev, [sk]: false }))}
+              style={styles.collapsedBeforeAshreiRow}
+              activeOpacity={0.7}
+              accessibilityLabel="הרחבת ברכות השחר"
+            >
+              <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
+                הרחבת ברכות השחר
+              </Text>
+              <Text style={styles.collapsedBeforeAshreiChevron}>▲</Text>
+            </TouchableOpacity>
+            {bhExp ? renderHebrewFrom(bhExp) : null}
+            {bhExp && showEnglish ? renderEnglishFrom(bhExp) : null}
+          </>
+        )}
+      </>
+    ) : null;
+    const birchosHashacharPrefixBlockSingle =
+      birchosHashacharExpBetweenMain ? (
+        <>
+          {renderHebrewBeforeBirchosHashacharExpansionSingle()}
+          {renderEnglishBeforeBirchosHashacharExpansionSingle()}
+        </>
+      ) : null;
     const hasModim = showModimFoldout;
     return (
       <>
         {kedushaFoldoutBetweenMain ? (
           <>
+            {birchosHashacharPrefixBlockSingle}
+            {birchosHashacharExpansionFoldoutUiSingle}
             {renderHebrewBeforeKedusha()}
             {amidahKedushaFoldoutUi}
             {hasModim && modimFoldoutBetweenMain ? (
@@ -2173,6 +2429,8 @@ export const SiddurReaderScreen: React.FC = () => {
           </>
         ) : (
           <>
+            {birchosHashacharPrefixBlockSingle}
+            {birchosHashacharExpansionFoldoutUiSingle}
             {hasModim && modimFoldoutBetweenMain ? (
               <>
                 {renderHebrewBeforeModim()}

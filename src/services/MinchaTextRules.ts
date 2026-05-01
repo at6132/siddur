@@ -2288,6 +2288,70 @@ export function extractModimDerabananFoldout(hebrew: string, english: string): M
   };
 }
 
+/** After main Birchot HaShachar: optional long Zichronos / Va’ani block before “לְעוֹלָם יְהֵא אָדָם יְרֵא שָׁמַיִם” (collapsible in reader). */
+export type BirchosHashacharExpansionSplit = {
+  beforeHebrew: string;
+  beforeEnglish: string;
+  foldoutHebrew: string;
+  foldoutEnglish: string;
+  mainHebrew: string;
+  mainEnglish: string;
+};
+
+/**
+ * Split Sefaria **Birkot HaShachar** so the optional block beginning at
+ * אֱלֹהֵינוּ/אֱלֹקֵינוּ/אֱלוֹהֵינוּ וֵאלֹהֵי אֲבוֹתֵינוּ זָכְרֵנוּ is placed in a foldout.
+ * The foldout runs from that start marker through the **end of section**.
+ */
+export function extractBirchosHashacharExpansionFoldout(
+  hebrew: string,
+  english: string
+): BirchosHashacharExpansionSplit | null {
+  /** Strip bidi / ZWJ / WJ so Sefaria RLM/LRM does not break fixed-string regexes. */
+  const stripBidiEtc = (s: string) => s.replace(/[\u200E\u200F\u202A-\u202E\u2060\u200C-\u200D]/g, '');
+  const hNo = stripBidiEtc(stripHtml(hebrew).replace(/<br\s*\/?>/gi, '\n'));
+  const stripped = stripNikkud(hNo);
+  const toOrig: number[] = [];
+  for (let i = 0; i < hNo.length; i++) {
+    if (!/[\u0591-\u05C7]/.test(hNo[i])) toOrig.push(i);
+  }
+  if (toOrig.length === 0) return null;
+
+  const gap = '[\\s\\r\\n\u05be־\u00a0\u200c-\u200f]*';
+  const startRe = new RegExp(
+    `(?:אלהינו|אלוקינו|אלוהינו)${gap}(?:ואלקי|ואלהי)${gap}אבותינו${gap}זכרנו`
+  );
+  const startMatch = stripped.match(startRe);
+  if (!startMatch || startMatch.index === undefined) return null;
+  const startS = startMatch.index;
+
+  const startOrig = startS < toOrig.length ? toOrig[startS] : 0;
+  const beforeHebrew = hNo.slice(0, startOrig).trimEnd();
+  const foldoutHebrew = hNo.slice(startOrig).trim();
+  const mainHebrew = '';
+  if (foldoutHebrew.length < 120) return null;
+
+  const en = english ?? '';
+  const sl = Math.max(1, stripped.length);
+  let beforeEnglish = '';
+  let foldoutEnglish = '';
+  let mainEnglish = '';
+  if (en.trim()) {
+    const i0 = Math.max(0, Math.floor((en.length * startS) / sl));
+    beforeEnglish = en.slice(0, i0).trimEnd();
+    foldoutEnglish = en.slice(i0).trimStart();
+  }
+
+  return {
+    beforeHebrew,
+    beforeEnglish,
+    foldoutHebrew,
+    foldoutEnglish,
+    mainHebrew,
+    mainEnglish,
+  };
+}
+
 /**
  * Collapse line/paragraph break between "למען שמו באהבה" (optional :) and "מלך עוזר" (Avos → Gevuros) into one line.
  * Sefaria often omits the colon and uses only a newline; the old pattern required `:` and never matched.

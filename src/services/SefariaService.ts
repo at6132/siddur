@@ -30,18 +30,21 @@ import {
   extractAmidahKedushaFoldout,
   extractModimDerabananFoldout,
   stripAmidahEpilogueKaddishLedavid,
-  stripFullKaddishShalemBeforeAleinu,
   trimAlHanissimInsertionByCalendar,
   splitMinchaAmidahBeforeStandaloneAleinu,
+  extractBirchosHashacharExpansionFoldout,
 } from './MinchaTextRules';
 import { applyWeekdayAmidahTextPipeline } from './AmidahTextPipeline';
+import { applyShacharitSiddurSectionPipeline } from './ShacharitSectionPipelines';
 
 const SEFARIA_API_BASE = 'https://www.sefaria.org/api';
 const SEFARIA_V3_TEXTS = 'https://www.sefaria.org/api/v3/texts';
-const CACHE_PREFIX = '@sefaria_cache_v4_';
+const CACHE_PREFIX = '@sefaria_cache_v5_';
 const CACHE_EXPIRY_DAYS = 30;
 /** Max wait per request so we never hang on "Loading prayers..." */
 const FETCH_TIMEOUT_MS = 12_000;
+const MODEH_ANI_APPENDIX =
+  'רֵאשִׁית חָכְמָה יִרְאַת יְהֹוָה, שֵֽׂכֶל טוֹב לְכָל־עֹשֵׂיהֶם, תְּהִלָּתוֹ עוֹמֶֽדֶת לָעַד: בָּרוּךְ שֵׁם כְּבוֹד מַלְכוּתוֹ לְעוֹלָם וָעֶד:';
 
 export interface SefariaText {
   hebrew: string | string[];
@@ -89,6 +92,12 @@ export interface PrayerTextData {
   englishBeforeModimDerabananFoldoutSegments?: PrayerTextSegment[];
   /** Amidah only: Modim deRabbanan paragraph (collapsible "מודים דרבנן" in the reader). */
   modimDerabananFoldout?: PrayerTextData;
+  /** Birchot HaShachar only: optional long Zichronos / Akeda expansion (collapsible "הרחבת ברכות השחר"). */
+  birchosHashacharExpansionFoldout?: PrayerTextData;
+  hebrewBeforeBirchosHashacharExpansionFoldout?: string;
+  englishBeforeBirchosHashacharExpansionFoldout?: string;
+  hebrewBeforeBirchosHashacharExpansionFoldoutSegments?: PrayerTextSegment[];
+  englishBeforeBirchosHashacharExpansionFoldoutSegments?: PrayerTextSegment[];
 }
 
 /** Fetch with timeout; throws on timeout or non-OK. */
@@ -481,6 +490,11 @@ export class SefariaService {
       let amidahModimDerabananFoldout: PrayerTextData | undefined;
       let amidahModimPrefixHebrew: string | undefined;
       let amidahModimPrefixEnglish: string | undefined;
+      let birchosHashacharExpansionFoldout: PrayerTextData | undefined;
+      let hebrewBeforeBirchosHashacharExpansionFoldout: string | undefined;
+      let englishBeforeBirchosHashacharExpansionFoldout: string | undefined;
+      let hebrewBeforeBirchosHashacharExpansionFoldoutSegments: PrayerTextSegment[] | undefined;
+      let englishBeforeBirchosHashacharExpansionFoldoutSegments: PrayerTextSegment[] | undefined;
       // Ensure we have plain strings; flatten nested arrays (Sefaria can return [[ "p1", "p2" ], [ "p3" ]])
       const toStr = (v: unknown): string => {
         if (typeof v === 'string') return v;
@@ -549,10 +563,75 @@ export class SefariaService {
           rawEnglishStr = modimSplit.suffixEnglish.trim();
         }
       }
-      if (sectionKey === 'concluding' || sectionKey === 'mincha_aleinu') {
-        const noKaddish = stripFullKaddishShalemBeforeAleinu(rawHebrewStr, rawEnglishStr);
-        rawHebrewStr = noKaddish.hebrew;
-        rawEnglishStr = noKaddish.english;
+      // Shacharit-style siddur string pipelines (per sectionKey); see `ShacharitSectionPipelines.ts`
+      const siddurSectionCtxDate = new Date();
+      const shacharitPiped = applyShacharitSiddurSectionPipeline(sectionKey, rawHebrewStr, rawEnglishStr, {
+        date: siddurSectionCtxDate,
+        nusach,
+      });
+      rawHebrewStr = shacharitPiped.hebrew;
+      rawEnglishStr = shacharitPiped.english;
+      // Shacharis guarantee: if netilas text is present but מודה אני / ציצית are missing,
+      // prepend them from dedicated refs so they always appear before "על נטילת ידים".
+      if (sectionKey === 'birchot_hashachar' || sectionKey === 'preparatory') {
+        const stripNikkud = (s: string) => s.replace(/[\u0591-\u05C7]/g, '');
+        const hNorm = stripNikkud(rawHebrewStr);
+        const hasNetilas = /על\s+נטילת\s+יד/.test(hNorm);
+        if (hasNetilas) {
+          const hasModehAni = /מודה\s+אני/.test(hNorm);
+          const hasTzitzis = /ציצית/.test(hNorm);
+          const prependHebrew: string[] = [];
+          const prependEnglish: string[] = [];
+
+          if (!hasModehAni) {
+            const modehRef =
+              (nusach === 'sfard' ? this.SIDDUR_SFARD_REFS.modeh_ani : this.SIDDUR_ASHKENAZ_REFS.modeh_ani) ??
+              this.SIDDUR_ASHKENAZ_REFS.modeh_ani;
+            if (modehRef) {
+              const mData = await this.fetchText(modehRef);
+              if (mData) {
+                let mH = toStr(mData.hebrew).trim();
+                const mE = toStr(mData.english).trim();
+                const mNoNik = mH.replace(/[\u0591-\u05C7]/g, '');
+                if (mH && !/ראשית\s+חכמה/.test(mNoNik)) {
+                  mH = `${mH}\n${MODEH_ANI_APPENDIX}`;
+                }
+                if (mH) prependHebrew.push(mH);
+                if (mE) prependEnglish.push(mE);
+              }
+            }
+          }
+
+          if (!hasTzitzis) {
+            const tzitzisRef = 'Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Tzitzit';
+            const tData = await this.fetchText(tzitzisRef);
+            if (tData) {
+              const tH = toStr(tData.hebrew).trim();
+              const tE = toStr(tData.english).trim();
+              if (tH) prependHebrew.push(tH);
+              if (tE) prependEnglish.push(tE);
+            }
+          }
+
+          if (prependHebrew.length > 0) {
+            rawHebrewStr = `${prependHebrew.join('\n\n')}\n\n${rawHebrewStr.trimStart()}`;
+          }
+          if (prependEnglish.length > 0) {
+            rawEnglishStr = `${prependEnglish.join('\n\n')}\n\n${rawEnglishStr.trimStart()}`;
+          }
+        }
+      }
+      // Always remove the printed note "בט' אב ויוה\"כ אין אומרים ברכה זו" (and close variants)
+      // regardless of which Shacharis subsection Sefaria currently places it in.
+      {
+        const nik = '[\\u0591-\\u05C7]*';
+        const gap = '(?:\\s|<[^>]+>|<br\\s*\\/?>)*';
+        const q = `['"׳״\\u05F3\\u05F4\\u2018\\u2019\\u201C\\u201D]?`;
+        const bAv = `(?:ב${nik}י${nik}ו${nik}ם${gap})?(?:ב${nik}ט${q}${gap}א${nik}ב|ט${q}${gap}ב${nik}א${nik}ב)`;
+        const yk = `ו${nik}י${nik}ו${nik}ה${q}${nik}כ`;
+        const note = `א${nik}י${nik}נ${gap}א${nik}ו${nik}מ${nik}ר${nik}י${nik}ם${gap}ב${nik}ר${nik}כ${nik}ה${gap}ז${nik}ו`;
+        const re = new RegExp(`${bAv}${gap}${yk}${gap}${note}\\s*[:׃.]?`, 'gu');
+        rawHebrewStr = rawHebrewStr.replace(re, '').replace(/\n{3,}/g, '\n\n').trim();
       }
       // Mincha: split Korbanot vs Ashrei (Chatzi Kaddish removal is done in the reader, same as Bentching)
       if (sectionKey === 'mincha_korbanot' || sectionKey === 'mincha_ashrei') {
@@ -567,6 +646,55 @@ export class SefariaService {
       }
       // Preserve paragraph breaks (\n\n) for readability (e.g. Tefillas HaDerech)
       const normalizeParagraphs = (s: string) => s.replace(/\n\s*\n/g, '\n\n').trim();
+
+      // Shacharis optional long Zichronos / Akeda block:
+      // split on the **raw** API string *before* parseInstructionSegments so Sefaria <i>/<small>
+      // boundaries cannot prevent matching. We intentionally do this by content, not strict section key,
+      // because nusach/API structure can place this block under different Shacharis nodes.
+      if (!birchosHashacharExpansionFoldout?.hebrew?.trim()) {
+        const bhSplit = extractBirchosHashacharExpansionFoldout(rawHebrewStr, rawEnglishStr);
+        if (bhSplit) {
+          const nP = (s: string) => s.replace(/\n\s*\n/g, '\n\n').trim();
+          if (bhSplit.beforeHebrew.trim()) {
+            hebrewBeforeBirchosHashacharExpansionFoldout = nP(bhSplit.beforeHebrew);
+            englishBeforeBirchosHashacharExpansionFoldout = nP(bhSplit.beforeEnglish);
+            hebrewBeforeBirchosHashacharExpansionFoldoutSegments = this.parseInstructionSegments(
+              hebrewBeforeBirchosHashacharExpansionFoldout
+            ).map((seg) => ({
+              text: normalizeParagraphs(seg.text),
+              italic: seg.italic,
+            }));
+            englishBeforeBirchosHashacharExpansionFoldoutSegments = englishBeforeBirchosHashacharExpansionFoldout.trim()
+              ? this.parseInstructionSegments(englishBeforeBirchosHashacharExpansionFoldout).map((seg) => ({
+                  text: normalizeParagraphs(seg.text),
+                  italic: seg.italic,
+                }))
+              : undefined;
+          }
+          const foldHSeg = this.parseInstructionSegments(bhSplit.foldoutHebrew).map((seg) => ({
+            text: normalizeParagraphs(seg.text),
+            italic: seg.italic,
+          }));
+          const foldESeg = bhSplit.foldoutEnglish.trim()
+            ? this.parseInstructionSegments(bhSplit.foldoutEnglish).map((seg) => ({
+                text: normalizeParagraphs(seg.text),
+                italic: seg.italic,
+              }))
+            : undefined;
+          birchosHashacharExpansionFoldout = {
+            hebrew: foldHSeg.map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim(),
+            english: (foldESeg ?? []).map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim(),
+            hebrewSegments: foldHSeg,
+            englishSegments: foldESeg,
+          };
+          rawHebrewStr = bhSplit.beforeHebrew.trim()
+            ? nP(`${bhSplit.beforeHebrew.trimEnd()}\n\n${bhSplit.mainHebrew.trimStart()}`)
+            : nP(bhSplit.mainHebrew);
+          rawEnglishStr = bhSplit.beforeEnglish.trim()
+            ? nP(`${bhSplit.beforeEnglish.trimEnd()}\n\n${bhSplit.mainEnglish.trimStart()}`)
+            : nP(bhSplit.mainEnglish);
+        }
+      }
 
       const hebrewSegments = this.parseInstructionSegments(rawHebrewStr).map((seg) => ({
         text: normalizeParagraphs(seg.text),
@@ -1023,6 +1151,105 @@ export class SefariaService {
         }
       }
 
+      // Final hard-kill for the printed note:
+      // "בט' אב ויוה\"כ אין אומרים ברכה זו" (and close punctuation/quote variants).
+      // Do this at the assembled text/segment layer so it cannot leak through formatting paths.
+      {
+        const stripNoNik = (s: string) => s.replace(/[\u0591-\u05C7]/g, '');
+        const collapse = (s: string) => s.replace(/\n{3,}/g, '\n\n').trim();
+        const noteRe =
+          /(?:ב\s*)?ט['׳״"”]?\s*אב\s*ו\s*יוה['׳״"”]?\s*כ\s*אין\s*אומרים\s*ברכה\s*זו\s*[:׃.]?/gu;
+        const stripNoteText = (s: string) =>
+          collapse(
+            s
+              .replace(noteRe, '')
+              .replace(/\n?[^\n]*אין\s*אומרים\s*ברכה\s*זו\s*[:׃.]?\n?/gu, '\n')
+          );
+        const isNoteSegment = (txt: string) => {
+          const t = stripNoNik(txt).replace(/\s+/g, ' ').trim();
+          return /אין אומרים ברכה זו/.test(t) && (/אב/.test(t) || /יוה.?כ/.test(t));
+        };
+
+        hebrew = stripNoteText(hebrew);
+        finalHebrewSegments = finalHebrewSegments
+          .map((seg) => ({ ...seg, text: stripNoteText(seg.text) }))
+          .filter((seg) => seg.text.trim().length > 0 && !isNoteSegment(seg.text));
+
+        if (birchosHashacharExpansionFoldout?.hebrew) {
+          let bhSeg = birchosHashacharExpansionFoldout.hebrewSegments;
+          if (bhSeg?.length) {
+            bhSeg = bhSeg
+              .map((seg) => ({ ...seg, text: stripNoteText(seg.text) }))
+              .filter((seg) => seg.text.trim().length > 0 && !isNoteSegment(seg.text));
+          }
+          birchosHashacharExpansionFoldout = {
+            ...birchosHashacharExpansionFoldout,
+            hebrew: stripNoteText(birchosHashacharExpansionFoldout.hebrew),
+            hebrewSegments: bhSeg,
+          };
+        }
+      }
+
+      // Remove visual separator artifacts (thin divider lines) that Sefaria sometimes emits as
+      // standalone instruction segments/paragraphs.
+      {
+        const isSeparatorOnly = (txt: string) => {
+          const t = txt
+            .replace(/[\u0591-\u05C7]/g, '')
+            .replace(/\s+/g, '')
+            .replace(/[<>{}\[\]()]/g, '');
+          return t.length > 0 && /^[\-־_—–=~·•|\\/:\u2500-\u257F\u23AF.,"'׳״`]+$/u.test(t);
+        };
+        const stripSeparatorLines = (s: string) =>
+          s
+            .split(/\n/)
+            .filter((line) => !isSeparatorOnly(line))
+            .join('\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+
+        hebrew = stripSeparatorLines(hebrew);
+        finalHebrewSegments = finalHebrewSegments
+          .map((seg) => ({ ...seg, text: stripSeparatorLines(seg.text) }))
+          .filter((seg) => seg.text.trim().length > 0 && !isSeparatorOnly(seg.text));
+
+        if (birchosHashacharExpansionFoldout?.hebrew) {
+          let bhSeg = birchosHashacharExpansionFoldout.hebrewSegments;
+          if (bhSeg?.length) {
+            bhSeg = bhSeg
+              .map((seg) => ({ ...seg, text: stripSeparatorLines(seg.text) }))
+              .filter((seg) => seg.text.trim().length > 0 && !isSeparatorOnly(seg.text));
+          }
+          birchosHashacharExpansionFoldout = {
+            ...birchosHashacharExpansionFoldout,
+            hebrew: stripSeparatorLines(birchosHashacharExpansionFoldout.hebrew),
+            hebrewSegments: bhSeg,
+          };
+        }
+      }
+
+      // Final guarantee: if Tzitzis appears before Netilas but Modeh Ani is missing, prepend Modeh Ani.
+      if (sectionKey === 'birchot_hashachar' || sectionKey === 'preparatory') {
+        const stripNoNik = (s: string) => s.replace(/[\u0591-\u05C7]/g, '');
+        const hNoNik = stripNoNik(hebrew);
+        const netIdx = hNoNik.search(/על\s+נטילת\s+יד/);
+        const tzIdx = hNoNik.search(/ציצית/);
+        const modehIdx = hNoNik.search(/מודה\s+אני/);
+        const needsModeh =
+          netIdx > 0 &&
+          tzIdx >= 0 &&
+          tzIdx < netIdx &&
+          (modehIdx === -1 || modehIdx > tzIdx);
+        if (needsModeh) {
+          const modehAniText =
+            'מוֹדֶה אֲנִי לְפָנֶֽיךָ מֶֽלֶךְ חַי וְקַיָּם שֶׁהֶחֱזַֽרְתָּ בִּי נִשְׁמָתִי בְּחֶמְלָה, רַבָּה אֱמוּנָתֶֽךָ:' +
+            '\n' +
+            MODEH_ANI_APPENDIX;
+          hebrew = `${modehAniText}\n\n${hebrew.trimStart()}`;
+          finalHebrewSegments = [{ text: hebrew, italic: false }];
+        }
+      }
+
       return {
         hebrew,
         english,
@@ -1046,6 +1273,19 @@ export class SefariaService {
           : {}),
         ...(amidahKedushaFoldout ? { kedushaFoldout: amidahKedushaFoldout } : {}),
         ...(amidahModimDerabananFoldout ? { modimDerabananFoldout: amidahModimDerabananFoldout } : {}),
+        ...(birchosHashacharExpansionFoldout?.hebrew?.trim()
+          ? {
+              birchosHashacharExpansionFoldout,
+              ...(hebrewBeforeBirchosHashacharExpansionFoldout != null
+                ? {
+                    hebrewBeforeBirchosHashacharExpansionFoldout,
+                    englishBeforeBirchosHashacharExpansionFoldout,
+                    hebrewBeforeBirchosHashacharExpansionFoldoutSegments,
+                    englishBeforeBirchosHashacharExpansionFoldoutSegments,
+                  }
+                : {}),
+            }
+          : {}),
       };
     } catch {
       return null;

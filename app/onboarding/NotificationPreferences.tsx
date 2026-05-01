@@ -262,8 +262,8 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
         <GlassCard>
           <View style={styles.cardContent}>
             <Text style={styles.emoji}>🔔</Text>
-            <Text style={styles.title}>Gentle{'\n'}Reminders</Text>
-            <Text style={styles.subtitle}>Calm notifications that guide, never guilt</Text>
+            <Text style={styles.title}>Reminders</Text>
+            <Text style={styles.subtitle}>Pick what you want — you can change this anytime in Settings</Text>
 
             {/* Options with staggered entrance */}
             <View style={styles.optionsContainer}>

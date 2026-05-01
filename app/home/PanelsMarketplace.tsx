@@ -24,6 +24,7 @@ import {
   PanelDefinition,
   PANEL_DEFINITIONS,
 } from '../../src/storage/HomePanelsService';
+import { isPanelLibraryPhase2ComingSoon } from '../../src/feature/LibraryFeatureAccess';
 
 // Glass Card Component
 const GlassCard: React.FC<{
@@ -180,23 +181,25 @@ export const PanelsMarketplace: React.FC = () => {
           {filteredPanels.map((panel, index) => {
             const isAdded = isPanelAdded(panel.type);
             const isCommunity = panel.category === 'community';
+            const isPhase2 = isPanelLibraryPhase2ComingSoon(panel.type);
+            const isLocked = isCommunity || isPhase2;
             return (
               <View key={panel.type} style={styles.panelCardWrapper}>
                 <GlassCard
                   style={[
                     styles.panelCard,
                     isAdded && styles.panelCardAdded,
-                    isCommunity && styles.panelCardComingSoon,
+                    isLocked && styles.panelCardComingSoon,
                   ]}
-                  onPress={!isCommunity && !isAdded ? () => handleAddPanel(panel) : undefined}
+                  onPress={!isLocked && !isAdded ? () => handleAddPanel(panel) : undefined}
                 >
-                  {isCommunity && (
+                  {isLocked && (
                     <View style={styles.comingSoonBadge}>
                       <Text style={styles.comingSoonBadgeText}>Coming soon</Text>
                     </View>
                   )}
                   <View style={styles.panelHeader}>
-                    <Text style={[styles.panelIcon, isCommunity && styles.panelIconMuted]}>{panel.icon}</Text>
+                    <Text style={[styles.panelIcon, isLocked && styles.panelIconMuted]}>{panel.icon}</Text>
                     <View style={styles.panelHeaderRight}>
                       <TouchableOpacity
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -208,20 +211,20 @@ export const PanelsMarketplace: React.FC = () => {
                       >
                         <Text style={styles.helpButtonText}>?</Text>
                       </TouchableOpacity>
-                      {isAdded && !isCommunity && (
+                      {isAdded && !isLocked && (
                         <View style={styles.addedBadge}>
                           <Text style={styles.addedBadgeText}>✓</Text>
                         </View>
                       )}
                     </View>
                   </View>
-                  <Text style={[styles.panelName, isCommunity && styles.panelTextMuted]} numberOfLines={2}>{panel.name}</Text>
-                  <Text style={[styles.panelDescription, isCommunity && styles.panelTextMuted]} numberOfLines={2}>{panel.description}</Text>
+                  <Text style={[styles.panelName, isLocked && styles.panelTextMuted]} numberOfLines={2}>{panel.name}</Text>
+                  <Text style={[styles.panelDescription, isLocked && styles.panelTextMuted]} numberOfLines={2}>{panel.description}</Text>
                   <View style={styles.panelFooter}>
-                    <View style={[styles.categoryBadge, isCommunity && styles.categoryBadgeMuted]}>
-                      <Text style={[styles.categoryBadgeText, isCommunity && styles.panelTextMuted]}>{panel.category}</Text>
+                    <View style={[styles.categoryBadge, isLocked && styles.categoryBadgeMuted]}>
+                      <Text style={[styles.categoryBadgeText, isLocked && styles.panelTextMuted]}>{panel.category}</Text>
                     </View>
-                    {!isAdded && !isCommunity && (
+                    {!isAdded && !isLocked && (
                       <TouchableOpacity
                         style={styles.addButton}
                         onPress={() => handleAddPanel(panel)}

@@ -306,7 +306,7 @@ export const SpiritualGoals: React.FC<SpiritualGoalsProps> = ({ onSelect, onSkip
         <GlassCard>
           <View style={styles.cardContent}>
             <Text style={styles.title}>What would you{'\n'}like help with?</Text>
-            <Text style={styles.subtitle}>Choose up to 2 — we'll send gentle reminders</Text>
+            <Text style={styles.subtitle}>Choose up to 2 — we'll send reminders</Text>
 
             {/* Animated chips */}
             <View style={styles.chipsContainer}>
