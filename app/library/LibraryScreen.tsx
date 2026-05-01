@@ -140,14 +140,6 @@ const LIBRARY_ITEMS: LibraryItem[] = [
     screen: 'Bentching',
     color: 'rgba(212, 196, 165, 0.3)',
   },
-  {
-    id: 'modeh_ani',
-    title: 'Modeh Ani',
-    subtitle: 'Morning gratitude • First words of the day',
-    icon: '🌄',
-    screen: 'ModehAni',
-    color: 'rgba(232, 196, 165, 0.3)',
-  },
   // Rest of library
   {
     id: 'gemara',
@@ -239,7 +231,7 @@ function buildSearchableItems(
       id: i.id,
       title: i.title,
       subtitle: i.subtitle,
-      keywords: `${i.title} ${i.subtitle} gemara talmud nach mishna rambam chumash torah shneyim mikra parsha pirkei avos tehillim brachos bentching bedtime modeh ani tefilas haderech`,
+      keywords: `${i.title} ${i.subtitle} gemara talmud nach mishna rambam chumash torah shneyim mikra parsha pirkei avos tehillim brachos bentching bedtime tefilas haderech`,
       icon: i.icon,
       color: i.color,
       onPress: () => handleItemPress(i),
