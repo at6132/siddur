@@ -19,6 +19,7 @@ import { FadeIn } from '../../components/animations/FadeIn';
 import { BackButton } from '../../components/ui/BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/design/colors';
+import { DEFAULT_SCREEN_BACKGROUND } from '../../src/design/screenGradient';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
@@ -423,7 +424,7 @@ export const TehillimListScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
+        colors={[...DEFAULT_SCREEN_BACKGROUND]}
         style={StyleSheet.absoluteFill}
       />
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>

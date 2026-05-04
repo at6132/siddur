@@ -406,7 +406,7 @@ export const GemaraReaderScreen: React.FC = () => {
         </View>
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary?.main || '#888'} />
+            <ActivityIndicator size="large" color={theme.colors.primary.main} />
             <Text style={styles.loadingText}>Loading daf...</Text>
           </View>
         ) : error ? (

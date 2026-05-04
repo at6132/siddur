@@ -330,7 +330,7 @@ export const NachReaderScreen: React.FC = () => {
         </View>
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary?.main || '#888'} />
+            <ActivityIndicator size="large" color={theme.colors.primary.main} />
             <Text style={styles.loadingText}>Loading chapter...</Text>
           </View>
         ) : error ? (

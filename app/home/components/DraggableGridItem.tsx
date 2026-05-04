@@ -211,7 +211,7 @@ export const DraggableGridItem: React.FC<DraggableGridItemProps> = React.memo(({
           activeOpacity={0.7}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <View style={[styles.removeButtonInner, { backgroundColor: theme.colors?.semantic?.error || '#e74c3c' }]}>
+          <View style={[styles.removeButtonInner, { backgroundColor: theme.colors.semantic.error }]}>
             <Text style={styles.removeButtonText}>−</Text>
           </View>
         </TouchableOpacity>

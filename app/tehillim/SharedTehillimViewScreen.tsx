@@ -23,6 +23,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BackButton } from '../../components/ui/BackButton';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../src/design/colors';
+import { DEFAULT_SCREEN_BACKGROUND, DEFAULT_SCREEN_BACKGROUND_SOFT } from '../../src/design/screenGradient';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { getAnonymousId } from '../../src/analytics/IdentityService';
@@ -224,7 +225,7 @@ export const SharedTehillimViewScreen: React.FC = () => {
   if (!campaignId) {
     return (
       <View style={styles.container}>
-        <LinearGradient colors={['#FAF9F7', '#F5E6E8']} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={[...DEFAULT_SCREEN_BACKGROUND_SOFT]} style={StyleSheet.absoluteFill} />
         <View style={styles.center}>
           <BackButton onPress={() => navigation.goBack()} />
           <Text style={styles.errorText}>Missing campaign ID</Text>
@@ -236,7 +237,7 @@ export const SharedTehillimViewScreen: React.FC = () => {
   if (loading) {
     return (
       <View style={styles.container}>
-        <LinearGradient colors={['#FAF9F7', '#F5E6E8']} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={[...DEFAULT_SCREEN_BACKGROUND_SOFT]} style={StyleSheet.absoluteFill} />
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary.main} />
         </View>
@@ -247,7 +248,7 @@ export const SharedTehillimViewScreen: React.FC = () => {
   if (error || !data) {
     return (
       <View style={styles.container}>
-        <LinearGradient colors={['#FAF9F7', '#F5E6E8']} style={StyleSheet.absoluteFill} />
+        <LinearGradient colors={[...DEFAULT_SCREEN_BACKGROUND_SOFT]} style={StyleSheet.absoluteFill} />
         <View style={styles.center}>
           <BackButton onPress={() => navigation.goBack()} />
           <Text style={styles.errorText}>{error || 'Not found'}</Text>
@@ -271,7 +272,7 @@ export const SharedTehillimViewScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
+        colors={[...DEFAULT_SCREEN_BACKGROUND]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

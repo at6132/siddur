@@ -24,7 +24,7 @@ export const BackButton: React.FC<BackButtonProps> = ({
   textStyle,
 }) => {
   const { theme } = useTheme();
-  const color = theme.colors.primary?.main ?? theme.colors.primary?.dark ?? '#D4A5B8';
+  const color = theme.colors.primary.main;
 
   return (
     <TouchableOpacity onPress={onPress} style={[styles.button, style]} activeOpacity={0.7}>

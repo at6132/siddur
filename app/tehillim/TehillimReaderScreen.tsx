@@ -183,7 +183,7 @@ export const TehillimReaderScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
+          colors={theme.backgroundGradient}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.loadingContainer}>
@@ -198,7 +198,7 @@ export const TehillimReaderScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
+          colors={theme.backgroundGradient}
           style={StyleSheet.absoluteFill}
         />
         <View style={styles.loadingContainer}>
@@ -214,7 +214,7 @@ export const TehillimReaderScreen: React.FC = () => {
   return (
     <GestureHandlerRootView style={styles.container}>
       <LinearGradient
-        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
+        colors={theme.backgroundGradient}
         style={StyleSheet.absoluteFill}
       />
       <ReaderChrome

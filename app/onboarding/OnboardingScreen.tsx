@@ -5,6 +5,7 @@ import { NusachSelection } from './NusachSelection';
 import { WelcomeScreen } from './WelcomeScreen';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { spacing } from '../../src/design/spacing';
+import { DEFAULT_SCREEN_BACKGROUND_LOOP } from '../../src/design/screenGradient';
 import { Nusach } from '../../src/types/nusach';
 import * as Location from 'expo-location';
 import { track, ONBOARDING_EVENTS } from '../../src/analytics';
@@ -117,7 +118,7 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
     <View style={styles.container}>
       {/* Enhanced background gradient with subtle animation feel */}
       <LinearGradient
-        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5', '#FAF9F7']}
+        colors={[...DEFAULT_SCREEN_BACKGROUND_LOOP]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

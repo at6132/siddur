@@ -131,48 +131,6 @@ export const SHACHARIT_SIDDUR_PIPELINE_STEPS: Partial<
       apply: (h, e) => enforceDoubleBreakAfterVaaniAvarchemBeforeEluDevarim(h, e),
     },
   ],
-  /** Ashkenaz: full Pesukei D’Zimra — do not collapse. Sefard ref is Birchot HaTorah under this key; collapse only then. */
-  pesukei_dzimra: [
-    {
-      id: 'collapse_paragraph_breaks_sfard_torah_blessings_slot',
-      description:
-        'Sefard `pesukei_dzimra` ref is ברכות התורה; same single-\\n collapse as birchos_hatorah (skip for Ashkenaz PDZ)',
-      apply: (h, e, ctx) =>
-        ctx.nusach === 'sfard'
-          ? collapseSefariaParagraphBreaksToSingleNewline(h, e)
-          : { hebrew: h, english: e },
-    },
-    {
-      id: 'remove_tisha_av_yom_kippur_ein_omerim_note_sfard',
-      description: 'Same removal as birchos_hatorah (Sefard Torah-blessings slot only)',
-      apply: (h, e, ctx) =>
-        ctx.nusach === 'sfard' ? removeBirchosHatorahTishaAvYomKippurInstruction(h, e) : { hebrew: h, english: e },
-    },
-    {
-      id: 'join_laasok_divrei_torah_colon_with_vehaarev_na_sfard',
-      description: 'Same לַעֲסֹק…תוֹרָה: ↔ וְהַעֲרֶב נָא join as birchos_hatorah (Sefard slot only)',
-      apply: (h, e, ctx) =>
-        ctx.nusach === 'sfard' ? joinBirkatHaTorahLaasokDivreiTorahWithVehaarevNa(h, e) : { hebrew: h, english: e },
-    },
-    {
-      id: 'join_amor_lahem_colon_with_yevarechecha_sfard',
-      description: 'Same אָמוֹר לָהֶם: ↔ יְבָרֶכְךָ join as birchos_hatorah (Sefard slot only)',
-      apply: (h, e, ctx) =>
-        ctx.nusach === 'sfard' ? joinBirkatHaTorahAmorLahemWithYevarechecha(h, e) : { hebrew: h, english: e },
-    },
-    {
-      id: 'fix_venehiyeh_tzetzaei_duplication_sfard',
-      description: 'Same duplication fix as birchos_hatorah (Sefard slot only)',
-      apply: (h, e, ctx) =>
-        ctx.nusach === 'sfard' ? fixVenehiyehTzetzaeiDuplication(h, e) : { hebrew: h, english: e },
-    },
-    {
-      id: 'double_break_vaani_avarchem_to_elu_devarim_sfard',
-      description: 'Same וַאֲנִי אַבָרְכֵם: ↔ אֵלּוּ דְבָרִים paragraph break as birchos_hatorah (Sefard slot only)',
-      apply: (h, e, ctx) =>
-        ctx.nusach === 'sfard' ? enforceDoubleBreakAfterVaaniAvarchemBeforeEluDevarim(h, e) : { hebrew: h, english: e },
-    },
-  ],
   preparatory: [
     {
       id: 'move_modeh_ani_and_tzitzis_before_netilas',

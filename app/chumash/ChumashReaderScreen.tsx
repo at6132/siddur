@@ -131,7 +131,7 @@ function createStyles(theme: AppTheme) {
     linkButtonText: {
       fontFamily: fonts.body.medium,
       fontSize: 14,
-      color: theme.colors.primary?.main || '#6B7FD7',
+      color: theme.colors.primary.main,
     },
     smBlock: {
       marginBottom: spacing.md,
@@ -145,7 +145,7 @@ function createStyles(theme: AppTheme) {
     },
     smProgressFill: {
       height: '100%',
-      backgroundColor: theme.colors.primary?.main || '#5a7fc9',
+      backgroundColor: theme.colors.primary.main,
       borderRadius: 2,
     },
     smProgressLabel: {
@@ -156,7 +156,7 @@ function createStyles(theme: AppTheme) {
     },
     markCompleteButton: {
       marginTop: spacing.lg,
-      backgroundColor: theme.colors.primary?.main || '#5a7fc9',
+      backgroundColor: theme.colors.primary.main,
       paddingVertical: spacing.md,
       paddingHorizontal: spacing.lg,
       borderRadius: 12,
@@ -165,7 +165,7 @@ function createStyles(theme: AppTheme) {
     markCompleteButtonText: {
       fontFamily: fonts.body.semibold,
       fontSize: 15,
-      color: '#fff',
+      color: theme.colors.text.inverse,
     },
     markedComplete: {
       marginTop: spacing.lg,
@@ -187,13 +187,13 @@ function createStyles(theme: AppTheme) {
       borderRadius: 12,
       alignItems: 'center',
       borderWidth: 1,
-      borderColor: theme.colors.primary?.main || '#5a7fc9',
+      borderColor: theme.colors.primary.main,
       backgroundColor: 'transparent',
     },
     nextAliyahButtonText: {
       fontFamily: fonts.body.semibold,
       fontSize: 15,
-      color: theme.colors.primary?.main || '#5a7fc9',
+      color: theme.colors.primary.main,
     },
   });
 }
@@ -334,7 +334,7 @@ export const ChumashReaderScreen: React.FC = () => {
         )}
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary?.main || '#888'} />
+            <ActivityIndicator size="large" color={theme.colors.primary.main} />
             <Text style={styles.loadingText}>Loading Chumash...</Text>
           </View>
         ) : error ? (

@@ -42,6 +42,7 @@ import {
 } from '../../src/types/preferences';
 import { useTheme } from '../../src/design/theme';
 import type { AppTheme } from '../../src/design/theme';
+import { colorWithAlpha } from '../../src/design/colorAlpha';
 
 // Glass Card Component - theme-aware for dark mode
 const GlassCard: React.FC<{
@@ -640,7 +641,7 @@ export const SettingsScreen: React.FC = () => {
                 colors={
                   theme.isDark
                     ? ['rgba(48, 36, 70, 0.95)', 'rgba(32, 26, 48, 0.98)']
-                    : ['#FFF7ED', '#EEF2FF', '#FDF4FF']
+                    : [...theme.backgroundGradient]
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -2005,8 +2006,10 @@ function createSettingsStyles(theme: AppTheme) {
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
     borderWidth: 1.5,
-    borderColor: theme.isDark ? 'rgba(199, 181, 255, 0.2)' : 'rgba(99, 102, 241, 0.35)',
-    shadowColor: '#6366f1',
+    borderColor: theme.isDark
+      ? 'rgba(199, 181, 255, 0.2)'
+      : colorWithAlpha(theme.colors.accent.lavender, 0.4),
+    shadowColor: theme.isDark ? theme.colors.shadow.medium : colorWithAlpha(theme.colors.primary.main, 0.35),
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: theme.isDark ? 0.2 : 0.12,
     shadowRadius: 12,
@@ -2053,7 +2056,9 @@ function createSettingsStyles(theme: AppTheme) {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(99, 102, 241, 0.12)',
+    backgroundColor: theme.isDark
+      ? 'rgba(255,255,255,0.1)'
+      : colorWithAlpha(theme.colors.accent.lavender, 0.2),
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.lg,

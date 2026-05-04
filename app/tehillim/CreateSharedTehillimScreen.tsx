@@ -20,6 +20,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { colors } from '../../src/design/colors';
+import { DEFAULT_SCREEN_BACKGROUND_LOOP } from '../../src/design/screenGradient';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { BackButton } from '../../components/ui/BackButton';
@@ -137,7 +138,7 @@ export const CreateSharedTehillimScreen: React.FC = () => {
     return (
       <View style={styles.container}>
         <LinearGradient
-          colors={['#FAF9F7', '#F5E6E8', '#E8F0F5', '#FAF9F7']}
+          colors={[...DEFAULT_SCREEN_BACKGROUND_LOOP]}
           style={StyleSheet.absoluteFill}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -169,7 +170,7 @@ export const CreateSharedTehillimScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5', '#FAF9F7']}
+        colors={[...DEFAULT_SCREEN_BACKGROUND_LOOP]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

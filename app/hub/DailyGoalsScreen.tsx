@@ -28,6 +28,7 @@ import { BackButton } from '../../components/ui/BackButton';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { colors } from '../../src/design/colors';
+import { DEFAULT_SCREEN_BACKGROUND } from '../../src/design/screenGradient';
 import { DailyGoalsService, type DailyGoalItem } from '../../src/storage/DailyGoalsService';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { SPIRITUAL_GOAL_OPTIONS } from '../../src/types/preferences';
@@ -125,7 +126,7 @@ export const DailyGoalsScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[...DEFAULT_SCREEN_BACKGROUND]} style={StyleSheet.absoluteFill} />
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.keyboard}>
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <BackButton onPress={() => navigation.goBack()} label="Back to Hub" style={styles.backRow} />

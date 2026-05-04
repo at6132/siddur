@@ -22,6 +22,8 @@ import { FadeIn } from '../../components/animations/FadeIn';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { colors } from '../../src/design/colors';
+import { useTheme } from '../../src/design/theme';
+import { colorWithAlpha } from '../../src/design/colorAlpha';
 import { getBrachosCount, addBrachos, getBrachosTotalForRange, BRACHOS_PER_TEFILLA } from '../../src/storage/BrachosCounterService';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { TzedakahTracker } from '../../src/storage/TzedakahTracker';
@@ -146,6 +148,7 @@ function ExploreCard({ icon, title, subtitle, comingSoon, onPress }: ExploreCard
 }
 
 export const HubOverviewScreen: React.FC = () => {
+  const { theme } = useTheme();
   const navigation = useNavigation();
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('day');
   const [brachosCount, setBrachosCount] = useState(0);
@@ -230,7 +233,7 @@ export const HubOverviewScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <FadeIn delay={0}>
           <TouchableOpacity
@@ -241,7 +244,10 @@ export const HubOverviewScreen: React.FC = () => {
             accessibilityLabel="New feature: Shabbos alarm can ring briefly each Shabbos morning. Opens Settings to Shabbos alarm."
           >
             <LinearGradient
-              colors={['rgba(212, 165, 184, 0.4)', 'rgba(99, 102, 241, 0.15)']}
+              colors={[
+                colorWithAlpha(theme.colors.primary.main, 0.38),
+                colorWithAlpha(theme.colors.accent.lavender, 0.22),
+              ]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.featureBanner}
@@ -341,28 +347,28 @@ export const HubOverviewScreen: React.FC = () => {
               <Text style={styles.menuTitle}>Add Brachos</Text>
               <TouchableOpacity style={styles.menuItem} onPress={() => handleBrachosAdd(1)}>
                 <View style={styles.menuItemLeft}>
-                  <Ionicons name="add-circle-outline" size={22} color="#F59E0B" />
+                  <Ionicons name="add-circle-outline" size={22} color={colors.accent.gold} />
                   <Text style={styles.menuItemText}>+1 Bracha</Text>
                 </View>
               </TouchableOpacity>
               <View style={styles.menuDivider} />
               <TouchableOpacity style={styles.menuItem} onPress={() => handleBrachosAdd(BRACHOS_PER_TEFILLA.shacharis)}>
                 <View style={styles.menuItemLeft}>
-                  <Ionicons name="sunny-outline" size={22} color="#F59E0B" />
+                  <Ionicons name="sunny-outline" size={22} color={colors.accent.gold} />
                   <Text style={styles.menuItemText}>Shacharis</Text>
                 </View>
                 <Text style={styles.menuItemBadge}>+{BRACHOS_PER_TEFILLA.shacharis}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.menuItem} onPress={() => handleBrachosAdd(BRACHOS_PER_TEFILLA.mincha)}>
                 <View style={styles.menuItemLeft}>
-                  <Ionicons name="partly-sunny-outline" size={22} color="#F59E0B" />
+                  <Ionicons name="partly-sunny-outline" size={22} color={colors.accent.gold} />
                   <Text style={styles.menuItemText}>Mincha</Text>
                 </View>
                 <Text style={styles.menuItemBadge}>+{BRACHOS_PER_TEFILLA.mincha}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.menuItem} onPress={() => handleBrachosAdd(BRACHOS_PER_TEFILLA.maariv)}>
                 <View style={styles.menuItemLeft}>
-                  <Ionicons name="moon-outline" size={22} color="#F59E0B" />
+                  <Ionicons name="moon-outline" size={22} color={colors.accent.gold} />
                   <Text style={styles.menuItemText}>Maariv</Text>
                 </View>
                 <Text style={styles.menuItemBadge}>+{BRACHOS_PER_TEFILLA.maariv}</Text>
@@ -505,7 +511,7 @@ const styles = StyleSheet.create({
     left: 4,
     width: SLIDER_SEGMENT_WIDTH - 8,
     height: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background.primary,
     borderRadius: 12,
     ...Platform.select({
       ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 4 },
@@ -607,7 +613,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 12,
-    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    backgroundColor: colorWithAlpha(colors.accent.gold, 0.18),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -621,7 +627,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
   },
   menuBox: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background.primary,
     borderRadius: 20,
     width: 280,
     overflow: 'hidden',
@@ -659,7 +665,7 @@ const styles = StyleSheet.create({
   menuItemBadge: {
     fontFamily: fonts.body.semibold,
     fontSize: 14,
-    color: '#F59E0B',
+    color: colors.accent.gold,
   },
   menuDivider: {
     height: 1,
@@ -704,7 +710,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   comingSoonPill: {
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: colorWithAlpha(colors.accent.lavender, 0.22),
     paddingHorizontal: spacing.sm,
     paddingVertical: 3,
     borderRadius: borderRadius.full,

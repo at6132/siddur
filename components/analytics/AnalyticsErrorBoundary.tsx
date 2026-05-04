@@ -4,6 +4,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { track } from '../../src/analytics';
+import { lightColors } from '../../src/design/colors';
 import { RELIABILITY_EVENTS } from '../../src/analytics/types';
 
 interface Props {
@@ -59,28 +60,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#FAF9F7',
+    backgroundColor: lightColors.background.secondary,
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
-    color: '#333',
+    color: lightColors.text.primary,
   },
   message: {
     fontSize: 14,
-    color: '#666',
+    color: lightColors.text.secondary,
     textAlign: 'center',
     marginBottom: 24,
   },
   button: {
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#8B7355',
+    backgroundColor: lightColors.primary.main,
     borderRadius: 8,
   },
   buttonText: {
-    color: '#fff',
+    color: lightColors.text.inverse,
     fontSize: 16,
     fontWeight: '600',
   },

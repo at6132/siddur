@@ -18,6 +18,8 @@ import { BackButton } from '../../components/ui/BackButton';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { colors } from '../../src/design/colors';
+import { DEFAULT_SCREEN_BACKGROUND } from '../../src/design/screenGradient';
+import { colorWithAlpha } from '../../src/design/colorAlpha';
 import { GratitudeTracker, type GratitudeEntry } from '../../src/storage/GratitudeTracker';
 
 function formatDate(dateStr: string): string {
@@ -46,7 +48,7 @@ export const GratitudeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[...DEFAULT_SCREEN_BACKGROUND]} style={StyleSheet.absoluteFill} />
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -128,7 +130,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    backgroundColor: colorWithAlpha(colors.accent.lavender, 0.22),
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
@@ -165,5 +167,5 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  fabText: { fontSize: 28, color: '#fff', fontFamily: fonts.body.regular, lineHeight: 32 },
+  fabText: { fontSize: 28, color: colors.text.inverse, fontFamily: fonts.body.regular, lineHeight: 32 },
 });

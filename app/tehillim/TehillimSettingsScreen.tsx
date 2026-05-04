@@ -119,7 +119,7 @@ export const TehillimSettingsScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5', '#FAF9F7']}
+        colors={theme.backgroundGradientLoop}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

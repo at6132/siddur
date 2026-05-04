@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { GlassButton } from '../../components/ui/GlassButton';
 import { colors } from '../../src/design/colors';
+import { DEFAULT_SCREEN_BACKGROUND } from '../../src/design/screenGradient';
 import { spacing } from '../../src/design/spacing';
 import { textStyles } from '../../src/design/typography';
 
@@ -341,7 +342,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
   return (
     <View style={styles.container} pointerEvents="box-none">
       <LinearGradient
-        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
+        colors={[...DEFAULT_SCREEN_BACKGROUND]}
         style={styles.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

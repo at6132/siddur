@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { GlassButton } from '../../components/ui/GlassButton';
 import { colors } from '../../src/design/colors';
+import { screenBackgroundGradientLoopAltNotifications } from '../../src/design/screenGradient';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles } from '../../src/design/typography';
 import {
@@ -223,7 +224,7 @@ export const NotificationPreferences: React.FC<NotificationPreferencesProps> = (
     <View style={styles.container}>
       {/* Enhanced Background Gradient */}
       <LinearGradient
-        colors={['#E8F0F5', '#FAF9F7', '#F5E6E8', '#FAF9F7']}
+        colors={[...screenBackgroundGradientLoopAltNotifications('light')]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}

@@ -19,6 +19,7 @@ import { BackButton } from '../../components/ui/BackButton';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { colors } from '../../src/design/colors';
+import { DEFAULT_SCREEN_BACKGROUND } from '../../src/design/screenGradient';
 import { GratitudeTracker } from '../../src/storage/GratitudeTracker';
 
 export const AddGratitudeScreen: React.FC = () => {
@@ -46,7 +47,7 @@ export const AddGratitudeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[...DEFAULT_SCREEN_BACKGROUND]} style={StyleSheet.absoluteFill} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.keyboard}

@@ -12,6 +12,7 @@ import { BlurView } from 'expo-blur';
 import { GlassButton } from '../../components/ui/GlassButton';
 import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
+import { screenBackgroundGradientLoopAltWelcome } from '../../src/design/screenGradient';
 import { textStyles } from '../../src/design/typography';
 
 const { width, height } = Dimensions.get('window');
@@ -156,7 +157,7 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
     <View style={styles.container}>
       {/* Enhanced gradient background */}
       <LinearGradient
-        colors={['#F5E6E8', '#FAF9F7', '#E8F0F5', '#FAF9F7']}
+        colors={[...screenBackgroundGradientLoopAltWelcome('light')]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0.5, y: 0 }}
         end={{ x: 0.5, y: 1 }}

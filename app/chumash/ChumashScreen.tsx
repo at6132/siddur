@@ -89,7 +89,7 @@ function createStyles(theme: AppTheme) {
     },
     progressBarFill: {
       height: '100%',
-      backgroundColor: theme.colors.primary?.main || '#5a7fc9',
+      backgroundColor: theme.colors.primary.main,
       borderRadius: 4,
     },
     progressText: {
@@ -99,7 +99,7 @@ function createStyles(theme: AppTheme) {
       marginBottom: spacing.md,
     },
     continueButton: {
-      backgroundColor: theme.colors.primary?.main || '#5a7fc9',
+      backgroundColor: theme.colors.primary.main,
       paddingVertical: spacing.sm,
       paddingTop: spacing.xs,
       paddingHorizontal: spacing.xl,
@@ -111,7 +111,7 @@ function createStyles(theme: AppTheme) {
     continueButtonText: {
       fontFamily: fonts.body.semibold,
       fontSize: 15,
-      color: '#fff',
+      color: theme.colors.text.inverse,
     },
     completeMessage: {
       backgroundColor: theme.isDark ? 'rgba(100,180,100,0.3)' : 'rgba(100,180,100,0.4)',
@@ -253,7 +253,7 @@ export const ChumashScreen: React.FC = () => {
     if (loading) {
       return (
         <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
-          <ActivityIndicator size="small" color={theme.colors.primary?.main || '#5a7fc9'} />
+          <ActivityIndicator size="small" color={theme.colors.primary.main} />
         </View>
       );
     }

@@ -353,7 +353,8 @@ export class SefariaService {
     // Shacharis
     preparatory: 'Siddur Sefard, Upon Arising, Introductory Prayers',
     birchot_hashachar: 'Siddur Sefard, Weekday Shacharit, Morning Blessings',
-    pesukei_dzimra: 'Siddur Sefard, Weekday Shacharit, Blessings on Torah',
+    /** Sefaria has no dedicated Sfard PDZ node here; Ashkenaz PDZ is used (Sfard slot was wrongly Birchot HaTorah). */
+    pesukei_dzimra: 'Siddur Ashkenaz, Weekday, Shacharit, Pesukei D\'Zimra',
     yotzer_or: 'Siddur Sefard, Weekday Shacharit, Morning Prayer',
     shema: 'Siddur Sefard, Weekday Shacharit, The Shema',
     amidah: 'Siddur Sefard, Weekday Shacharit, Amidah',
@@ -585,7 +586,7 @@ export class SefariaService {
 
           if (!hasModehAni) {
             const modehRef =
-              (nusach === 'sfard' ? this.SIDDUR_SFARD_REFS.modeh_ani : this.SIDDUR_ASHKENAZ_REFS.modeh_ani) ??
+              (nusach === 'sfard' ? this.SIDDUR_SEFARD_REFS.modeh_ani : this.SIDDUR_ASHKENAZ_REFS.modeh_ani) ??
               this.SIDDUR_ASHKENAZ_REFS.modeh_ani;
             if (modehRef) {
               const mData = await this.fetchText(modehRef);
@@ -647,11 +648,14 @@ export class SefariaService {
       // Preserve paragraph breaks (\n\n) for readability (e.g. Tefillas HaDerech)
       const normalizeParagraphs = (s: string) => s.replace(/\n\s*\n/g, '\n\n').trim();
 
-      // Shacharis optional long Zichronos / Akeda block:
+      // Shacharis optional long Zichronos / Akeda block (Birkot HaShachar only):
       // split on the **raw** API string *before* parseInstructionSegments so Sefaria <i>/<small>
-      // boundaries cannot prevent matching. We intentionally do this by content, not strict section key,
-      // because nusach/API structure can place this block under different Shacharis nodes.
-      if (!birchosHashacharExpansionFoldout?.hebrew?.trim()) {
+      // boundaries cannot prevent matching. Must **not** run on Pesukei D'Zimra etc.: the start phrase
+      // can appear as a substring there and would empty the main body (foldout is reader-specific).
+      if (
+        (sectionKey === 'birchot_hashachar' || sectionKey === 'preparatory') &&
+        !birchosHashacharExpansionFoldout?.hebrew?.trim()
+      ) {
         const bhSplit = extractBirchosHashacharExpansionFoldout(rawHebrewStr, rawEnglishStr);
         if (bhSplit) {
           const nP = (s: string) => s.replace(/\n\s*\n/g, '\n\n').trim();

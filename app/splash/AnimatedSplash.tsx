@@ -8,6 +8,7 @@ import {
   Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { DEFAULT_SCREEN_BACKGROUND_LOOP } from '../../src/design/screenGradient';
 
 const { width, height } = Dimensions.get('window');
 
@@ -226,7 +227,7 @@ export const AnimatedSplash: React.FC<AnimatedSplashProps> = ({
       ]}
     >
       <LinearGradient
-        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5', '#FAF9F7']}
+        colors={[...DEFAULT_SCREEN_BACKGROUND_LOOP]}
         style={StyleSheet.absoluteFill}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}

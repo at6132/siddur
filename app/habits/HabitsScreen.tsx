@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { FadeIn } from '../../components/animations/FadeIn';
 import { colors } from '../../src/design/colors';
+import { DEFAULT_SCREEN_BACKGROUND } from '../../src/design/screenGradient';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles, fonts } from '../../src/design/typography';
 import { toLocalDateString } from '../../src/utils/dateUtils';
@@ -127,7 +128,7 @@ export const HabitsScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']}
+        colors={[...DEFAULT_SCREEN_BACKGROUND]}
         style={StyleSheet.absoluteFill}
       />
       

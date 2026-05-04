@@ -31,6 +31,7 @@ import { ScalePress } from '../../components/animations/ScalePress';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { colors } from '../../src/design/colors';
+import { DEFAULT_SCREEN_BACKGROUND } from '../../src/design/screenGradient';
 import { toLocalDateString } from '../../src/utils/dateUtils';
 import { DailyGoalsService, type DailyGoalsDay } from '../../src/storage/DailyGoalsService';
 
@@ -108,7 +109,7 @@ export const GoalsHistoryScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <LinearGradient colors={['#FAF9F7', '#F5E6E8', '#E8F0F5']} style={StyleSheet.absoluteFill} />
+      <LinearGradient colors={[...DEFAULT_SCREEN_BACKGROUND]} style={StyleSheet.absoluteFill} />
       <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <BackButton onPress={() => navigation.goBack()} style={styles.backRow} />
 
@@ -242,9 +243,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.light,
     marginRight: spacing.sm,
   },
-  badgeAll: { backgroundColor: colors.semantic?.success ?? '#5a9e5a' },
+  badgeAll: { backgroundColor: colors.semantic.success },
   badgeText: { fontFamily: fonts.body.semibold, fontSize: 13, color: colors.primary.dark },
-  badgeTextAll: { color: '#fff' },
+  badgeTextAll: { color: colors.text.inverse },
   dayArrow: { fontFamily: fonts.body.regular, fontSize: 18, color: colors.text.tertiary },
   modalOverlay: {
     flex: 1,
@@ -253,7 +254,7 @@ const styles = StyleSheet.create({
   },
   modalTouchable: { flex: 1, justifyContent: 'flex-end' },
   modalCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.background.primary,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: spacing.lg,

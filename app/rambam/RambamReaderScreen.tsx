@@ -148,7 +148,7 @@ function createStyles(theme: AppTheme) {
     linkButtonText: {
       fontFamily: fonts.body.medium,
       fontSize: 14,
-      color: theme.colors.primary?.main || '#6B7FD7',
+      color: theme.colors.primary.main,
     },
   });
 }
@@ -258,7 +258,7 @@ export const RambamReaderScreen: React.FC = () => {
       >
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary?.main || '#888'} />
+            <ActivityIndicator size="large" color={theme.colors.primary.main} />
             <Text style={styles.loadingText}>Loading Mishneh Torah...</Text>
           </View>
         ) : error ? (
