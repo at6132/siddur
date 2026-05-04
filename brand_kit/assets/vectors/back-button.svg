@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Siddur global back control: matches components/ui/BackButton.tsx (light primary.main) -->
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="40" viewBox="0 0 120 40">
+  <text
+    x="0"
+    y="26"
+    font-family="Nunito, Nunito_500Medium, system-ui, -apple-system, sans-serif"
+    font-size="16"
+    font-weight="500"
+    fill="#D4A5B8"
+  >ê Back</text>
+</svg>
