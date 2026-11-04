@@ -1,11 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { NusachSelection } from './NusachSelection';
 import { WelcomeScreen } from './WelcomeScreen';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
-import { spacing } from '../../src/design/spacing';
-import { DEFAULT_SCREEN_BACKGROUND_LOOP } from '../../src/design/screenGradient';
+import { useTheme } from '../../src/design/theme';
 import { Nusach } from '../../src/types/nusach';
 import { track, ONBOARDING_EVENTS } from '../../src/analytics';
 import { NotificationService } from '../../src/notifications/NotificationService';
@@ -20,6 +18,7 @@ interface OnboardingScreenProps {
 }
 
 export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
+  const { theme } = useTheme();
   const [step, setStep] = useState<OnboardingStep>('nusach');
   const onboardingStartedAt = useRef<number>(Date.now());
   const stepStartedAt = useRef<number>(Date.now());
@@ -88,14 +87,9 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
   };
 
   return (
-    <View style={styles.container}>
-      {/* Enhanced background gradient with subtle animation feel */}
-      <LinearGradient
-        colors={[...DEFAULT_SCREEN_BACKGROUND_LOOP]}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
+    // Each step renders its own `Screen` (gradient + safe areas); this shell only
+    // supplies a matching base color so step swaps never flash.
+    <View style={[styles.container, { backgroundColor: theme.colors.background.secondary }]}>
       {renderStep()}
     </View>
   );
@@ -104,6 +98,5 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: spacing.safeTopInset,
   },
 });
