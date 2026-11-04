@@ -2,6 +2,7 @@ import { createContext, useContext } from 'react';
 import { darkColors, lightColors, ColorPalette } from '../colors';
 import { ThemePreference } from '../../types/preferences';
 import { screenBackgroundGradient, screenBackgroundGradientLoop } from '../screenGradient';
+import { buildThemeTokens, type ThemeTokens } from './tokens';
 
 export type ThemeMode = 'light' | 'dark';
 
@@ -9,6 +10,8 @@ export interface AppTheme {
   mode: ThemeMode;
   isDark: boolean;
   colors: ColorPalette;
+  /** Consolidated spacing / radii / type / hebrew / glass tokens for the current mode. */
+  tokens: ThemeTokens;
   backgroundGradient: [string, string, string];
   /** Same stops as `backgroundGradient` with first repeated (onboarding / splash loops). */
   backgroundGradientLoop: [string, string, string, string];
@@ -37,6 +40,7 @@ export const buildTheme = (mode: ThemeMode): AppTheme => {
     mode,
     isDark: mode === 'dark',
     colors: palette,
+    tokens: buildThemeTokens(mode),
     backgroundGradient,
     backgroundGradientLoop,
     statusBarStyle: mode === 'dark' ? 'light' : 'dark',

@@ -33,6 +33,10 @@ import { OfflineStandaloneService } from '../../src/content/siddur/standalone/Of
 import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { recordDaveningToday } from '../../src/storage/DaveningStreakService';
+import {
+  LastPrayerSessionService,
+  PRAYER_SERVICE_TITLES,
+} from '../../src/storage/LastPrayerSession';
 import { MizrachCompass } from '../../components/ui/MizrachCompass';
 import { BackButton } from '../../components/ui/BackButton';
 import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../components/reader/ReaderChrome';
@@ -55,6 +59,8 @@ interface RouteParams {
   service: 'shacharis' | 'mincha' | 'maariv' | 'brachos' | 'shabbos' | 'bentching' | 'bedtime' | 'shema' | 'modeh_ani' | 'tefilas_haderech' | 'asher_yatzar';
   /** When set, show this single section as a full page (no pop-down list). */
   sectionKey?: string;
+  /** 0–1 scroll progress from continue-reading MiniPlayer. */
+  resumeProgress?: number;
 }
 
 interface Section {
@@ -1002,7 +1008,7 @@ export const SiddurReaderScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const { theme } = useTheme();
-  const { service, sectionKey } = (route.params as RouteParams) || { service: 'shacharis' };
+  const { service, sectionKey, resumeProgress } = (route.params as RouteParams) || { service: 'shacharis' };
 
   const [sections, setSections] = useState<Section[]>([]);
   const isFullScroll =
@@ -1042,7 +1048,37 @@ export const SiddurReaderScreen: React.FC = () => {
   const scrollYRef = useRef(0);
   const scrollYFloatRef = useRef(0);
   const contentHeightRef = useRef(0);
+  const viewportHeightRef = useRef(height);
   const autoscrollRafRef = useRef<number | null>(null);
+  const lastPersistAtRef = useRef(0);
+  const didResumeScrollRef = useRef(false);
+  const [contentSizeVersion, setContentSizeVersion] = useState(0);
+  viewportHeightRef.current = height;
+
+  const persistSession = useCallback(
+    (progressOverride?: number) => {
+      const maxY = Math.max(0, contentHeightRef.current - viewportHeightRef.current);
+      const progress =
+        progressOverride ??
+        (maxY > 0 ? Math.min(1, Math.max(0, scrollYRef.current / maxY)) : 0);
+      const titles = PRAYER_SERVICE_TITLES[service] ?? { english: service, hebrew: '' };
+      void LastPrayerSessionService.save({
+        service,
+        sectionKey: sectionKey,
+        progress,
+        titleEnglish: titles.english,
+        titleHebrew: titles.hebrew,
+      });
+    },
+    [service, sectionKey],
+  );
+
+  const persistSessionThrottled = useCallback(() => {
+    const now = Date.now();
+    if (now - lastPersistAtRef.current < 800) return;
+    lastPersistAtRef.current = now;
+    persistSession();
+  }, [persistSession]);
 
   const loadPreferences = useCallback(async () => {
     try {
@@ -1068,12 +1104,31 @@ export const SiddurReaderScreen: React.FC = () => {
     return () => clearTimeout(fallback);
   }, [loadPreferences]);
 
-  // Record davening streak when user opens siddur
+  // Record davening streak when user opens siddur; persist continue-reading session on blur
   useFocusEffect(
     useCallback(() => {
       recordDaveningToday();
-    }, [])
+      return () => {
+        persistSession();
+      };
+    }, [persistSession])
   );
+
+  // Restore scroll from MiniPlayer resumeProgress once content is measured
+  useEffect(() => {
+    if (didResumeScrollRef.current) return;
+    if (resumeProgress == null || resumeProgress <= 0) return;
+    if (loading || contentHeightRef.current <= 0) return;
+    const maxY = Math.max(0, contentHeightRef.current - height);
+    if (maxY <= 0) return;
+    const y = resumeProgress * maxY;
+    didResumeScrollRef.current = true;
+    requestAnimationFrame(() => {
+      scrollViewRef.current?.scrollTo({ y, animated: false });
+      scrollYRef.current = y;
+      scrollYFloatRef.current = y;
+    });
+  }, [resumeProgress, loading, height, sections.length, contentSizeVersion]);
 
   // Persist autoscroll speed when user changes it (not on initial load)
   const userHasChangedSpeedRef = useRef(false);
@@ -1400,9 +1455,12 @@ export const SiddurReaderScreen: React.FC = () => {
           const y = e.nativeEvent.contentOffset.y;
           scrollYRef.current = y;
           scrollYFloatRef.current = y;
+          persistSessionThrottled();
         }}
+        scrollEventThrottle={200}
         onContentSizeChange={(_, h) => {
           contentHeightRef.current = h;
+          setContentSizeVersion((v) => v + 1);
         }}
       >
         {loading ? (
@@ -2572,9 +2630,12 @@ export const SiddurReaderScreen: React.FC = () => {
             const y = e.nativeEvent.contentOffset.y;
             scrollYRef.current = y;
             scrollYFloatRef.current = y;
+            persistSessionThrottled();
           }}
+          scrollEventThrottle={200}
           onContentSizeChange={(_, h) => {
             contentHeightRef.current = h;
+            setContentSizeVersion((v) => v + 1);
           }}
         >
           {isLoading ? (

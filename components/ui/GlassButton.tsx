@@ -1,37 +1,41 @@
 import React from 'react';
 import {
-  TouchableOpacity,
   Text,
   StyleSheet,
-  ViewStyle,
-  TextStyle,
+  View,
   ActivityIndicator,
+  Pressable,
+  type ViewStyle,
+  type TextStyle,
+  type StyleProp,
+  Platform,
 } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
-import { useTheme } from '../../src/design/theme';
-import { spacing, borderRadius } from '../../src/design/spacing';
-import { textStyles } from '../../src/design/typography';
 import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import { useTheme } from '../../src/design/theme';
 
-const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-interface GlassButtonProps {
+export interface GlassButtonProps {
   title: string;
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   loading?: boolean;
-  style?: ViewStyle;
-  textStyle?: TextStyle;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
 }
 
+/**
+ * Primary actions — solid token fills (no gradient CTAs).
+ * Blur/glass only on the ghost chrome variant.
+ */
 export const GlassButton: React.FC<GlassButtonProps> = ({
   title,
   onPress,
@@ -43,125 +47,120 @@ export const GlassButton: React.FC<GlassButtonProps> = ({
   textStyle,
 }) => {
   const { theme } = useTheme();
+  const { spacing, radii, type, glass } = theme.tokens;
   const scale = useSharedValue(1);
-  const opacity = useSharedValue(1);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
-    opacity: opacity.value,
   }));
 
-  const handlePressIn = () => {
-    scale.value = withSpring(0.95);
-    opacity.value = withTiming(0.8);
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1);
-    opacity.value = withTiming(1);
-  };
-
-  const getVariantStyles = () => {
+  const variantStyles = (() => {
     switch (variant) {
-      case 'primary':
-        return {
-          backgroundColor: theme.colors.primary.main,
-          textColor: theme.colors.text.inverse,
-        };
       case 'secondary':
         return {
           backgroundColor: theme.colors.secondary.main,
           textColor: theme.colors.text.inverse,
+          useBlur: false,
         };
       case 'ghost':
         return {
-          backgroundColor: 'transparent',
+          backgroundColor: theme.colors.glass.medium,
           textColor: theme.colors.primary.main,
+          useBlur: true,
         };
+      case 'primary':
       default:
         return {
           backgroundColor: theme.colors.primary.main,
           textColor: theme.colors.text.inverse,
+          useBlur: false,
         };
     }
-  };
+  })();
 
-  const getSizeStyles = () => {
+  const sizeStyles = (() => {
     switch (size) {
       case 'sm':
         return { paddingVertical: spacing.sm, paddingHorizontal: spacing.md };
-      case 'md':
-        return { paddingVertical: spacing.md, paddingHorizontal: spacing.lg };
       case 'lg':
         return { paddingVertical: spacing.lg, paddingHorizontal: spacing.xl };
+      case 'md':
       default:
         return { paddingVertical: spacing.md, paddingHorizontal: spacing.lg };
     }
+  })();
+
+  const handlePress = () => {
+    if (disabled || loading) return;
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
   };
 
-  const variantStyles = getVariantStyles();
-  const sizeStyles = getSizeStyles();
-
-  return (
-    <AnimatedTouchable
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      disabled={disabled || loading}
-      activeOpacity={0.8}
-      style={[animatedStyle, style]}
+  const inner = (
+    <View
+      style={[
+        styles.inner,
+        {
+          borderRadius: radii.xl,
+          ...sizeStyles,
+          backgroundColor: variantStyles.useBlur ? 'transparent' : variantStyles.backgroundColor,
+          opacity: disabled ? 0.5 : 1,
+        },
+      ]}
     >
-      <BlurView intensity={20} style={styles.blur}>
-        <LinearGradient
-          colors={
-            variant === 'ghost'
-              ? ['transparent', 'transparent']
-              : [variantStyles.backgroundColor, variantStyles.backgroundColor]
-          }
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+      {loading ? (
+        <ActivityIndicator color={variantStyles.textColor} size="small" />
+      ) : (
+        <Text
           style={[
-            styles.gradient,
-            {
-              borderRadius: borderRadius.xl,
-              ...sizeStyles,
-              opacity: disabled ? 0.5 : 1,
-            },
+            type.textStyles.label,
+            { color: variantStyles.textColor, textAlign: 'center' },
+            textStyle,
           ]}
         >
-          {loading ? (
-            <ActivityIndicator
-              color={variantStyles.textColor}
-              size="small"
-            />
-          ) : (
-            <Text
-              style={[
-                textStyles.label,
-                {
-                  color: variantStyles.textColor,
-                  textAlign: 'center',
-                },
-                textStyle,
-              ]}
-            >
-              {title}
-            </Text>
-          )}
-        </LinearGradient>
-      </BlurView>
-    </AnimatedTouchable>
+          {title}
+        </Text>
+      )}
+    </View>
+  );
+
+  return (
+    <AnimatedPressable
+      onPress={handlePress}
+      onPressIn={() => {
+        if (disabled || loading) return;
+        scale.value = withSpring(0.97, { damping: 16, stiffness: 280 });
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1, { damping: 16, stiffness: 280 });
+      }}
+      disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      style={[animatedStyle, style]}
+    >
+      {variantStyles.useBlur && Platform.OS !== 'web' ? (
+        <BlurView
+          intensity={glass.intensity.button}
+          tint={theme.isDark ? 'dark' : 'light'}
+          style={[styles.blur, { borderRadius: radii.xl, backgroundColor: variantStyles.backgroundColor }]}
+        >
+          {inner}
+        </BlurView>
+      ) : (
+        inner
+      )}
+    </AnimatedPressable>
   );
 };
 
 const styles = StyleSheet.create({
   blur: {
-    borderRadius: borderRadius.xl,
     overflow: 'hidden',
   },
-  gradient: {
+  inner: {
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 44,
   },
 });
-

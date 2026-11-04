@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { spacing } from '../design/spacing';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -47,7 +46,9 @@ import { AddGratitudeScreen } from '../../app/hub/AddGratitudeScreen';
 import { TzedakahScreen } from '../../app/tzedakah/TzedakahScreen';
 import { AddTzedakahScreen } from '../../app/tzedakah/AddTzedakahScreen';
 import { SettingsScreen } from '../../app/settings/SettingsScreen';
+import { SearchScreen } from '../../app/search/SearchScreen';
 import { LiquidGlassTabBar } from '../../components/navigation/LiquidGlassTabBar';
+import { ContinueReadingChrome } from '../../components/navigation/ContinueReadingChrome';
 import { UserPreferencesService } from '../storage/UserPreferences';
 import { useTheme } from '../design/theme';
 import { textStyles } from '../design/typography';
@@ -93,16 +94,6 @@ function MainTabs() {
         options={{ tabBarLabel: 'Home' }}
       />
       <Tab.Screen
-        name="Hub"
-        component={HubNavigator}
-        options={{ tabBarLabel: 'Hub' }}
-      />
-      <Tab.Screen
-        name="Calendar"
-        component={CalendarScreen}
-        options={{ tabBarLabel: 'Calendar' }}
-      />
-      <Tab.Screen
         name="Library"
         component={LibraryNavigator}
         options={({ route }) => {
@@ -114,17 +105,40 @@ function MainTabs() {
         }}
       />
       <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{ tabBarLabel: 'Settings' }}
+        name="Hub"
+        component={HubNavigator}
+        options={{ tabBarLabel: 'Hub' }}
+      />
+      <Tab.Screen
+        name="Calendar"
+        component={CalendarScreen}
+        options={{ tabBarLabel: 'Calendar' }}
+      />
+      <Tab.Screen
+        name="Search"
+        component={SearchScreen}
+        options={{ tabBarLabel: 'Search' }}
       />
     </Tab.Navigator>
+  );
+}
+
+/** Main tabs + continue-reading MiniPlayer above the tab bar. */
+function MainWithChrome() {
+  return (
+    <View style={styles.mainShell}>
+      <MainTabs />
+      <ContinueReadingChrome />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   sceneContainer: {
     backgroundColor: 'transparent',
+  },
+  mainShell: {
+    flex: 1,
   },
 });
 
@@ -180,7 +194,7 @@ export default function AppNavigator() {
         </Stack.Screen>
       ) : (
         <>
-          <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen name="Main" component={MainWithChrome} />
           <Stack.Screen
             name="TehillimReader"
             component={TehillimReaderScreen}

@@ -747,20 +747,31 @@ export const HomeScreen: React.FC = () => {
                 <Text style={[styles.greeting, { color: theme.colors.text.primary, fontSize: 34 }]}>
                   {greeting}
                 </Text>
-                <TouchableOpacity
-                  style={[styles.editButton, isEditing && styles.editButtonActive]}
-                  onPress={toggleEditMode}
-                >
-                  <Text
-                    style={[
-                      styles.editButtonText,
-                      isEditing && styles.editButtonTextActive,
-                      !isEditing && { color: theme.colors.text.secondary, fontSize: 14 },
-                    ]}
+                <View style={styles.headerActions}>
+                  <TouchableOpacity
+                    style={styles.settingsGearButton}
+                    onPress={() => navigation.navigate('Settings' as never)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Settings"
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    {isEditing ? 'Done' : 'Edit'}
-                  </Text>
-                </TouchableOpacity>
+                    <Ionicons name="settings-outline" size={22} color={theme.colors.text.secondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.editButton, isEditing && styles.editButtonActive]}
+                    onPress={toggleEditMode}
+                  >
+                    <Text
+                      style={[
+                        styles.editButtonText,
+                        isEditing && styles.editButtonTextActive,
+                        !isEditing && { color: theme.colors.text.secondary, fontSize: 14 },
+                      ]}
+                    >
+                      {isEditing ? 'Done' : 'Edit'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {isEditing && (
@@ -954,7 +965,19 @@ function createHomeStyles(theme: AppTheme) {
     alignItems: 'center',
     marginBottom: spacing.md,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  settingsGearButton: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   greeting: {
+    flex: 1,
     fontFamily: fonts.heading.bold,
     fontSize: 34,
     color: theme.colors.text.primary,

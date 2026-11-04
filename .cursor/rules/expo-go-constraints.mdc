@@ -1,0 +1,7 @@
+---
+description: Expo Go compatibility
+alwaysApply: true
+---
+- Dev runs in Expo Go. Only use packages bundled in Expo Go for the current SDK. Run `npx expo install <pkg>` so versions match.
+- If a feature needs a custom native module, stop and ask before adding it.
+- Check docs for the project's installed SDK version before using any API; native tabs and Expo UI APIs differ between SDK versions.

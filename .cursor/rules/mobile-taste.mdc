@@ -1,0 +1,49 @@
+---
+description: Draftbit mobile-taste anti-slop (React Native / Expo UI)
+alwaysApply: true
+---
+# Mobile taste (from Draftbit mobile-taste-skill)
+
+Source: https://github.com/draftbit/mobile-taste-skill — distilled for Cursor rules. Existing project stack and brand tokens win over skill defaults.
+
+## Before UI code
+1. Stack sniff: read `package.json`, app config, and `src/design/*` / `MOBILE-DESIGN.md` if present. Match the real router, styling, icons, and tokens.
+2. Emit a short **App Read** (kind, audience, vibe, platforms, posture) when building or redesigning screens. Ask one clarifying question only if the read genuinely forks.
+3. Set dials (baseline 4/4/4 unless the brief says otherwise): `DESIGN_EXPRESSION`, `MOTION_INTENSITY`, `VISUAL_DENSITY`. Hard floors: ≥44pt targets, honor reduced motion, UI-thread animation only.
+
+## Chrome lags content
+Native headers, tabs, sheets, and system pickers stay native until expression is extremely custom. Brand content first; do not hand-roll tab bars or large-title headers. One icon family; never emoji as icons.
+
+## Navigation hard rules
+- Tabs 3–5; no Settings/Logout tab; no nested tab bars; no double headers.
+- Container order: tab → push → modal (`pageSheet`) → sheet → fullscreen.
+- Auth/onboarding as route groups, not conditional renders inside screens.
+- Every modal needs an explicit close; Android back matches header back.
+
+## Layout & states
+- Safe-area insets, not magic `paddingTop`. Top-align data screens; center only empty/auth/interstitial.
+- Group with whitespace, hairlines, inset-grouped lists — not stacks of white shadowed cards.
+- Every data screen: loading (skeleton), empty, error, refresh; offline when networked.
+- `Alert.alert` only for destructive confirms. Permission prompts at moment of intent, never on mount.
+
+## Motion & haptics
+- Reanimated springs for interactive motion; no linear UI timing; no `useNativeDriver: false`; no `useState` driven by `onScroll`.
+- Press feedback on every touchable. Haptics: selection for toggles/pickers, light impact for meaningful confirms, notification for async outcomes — not on plain navigation taps.
+- Entering animations never unconditional inside recycled list cells.
+
+## Forbidden AI tells (always)
+1. Icon-chip rows (40×40 tinted rounded squares on every row)
+2. Indigo/violet gradient pipeline (`#6366F1` / `#8B5CF6` / `#7C3AED`)
+3. Card-stack screens
+4. Emoji icons
+5. Five-tabs-plus-FAB by default
+6. `ScrollView` + `.map` for unbounded data
+7. Magic top padding / missing safe areas
+8. Generic three-slide onboarding
+9. `Alert.alert` for success/info
+10. “Welcome back … 👋” / exclamation onboarding voice / filler verbs / em-dashes in UI copy
+
+## Ship checklist (mechanical)
+- No inline hex in screen files (theme tokens only); no indigo family; ≤1 `LinearGradient` app-wide unless brand requires more intentionally.
+- No em-dashes in visible strings; one accent; one radius scale; shadows paired with Android `elevation`.
+- Prefer `npx expo install` for packages. Do not invent APIs — check Expo docs for this project’s SDK (see `expo-docs` rule).

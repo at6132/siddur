@@ -1,0 +1,30 @@
+---
+description: Design rules for every UI change
+alwaysApply: true
+---
+# Twenty4Seven redesign rules
+Goal: Apple Music-level polish. Simple on the surface, many features underneath.
+
+## Non-negotiables
+- Keep the existing brand palette from docs/CURRENT-TOKENS.md. Do not invent new colors. Derive tints/shades from it only.
+- Never remove a feature in docs/FEATURES.md. Redesign how it is presented, not whether it exists.
+- Progressive disclosure: one primary action per screen, secondary features behind menus, sheets, or long-press.
+- Max 4-5 tabs. Everything else is reachable from Home or Search.
+
+## Use real iOS components, never imitations
+- Tabs: expo-router native tabs. No custom tab bar.
+- Headers: native large titles that collapse. No hand-rolled headers.
+- Sheets: native form sheets with detents. No custom bottom-sheet libs unless unavoidable.
+- Icons: SF Symbols via expo-symbols only. No emoji, no mixed icon sets.
+- Menus: native context menus on long-press.
+- Liquid Glass only on chrome (tab bar, floating controls, mini-player), never on content. Always check availability and fall back to expo-blur.
+- Haptics (expo-haptics) on every meaningful tap and toggle.
+
+## Anti-slop
+- No stacks of white rounded cards with shadows. Prefer full-bleed lists, grouped sections, and big imagery/type.
+- No gradient buttons. No centered-everything layouts. No "Welcome back 👋" copy.
+- Every screen needs loading, empty, and error states.
+- Every color via theme tokens with light and dark values. No hex codes in components.
+- Every spacing/radius/font size via tokens. No magic numbers.
+- Respect safe areas and Dynamic Type.
+- Animations: Reanimated springs, never linear timing for UI movement.

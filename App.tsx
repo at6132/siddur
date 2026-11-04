@@ -199,8 +199,12 @@ function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
           } as never);
           return;
         }
-        if (screenName === 'Home' || screenName === 'Calendar' || screenName === 'Library' || screenName === 'Settings') {
+        if (screenName === 'Home' || screenName === 'Calendar' || screenName === 'Library' || screenName === 'Search' || screenName === 'Hub') {
           navigationRef.navigate('Main' as never, { screen: screenName } as never);
+          return;
+        }
+        if (screenName === 'Settings') {
+          navigationRef.navigate('Settings' as never);
           return;
         }
         if (screenName === 'Omer' || screenName === 'omer') {

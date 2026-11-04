@@ -1,0 +1,7 @@
+---
+description: Siddur reader typography
+globs: ["components/reader/**", "app/siddur/**", "src/content/siddur/**"]
+alwaysApply: false
+---
+- Hebrew liturgical text uses one dedicated Hebrew typeface from theme tokens, with nikud support and generous line height. Never fall back to the system font for prayer text.
+- RTL layout for Hebrew blocks, correct writingDirection, text size user-adjustable.
