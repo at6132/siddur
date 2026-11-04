@@ -91,6 +91,14 @@
       transition: transform 0.15s, box-shadow 0.2s;
     }
     .login-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 20px var(--shadow-rose); }
+    .login-legal {
+      margin: 22px 0 0;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-tertiary);
+    }
+    .login-legal a { color: var(--primary-dark); text-decoration: none; font-weight: 600; }
+    .login-legal a:hover { text-decoration: underline; }
 
     #dashboardView { display: none; min-height: 100vh; }
     #dashboardView.visible { display: block; }
@@ -315,6 +323,64 @@
     .tehillim-card .num { font-family: var(--font-heading); font-weight: 700; font-size: 2rem; color: var(--text-primary); }
     .tehillim-card .what { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-top: 6px; }
     .tehillim-card .when { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 4px; }
+
+    .support-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .chip {
+      padding: 8px 14px;
+      font-family: var(--font-body);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--glass-medium);
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .chip.active { color: white; background: linear-gradient(135deg, var(--primary-main), var(--primary-dark)); border-color: transparent; }
+    .ticket {
+      padding: 16px 18px;
+      margin-bottom: 12px;
+      background: var(--glass-light);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 2px 12px var(--shadow-light), 0 0 0 1px rgba(255,255,255,0.5);
+    }
+    .ticket-top { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+    .ticket-subject { font-weight: 700; font-size: 1.02rem; margin: 0; }
+    .badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 4px 8px;
+      border-radius: 999px;
+    }
+    .badge-new { background: rgba(212, 165, 184, 0.35); color: #8a4d64; }
+    .badge-in_progress { background: rgba(165, 196, 212, 0.4); color: #3d5d6e; }
+    .badge-resolved { background: rgba(165, 212, 184, 0.4); color: #2d5b44; }
+    .ticket-meta { font-size: 0.82rem; color: var(--text-secondary); margin: 6px 0 10px; }
+    .ticket-msg { white-space: pre-wrap; font-size: 0.92rem; line-height: 1.55; margin: 0 0 12px; }
+    .ticket-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .ticket-actions button {
+      padding: 8px 12px;
+      font-family: var(--font-body);
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(212, 165, 184, 0.4);
+      background: rgba(255,255,255,0.7);
+      cursor: pointer;
+    }
+    .ticket-actions button:hover { background: rgba(212, 165, 184, 0.22); }
+    .tab-count {
+      display: inline-block;
+      min-width: 1.3em;
+      margin-left: 6px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.35);
+      font-size: 0.75rem;
+    }
+    .tab.active .tab-count { background: rgba(255,255,255,0.25); }
   </style>
 </head>
 <body>
@@ -328,6 +394,13 @@
         <div class="login-error" id="loginError"></div>
         <button type="submit" class="login-btn">Enter</button>
       </form>
+      <p class="login-legal">
+        <a href="/support">Support</a>
+        &nbsp;·&nbsp;
+        <a href="/privacy">Privacy Policy</a>
+        &nbsp;·&nbsp;
+        <a href="/terms">Terms of Use</a>
+      </p>
     </div>
   </div>
 
@@ -351,6 +424,7 @@
         <button type="button" class="tab active" data-tab="overview">Overview</button>
         <button type="button" class="tab" data-tab="usage">App usage</button>
         <button type="button" class="tab" data-tab="tehillim">Tehillim</button>
+        <button type="button" class="tab" data-tab="support">Support <span class="tab-count" id="supportTabCount">0</span></button>
         <button type="button" class="tab" data-tab="users">Users & export</button>
       </div>
 
@@ -433,6 +507,33 @@
         </div>
       </div>
 
+      <!-- Tab: Support -->
+      <div id="panel-support" class="tab-panel">
+        <h2 class="section-title">Support requests</h2>
+        <p class="section-desc">Messages sent from <a href="/support">/support</a>. Reply by email, then mark the ticket resolved.</p>
+        <div class="cards-row">
+          <div class="stat-card">
+            <div class="value" id="supportNew">–</div>
+            <div class="label">New</div>
+          </div>
+          <div class="stat-card">
+            <div class="value" id="supportProgress">–</div>
+            <div class="label">In progress</div>
+          </div>
+          <div class="stat-card">
+            <div class="value" id="supportResolved">–</div>
+            <div class="label">Resolved</div>
+          </div>
+        </div>
+        <div class="support-filters">
+          <button type="button" class="chip active" data-status="">All</button>
+          <button type="button" class="chip" data-status="new">New</button>
+          <button type="button" class="chip" data-status="in_progress">In progress</button>
+          <button type="button" class="chip" data-status="resolved">Resolved</button>
+        </div>
+        <div id="supportList" class="loading">Loading…</div>
+      </div>
+
       <!-- Tab: Users & export -->
       <div id="panel-users" class="tab-panel">
         <h2 class="section-title">Look up one user</h2>
@@ -507,6 +608,7 @@
       checkAuth();
     });
 
+    var supportFilter = '';
     document.querySelectorAll('.tab').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var tab = this.getAttribute('data-tab');
@@ -514,6 +616,15 @@
         document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
         this.classList.add('active');
         qs('panel-' + tab).classList.add('active');
+        if (tab === 'support') loadSupport();
+      });
+    });
+    document.querySelectorAll('.support-filters .chip').forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        document.querySelectorAll('.support-filters .chip').forEach(function(c) { c.classList.remove('active'); });
+        this.classList.add('active');
+        supportFilter = this.getAttribute('data-status') || '';
+        loadSupport();
       });
     });
 
@@ -778,6 +889,77 @@
       URL.revokeObjectURL(a.href);
     }
 
+    function statusLabel(s) {
+      if (s === 'in_progress') return 'In progress';
+      if (s === 'resolved') return 'Resolved';
+      return 'New';
+    }
+
+    function applySupportStats(stats) {
+      var n = (stats && stats.new) || 0;
+      qs('supportNew').textContent = n;
+      qs('supportProgress').textContent = (stats && stats.in_progress) || 0;
+      qs('supportResolved').textContent = (stats && stats.resolved) || 0;
+      qs('supportTabCount').textContent = n;
+    }
+
+    async function setSupportStatus(id, status) {
+      try {
+        await fetch(base + '/api/support/' + id + '/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: status })
+        });
+        loadSupport();
+      } catch (e) {
+        alert('Could not update this request.');
+        console.error(e);
+      }
+    }
+
+    async function loadSupport() {
+      var el = qs('supportList');
+      el.className = 'loading';
+      el.textContent = 'Loading…';
+      try {
+        var data = await fetchJson('/api/support', { status: supportFilter || undefined, limit: 200 });
+        applySupportStats(data.stats || {});
+        var rows = data.requests || [];
+        if (rows.length === 0) {
+          el.className = '';
+          el.innerHTML = '<p class="muted">No support requests in this filter.</p>';
+          return;
+        }
+        el.className = '';
+        el.innerHTML = rows.map(function(r) {
+          var mailto = 'mailto:' + encodeURIComponent(r.email) + '?subject=' + encodeURIComponent('Re: ' + (r.subject || '24/7 support'));
+          var actions = '';
+          if (r.status !== 'in_progress') actions += '<button type="button" data-id="' + r.id + '" data-status="in_progress">Mark in progress</button>';
+          if (r.status !== 'resolved') actions += '<button type="button" data-id="' + r.id + '" data-status="resolved">Mark resolved</button>';
+          if (r.status !== 'new') actions += '<button type="button" data-id="' + r.id + '" data-status="new">Reopen</button>';
+          return '<article class="ticket">' +
+            '<div class="ticket-top"><p class="ticket-subject">' + escapeHtml(r.subject) + '</p>' +
+            '<span class="badge badge-' + escapeHtml(r.status) + '">' + statusLabel(r.status) + '</span></div>' +
+            '<p class="ticket-meta">' + escapeHtml(r.name || 'No name') + ' · <a href="' + mailto + '">' + escapeHtml(r.email) + '</a>' +
+            (r.app_version ? ' · v' + escapeHtml(r.app_version) : '') +
+            (r.platform ? ' · ' + escapeHtml(r.platform) : '') +
+            ' · ' + escapeHtml((r.created_at || '').slice(0, 19).replace('T', ' ')) + ' UTC</p>' +
+            '<p class="ticket-msg">' + escapeHtml(r.message) + '</p>' +
+            '<div class="ticket-actions"><a class="export-btn" href="' + mailto + '">Reply by email</a>' + actions + '</div>' +
+            '</article>';
+        }).join('');
+        el.querySelectorAll('button[data-id]').forEach(function(b) {
+          b.addEventListener('click', function() {
+            setSupportStatus(this.getAttribute('data-id'), this.getAttribute('data-status'));
+          });
+        });
+      } catch (e) {
+        el.className = 'error';
+        el.textContent = 'Could not load support requests.';
+        console.error(e);
+      }
+    }
+
     function apply() {
       loadActiveUsers();
       loadTehillimStats();
@@ -785,6 +967,7 @@
       loadEventSeries();
       loadRetention();
       loadEvents();
+      loadSupport();
       setTimeout(function() { updateOverviewSummary(window._lastDau, window._lastWau, window._lastMau, window._lastPriv, window._lastShared, window._lastPages); }, 400);
     }
 

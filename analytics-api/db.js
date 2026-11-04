@@ -7,7 +7,7 @@ const { Pool } = pg;
 
 const connectionString = process.env.DATABASE_URL;
 let pool = null;
-let memoryStore = { events: [], identities: [] };
+let memoryStore = { events: [], identities: [], supportRequests: [] };
 
 export function getPool() {
   if (pool) return pool;
@@ -60,6 +60,24 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_events_created ON events(created_at);
   `);
   await initTehillimTables();
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS support_requests (
+      id BIGSERIAL PRIMARY KEY,
+      name TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      message TEXT NOT NULL,
+      app_version TEXT,
+      platform TEXT,
+      status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'in_progress', 'resolved')),
+      admin_notes TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_support_status ON support_requests(status);
+    CREATE INDEX IF NOT EXISTS idx_support_created ON support_requests(created_at DESC);
+  `);
+  console.log('[analytics-api] Support tables initialized.');
   console.log('[analytics-api] DB initialized.');
 }
 
@@ -104,6 +122,29 @@ export async function initTehillimTables() {
     CREATE INDEX IF NOT EXISTS idx_tehillim_participants_campaign ON tehillim_participants(campaign_id);
   `);
   console.log('[analytics-api] Tehillim tables initialized.');
+}
+
+async function initSupportRequestTables() {
+  const p = getPool();
+  if (!p) return;
+  await p.query(`
+    CREATE TABLE IF NOT EXISTS support_requests (
+      id BIGSERIAL PRIMARY KEY,
+      name TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      message TEXT NOT NULL,
+      app_version TEXT,
+      platform TEXT,
+      status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'in_progress', 'resolved')),
+      admin_notes TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_support_status ON support_requests(status);
+    CREATE INDEX IF NOT EXISTS idx_support_created ON support_requests(created_at DESC);
+  `);
+  console.log('[analytics-api] Support tables initialized.');
 }
 
 export async function insertEvents(events) {
@@ -682,5 +723,145 @@ export async function getTehillimStats(startDate, endDate) {
     shared_pages_created: sharedPagesCreated,
     shared_perakim_completed: sharedPerakimCompleted,
     private_perakim_completed: privatePerakimCompleted,
+  };
+}
+
+const SUPPORT_STATUSES = new Set(['new', 'in_progress', 'resolved']);
+
+function mapSupportRow(row) {
+  if (!row) return null;
+  return {
+    id: Number(row.id),
+    name: row.name || '',
+    email: row.email,
+    subject: row.subject,
+    message: row.message,
+    app_version: row.app_version || null,
+    platform: row.platform || null,
+    status: row.status,
+    admin_notes: row.admin_notes || '',
+    created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
+    updated_at: row.updated_at instanceof Date ? row.updated_at.toISOString() : row.updated_at,
+  };
+}
+
+export async function initSupportTables() {
+  return initSupportRequestTables();
+}
+
+export async function createSupportRequest({ name, email, subject, message, appVersion, platform }) {
+  const p = getPool();
+  if (!p) {
+    const now = new Date().toISOString();
+    const row = {
+      id: memoryStore.supportRequests.length + 1,
+      name: name || '',
+      email,
+      subject,
+      message,
+      app_version: appVersion || null,
+      platform: platform || null,
+      status: 'new',
+      admin_notes: '',
+      created_at: now,
+      updated_at: now,
+    };
+    memoryStore.supportRequests.unshift(row);
+    return row;
+  }
+  const res = await p.query(
+    `INSERT INTO support_requests (name, email, subject, message, app_version, platform)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING id, name, email, subject, message, app_version, platform, status, admin_notes, created_at, updated_at`,
+    [name || '', email, subject, message, appVersion || null, platform || null]
+  );
+  return mapSupportRow(res.rows[0]);
+}
+
+export async function listSupportRequests({ status, limit = 200, offset = 0 } = {}) {
+  const p = getPool();
+  if (!p) {
+    let list = [...memoryStore.supportRequests];
+    if (status && SUPPORT_STATUSES.has(status)) list = list.filter((r) => r.status === status);
+    return list.slice(offset, offset + limit);
+  }
+  const params = [];
+  let where = '';
+  if (status && SUPPORT_STATUSES.has(status)) {
+    params.push(status);
+    where = 'WHERE status = $1';
+  }
+  params.push(Math.min(Number(limit) || 200, 500), Number(offset) || 0);
+  const limitIdx = params.length - 1;
+  const res = await p.query(
+    `SELECT id, name, email, subject, message, app_version, platform, status, admin_notes, created_at, updated_at
+     FROM support_requests ${where}
+     ORDER BY created_at DESC
+     LIMIT $${limitIdx} OFFSET $${limitIdx + 1}`,
+    params
+  );
+  return res.rows.map(mapSupportRow);
+}
+
+export async function updateSupportRequest(id, { status, adminNotes } = {}) {
+  const p = getPool();
+  const numericId = Number(id);
+  if (!Number.isFinite(numericId) || numericId < 1) throw new Error('Invalid id');
+  if (status != null && !SUPPORT_STATUSES.has(status)) throw new Error('Invalid status');
+
+  if (!p) {
+    const row = memoryStore.supportRequests.find((r) => r.id === numericId);
+    if (!row) return null;
+    if (status) row.status = status;
+    if (adminNotes != null) row.admin_notes = String(adminNotes);
+    row.updated_at = new Date().toISOString();
+    return row;
+  }
+
+  const sets = ['updated_at = NOW()'];
+  const params = [];
+  let i = 1;
+  if (status) {
+    sets.push(`status = $${i++}`);
+    params.push(status);
+  }
+  if (adminNotes != null) {
+    sets.push(`admin_notes = $${i++}`);
+    params.push(String(adminNotes));
+  }
+  params.push(numericId);
+  const res = await p.query(
+    `UPDATE support_requests SET ${sets.join(', ')} WHERE id = $${i}
+     RETURNING id, name, email, subject, message, app_version, platform, status, admin_notes, created_at, updated_at`,
+    params
+  );
+  return mapSupportRow(res.rows[0]);
+}
+
+export async function getSupportStats() {
+  const p = getPool();
+  if (!p) {
+    const list = memoryStore.supportRequests;
+    return {
+      total: list.length,
+      new: list.filter((r) => r.status === 'new').length,
+      in_progress: list.filter((r) => r.status === 'in_progress').length,
+      resolved: list.filter((r) => r.status === 'resolved').length,
+    };
+  }
+  const res = await p.query(`
+    SELECT
+      COUNT(*)::int AS total,
+      COUNT(*) FILTER (WHERE status = 'new')::int AS new,
+      COUNT(*) FILTER (WHERE status = 'in_progress')::int AS in_progress,
+      COUNT(*) FILTER (WHERE status = 'resolved')::int AS resolved
+    FROM support_requests
+  `);
+  const row = res.rows[0] || {};
+  return {
+    total: Number(row.total || 0),
+    new: Number(row.new || 0),
+    in_progress: Number(row.in_progress || 0),
+    resolved: Number(row.resolved || 0),
   };
 }

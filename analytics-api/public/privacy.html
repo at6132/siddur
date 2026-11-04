@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy Policy — 24/7 Siddur</title>
+  <meta name="description" content="Privacy Policy for the 24/7 Siddur app by Sheva Studios." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/legal.css" />
+</head>
+<body>
+  <div class="wrap">
+    <nav class="topnav">
+      <a class="brand" href="/privacy">24/7</a>
+      <div class="nav-links">
+        <a href="/support">Support</a>
+        <a class="active" href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms of Use</a>
+      </div>
+    </nav>
+
+    <article class="card">
+      <h1>Privacy Policy</h1>
+      <p class="meta">Effective date: August 12, 2026 &nbsp;·&nbsp; Last updated: August 12, 2026</p>
+
+      <p class="note">
+        This policy describes how <strong>Sheva Studios</strong> (“we,” “us,” or “our”) collects, uses, stores, and shares information when you use the mobile application currently published as <strong>Siddur</strong> and branded in-app as <strong>24/7</strong> (the “App”), our admin analytics dashboard, shared Tehillim links, and related websites or APIs (together, the “Services”). It is written to match how the App actually works today. It is not legal advice.
+      </p>
+
+      <h2>1. Who we are</h2>
+      <p>
+        The Services are operated by Sheva Studios (project by Avi Taub). The App is a Jewish davening and daily-life companion: siddur, Tehillim, calendar/zmanim, reminders, Mizrach compass, learning texts, and personal tracking tools.
+      </p>
+      <p>
+        Contact for privacy requests: <a href="mailto:shevastudios@gmail.com">shevastudios@gmail.com</a>
+        or <a href="tel:+13475547549">347-554-7549</a>.
+        Support: <a href="https://www.siddur24seven.com/support">siddur24seven.com/support</a>.
+      </p>
+      <p>
+        iOS bundle identifier: <code>com.siddur.app</code>. We do not currently require you to create an account or provide an email address to use the App.
+      </p>
+
+      <h2>2. Scope</h2>
+      <p>This policy covers:</p>
+      <ul>
+        <li>The iOS and Android App (including Expo / TestFlight / App Store / Play builds);</li>
+        <li>Our first-party analytics and Tehillim campaign API hosted on Railway;</li>
+        <li>The password-protected admin dashboard at <code>/dashboard</code>;</li>
+        <li>Shared Tehillim web links (for example on siddur24seven.com or our Railway domain) that open the App.</li>
+      </ul>
+      <p>It does not control third-party sites you open from the App (for example Sefaria.org), Apple, Google, or your device operating system.</p>
+
+      <h2>3. Information we collect</h2>
+      <p>We collect only what is needed to run the App. Most personal and spiritual content stays on your device.</p>
+
+      <h3>3.1 Information stored only on your device</h3>
+      <p>The following is saved locally (typically via device storage / AsyncStorage) and is <strong>not</strong> uploaded to our servers as part of normal App use:</p>
+      <ul>
+        <li><strong>Preferences:</strong> nusach, display settings (text size, fonts, theme), spiritual goals, home-panel layout, autoscroll speed, Hebrew birthday if you enter one.</li>
+        <li><strong>Notification settings and custom reminders:</strong> times, titles, and messages you create.</li>
+        <li><strong>Precise location</strong> (latitude, longitude, and an approximate city name) after you grant location permission, used for zmanim, sunset-based reminders, and the Mizrach compass.</li>
+        <li><strong>Refuah names:</strong> Hebrew names and mother’s names you optionally add for the Amidah “Refa’einu” insertion.</li>
+        <li><strong>Gratitude journal entries</strong> (free-text notes you write).</li>
+        <li><strong>Tzedakah log:</strong> amounts, organization names, and dates you enter.</li>
+        <li><strong>Progress trackers:</strong> Tehillim completions, brachos counts, habits, daily goals, gratitude streaks, davening streaks, Shnayim Mikra progress, Omer widget state, and similar on-device counters.</li>
+        <li><strong>Cached Jewish texts</strong> downloaded from Sefaria or bundled offline packs, so reading can work with poor connectivity.</li>
+        <li><strong>An analytics event queue</strong> waiting to be sent (see 3.3).</li>
+      </ul>
+      <p>Uninstalling the App, using the in-App “Reset App” control, or clearing app data on the device deletes this local information. We cannot recover it from our servers because we do not hold a copy.</p>
+
+      <h3>3.2 Location, sensors, and notifications</h3>
+      <table>
+        <thead>
+          <tr><th>Category</th><th>What we access</th><th>Why</th><th>Leaves the device?</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Precise location</td>
+            <td>GPS coordinates and reverse-geocoded city name, if you allow location</td>
+            <td>Zmanim (sunrise, sunset, candle lighting, etc.), location-aware reminders, and bearing toward Jerusalem for Mizrach</td>
+            <td>Stored on device. Not sent in analytics events. Device OS may geocode locally or via Apple/Google geocoding.</td>
+          </tr>
+          <tr>
+            <td>Motion / compass sensors</td>
+            <td>Magnetometer, accelerometer, and heading (when available)</td>
+            <td>Mizrach compass only; processed on device</td>
+            <td>No</td>
+          </tr>
+          <tr>
+            <td>Notifications</td>
+            <td>Permission status; locally scheduled reminder content</td>
+            <td>Davening, zmanim, Tehillim, Omer, Shabbos clock, and custom reminders you enable</td>
+            <td>Scheduled on device. Apple/Google deliver local or OS-managed notifications. We do not currently collect your push token as a marketing identifier.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Location is optional. If you deny permission, you can still use the App; zmanim and Mizrach may use a saved or default location and will be less accurate. We request location while the App is in use (foreground), not for advertising.</p>
+
+      <h3>3.3 Product analytics (sent to our servers)</h3>
+      <p>
+        The App sends product-analytics events to our first-party backend (currently hosted by Railway). Events are tied to a random <strong>anonymous ID</strong> created on the device. We do not collect your name, email, phone number, or address in these events.
+      </p>
+      <p>Typical event fields include:</p>
+      <ul>
+        <li>Anonymous ID, session ID, and (only if we later add login) a user ID;</li>
+        <li>Event name and time (for example app_open, screen_view, onboarding steps, feature use, Tehillim perek completed, reliability/error codes);</li>
+        <li>App version, build number, platform (iOS/Android/web), OS version, a coarse device model label, locale, timezone, network type (wifi/cellular/offline/unknown), environment, and screen name;</li>
+        <li>Optional campaign/UTM fields if present.</li>
+      </ul>
+      <p>We do <strong>not</strong> include gratitude text, tzedakah amounts, Refuah names, precise GPS coordinates, reminder message bodies, or other journal content in analytics payloads.</p>
+      <p>The admin dashboard is for the operator of Sheva Studios. It shows aggregated usage (DAU/WAU/MAU, funnels, retention) and event timelines by anonymous ID. Access is password-protected. Dashboard use is not a consumer-facing account.</p>
+
+      <h3>3.4 Shared Tehillim campaigns</h3>
+      <p>If you create or join a shared / split Tehillim campaign, we store on our servers:</p>
+      <ul>
+        <li>Campaign type, optional title, optional reason, optional deadline;</li>
+        <li>A random campaign ID and share link;</li>
+        <li>Anonymous participant IDs (not legal names);</li>
+        <li>Which perakim were claimed or marked complete.</li>
+      </ul>
+      <p>Anyone with the share link can open the campaign. Do not put private medical, financial, or identifying details in a campaign title or reason. You can leave a campaign; the creator can delete a campaign they created.</p>
+
+      <h3>3.5 Information we do not collect today</h3>
+      <ul>
+        <li>No required user account, password, or email for App use;</li>
+        <li>No contacts, photos, camera, microphone, calendar write access, or files outside App storage;</li>
+        <li>No advertising SDKs, no sale of personal information, no cross-app tracking for ads;</li>
+        <li>No payment card numbers processed by us (the App does not currently run in-app purchases);</li>
+        <li>No health, fitness, or government-ID data.</li>
+      </ul>
+
+      <h3>3.6 Information collected automatically by infrastructure</h3>
+      <p>
+        Our hosting provider (Railway), Apple, Google, and Expo may process standard technical logs (IP address, user-agent, request time, device diagnostics) when the App, dashboard, or API is reached. We use this to operate, secure, and debug the Services, not to build advertising profiles.
+      </p>
+
+      <h2>4. How we use information</h2>
+      <ul>
+        <li>Provide siddur/Tehillim/learning text, calendar, zmanim, and reminders;</li>
+        <li>Point Mizrach using your location and device sensors;</li>
+        <li>Remember your settings and on-device progress;</li>
+        <li>Operate shared Tehillim campaigns you choose to create or join;</li>
+        <li>Understand how the App is used, find crashes, and improve reliability;</li>
+        <li>Secure the Services, prevent abuse, and comply with law;</li>
+        <li>Respond to support emails you send us.</li>
+      </ul>
+      <p>We do not use your data for targeted advertising. We do not sell or “share” personal information for cross-context behavioral advertising as those terms are used in the CCPA/CPRA.</p>
+
+      <h2>5. Legal bases (EEA/UK/Switzerland)</h2>
+      <p>If GDPR or UK GDPR applies, we process personal data on these bases:</p>
+      <ul>
+        <li><strong>Contract / requested service:</strong> providing the App features you use (including optional shared Tehillim);</li>
+        <li><strong>Consent:</strong> location, notifications, and sensors, which you can revoke in device settings;</li>
+        <li><strong>Legitimate interests:</strong> first-party product analytics with anonymous IDs, security, and service improvement, balanced against your rights;</li>
+        <li><strong>Legal obligation:</strong> if we must retain or disclose information to comply with law.</li>
+      </ul>
+      <p>You may withdraw consent in iOS/Android Settings without affecting the lawfulness of processing before withdrawal.</p>
+
+      <h2>6. How we share information</h2>
+      <p>We share information only as follows:</p>
+      <table>
+        <thead>
+          <tr><th>Recipient</th><th>Role</th><th>What they may process</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Railway</td>
+            <td>Cloud hosting for our API, dashboard, and database</td>
+            <td>Analytics events, Tehillim campaign records, server logs</td>
+          </tr>
+          <tr>
+            <td>Expo / EAS</td>
+            <td>App builds and over-the-air updates</td>
+            <td>Install/update diagnostics as described by Expo</td>
+          </tr>
+          <tr>
+            <td>Apple / Google</td>
+            <td>App distribution, OS permissions, local notifications, device services</td>
+            <td>Standard store and OS data; location/geocoding if you grant permission</td>
+          </tr>
+          <tr>
+            <td>Sefaria</td>
+            <td>Independent library of Jewish texts</td>
+            <td>Text-fetch requests (IP and request URL) when the App loads a text that is not already bundled or cached. We do not send your name or journal content to Sefaria.</td>
+          </tr>
+          <tr>
+            <td>You / people you invite</td>
+            <td>Shared Tehillim</td>
+            <td>Campaign title, reason, progress visible to anyone with the link</td>
+          </tr>
+          <tr>
+            <td>Professional advisers or authorities</td>
+            <td>Legal, security, or compliance</td>
+            <td>Only as reasonably necessary or required by law</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>We do not sell your personal information. If we ever use a new processor that materially changes this policy, we will update this page.</p>
+
+      <h2>7. Retention</h2>
+      <ul>
+        <li><strong>On-device data:</strong> until you delete it, reset the App, or uninstall.</li>
+        <li><strong>Analytics events:</strong> kept as long as reasonably needed to operate the product and understand usage, then deleted or aggregated. You may email us to request deletion of records associated with an anonymous ID if you can provide it.</li>
+        <li><strong>Tehillim campaigns:</strong> until the creator deletes the campaign or we remove inactive/abusive campaigns.</li>
+        <li><strong>Support emails:</strong> as long as needed to handle your request and keep a reasonable business record.</li>
+        <li><strong>Server logs:</strong> typically short periods consistent with hosting defaults and security needs.</li>
+      </ul>
+
+      <h2>8. Security</h2>
+      <p>
+        We use HTTPS, least-privilege hosting, a password on the admin dashboard, and on-device storage for sensitive journal and name data. No method of transmission or storage is 100% secure. Do not put secrets, medical diagnoses, or other highly sensitive material in shared Tehillim titles. Refuah names and gratitude notes are stored on the device; protect the device with a passcode and OS-level privacy settings.
+      </p>
+
+      <h2>9. International transfers</h2>
+      <p>
+        We are based in the United States. Hosting (Railway) and device platforms may process data in the United States or other countries. If you use the App from the EEA, UK, or elsewhere, you understand that your information may be transferred to the U.S., which may have different data-protection rules. We rely on appropriate transfer mechanisms used by our providers and on your use of the Services.
+      </p>
+
+      <h2>10. Your rights</h2>
+      <p>Depending on where you live, you may have the right to:</p>
+      <ul>
+        <li>Access, correct, or delete personal information we hold;</li>
+        <li>Port a copy of data we store on our servers;</li>
+        <li>Object to or restrict certain processing;</li>
+        <li>Withdraw consent for location, notifications, or sensors in device settings;</li>
+        <li>Appeal a denial of a privacy request (California and similar laws);</li>
+        <li>Lodge a complaint with a supervisory authority (EEA/UK).</li>
+      </ul>
+      <p>
+        Because most App data is on your device, the fastest deletion method is uninstalling the App or using Reset App in Settings. For server-side analytics or a Tehillim campaign, email <a href="mailto:shevastudios@gmail.com">shevastudios@gmail.com</a> with a description of your request. If you still have the App, include your anonymous ID if you can locate it, or describe the campaign link. We will not discriminate against you for exercising privacy rights. We do not sell personal information, so there is no “Do Not Sell” opt-out for a sale we do not perform.
+      </p>
+      <p>Authorized agents (California) may submit requests to the same email with proof of authority. We may need to verify identity to a reasonable degree.</p>
+
+      <h2>11. Children</h2>
+      <p>
+        The App is a general religious companion. It is not directed at children under 13 (or under 16 in the EEA where consent-age rules require it), and we do not knowingly collect personal information from children for accounts or marketing. We do not ask for a child’s name, email, or photos. If you believe a child has submitted personal information to our servers (for example in a shared Tehillim title), contact us and we will delete it. Parents and educators may use the App themselves; device-level parental controls remain your responsibility.
+      </p>
+
+      <h2>12. Push notifications and tracking</h2>
+      <p>
+        Reminders are scheduled locally on your device based on settings you choose. You can disable notifications in the App and in system settings. We do not use the App to track you across other companies’ apps and websites for advertising. On iOS, we do not use the App Tracking Transparency advertising identifier for ads.
+      </p>
+
+      <h2>13. Religious texts and third-party content</h2>
+      <p>
+        Prayer and learning texts may be bundled offline or fetched from Sefaria and similar sources and are provided under their licenses (including Creative Commons CC-BY-SA where applicable). Fetching a text may expose your IP address to that provider. See Sefaria’s own privacy policy at sefaria.org.
+      </p>
+
+      <h2>14. Apple / Google privacy labels (summary)</h2>
+      <p>For store questionnaires, the following is an accurate high-level summary of current practice:</p>
+      <ul>
+        <li><strong>Precise Location</strong> — used for App functionality (zmanim, reminders, Mizrach); not used for third-party advertising; linked to your device, not to an account name.</li>
+        <li><strong>Product Interaction / Usage Data</strong> — screens, features, and reliability events for first-party analytics.</li>
+        <li><strong>Identifiers</strong> — random anonymous/device IDs we generate; not your email.</li>
+        <li><strong>Diagnostics</strong> — crash and API-error events.</li>
+        <li><strong>User Content</strong> — Tehillim campaign metadata if you use sharing; journal/tzedakah/names stay on device.</li>
+        <li><strong>Not collected:</strong> contact info, financial info, health records, browsing history for ads, purchases in-app (none today).</li>
+      </ul>
+
+      <h2>15. Changes</h2>
+      <p>
+        We may update this policy when the App or the law changes. The “Last updated” date will change. Material changes will be posted on this page. Continued use after the effective date means you accept the updated policy. If we add accounts, payments, or new data types, we will revise this policy before those features collect new personal data.
+      </p>
+
+      <h2>16. Contact</h2>
+      <p>
+        Sheva Studios<br />
+        Privacy requests: <a href="mailto:shevastudios@gmail.com">shevastudios@gmail.com</a><br />
+        Phone: <a href="tel:+13475547549">347-554-7549</a><br />
+        This policy: <a href="https://www.siddur24seven.com/privacy">siddur24seven.com/privacy</a><br />
+        Support: <a href="https://www.siddur24seven.com/support">siddur24seven.com/support</a><br />
+        Terms of Use: <a href="https://www.siddur24seven.com/terms">siddur24seven.com/terms</a>
+      </p>
+    </article>
+
+    <p class="footer">© 2026 Sheva Studios · 24/7 Siddur · Not a substitute for a posek or professional advice.</p>
+  </div>
+</body>
+</html>

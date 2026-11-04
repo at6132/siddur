@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Support — 24/7 Siddur</title>
+  <meta name="description" content="Get help with the 24/7 Siddur app from Sheva Studios." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/legal.css" />
+</head>
+<body>
+  <div class="wrap">
+    <nav class="topnav">
+      <a class="brand" href="/support">24/7</a>
+      <div class="nav-links">
+        <a class="active" href="/support">Support</a>
+        <a href="/privacy">Privacy Policy</a>
+        <a href="/terms">Terms of Use</a>
+      </div>
+    </nav>
+
+    <article class="card">
+      <h1>Support</h1>
+      <p class="meta">24/7 Siddur · Sheva Studios</p>
+
+      <p class="note">
+        Need help with davening, Tehillim, zmanim, or anything else in the app? Send a message below
+        and we’ll get back to you at the email you share. You can also call
+        <a href="tel:+13475547549">347-554-7549</a>
+        or email
+        <a href="mailto:shevastudios@gmail.com">shevastudios@gmail.com</a>.
+        We usually reply within 1–2 business days.
+      </p>
+
+      <form id="supportForm" novalidate>
+        <label for="name">Name <span class="optional">(optional)</span></label>
+        <input id="name" name="name" type="text" maxlength="100" autocomplete="name" placeholder="Your name" />
+
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" maxlength="200" autocomplete="email" required placeholder="you@email.com" />
+
+        <label for="subject">Subject</label>
+        <input id="subject" name="subject" type="text" maxlength="200" required placeholder="How can we help?" />
+
+        <label for="message">Message</label>
+        <textarea id="message" name="message" maxlength="4000" required rows="7" placeholder="Tell us what happened, and what you expected."></textarea>
+
+        <label for="app_version">App version <span class="optional">(optional)</span></label>
+        <input id="app_version" name="app_version" type="text" maxlength="40" placeholder="e.g. 1.8.2" />
+
+        <div class="hp" aria-hidden="true">
+          <label for="website">Website</label>
+          <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
+        </div>
+
+        <p id="formError" class="form-error" role="alert"></p>
+        <p id="formSuccess" class="form-success" hidden>Thanks — we received your message and will reply by email.</p>
+
+        <button type="submit" class="submit-btn" id="submitBtn">Send message</button>
+      </form>
+
+      <h2>Other ways to reach us</h2>
+      <p>
+        Phone: <a href="tel:+13475547549">347-554-7549</a><br />
+        Email: <a href="mailto:shevastudios@gmail.com">shevastudios@gmail.com</a><br />
+        In the app: Settings → About → Support
+      </p>
+    </article>
+
+    <p class="footer">© 2026 Sheva Studios · 24/7 Siddur · Not a substitute for a posek or professional advice.</p>
+  </div>
+
+  <script>
+    var form = document.getElementById('supportForm');
+    var err = document.getElementById('formError');
+    var ok = document.getElementById('formSuccess');
+    var btn = document.getElementById('submitBtn');
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      err.textContent = '';
+      ok.hidden = true;
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      try {
+        var body = {
+          name: document.getElementById('name').value,
+          email: document.getElementById('email').value,
+          subject: document.getElementById('subject').value,
+          message: document.getElementById('message').value,
+          app_version: document.getElementById('app_version').value,
+          website: document.getElementById('website').value,
+          platform: 'web'
+        };
+        var res = await fetch('/api/support', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        var data = {};
+        try { data = await res.json(); } catch (_) {}
+        if (!res.ok) {
+          err.textContent = data.error || 'Could not send. Please email shevastudios@gmail.com.';
+          return;
+        }
+        form.reset();
+        ok.hidden = false;
+      } catch (_) {
+        err.textContent = 'Could not send. Please email shevastudios@gmail.com.';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Send message';
+      }
+    });
+  </script>
+</body>
+</html>

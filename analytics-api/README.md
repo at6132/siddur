@@ -32,6 +32,9 @@ In the Siddur app, set the analytics backend URL:
 - `POST /api/identities/merge` – `{ anonymous_id, user_id, profile? }`
 - `POST /api/identities/profile` – `{ anonymous_id, profile }`
 - `GET /api/health` – health check
+- `POST /api/support` – public support form
+- `GET /api/support` – admin inbox
+- `POST /api/support/:id/status` – update ticket status
 
 ## Admin dashboard
 
@@ -42,3 +45,4 @@ Open **`/dashboard`** in the browser (e.g. `https://your-app.railway.app/dashboa
 - **Event counts:** table of event_name → count (funnel/overview)
 - **Recent events:** table with time, event, anonymous_id, session, screen
 - **Export:** CSV download of the currently loaded events
+- **Support:** inbox of messages from `/support`
