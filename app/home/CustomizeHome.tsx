@@ -1,63 +1,68 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Platform,
-  Alert,
-} from 'react-native';
+import { View, Text, Pressable, Switch, Alert, StyleSheet } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import { FadeIn } from '../../components/animations/FadeIn';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { BackButton } from '../../components/ui/BackButton';
-import { colors } from '../../src/design/colors';
-import { DEFAULT_SCREEN_BACKGROUND } from '../../src/design/screenGradient';
-import { spacing, borderRadius } from '../../src/design/spacing';
-import { fonts } from '../../src/design/typography';
+import { Screen } from '../../components/ui/Screen';
+import { Section } from '../../components/ui/Section';
+import { ListRow } from '../../components/ui/ListRow';
+import { GlassButton } from '../../components/ui/GlassButton';
+import { useTheme } from '../../src/design/theme';
 import {
   HomePanelsService,
   HomePanel,
   PANEL_DEFINITIONS,
 } from '../../src/storage/HomePanelsService';
+import { getPanelIconName } from './utils/panelIcons';
 
-// Glass Card Component
-const GlassCard: React.FC<{
-  children: React.ReactNode;
-  style?: any;
-}> = ({ children, style }) => {
-  const content = (
-    <View style={[styles.glassCard, style]}>
-      {Platform.OS !== 'web' ? (
-        <>
-          <BlurView
-            intensity={75}
-            tint="light"
-            style={StyleSheet.absoluteFillObject}
-            pointerEvents="none"
-          />
-          <View style={styles.glassInner} collapsable={false}>{children}</View>
-        </>
-      ) : (
-        <LinearGradient
-          colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
-          style={styles.glassBlur}
-        >
-          <View style={styles.glassInner}>{children}</View>
-        </LinearGradient>
-      )}
-    </View>
+interface PanelActionProps {
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  destructive?: boolean;
+}
+
+/** Secondary row action, revealed only when a panel row is expanded. */
+const PanelAction: React.FC<PanelActionProps> = ({ icon, label, onPress, disabled, destructive }) => {
+  const { theme } = useTheme();
+  const { spacing, type } = theme.tokens;
+  const color = destructive ? theme.colors.semantic.error : theme.colors.text.secondary;
+
+  return (
+    <Pressable
+      onPress={() => {
+        if (disabled) return;
+        void Haptics.selectionAsync();
+        onPress();
+      }}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
+      style={({ pressed }) => [
+        styles.action,
+        {
+          gap: spacing.xs,
+          opacity: disabled ? 0.35 : pressed ? 0.6 : 1,
+        },
+      ]}
+    >
+      <Ionicons name={icon} size={theme.tokens.type.fontSize.lg} color={color} />
+      <Text style={[type.textStyles.label, { color }]}>{label}</Text>
+    </Pressable>
   );
-
-  return content;
 };
 
 export const CustomizeHome: React.FC = () => {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const { spacing, type } = theme.tokens;
   const [panels, setPanels] = useState<HomePanel[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     loadPanels();
@@ -66,6 +71,7 @@ export const CustomizeHome: React.FC = () => {
   const loadPanels = async () => {
     const loadedPanels = await HomePanelsService.getPanels();
     setPanels(loadedPanels.sort((a, b) => a.order - b.order));
+    setLoaded(true);
   };
 
   const getPanelInfo = (panel: HomePanel) => {
@@ -75,15 +81,15 @@ export const CustomizeHome: React.FC = () => {
   const movePanel = (index: number, direction: 'up' | 'down') => {
     const newPanels = [...panels];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
-    
+
     if (targetIndex < 0 || targetIndex >= panels.length) return;
-    
+
     // Swap panels
     [newPanels[index], newPanels[targetIndex]] = [newPanels[targetIndex], newPanels[index]];
-    
+
     // Update order values
-    newPanels.forEach((p, i) => p.order = i);
-    
+    newPanels.forEach((p, i) => (p.order = i));
+
     setPanels(newPanels);
     setHasChanges(true);
   };
@@ -98,7 +104,7 @@ export const CustomizeHome: React.FC = () => {
   const removePanel = (index: number) => {
     const panel = panels[index];
     const info = getPanelInfo(panel);
-    
+
     Alert.alert(
       'Remove Panel',
       `Remove "${info?.name || 'this panel'}" from your home screen?`,
@@ -109,6 +115,7 @@ export const CustomizeHome: React.FC = () => {
           style: 'destructive',
           onPress: async () => {
             await HomePanelsService.removePanel(panel.id);
+            setExpandedId(null);
             loadPanels();
           },
         },
@@ -119,7 +126,7 @@ export const CustomizeHome: React.FC = () => {
   const saveChanges = async () => {
     const panelIds = panels.map(p => p.id);
     await HomePanelsService.reorderPanels(panelIds);
-    
+
     // Save visibility changes
     for (const panel of panels) {
       const original = await HomePanelsService.getPanels();
@@ -128,9 +135,9 @@ export const CustomizeHome: React.FC = () => {
         await HomePanelsService.togglePanelVisibility(panel.id);
       }
     }
-    
+
     setHasChanges(false);
-    Alert.alert('Saved', 'Your home screen has been updated!');
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
 
   const resetToDefault = () => {
@@ -152,301 +159,159 @@ export const CustomizeHome: React.FC = () => {
     );
   };
 
-  return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={[...DEFAULT_SCREEN_BACKGROUND]}
-        style={StyleSheet.absoluteFill}
-      />
+  const goToMarketplace = () => navigation.navigate('PanelsMarketplace' as never);
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
+  const header = (
+    <View style={{ paddingBottom: spacing.md }}>
+      <BackButton onPress={() => navigation.goBack()} style={{ marginBottom: spacing.sm }} />
+      <Text style={[type.textStyles.h2, { color: theme.colors.text.primary }]}>
+        Customize Home
+      </Text>
+      <Text
+        style={[
+          type.textStyles.bodySmall,
+          { color: theme.colors.text.secondary, marginTop: spacing.xs },
+        ]}
       >
-        {/* Header */}
-        <FadeIn delay={0}>
-          <View style={styles.header}>
-            <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
-            <Text style={styles.title}>Customize Home</Text>
-            <Text style={styles.subtitle}>Drag to reorder, tap to toggle visibility</Text>
-          </View>
-        </FadeIn>
-
-        {/* Action Buttons */}
-        <FadeIn delay={50}>
-          <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={styles.addPanelButton}
-              onPress={() => navigation.navigate('PanelsMarketplace' as never)}
-            >
-              <Text style={styles.addPanelIcon}>+</Text>
-              <Text style={styles.addPanelText}>Add Panel</Text>
-            </TouchableOpacity>
-            
-            {hasChanges && (
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={saveChanges}
-              >
-                <Text style={styles.saveButtonText}>Save Changes</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </FadeIn>
-
-        {/* Panels List */}
-        <View style={styles.panelsList}>
-          {panels.map((panel, index) => {
-            const info = getPanelInfo(panel);
-            if (!info) return null;
-            
-            return (
-              <FadeIn key={panel.id} delay={100 + index * 30}>
-                <GlassCard style={[styles.panelItem, !panel.visible && styles.panelItemHidden]}>
-                  <View style={styles.panelContent}>
-                    <View style={styles.panelLeft}>
-                      <Text style={styles.panelIcon}>{info.icon}</Text>
-                      <View style={styles.panelInfo}>
-                        <Text style={styles.panelName}>{info.name}</Text>
-                        <Text style={styles.panelCategory}>{info.category}</Text>
-                      </View>
-                    </View>
-                    
-                    <View style={styles.panelActions}>
-                      {/* Move Up */}
-                      <TouchableOpacity
-                        style={[styles.actionButton, index === 0 && styles.actionButtonDisabled]}
-                        onPress={() => movePanel(index, 'up')}
-                        disabled={index === 0}
-                      >
-                        <Text style={styles.actionButtonText}>↑</Text>
-                      </TouchableOpacity>
-                      
-                      {/* Move Down */}
-                      <TouchableOpacity
-                        style={[styles.actionButton, index === panels.length - 1 && styles.actionButtonDisabled]}
-                        onPress={() => movePanel(index, 'down')}
-                        disabled={index === panels.length - 1}
-                      >
-                        <Text style={styles.actionButtonText}>↓</Text>
-                      </TouchableOpacity>
-                      
-                      {/* Toggle Visibility */}
-                      <TouchableOpacity
-                        style={[styles.actionButton, panel.visible && styles.actionButtonActive]}
-                        onPress={() => toggleVisibility(index)}
-                      >
-                        <Text style={styles.actionButtonText}>{panel.visible ? '👁️' : '👁️‍🗨️'}</Text>
-                      </TouchableOpacity>
-                      
-                      {/* Remove */}
-                      <TouchableOpacity
-                        style={[styles.actionButton, styles.actionButtonDanger]}
-                        onPress={() => removePanel(index)}
-                      >
-                        <Text style={styles.actionButtonText}>×</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </GlassCard>
-              </FadeIn>
-            );
-          })}
-        </View>
-
-        {/* Reset Button */}
-        <FadeIn delay={300}>
-          <TouchableOpacity
-            style={styles.resetButton}
-            onPress={resetToDefault}
-          >
-            <Text style={styles.resetButtonText}>Reset to Default</Text>
-          </TouchableOpacity>
-        </FadeIn>
-
-        <View style={{ height: 120 }} />
-      </ScrollView>
+        Tap a panel to reorder or remove it. Use the switch to show or hide.
+      </Text>
     </View>
+  );
+
+  return (
+    <Screen
+      scroll
+      header={header}
+      state={loaded ? (panels.length === 0 ? 'empty' : 'ready') : 'loading'}
+      emptyTitle="No panels on Home"
+      emptyMessage="Add a panel to bring it back to your home screen."
+      emptyAction={<GlassButton title="Add panel" onPress={goToMarketplace} />}
+      bottomExtra={spacing['2xl']}
+    >
+      <View style={[styles.actionRow, { gap: spacing.sm, marginBottom: spacing.lg }]}>
+        <GlassButton
+          title="Add panel"
+          variant={hasChanges ? 'ghost' : 'primary'}
+          onPress={goToMarketplace}
+          style={styles.flex}
+        />
+        {hasChanges ? (
+          <GlassButton title="Save changes" onPress={saveChanges} style={styles.flex} />
+        ) : null}
+      </View>
+
+      <Section title="Panels">
+        {panels.map((panel, index) => {
+          const info = getPanelInfo(panel);
+          if (!info) return null;
+          const expanded = expandedId === panel.id;
+
+          return (
+            <View key={panel.id}>
+              <ListRow
+                title={info.name}
+                subtitle={info.category}
+                leading={
+                  <Ionicons
+                    name={getPanelIconName(panel.type)}
+                    size={type.fontSize.xl}
+                    color={panel.visible ? theme.colors.primary.main : theme.colors.text.tertiary}
+                  />
+                }
+                trailing={
+                  <Switch
+                    value={panel.visible}
+                    onValueChange={() => {
+                      void Haptics.selectionAsync();
+                      toggleVisibility(index);
+                    }}
+                    trackColor={{
+                      false: theme.colors.neutral[300],
+                      true: theme.colors.primary.main,
+                    }}
+                    thumbColor={theme.colors.background.primary}
+                    ios_backgroundColor={theme.colors.neutral[300]}
+                    accessibilityLabel={`Show ${info.name} on Home`}
+                  />
+                }
+                onPress={() => setExpandedId(expanded ? null : panel.id)}
+              />
+              {expanded ? (
+                <View
+                  style={[
+                    styles.actionsRow,
+                    {
+                      paddingHorizontal: spacing.md,
+                      paddingBottom: spacing.sm,
+                      gap: spacing.md,
+                    },
+                  ]}
+                >
+                  <PanelAction
+                    icon="arrow-up"
+                    label="Move up"
+                    disabled={index === 0}
+                    onPress={() => movePanel(index, 'up')}
+                  />
+                  <PanelAction
+                    icon="arrow-down"
+                    label="Move down"
+                    disabled={index === panels.length - 1}
+                    onPress={() => movePanel(index, 'down')}
+                  />
+                  <PanelAction
+                    icon="trash-outline"
+                    label="Remove"
+                    destructive
+                    onPress={() => removePanel(index)}
+                  />
+                </View>
+              ) : null}
+            </View>
+          );
+        })}
+      </Section>
+
+      <Pressable
+        onPress={() => {
+          void Haptics.selectionAsync();
+          resetToDefault();
+        }}
+        accessibilityRole="button"
+        accessibilityLabel="Reset home to default layout"
+        style={({ pressed }) => [
+          styles.resetButton,
+          { marginTop: spacing.md, paddingHorizontal: spacing.md, opacity: pressed ? 0.6 : 1 },
+        ]}
+      >
+        <Text style={[type.textStyles.label, { color: theme.colors.text.tertiary }]}>
+          Reset to default
+        </Text>
+      </Pressable>
+    </Screen>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  flex: {
     flex: 1,
   },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingTop: spacing.xl + spacing.safeTopInset,
-  },
-
-  // Header
-  header: {
-    marginBottom: spacing.lg,
-  },
-  backButton: {
-    marginBottom: spacing.md,
-  },
-  backText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 16,
-    color: colors.primary.dark,
-  },
-  title: {
-    fontFamily: fonts.heading.bold,
-    fontSize: 28,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontFamily: fonts.body.regular,
-    fontSize: 14,
-    color: colors.text.secondary,
-  },
-
-  // Action Row
   actionRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.lg,
   },
-  addPanelButton: {
+  actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary.main,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.full,
-    gap: spacing.xs,
+  },
+  action: {
+    flexDirection: 'row',
+    alignItems: 'center',
     minHeight: 44,
-    shadowColor: colors.primary.dark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
   },
-  addPanelIcon: {
-    fontSize: 20,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  addPanelText: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 14,
-    color: '#fff',
-  },
-  saveButton: {
-    backgroundColor: colors.semantic.success,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-  },
-  saveButtonText: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 14,
-    color: '#fff',
-  },
-
-  // Panels List
-  panelsList: {
-    gap: spacing.sm,
-  },
-
-  // Glass Card
-  glassCard: {
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.8)',
-    shadowColor: colors.shadow.medium,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  glassBlur: {
-    overflow: 'hidden',
-  },
-  glassInner: {
-    padding: spacing.lg,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-  },
-
-  // Panel Item
-  panelItem: {},
-  panelItemHidden: {
-    opacity: 0.5,
-  },
-  panelContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  panelLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flex: 1,
-  },
-  panelIcon: {
-    fontSize: 24,
-  },
-  panelInfo: {
-    flex: 1,
-  },
-  panelName: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 15,
-    color: colors.text.primary,
-  },
-  panelCategory: {
-    fontFamily: fonts.body.regular,
-    fontSize: 12,
-    color: colors.text.tertiary,
-    textTransform: 'capitalize',
-  },
-
-  // Panel Actions
-  panelActions: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  actionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.06)',
+  resetButton: {
+    alignSelf: 'center',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
-  },
-  actionButtonDisabled: {
-    opacity: 0.3,
-  },
-  actionButtonActive: {
-    backgroundColor: 'rgba(212, 165, 184, 0.3)',
-  },
-  actionButtonDanger: {
-    backgroundColor: 'rgba(212, 165, 165, 0.3)',
-  },
-  actionButtonText: {
-    fontSize: 16,
-  },
-
-  // Reset Button
-  resetButton: {
-    marginTop: spacing.xl,
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  resetButtonText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 14,
-    color: colors.text.tertiary,
-    textDecorationLine: 'underline',
+    minHeight: 44,
   },
 });

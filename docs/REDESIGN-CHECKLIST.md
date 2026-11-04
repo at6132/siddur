@@ -40,28 +40,28 @@ Stack note: App uses **React Navigation** (`src/navigation/AppNavigator.tsx`), n
 
 | Route / id | Owning file | FEATURES coverage | Status |
 |------------|-------------|-------------------|--------|
-| Home | `app/home/HomeScreen.tsx` | Widget grid, seasonal auto-panels, Settings gear, birthday modal, Kosher AI banner, streaks glance | todo |
-| CustomizeHome | `app/home/CustomizeHome.tsx` | Layout visibility / sizes | todo |
-| PanelsMarketplace | `app/home/PanelsMarketplace.tsx` | Browse / add panels | todo |
-| Home panel chrome | `app/home/components/GlassCard.tsx`, `DraggableGrid*.tsx`, `PanelContentRenderer.tsx` | Panel render / drag | todo — with Home |
+| Home | `app/home/HomeScreen.tsx` | Widget grid, seasonal auto-panels, Settings gear, birthday modal, Kosher AI banner, streaks glance | done — no emoji (Ionicons), edit/add haptics, tokenized header/modal/panel fills, shorter edit hint; grid + panel logic unchanged |
+| CustomizeHome | `app/home/CustomizeHome.tsx` | Layout visibility / sizes | done — `Screen` + `Section`/`ListRow`, native Switch for visibility, reorder/remove behind row expand, haptics; service calls unchanged |
+| PanelsMarketplace | `app/home/PanelsMarketplace.tsx` | Browse / add panels | done — category `Chip`s, grouped `Section` rows, Ionicons via `utils/panelIcons.ts`, success haptic instead of alert; add logic unchanged |
+| Home panel chrome | `app/home/components/GlassCard.tsx`, `DraggableGrid*.tsx`, `PanelContentRenderer.tsx` | Panel render / drag | done — GlassCard theme glass; panel emoji → Ionicons + `panelIcons`; DraggableGridItem remove/shadow tokens |
 
 ## Pre-stack / first launch
 
 | Route / id | Owning file | FEATURES coverage | Status |
 |------------|-------------|-------------------|--------|
 | Intro | `app/intro/IntroScreen.tsx` | Brand pitch → Begin | done — emoji replaced with Ionicons rows (hairlines, no cards), theme tokens, Reanimated springs + reduced motion, `onBegin` unchanged |
-| Onboarding | `app/onboarding/OnboardingScreen.tsx` | Shell Nusach → Welcome | todo |
-| NusachSelection | `app/onboarding/NusachSelection.tsx` | Ashkenaz / Sfard / skip | todo |
-| Welcome | `app/onboarding/WelcomeScreen.tsx` | Notifications permission + schedule | todo |
-| SpiritualGoals | `app/onboarding/SpiritualGoals.tsx` | Built, unwired | todo — presentational polish; keep available |
-| NotificationPreferences | `app/onboarding/NotificationPreferences.tsx` | Built, unwired | todo — presentational polish; keep available |
+| Onboarding | `app/onboarding/OnboardingScreen.tsx` | Shell Nusach → Welcome | done — shell is a token-colored wrapper; each step owns its `Screen` (gradient + safe areas); flow, analytics, and storage calls unchanged |
+| NusachSelection | `app/onboarding/NusachSelection.tsx` | Ashkenaz / Sfard / skip | done — left-aligned title, `Section`/`ListRow` radio list with checkmark, spring-in Continue, ghost Skip; no emoji, orbs, or glass cards |
+| Welcome | `app/onboarding/WelcomeScreen.tsx` | Notifications permission + schedule | done — Ionicons heart replaces emoji, Reanimated spring entrances (reduced-motion aware), em-dash removed from copy; `onStart` unchanged |
+| SpiritualGoals | `app/onboarding/SpiritualGoals.tsx` | Built, unwired | done — token `Chip` goal picker (max 2 + custom input), shared step dots, tokenized count line, em-dash removed; selection logic unchanged, still unwired |
+| NotificationPreferences | `app/onboarding/NotificationPreferences.tsx` | Built, unwired | done — grouped `Section` of `ListRow` + native `Switch` (selection haptic), emoji removed, enabled-count footer; preferences logic unchanged, still unwired |
 | AnimatedSplash | `app/splash/AnimatedSplash.tsx` | Unmounted splash component | todo — polish; do not mount unless requested |
 
 ## Library + Tehillim
 
 | Route / id | Owning file | FEATURES coverage | Status |
 |------------|-------------|-------------------|--------|
-| LibraryHome | `app/library/LibraryScreen.tsx` | Daily tefillos, More Texts, quick Tehillim, search shortcuts | todo |
+| LibraryHome | `app/library/LibraryScreen.tsx` | Daily tefillos, More Texts, quick Tehillim, search shortcuts | done — `Screen` + virtualized `FlatList`, grouped `Section`/`ListRow` (Tefillos, More Texts, Quick Access), `Chip` quick links, pageSheet customize modal, no emoji or hex; navigation targets, search, and AsyncStorage unchanged |
 | ComingSoon | `app/library/ComingSoonScreen.tsx` | Gated feature placeholder | done — `Screen` + `BackButton` + `EmptyState`, no hex or emoji |
 | TehillimList | `app/tehillim/TehillimListScreen.tsx` | 150 perakim, progress, campaigns | todo |
 | TehillimReader | `app/tehillim/TehillimReaderScreen.tsx` | Chapter reader | todo |

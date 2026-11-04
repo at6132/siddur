@@ -2,8 +2,8 @@ import React from 'react';
 import { View, TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { borderRadius } from '../../../src/design/spacing';
-import { spacing } from '../../../src/design/spacing';
+import { borderRadius, spacing } from '../../../src/design/spacing';
+import { colorWithAlpha } from '../../../src/design/colorAlpha';
 import { useTheme } from '../../../src/design/theme';
 
 interface GlassCardProps {
@@ -21,12 +21,16 @@ interface GlassCardProps {
  */
 export const GlassCard: React.FC<GlassCardProps> = ({ children, style, onPress, compact }) => {
   const { theme } = useTheme();
-  const glassGradient = theme.isDark
-    ? (['rgba(45,42,60,0.72)', 'rgba(35,32,50,0.62)'] as const)
-    : (['rgba(255,255,255,0.92)', 'rgba(255,255,255,0.78)'] as const);
+  const { glass } = theme.tokens;
+  // Surface tint derived from the background palette (white in light, deep plum in dark).
+  const surface = theme.isDark ? theme.colors.background.tertiary : theme.colors.background.primary;
+  const glassGradient = [
+    colorWithAlpha(surface, theme.isDark ? 0.72 : 0.92),
+    colorWithAlpha(surface, theme.isDark ? 0.62 : 0.78),
+  ] as const;
 
   // Opaque enough that greys read as greys (not pastel mush over the gradient)
-  const fillColor = theme.isDark ? 'rgba(45,42,60,0.55)' : 'rgba(255,255,255,0.72)';
+  const fillColor = colorWithAlpha(surface, theme.isDark ? 0.55 : 0.72);
 
   const contentBody = (
     <View
@@ -46,8 +50,8 @@ export const GlassCard: React.FC<GlassCardProps> = ({ children, style, onPress, 
       style={[
         styles.glassCard,
         {
-          borderColor: theme.isDark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.85)',
-          shadowColor: theme.colors.shadow?.medium || 'rgba(0,0,0,0.1)',
+          borderColor: glass.light,
+          shadowColor: theme.colors.shadow.medium,
         },
         compact && styles.glassCardCompact,
         style,
@@ -57,13 +61,13 @@ export const GlassCard: React.FC<GlassCardProps> = ({ children, style, onPress, 
         <BlurView
           intensity={55}
           tint={theme.isDark ? 'dark' : 'light'}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
           pointerEvents="none"
         />
       )}
       {Platform.OS === 'web' ? (
         <LinearGradient
-          colors={glassGradient as unknown as string[]}
+          colors={[...glassGradient]}
           style={compact ? styles.flexFill : styles.webBackdrop}
         >
           {contentBody}
@@ -92,7 +96,7 @@ const styles = StyleSheet.create({
   glassCard: {
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    borderWidth: 1.5,
+    borderWidth: StyleSheet.hairlineWidth * 2,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 1,
     shadowRadius: 12,
@@ -122,8 +126,8 @@ const styles = StyleSheet.create({
   /** Compact fills the card without absolute positioning (absolute was zeroing height on web). */
   glassInnerCompact: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
     justifyContent: 'center',
     minHeight: 0,
   },

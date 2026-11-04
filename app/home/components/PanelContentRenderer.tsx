@@ -1,4 +1,5 @@
 import React from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { View, Text, TouchableOpacity, Animated } from 'react-native';
 import { GlassCard } from './GlassCard';
 import { MoonPhaseAnimation } from '../../../components/ui/MoonPhaseAnimation';
@@ -22,6 +23,7 @@ import type { DayInfo, DaveningChanges } from '../../../src/types/calendar';
 import { spacing } from '../../../src/design/spacing';
 import { navigateOrComingSoon, isPanelLibraryPhase2ComingSoon } from '../../../src/feature/LibraryFeatureAccess';
 import { LOCATION_REQUIRED_MESSAGE } from '../../../src/services/LocationAccess';
+import { getPanelIconName } from '../utils/panelIcons';
 
 function coerceDate(d: unknown): Date | null {
   if (d instanceof Date && !Number.isNaN(d.getTime())) return d;
@@ -128,6 +130,7 @@ export function renderPanelContent(
     setHebrewBirthdayModalVisible,
     formatTime, formatTimeUntil,
   } = ctx;
+  const iconColor = theme.colors.primary.dark;
 
   const panelDef = PANEL_DEFINITIONS.find(p => p.type === panel.type);
   const half = panel.size === 'half';
@@ -458,7 +461,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half}>
           <View style={[styles.inspirationPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.inspirationIcon, half && styles.halfEmoji]}>✨</Text>
+            <Ionicons name="sparkles-outline" size={half ? 18 : 24} color={iconColor} />
             <Text
               style={[styles.inspirationHebrew, half && { fontSize: 13, marginBottom: 2 }]}
               numberOfLines={half ? 2 : undefined}
@@ -492,7 +495,7 @@ export function renderPanelContent(
             <GlassCard compact={half}>
               <View style={[styles.fastDayPanel, styles.halfPanelInner]}>
                 <View style={[styles.fastDayHeader, styles.fastDayHalfHeader]}>
-                  <Text style={[styles.fastDayIcon, styles.fastDayHalfIcon]}>🕯️</Text>
+                  <Ionicons name="moon-outline" size={18} color={iconColor} />
                   <View style={styles.fastDayTitleContainer}>
                     <Text style={[styles.fastDayTitle, styles.fastDayHalfTitle]} numberOfLines={1}>
                       {fastDayProgress.fastName}
@@ -528,7 +531,7 @@ export function renderPanelContent(
           <GlassCard compact={half}>
             <View style={styles.fastDayPanel}>
               <View style={styles.fastDayHeader}>
-                <Text style={styles.fastDayIcon}>🕯️</Text>
+                <Ionicons name="moon-outline" size={24} color={iconColor} />
                 <View style={styles.fastDayTitleContainer}>
                   <Text style={styles.fastDayTitle}>{fastDayProgress.fastName}</Text>
                   <Text style={styles.fastDaySubtitle}>
@@ -558,7 +561,7 @@ export function renderPanelContent(
               </View>
               {fastDayProgress.percentComplete >= 100 && (
                 <View style={styles.fastCompleteMessage}>
-                  <Text style={styles.fastCompleteText}>✨ Tzom kal! May it be a meaningful fast ✨</Text>
+                  <Text style={styles.fastCompleteText}>Tzom kal! May it be a meaningful fast</Text>
                 </View>
               )}
             </View>
@@ -572,7 +575,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half}>
           <View style={[styles.greetingPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.greetingEmoji, half && styles.halfEmoji]}>{hour < 12 ? '🌅' : hour < 17 ? '☀️' : hour < 21 ? '🌆' : '🌙'}</Text>
+            <Ionicons name={hour < 12 ? 'sunny-outline' : hour < 17 ? 'sunny' : hour < 21 ? 'partly-sunny-outline' : 'moon-outline'} size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.greetingText, half && { fontSize: 13 }]} numberOfLines={1}>{greetingText}</Text>
             <Text style={[styles.greetingSubtext, half && styles.halfBody]} numberOfLines={1}>
               May your day be blessed
@@ -586,7 +589,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half} onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
           <View style={[styles.shabbosPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.shabbosIcon, half && styles.halfEmoji]}>🕯️</Text>
+            <Ionicons name="flame-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.shabbosTitle, half && { fontSize: 12, marginBottom: spacing.xs }]} numberOfLines={1}>
               Shabbos Times
             </Text>
@@ -621,7 +624,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half} onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
           <View style={[styles.candlePanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.candleIcon, half && styles.halfEmoji]}>🕯️</Text>
+            <Ionicons name="flame-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.candleTitle, half && styles.halfHeading]} numberOfLines={1}>
               Candle Lighting
             </Text>
@@ -770,7 +773,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half} onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
           <View style={[styles.roshChodeshPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.roshChodeshIcon, half && styles.halfEmoji]}>🌙</Text>
+            <Ionicons name="moon-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.roshChodeshTitle, half && styles.halfHeading]} numberOfLines={1}>
               Rosh Chodesh
             </Text>
@@ -785,7 +788,7 @@ export function renderPanelContent(
       const daysUntil = hebrewBirthday ? JewishCalendarService.daysUntilHebrewDate(hebrewBirthday.day, hebrewBirthday.month) : null;
       const birthdayDisplay = hebrewBirthday
         ? daysUntil === 0
-          ? "Today! 🎂"
+          ? "Today!"
           : daysUntil === 1
             ? "Tomorrow!"
             : `${daysUntil} days`
@@ -793,7 +796,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half} onPress={() => !isEditing && setHebrewBirthdayModalVisible(true)}>
           <View style={[styles.birthdayPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.birthdayIcon, half && styles.halfEmoji]}>🎂</Text>
+            <Ionicons name="gift-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.birthdayTitle, half && styles.halfHeading]} numberOfLines={1}>
               Hebrew Birthday
             </Text>
@@ -814,7 +817,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half} onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
           <View style={[styles.yahrzeitPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.yahrzeitIcon, half && styles.halfEmoji]}>🕯️</Text>
+            <Ionicons name="flame-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.yahrzeitTitle, half && styles.halfHeading]} numberOfLines={1}>
               Yahrzeit
             </Text>
@@ -908,7 +911,7 @@ export function renderPanelContent(
           onPress={() => !isEditing && navigateOrComingSoon(navigation, { type: 'screen', name: 'Parsha' })}
         >
           <View style={[styles.learningPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.learningIcon, half && styles.halfEmoji]}>📜</Text>
+            <Ionicons name="document-text-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.learningTitle, half && styles.halfHeading]} numberOfLines={1}>
               {dayInfo?.parsha || 'Parsha'}
             </Text>
@@ -924,7 +927,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half}>
           <View style={[styles.mussarPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.mussarIcon, half && styles.halfEmoji]}>💎</Text>
+            <Ionicons name="diamond-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.mussarTitle, half && styles.halfHeading]} numberOfLines={1}>
               Daily Mussar
             </Text>
@@ -966,7 +969,7 @@ export function renderPanelContent(
           onPress={() => !isEditing && navigateOrComingSoon(navigation, { type: 'screen', name: 'Chumash' })}
         >
           <View style={[styles.chumashPanelCompact, half && styles.halfPanelInner]}>
-            <Text style={[styles.learningIcon, half && styles.halfEmoji]}>📜</Text>
+            <Ionicons name="document-text-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.learningTitle, half && styles.halfHeading]} numberOfLines={1}>
               Shneyim Mikra
             </Text>
@@ -1003,7 +1006,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half}>
           <View style={[styles.thoughtPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.thoughtIcon, half && styles.halfEmoji]}>💡</Text>
+            <Ionicons name="bulb-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.thoughtTitle, half && styles.halfHeading]} numberOfLines={1}>
               Torah Thought
             </Text>
@@ -1018,7 +1021,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half}>
           <View style={[styles.learningPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.learningIcon, half && styles.halfEmoji]}>🌟</Text>
+            <Ionicons name="star-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.learningTitle, half && styles.halfHeading]} numberOfLines={1}>
               Daily Zohar
             </Text>
@@ -1033,7 +1036,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half}>
           <View style={[styles.historyPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.historyIcon, half && styles.halfEmoji]}>📜</Text>
+            <Ionicons name="hourglass-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.historyTitle, half && styles.halfHeading]} numberOfLines={1}>
               On This Day
             </Text>
@@ -1048,7 +1051,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half}>
           <View style={[styles.storyPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.storyIcon, half && styles.halfEmoji]}>👤</Text>
+            <Ionicons name="person-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.storyTitle, half && styles.halfHeading]} numberOfLines={1}>
               Gedolim Story
             </Text>
@@ -1063,7 +1066,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
           <View style={[styles.mitzvahPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.mitzvahIcon, half && styles.halfEmoji]}>⭐</Text>
+            <Ionicons name="star-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.mitzvahTitle, half && { fontSize: 11 }]} numberOfLines={2}>
               Mitzvah of the Day
             </Text>
@@ -1079,7 +1082,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
           <View style={[styles.middahPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.middahIcon, half && styles.halfEmoji]}>💪</Text>
+            <Ionicons name="fitness-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.middahTitle, half && styles.halfHeading]} numberOfLines={1}>
               Middah of the Week
             </Text>
@@ -1095,7 +1098,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub', { screen: 'Gratitude' })}>
           <View style={[styles.gratitudePanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.gratitudeIcon, half && styles.halfEmoji]}>🙏</Text>
+            <Ionicons name="heart-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.gratitudeTitle, half && styles.halfHeading]} numberOfLines={1}>
               Daily Gratitude
             </Text>
@@ -1110,7 +1113,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
           <View style={[styles.statsPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.statsIcon, half && styles.halfEmoji]}>📊</Text>
+            <Ionicons name="stats-chart-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.statsTitle, half && styles.halfHeading]} numberOfLines={1}>
               Tehillim Stats
             </Text>
@@ -1158,7 +1161,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
           <View style={[styles.tzedakahPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.tzedakahIcon, half && styles.halfEmoji]}>💰</Text>
+            <Ionicons name="cash-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.tzedakahTitle, half && styles.halfHeading]} numberOfLines={1}>
               Tzedakah
             </Text>
@@ -1179,7 +1182,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub', { screen: 'DailyGoals' })}>
           <View style={[styles.habitsPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.habitsIcon, half && styles.halfEmoji]}>✓</Text>
+            <Ionicons name="checkmark-circle-outline" size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.habitsTitle, half && styles.halfHeading]} numberOfLines={1}>
               Habit Tracker
             </Text>
@@ -1201,7 +1204,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half}>
           <View style={[styles.communityPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.communityIcon, half && styles.halfEmoji]}>{panelDef?.icon || '👥'}</Text>
+            <Ionicons name={getPanelIconName(panel.type)} size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.communityTitle, half && styles.halfHeading]} numberOfLines={2}>
               {panelDef?.name || 'Community'}
             </Text>
@@ -1216,7 +1219,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half}>
           <View style={[styles.placeholderPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.placeholderIcon, half && styles.halfEmoji]}>{panelDef?.icon || '📦'}</Text>
+            <Ionicons name={getPanelIconName(panel.type)} size={half ? 18 : 24} color={iconColor} />
             <Text style={[styles.placeholderText, half && styles.halfBody]} numberOfLines={2}>
               {panelDef?.name || panel.type}
             </Text>

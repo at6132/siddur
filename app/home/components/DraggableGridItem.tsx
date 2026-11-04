@@ -175,7 +175,7 @@ export const DraggableGridItem: React.FC<DraggableGridItemProps> = React.memo(({
         { translateY: translateY.value + cy },
       ],
       opacity: dimOpacity,
-      shadowColor: isActive ? '#000' : 'transparent',
+      shadowColor: isActive ? theme.colors.shadow.dark : 'transparent',
       shadowOffset: { width: 0, height: isActive ? 8 : 0 },
       shadowOpacity: isActive ? 0.25 : 0,
       shadowRadius: isActive ? 16 : 0,
@@ -211,8 +211,17 @@ export const DraggableGridItem: React.FC<DraggableGridItemProps> = React.memo(({
           activeOpacity={0.7}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         >
-          <View style={[styles.removeButtonInner, { backgroundColor: theme.colors.semantic.error }]}>
-            <Text style={styles.removeButtonText}>−</Text>
+          <View
+            style={[
+              styles.removeButtonInner,
+              {
+                backgroundColor: theme.colors.semantic.error,
+                borderColor: theme.colors.background.primary,
+                shadowColor: theme.colors.shadow.dark,
+              },
+            ]}
+          >
+            <Text style={[styles.removeButtonText, { color: theme.colors.text.inverse }]}>−</Text>
           </View>
         </TouchableOpacity>
       )}
@@ -247,18 +256,17 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    ...(Platform.OS !== 'web' ? {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-    } : {}),
+    ...(Platform.OS !== 'web'
+      ? {
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.3,
+          shadowRadius: 4,
+        }
+      : {}),
     elevation: 6,
     borderWidth: 2,
-    borderColor: '#fff',
   },
   removeButtonText: {
-    color: '#fff',
     fontSize: 20,
     fontWeight: 'bold',
     marginTop: -2,

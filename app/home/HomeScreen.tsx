@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/core';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { ErrorView } from '../../components/ui/ErrorView';
 import { spacing, borderRadius } from '../../src/design/spacing';
@@ -207,9 +208,15 @@ export const HomeScreen: React.FC = () => {
   const orbPalette = useMemo(
     () =>
       theme.isDark
-        ? ['rgba(72, 65, 103, 0.35)', 'rgba(44, 68, 105, 0.28)']
-        : ['rgba(212, 165, 184, 0.2)', 'rgba(165, 196, 212, 0.2)'],
-    [theme.isDark]
+        ? [
+            colorWithAlpha(theme.colors.accent.lavender, 0.22),
+            colorWithAlpha(theme.colors.secondary.main, 0.2),
+          ]
+        : [
+            colorWithAlpha(theme.colors.primary.main, 0.2),
+            colorWithAlpha(theme.colors.secondary.main, 0.2),
+          ],
+    [theme.colors]
   );
 
   const progressAnim = useRef(new Animated.Value(0)).current;
@@ -604,6 +611,7 @@ export const HomeScreen: React.FC = () => {
   };
 
   const toggleEditMode = useCallback(() => {
+    void Haptics.selectionAsync();
     setIsEditing(prev => !prev);
   }, []);
 
@@ -760,6 +768,8 @@ export const HomeScreen: React.FC = () => {
                   <TouchableOpacity
                     style={[styles.editButton, isEditing && styles.editButtonActive]}
                     onPress={toggleEditMode}
+                    accessibilityRole="button"
+                    accessibilityLabel={isEditing ? 'Done editing home' : 'Edit home'}
                   >
                     <Text
                       style={[
@@ -777,18 +787,18 @@ export const HomeScreen: React.FC = () => {
               {isEditing && (
                 <View style={styles.editInstructions}>
                   <Text style={styles.editInstructionsText}>
-                    Long-press and drag to move • Drop to reorder
-                  </Text>
-                  <Text style={[styles.editInstructionsText, styles.editInstructionsSubtext]}>
-                    Tap − to remove a widget
+                    Hold and drag to reorder. Tap the minus to remove.
                   </Text>
                   <TouchableOpacity
                     style={styles.resetButton}
                     onPress={async () => {
+                      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       await HomePanelsService.resetToDefault();
                       await loadPanels();
                     }}
                     activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Reset home to default layout"
                   >
                     <Text style={styles.resetButtonText}>Reset to default</Text>
                   </TouchableOpacity>
@@ -800,9 +810,14 @@ export const HomeScreen: React.FC = () => {
             <>
               {panels.length === 0 && (
                 <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateIcon}>📦</Text>
+                  <Ionicons
+                    name="albums-outline"
+                    size={theme.tokens.type.fontSize['5xl']}
+                    color={theme.colors.text.tertiary}
+                    style={styles.emptyStateIcon}
+                  />
                   <Text style={styles.emptyStateText}>No panels added yet</Text>
-                  <Text style={styles.emptyStateSubtext}>Tap + to add some</Text>
+                  <Text style={styles.emptyStateSubtext}>Tap Edit, then add a panel</Text>
                 </View>
               )}
               {!isEditing && (
@@ -830,7 +845,7 @@ export const HomeScreen: React.FC = () => {
                       <Text style={styles.kosherAiBannerEyebrow}>From our family</Text>
                       <Text style={styles.kosherAiBannerTitle}>Try Kosher AI</Text>
                       <Text style={styles.kosherAiBannerSub}>
-                        A cute kosher chat companion — free on the App Store
+                        A kosher chat companion, free on the App Store
                       </Text>
                     </View>
                     <View style={styles.kosherAiBannerCta}>
@@ -850,11 +865,16 @@ export const HomeScreen: React.FC = () => {
       {isEditing && (
         <TouchableOpacity
           style={styles.floatingAddButton}
-          onPress={() => navigation.navigate('PanelsMarketplace' as never)}
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            navigation.navigate('PanelsMarketplace' as never);
+          }}
           activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Add panel"
         >
           <View style={styles.floatingAddButtonInner}>
-            <Text style={styles.floatingAddButtonText}>+</Text>
+            <Ionicons name="add" size={32} color={theme.colors.text.inverse} />
           </View>
         </TouchableOpacity>
       )}
@@ -869,7 +889,7 @@ export const HomeScreen: React.FC = () => {
         <Pressable style={styles.modalOverlay} onPress={() => setHebrewBirthdayModalVisible(false)}>
           <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalIcon}>🎂</Text>
+              <Ionicons name="gift-outline" size={28} color={theme.colors.primary.dark} />
               <Text style={styles.modalTitle}>Hebrew Birthday</Text>
             </View>
             <Text style={styles.modalSubtitle}>Set your Hebrew date (day and month)</Text>
@@ -987,9 +1007,9 @@ function createHomeStyles(theme: AppTheme) {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: theme.colors.glass.light,
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    borderColor: theme.colors.glass.light,
     shadowColor: theme.colors.shadow.light,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 1,
@@ -1008,12 +1028,12 @@ function createHomeStyles(theme: AppTheme) {
     color: theme.colors.text.secondary,
   },
   editButtonTextActive: {
-    color: '#fff',
+    color: theme.colors.text.inverse,
   },
 
   // Edit Instructions
   editInstructions: {
-    backgroundColor: 'rgba(212, 165, 184, 0.2)',
+    backgroundColor: colorWithAlpha(theme.colors.primary.main, 0.2),
     borderRadius: borderRadius.md,
     padding: spacing.sm,
     marginBottom: spacing.md,
@@ -1034,7 +1054,7 @@ function createHomeStyles(theme: AppTheme) {
     marginTop: spacing.sm,
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: theme.colors.glass.medium,
     borderRadius: borderRadius.sm,
     borderWidth: 1,
     borderColor: theme.colors.primary.main,
@@ -1066,10 +1086,10 @@ function createHomeStyles(theme: AppTheme) {
     shadowRadius: 10,
     elevation: 12,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: colorWithAlpha(theme.colors.text.inverse, 0.3),
   },
   floatingAddButtonText: {
-    color: '#fff',
+    color: theme.colors.text.inverse,
     fontSize: 32,
     fontWeight: '300',
     marginTop: -2,
@@ -1111,7 +1131,7 @@ function createHomeStyles(theme: AppTheme) {
   specialBadgeText: {
     fontFamily: fonts.body.semibold,
     fontSize: 11,
-    color: '#fff',
+    color: theme.colors.text.inverse,
   },
 
   // Tehillim Card
@@ -1124,7 +1144,7 @@ function createHomeStyles(theme: AppTheme) {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(212, 165, 184, 0.3)',
+    backgroundColor: colorWithAlpha(theme.colors.primary.main, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1149,7 +1169,7 @@ function createHomeStyles(theme: AppTheme) {
     marginTop: 2,
   },
   tehillimPercentContainer: {
-    backgroundColor: 'rgba(212, 165, 184, 0.2)',
+    backgroundColor: colorWithAlpha(theme.colors.primary.main, 0.2),
     paddingHorizontal: spacing.sm,
     paddingVertical: 4,
     borderRadius: borderRadius.full,
@@ -1164,7 +1184,7 @@ function createHomeStyles(theme: AppTheme) {
   },
   progressBarBg: {
     height: 6,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: colorWithAlpha(theme.colors.neutral[500], 0.12),
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -1220,7 +1240,7 @@ function createHomeStyles(theme: AppTheme) {
   zmanDivider: {
     width: 1,
     height: 30,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: colorWithAlpha(theme.colors.neutral[500], 0.3),
   },
   zmanLabel: {
     fontFamily: fonts.body.regular,
@@ -1238,7 +1258,7 @@ function createHomeStyles(theme: AppTheme) {
 
   // Davening Note
   daveningNote: {
-    backgroundColor: 'rgba(212, 165, 184, 0.15)',
+    backgroundColor: colorWithAlpha(theme.colors.primary.main, 0.15),
     borderRadius: borderRadius.md,
     padding: spacing.sm,
     alignItems: 'center',
@@ -1379,7 +1399,7 @@ function createHomeStyles(theme: AppTheme) {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.03)',
+    backgroundColor: colorWithAlpha(theme.colors.neutral[500], 0.1),
     padding: spacing.sm,
     borderRadius: borderRadius.md,
     marginBottom: spacing.xs,
@@ -1506,7 +1526,7 @@ function createHomeStyles(theme: AppTheme) {
   fastProgressBar: {
     flex: 1,
     height: 12,
-    backgroundColor: 'rgba(0,0,0,0.08)',
+    backgroundColor: colorWithAlpha(theme.colors.neutral[500], 0.18),
     borderRadius: 6,
     overflow: 'hidden',
   },
@@ -1542,7 +1562,7 @@ function createHomeStyles(theme: AppTheme) {
   },
   fastCompleteMessage: {
     marginTop: spacing.md,
-    backgroundColor: 'rgba(165, 212, 180, 0.2)',
+    backgroundColor: colorWithAlpha(theme.colors.semantic.success, 0.25),
     borderRadius: borderRadius.md,
     padding: spacing.sm,
     alignItems: 'center',
@@ -1700,10 +1720,10 @@ function createHomeStyles(theme: AppTheme) {
   },
   omerCheckboxDisabled: {
     borderColor: theme.colors.neutral[400],
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+    backgroundColor: colorWithAlpha(theme.colors.neutral[500], 0.14),
   },
   omerCheckmark: {
-    color: '#fff',
+    color: theme.colors.text.inverse,
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -1811,7 +1831,7 @@ function createHomeStyles(theme: AppTheme) {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.lg,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+    backgroundColor: colorWithAlpha(theme.colors.neutral[500], 0.14),
     alignSelf: 'center',
   },
   dafButtonText: {
@@ -1824,9 +1844,9 @@ function createHomeStyles(theme: AppTheme) {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.lg + 4,
     borderRadius: borderRadius.xl,
-    backgroundColor: theme.isDark ? 'rgba(80,100,160,0.5)' : 'rgba(80,100,160,0.35)',
+    backgroundColor: colorWithAlpha(theme.colors.secondary.main, 0.4),
     borderWidth: 1.5,
-    borderColor: theme.isDark ? 'rgba(255,255,255,0.25)' : 'rgba(80,100,160,0.5)',
+    borderColor: colorWithAlpha(theme.colors.secondary.dark, 0.55),
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 72,
@@ -2754,7 +2774,7 @@ function createHomeStyles(theme: AppTheme) {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(212, 165, 184, 0.3)',
+    backgroundColor: colorWithAlpha(theme.colors.primary.main, 0.3),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2780,7 +2800,7 @@ function createHomeStyles(theme: AppTheme) {
     marginTop: 2,
   },
   tehillimHalfPercentWrap: {
-    backgroundColor: 'rgba(212, 165, 184, 0.2)',
+    backgroundColor: colorWithAlpha(theme.colors.primary.main, 0.2),
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: borderRadius.full,
@@ -2795,7 +2815,7 @@ function createHomeStyles(theme: AppTheme) {
   },
   tehillimHalfProgressBg: {
     height: 4,
-    backgroundColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: colorWithAlpha(theme.colors.neutral[500], 0.12),
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -2908,7 +2928,10 @@ function createHomeStyles(theme: AppTheme) {
   // Hebrew Birthday Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: colorWithAlpha(
+      theme.isDark ? theme.colors.background.primary : theme.colors.text.primary,
+      0.5,
+    ),
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
@@ -2919,7 +2942,7 @@ function createHomeStyles(theme: AppTheme) {
     backgroundColor: theme.colors.background.secondary,
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow.dark,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
     shadowRadius: 16,
@@ -2955,7 +2978,7 @@ function createHomeStyles(theme: AppTheme) {
     width: 80,
     height: 44,
     borderWidth: 1,
-    borderColor: theme.colors.border?.default ?? theme.colors.text.tertiary,
+    borderColor: theme.colors.neutral[300],
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.sm,
     fontFamily: fonts.body.medium,
@@ -2996,7 +3019,7 @@ function createHomeStyles(theme: AppTheme) {
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.md,
-    backgroundColor: theme.colors.neutral?.[300] ?? 'rgba(0,0,0,0.1)',
+    backgroundColor: theme.colors.neutral[300],
   },
   modalSecondaryText: {
     fontFamily: fonts.body.semiBold,
@@ -3012,7 +3035,7 @@ function createHomeStyles(theme: AppTheme) {
   modalPrimaryText: {
     fontFamily: fonts.body.semiBold,
     fontSize: 15,
-    color: '#fff',
+    color: theme.colors.text.inverse,
   },
   modalClearButton: {
     marginTop: spacing.md,
