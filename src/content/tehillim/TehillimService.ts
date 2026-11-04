@@ -1,121 +1,68 @@
 /**
- * Tehillim Service
- * Service for accessing Tehillim content from Sefaria
- * 
- * Attribution: Texts provided by Sefaria (sefaria.org)
+ * Tehillim Service — bundled Psalms 1–150 (Sefaria CC-BY-SA).
  */
 
-import { SefariaService, TehillimChapterData, SefariaVerse } from '../../services/SefariaService';
-import { TehillimChapter, TehillimVerse, DAILY_TEHILLIM, DAY_OF_WEEK_TEHILLIM, TEHILLIM_BOOKS } from './types';
+import { SefariaService } from '../../services/SefariaService';
+import { TehillimChapter, DAILY_TEHILLIM, DAY_OF_WEEK_TEHILLIM, TEHILLIM_BOOKS } from './types';
 import { TEHILLIM_CHAPTERS } from './chapters';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { TEHILLIM_OFFLINE_CHAPTERS } from './offline/raw';
 import { JewishCalendarService } from '../../core/calendar/JewishCalendar';
-
-const TEHILLIM_CACHE_KEY = '@tehillim_full_cache';
 
 export class TehillimService {
   private static cachedChapters: Map<number, TehillimChapter> = new Map();
   private static isInitialized = false;
 
-  /**
-   * Initialize the service - load cached data
-   */
-  static async initialize(): Promise<void> {
-    if (this.isInitialized) return;
-
-    try {
-      const cached = await AsyncStorage.getItem(TEHILLIM_CACHE_KEY);
-      if (cached) {
-        const data = JSON.parse(cached);
-        this.cachedChapters = new Map(Object.entries(data).map(([k, v]) => [Number(k), v as TehillimChapter]));
-      }
-    } catch (e) {
-      console.warn('Error loading Tehillim cache:', e);
+  private static hydrateFromBundle(): void {
+    for (const [num, raw] of Object.entries(TEHILLIM_OFFLINE_CHAPTERS)) {
+      const n = Number(num);
+      this.cachedChapters.set(n, {
+        number: raw.number,
+        hebrewNumber: raw.hebrewNumber,
+        title: this.getChapterTitle(n),
+        titleHebrew: raw.title,
+        bookNumber: this.getBookForChapter(n),
+        themes: this.getChapterThemes(n),
+        occasions: this.getChapterOccasions(n),
+        verses: raw.verses.map((v) => ({
+          number: v.number,
+          hebrew: v.hebrew,
+          english: v.english,
+        })),
+      });
     }
-
-    // Load bundled chapters as fallback
     for (const [num, chapter] of Object.entries(TEHILLIM_CHAPTERS)) {
       if (!this.cachedChapters.has(Number(num))) {
         this.cachedChapters.set(Number(num), chapter);
       }
     }
+  }
 
+  /** Load bundled Tehillim (no network). */
+  static async initialize(): Promise<void> {
+    if (this.isInitialized) return;
+    this.hydrateFromBundle();
     this.isInitialized = true;
   }
 
-  /**
-   * Get a specific chapter - tries Sefaria first, falls back to local
-   */
   static async getChapter(number: number): Promise<TehillimChapter | null> {
     if (number < 1 || number > 150) return null;
-    
     await this.initialize();
-
-    // Check cache first
-    if (this.cachedChapters.has(number)) {
-      return this.cachedChapters.get(number)!;
-    }
-
-    // Try to fetch from Sefaria
-    try {
-      const sefariaData = await SefariaService.fetchTehillimChapter(number);
-      if (sefariaData) {
-        const chapter = this.convertSefariaToTehillim(sefariaData);
-        this.cachedChapters.set(number, chapter);
-        await this.saveCache();
-        return chapter;
-      }
-    } catch (e) {
-      console.warn(`Error fetching chapter ${number} from Sefaria:`, e);
-    }
-
-    // Return placeholder if nothing available
-    return this.getPlaceholderChapter(number);
+    return this.cachedChapters.get(number) ?? this.getPlaceholderChapter(number);
   }
 
-  /**
-   * Get chapter synchronously (from cache only)
-   */
   static getChapterSync(number: number): TehillimChapter | null {
     if (number < 1 || number > 150) return null;
-    
-    if (this.cachedChapters.has(number)) {
-      return this.cachedChapters.get(number)!;
-    }
-
-    // Check bundled chapters
-    if (TEHILLIM_CHAPTERS[number]) {
-      return TEHILLIM_CHAPTERS[number];
-    }
-
-    return this.getPlaceholderChapter(number);
+    if (!this.isInitialized) this.hydrateFromBundle();
+    this.isInitialized = true;
+    return this.cachedChapters.get(number) ?? TEHILLIM_CHAPTERS[number] ?? this.getPlaceholderChapter(number);
   }
 
-  /**
-   * Pre-fetch all chapters from Sefaria (call this in background)
-   */
+  /** All 150 chapters are bundled; progress callback still fires for callers. */
   static async prefetchAll(
     onProgress?: (current: number, total: number) => void
   ): Promise<void> {
-    for (let i = 1; i <= 150; i++) {
-      if (!this.cachedChapters.has(i)) {
-        try {
-          const sefariaData = await SefariaService.fetchTehillimChapter(i);
-          if (sefariaData) {
-            const chapter = this.convertSefariaToTehillim(sefariaData);
-            this.cachedChapters.set(i, chapter);
-          }
-        } catch (e) {
-          console.warn(`Error prefetching chapter ${i}:`, e);
-        }
-      }
-      if (onProgress) {
-        onProgress(i, 150);
-      }
-      // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 50));
-    }
-    await this.saveCache();
+    await this.initialize();
+    if (onProgress) onProgress(150, 150);
   }
 
   /**
@@ -220,26 +167,6 @@ export class TehillimService {
     }
 
     return results;
-  }
-
-  /**
-   * Convert Sefaria data format to our TehillimChapter format
-   */
-  private static convertSefariaToTehillim(data: TehillimChapterData): TehillimChapter {
-    return {
-      number: data.chapter,
-      hebrewNumber: data.hebrewNumber,
-      title: this.getChapterTitle(data.chapter),
-      titleHebrew: data.title,
-      bookNumber: this.getBookForChapter(data.chapter),
-      themes: this.getChapterThemes(data.chapter),
-      occasions: this.getChapterOccasions(data.chapter),
-      verses: data.verses.map(v => ({
-        number: v.number,
-        hebrew: v.hebrew,
-        english: v.english,
-      })),
-    };
   }
 
   /**
@@ -359,21 +286,6 @@ export class TehillimService {
     if (result.length === 1) return result + '׳';
     if (result.length > 1) return result.slice(0, -1) + '״' + result.slice(-1);
     return result;
-  }
-
-  /**
-   * Save cache to AsyncStorage
-   */
-  private static async saveCache(): Promise<void> {
-    try {
-      const cacheObj: { [key: number]: TehillimChapter } = {};
-      for (const [num, chapter] of this.cachedChapters.entries()) {
-        cacheObj[num] = chapter;
-      }
-      await AsyncStorage.setItem(TEHILLIM_CACHE_KEY, JSON.stringify(cacheObj));
-    } catch (e) {
-      console.warn('Error saving Tehillim cache:', e);
-    }
   }
 
   /**
