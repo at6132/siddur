@@ -127,3 +127,5 @@ Stack note: App uses **React Navigation** (`src/navigation/AppNavigator.tsx`), n
 - LiquidGlassTabBar: selection haptics.
 - Reader chrome: AutoscrollBar/Toolbar tokenized, no emoji play icons, haptics.
 - SiddurReader: styles via `createReaderStyles(theme)` for light/dark; continue-session already wired.
+- Phase 3 complete: onboarding → Home → Library → Hub → learning → Settings/Tehillim/splash.
+- Phase 4: FEATURES audit OK; hex/emoji cleanup; `docs/REDESIGN-SUMMARY.md` written (`redesign: phase-4 cleanup`).
