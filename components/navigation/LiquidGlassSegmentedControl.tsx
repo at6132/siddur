@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
+﻿import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -204,7 +204,7 @@ export const LiquidGlassSegmentedControl: React.FC<LiquidGlassSegmentedControlPr
       >
         {useNativeLiquidGlass ? (
           <GlassView
-            style={[StyleSheet.absoluteFillObject, { borderRadius: orbHeight / 2 }]}
+            style={[StyleSheet.absoluteFill, { borderRadius: orbHeight / 2 }]}
             glassEffectStyle="clear"
             colorScheme={glassColorScheme}
             tintColor={orbTint}
@@ -389,7 +389,7 @@ function createStyles(theme: AppTheme) {
       overflow: 'visible',
     },
     nativeBarGlass: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     islandFallback: {
       height: BAR_HEIGHT,
@@ -397,7 +397,7 @@ function createStyles(theme: AppTheme) {
       overflow: 'hidden',
     },
     glassBorder: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       borderRadius: PILL_RADIUS,
       borderWidth: 1,
       borderColor: theme.isDark ? 'rgba(255,255,255,0.28)' : 'rgba(255, 255, 255, 0.7)',
@@ -424,7 +424,7 @@ function createStyles(theme: AppTheme) {
       backgroundColor: theme.isDark ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.55)',
     },
     orbBorder: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       borderWidth: 1,
       borderColor: theme.isDark ? 'rgba(255,255,255,0.45)' : 'rgba(255, 255, 255, 0.9)',
     },
