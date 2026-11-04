@@ -23,10 +23,12 @@ import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { LocationRefreshService } from '../../src/services/LocationRefreshService';
 import { LOCATION_REQUIRED_MESSAGE, requestLocationFromUser } from '../../src/services/LocationAccess';
 import { DayInfo, CalendarContext } from '../../src/types/calendar';
+import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../src/design/theme';
 import type { AppTheme } from '../../src/design/theme';
 import { colorWithAlpha } from '../../src/design/colorAlpha';
 import * as Haptics from 'expo-haptics';
+import { BrandGlassTile } from '../../components/ui/BrandGlassTile';
 
 const { width } = Dimensions.get('window');
 const CELL_GAP = spacing.sm; // spacing between days
@@ -53,6 +55,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
 export const CalendarScreen: React.FC = () => {
   const { theme } = useTheme();
   const styles = useStyles();
+  const navigation = useNavigation();
   const [days, setDays] = useState<CalendarDay[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
@@ -421,6 +424,20 @@ export const CalendarScreen: React.FC = () => {
             </View>
           </FadeIn>
         )}
+
+        <FadeIn delay={selectedDay ? 40 : 0}>
+          <View style={styles.featureCard}>
+            <BrandGlassTile
+              title="Shabbos alarm"
+              subtitle="Morning ring on Shabbos"
+              icon="alarm-outline"
+              tint="rose"
+              onPress={() =>
+                (navigation as any).navigate('Settings', { scrollTo: 'shabbosAlarm' })
+              }
+            />
+          </View>
+        </FadeIn>
       </ScrollView>
     </View>
   );
@@ -876,6 +893,9 @@ function createCalendarStyles(theme: AppTheme) {
     fontFamily: fonts.body.semiBold,
     fontSize: 14,
     color: theme.colors.text.primary,
+  },
+  featureCard: {
+    marginTop: spacing.md,
   },
   };
 }
