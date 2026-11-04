@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
+﻿import React, { useRef, useEffect, useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -27,6 +27,7 @@ import Animated, {
   Extrapolation,
   Easing,
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../src/design/theme';
 import type { AppTheme } from '../../src/design/theme';
 import { fonts } from '../../src/design/typography';
@@ -225,6 +226,7 @@ export const LiquidGlassTabBar: React.FC<LiquidGlassTabBarProps> = ({
   const goToIndex = useCallback(
     (index: number) => {
       if (index >= 0 && index < tabCount) {
+        void Haptics.selectionAsync();
         navigation.emit({ type: 'tabPress', target: state.routes[index].key, canPreventDefault: true });
         navigation.navigate(state.routes[index].name);
       }
@@ -336,7 +338,7 @@ export const LiquidGlassTabBar: React.FC<LiquidGlassTabBarProps> = ({
       >
         {useNativeLiquidGlass ? (
           <GlassView
-            style={[StyleSheet.absoluteFillObject, { borderRadius: orbSize / 2 }]}
+            style={[StyleSheet.absoluteFill, { borderRadius: orbSize / 2 }]}
             glassEffectStyle="clear"
             colorScheme={glassColorScheme}
             tintColor={orbTint}
@@ -542,10 +544,10 @@ function createTabBarStyles(theme: AppTheme) {
       letterSpacing: 0.2,
     },
     nativeBarGlass: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
     },
     glassBorder: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       borderRadius: PILL_RADIUS,
       borderWidth: 1.5,
       borderColor: theme.isDark ? 'rgba(255,255,255,0.28)' : 'rgba(255, 255, 255, 0.75)',
@@ -572,7 +574,7 @@ function createTabBarStyles(theme: AppTheme) {
       backgroundColor: theme.isDark ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.55)',
     },
     orbBorder: {
-      ...StyleSheet.absoluteFillObject,
+      ...StyleSheet.absoluteFill,
       borderWidth: 1.5,
       borderColor: theme.isDark ? 'rgba(255,255,255,0.45)' : 'rgba(255, 255, 255, 0.9)',
     },

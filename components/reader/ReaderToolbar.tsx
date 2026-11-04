@@ -4,12 +4,11 @@
  */
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Switch, Alert } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../src/design/theme';
-import { spacing, borderRadius } from '../../src/design/spacing';
-import { fonts } from '../../src/design/typography';
+import { colorWithAlpha } from '../../src/design/colorAlpha';
 import type { DisplayPreferences } from '../../src/types/preferences';
-import type { AppTheme } from '../../src/design/theme';
 
 const TEXT_SIZES: DisplayPreferences['textSize'][] = ['xsmall', 'small', 'medium', 'large'];
 
@@ -25,44 +24,108 @@ export interface ReaderToolbarProps {
 export function ReaderToolbar({
   textSize,
   onTextSizeChange,
-  showEnglish,
-  onShowEnglishChange,
+  showEnglish: _showEnglish,
+  onShowEnglishChange: _onShowEnglishChange,
   showEnglishToggle = true,
 }: ReaderToolbarProps) {
   const { theme } = useTheme();
-  const styles = createStyles(theme);
+  const { spacing, radii, type } = theme.tokens;
+
+  const bumpSize = (dir: -1 | 1) => {
+    const i = TEXT_SIZES.indexOf(textSize);
+    const next = TEXT_SIZES[i + dir];
+    if (!next) return;
+    void Haptics.selectionAsync();
+    onTextSizeChange(next);
+  };
 
   return (
     <View style={styles.row}>
-      <View style={styles.textSizeRow}>
-        <TouchableOpacity
-          style={[styles.textSizeButton, textSize === 'xsmall' && styles.textSizeButtonDisabled]}
-          onPress={() => {
-            const i = TEXT_SIZES.indexOf(textSize);
-            if (i > 0) onTextSizeChange(TEXT_SIZES[i - 1]);
-          }}
+      <View style={[styles.textSizeRow, { gap: spacing['2xs'] }]}>
+        <Pressable
+          style={[
+            styles.textSizeButton,
+            {
+              paddingHorizontal: spacing.sm,
+              paddingVertical: spacing.sm,
+              borderRadius: radii.md,
+              backgroundColor: theme.isDark
+                ? colorWithAlpha(theme.colors.text.inverse, 0.12)
+                : colorWithAlpha(theme.colors.text.primary, 0.06),
+              opacity: textSize === 'xsmall' ? 0.4 : 1,
+              minWidth: 44,
+              minHeight: 44,
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+          ]}
+          onPress={() => bumpSize(-1)}
           disabled={textSize === 'xsmall'}
+          accessibilityLabel="Decrease text size"
         >
-          <Text style={styles.textSizeButtonLabel}>A−</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.textSizeButton, textSize === 'large' && styles.textSizeButtonDisabled]}
-          onPress={() => {
-            const i = TEXT_SIZES.indexOf(textSize);
-            if (i < TEXT_SIZES.length - 1) onTextSizeChange(TEXT_SIZES[i + 1]);
-          }}
+          <Text
+            style={[
+              type.textStyles.label,
+              { color: theme.colors.text.primary, fontSize: type.fontSize.base },
+            ]}
+          >
+            A-
+          </Text>
+        </Pressable>
+        <Pressable
+          style={[
+            styles.textSizeButton,
+            {
+              paddingHorizontal: spacing.sm,
+              paddingVertical: spacing.sm,
+              borderRadius: radii.md,
+              backgroundColor: theme.isDark
+                ? colorWithAlpha(theme.colors.text.inverse, 0.12)
+                : colorWithAlpha(theme.colors.text.primary, 0.06),
+              opacity: textSize === 'large' ? 0.4 : 1,
+              minWidth: 44,
+              minHeight: 44,
+              alignItems: 'center',
+              justifyContent: 'center',
+            },
+          ]}
+          onPress={() => bumpSize(1)}
           disabled={textSize === 'large'}
+          accessibilityLabel="Increase text size"
         >
-          <Text style={styles.textSizeButtonLabel}>A+</Text>
-        </TouchableOpacity>
+          <Text
+            style={[
+              type.textStyles.label,
+              { color: theme.colors.text.primary, fontSize: type.fontSize.base },
+            ]}
+          >
+            A+
+          </Text>
+        </Pressable>
       </View>
       {showEnglishToggle && (
-        <View style={styles.englishRow}>
-          <Text style={styles.englishLabel}>English</Text>
+        <View style={[styles.englishRow, { gap: spacing.sm }]}>
+          <Text
+            style={[
+              type.textStyles.label,
+              { color: theme.colors.text.secondary, fontSize: type.fontSize.sm },
+            ]}
+          >
+            English
+          </Text>
           <Switch
             value={false}
-            onValueChange={() => Alert.alert('Coming Soon', 'English translations will be available in a future update.')}
-            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary?.light ?? '#ccc' }}
+            onValueChange={() => {
+              void Haptics.selectionAsync();
+              Alert.alert(
+                'Coming Soon',
+                'English translations will be available in a future update.',
+              );
+            }}
+            trackColor={{
+              false: theme.colors.neutral[300],
+              true: theme.colors.primary.light,
+            }}
             thumbColor={theme.colors.neutral[400]}
           />
         </View>
@@ -84,43 +147,20 @@ export const HEBREW_LINE_HEIGHTS: Record<DisplayPreferences['textSize'], number>
   large: 48,
 };
 
-function createStyles(theme: AppTheme) {
-  return StyleSheet.create({
-    row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: spacing.sm,
-      flexWrap: 'wrap',
-    },
-    textSizeRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 2,
-    },
-    textSizeButton: {
-      paddingHorizontal: spacing.sm,
-      paddingVertical: 6,
-      borderRadius: borderRadius.md,
-      backgroundColor: theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)',
-    },
-    textSizeButtonDisabled: {
-      opacity: 0.4,
-    },
-    textSizeButtonLabel: {
-      fontFamily: fonts.body.semiBold,
-      fontSize: 16,
-      color: theme.colors.text.primary,
-    },
-    englishRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-    },
-    englishLabel: {
-      fontFamily: fonts.body.medium,
-      fontSize: 14,
-      color: theme.colors.text.secondary,
-    },
-  });
-}
+const styles = StyleSheet.create({
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+  },
+  textSizeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  textSizeButton: {},
+  englishRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+});

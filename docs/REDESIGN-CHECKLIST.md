@@ -24,17 +24,17 @@ Stack note: App uses **React Navigation** (`src/navigation/AppNavigator.tsx`), n
 | Route / id | Owning file | FEATURES coverage | Status |
 |------------|-------------|-------------------|--------|
 | Main tabs shell | `src/navigation/AppNavigator.tsx` (`MainWithChrome`) | Home / Library / Hub / Calendar / Search; Settings off-tab | done — IA |
-| LiquidGlassTabBar | `components/navigation/LiquidGlassTabBar.tsx` | Custom liquid-glass tab bar | todo — polish only; keep glass chrome |
+| LiquidGlassTabBar | `components/navigation/LiquidGlassTabBar.tsx` | Custom liquid-glass tab bar | done — selection haptics; absoluteFill fix |
 | ContinueReadingChrome | `components/navigation/ContinueReadingChrome.tsx` | MiniPlayer above tab bar → SiddurReader | done |
 | Search tab | `app/search/SearchScreen.tsx` | Global jump index | done — thin redesign if needed |
-| App bootstrap / deep links / notification nav | `App.tsx` | Theme, deep links, notification tap | todo — presentation only if needed |
+| App bootstrap / deep links / notification nav | `App.tsx` | Theme, deep links, notification tap | done — Settings off-tab routing |
 
 ## Prayer reader
 
 | Route / id | Owning file | FEATURES coverage | Status |
 |------------|-------------|-------------------|--------|
-| SiddurReader | `app/siddur/SiddurReaderScreen.tsx` | Daily + standalone tefillos, autoscroll, text size, English toggle, section jump, Mizrach, Amidah foldouts, Refuah, continue-session | todo |
-| ReaderChrome / Toolbar / AutoscrollBar | `components/reader/*` | Shared reader chrome | todo — with SiddurReader |
+| SiddurReader | `app/siddur/SiddurReaderScreen.tsx` | Daily + standalone tefillos, autoscroll, text size, English toggle, section jump, Mizrach, Amidah foldouts, Refuah, continue-session | done — theme-aware styles + dark mode; logic unchanged |
+| ReaderChrome / Toolbar / AutoscrollBar | `components/reader/*` | Shared reader chrome | done — no emoji; tokens; haptics |
 
 ## Home
 
@@ -123,4 +123,7 @@ Stack note: App uses **React Navigation** (`src/navigation/AppNavigator.tsx`), n
 
 ## Progress log
 
-_Updates append below as screens complete._
+- Foundation committed (`redesign: foundation`).
+- LiquidGlassTabBar: selection haptics.
+- Reader chrome: AutoscrollBar/Toolbar tokenized, no emoji play icons, haptics.
+- SiddurReader: styles via `createReaderStyles(theme)` for light/dark; continue-session already wired.

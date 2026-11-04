@@ -17,10 +17,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { FadeIn } from '../../components/animations/FadeIn';
-import { colors } from '../../src/design/colors';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { useTheme } from '../../src/design/theme';
+import type { AppTheme } from '../../src/design/theme';
+import { colorWithAlpha } from '../../src/design/colorAlpha';
 import { SefariaService, PrayerTextData } from '../../src/services/SefariaService';
 import {
   injectRefuahIntoAmidahPrayerTextData,
@@ -927,6 +928,8 @@ const SpeedSlider: React.FC<{
   thumbTintColor: string;
   style?: object;
 }> = ({ value, min, max, step, onValueChange, minimumTrackTintColor, maximumTrackTintColor, thumbTintColor, style }) => {
+  const { theme } = useTheme();
+  const styles = React.useMemo(() => createReaderStyles(theme), [theme]);
   const trackWidth = useRef(0);
   const valueFromRatio = useCallback((ratio: number) => {
     const v = min + ratio * (max - min);
@@ -975,6 +978,8 @@ const GlassCard: React.FC<{
   style?: any;
   onPress?: () => void;
 }> = ({ children, style, onPress }) => {
+  const { theme } = useTheme();
+  const styles = React.useMemo(() => createReaderStyles(theme), [theme]);
   const content = (
     <View style={[styles.glassCard, style]}>
       {Platform.OS !== 'web' ? (
@@ -983,7 +988,10 @@ const GlassCard: React.FC<{
         </BlurView>
       ) : (
         <LinearGradient
-          colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
+          colors={[
+            colorWithAlpha(theme.colors.background.primary, 0.95),
+            colorWithAlpha(theme.colors.background.primary, 0.85),
+          ]}
           style={styles.glassBlur}
         >
           <View style={styles.glassInner}>{children}</View>
@@ -1422,6 +1430,7 @@ export const SiddurReaderScreen: React.FC = () => {
   }, [autoscrollPlaying, autoscrollSpeed, height]);
 
   const serviceTitle = SERVICE_TITLES[service] || { english: service, hebrew: '' };
+  const styles = React.useMemo(() => createReaderStyles(theme), [theme]);
 
   const renderFullScrollContent = () => (
     <>
@@ -1465,7 +1474,7 @@ export const SiddurReaderScreen: React.FC = () => {
       >
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary.main} />
+            <ActivityIndicator size="large" color={theme.colors.primary.main} />
             <Text style={styles.loadingText}>Loading prayers...</Text>
           </View>
         ) : sections.length === 0 ? (
@@ -2081,7 +2090,7 @@ export const SiddurReaderScreen: React.FC = () => {
                 ) : (
                   loadingSection === section.key ? (
                     <View style={styles.retryRow}>
-                      <ActivityIndicator size="small" color={colors.primary.main} />
+                      <ActivityIndicator size="small" color={theme.colors.primary.main} />
                       <Text style={styles.retryRowText}>Loading…</Text>
                     </View>
                   ) : (
@@ -2640,7 +2649,7 @@ export const SiddurReaderScreen: React.FC = () => {
         >
           {isLoading ? (
             <View style={styles.sectionLoading}>
-              <ActivityIndicator size="small" color={colors.primary.main} />
+              <ActivityIndicator size="small" color={theme.colors.primary.main} />
               <Text style={styles.sectionLoadingText}>Loading text...</Text>
             </View>
           ) : content ? (
@@ -2677,7 +2686,7 @@ export const SiddurReaderScreen: React.FC = () => {
       >
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary.main} />
+          <ActivityIndicator size="large" color={theme.colors.primary.main} />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
       ) : (
@@ -2720,7 +2729,8 @@ export const SiddurReaderScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+function createReaderStyles(theme: AppTheme) {
+  return StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -2728,7 +2738,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollViewWeb: {
-    overflow: 'auto',
+    overflow: 'scroll',
     minHeight: 0,
   },
   staticHeader: {
@@ -2737,11 +2747,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
-    backgroundColor: 'rgba(250, 249, 247, 0.95)',
+    backgroundColor: theme.colors.background.secondary,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
+    borderBottomColor: colorWithAlpha(theme.colors.text.primary, 0.06),
   },
   dropdownModeHeader: {
     flexDirection: 'column',
@@ -2756,12 +2766,12 @@ const styles = StyleSheet.create({
   dropdownModeTitle: {
     fontFamily: fonts.heading.bold,
     fontSize: 28,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   dropdownModeTitleHebrew: {
     fontFamily: fonts.hebrew.regular,
     fontSize: 18,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginTop: 4,
     writingDirection: 'rtl',
     textAlign: 'left',
@@ -2799,7 +2809,7 @@ const styles = StyleSheet.create({
   },
   hamburgerIcon: {
     fontSize: 24,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   compassModalBackdrop: {
     flex: 1,
@@ -2821,13 +2831,13 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: fonts.heading.bold,
     fontSize: 32,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     letterSpacing: -0.7,
   },
   titleHebrew: {
     fontFamily: fonts.hebrew.regular,
     fontSize: 24,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     letterSpacing: 0,
     flexShrink: 0,
   },
@@ -2854,7 +2864,7 @@ const styles = StyleSheet.create({
   textSizeButtonLabel: {
     fontFamily: fonts.body.semiBold,
     fontSize: 16,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
   },
   toggleButton: {
     paddingHorizontal: spacing.md,
@@ -2863,15 +2873,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.05)',
   },
   toggleButtonActive: {
-    backgroundColor: colors.primary.light,
+    backgroundColor: theme.colors.primary.light,
   },
   toggleText: {
     fontFamily: fonts.body.medium,
     fontSize: 13,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   toggleTextActive: {
-    color: colors.primary.dark,
+    color: theme.colors.primary.dark,
   },
   englishToggleRow: {
     flexDirection: 'row',
@@ -2881,7 +2891,7 @@ const styles = StyleSheet.create({
   englishToggleLabel: {
     fontFamily: fonts.body.medium,
     fontSize: 14,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
 
   loadingContainer: {
@@ -2892,7 +2902,7 @@ const styles = StyleSheet.create({
   loadingText: {
     fontFamily: fonts.body.regular,
     fontSize: 14,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     marginTop: spacing.md,
   },
 
@@ -2900,7 +2910,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
+    borderBottomColor: colorWithAlpha(theme.colors.text.primary, 0.06),
   },
   optionalSectionRow: {
     paddingVertical: spacing.sm,
@@ -2908,7 +2918,7 @@ const styles = StyleSheet.create({
   },
   optionalSectionLabel: {
     fontFamily: fonts.hebrew.semibold,
-    color: colors.primary.main,
+    color: theme.colors.primary.main,
   },
   collapsedBeforeAshreiRow: {
     flexDirection: 'row',
@@ -2922,12 +2932,12 @@ const styles = StyleSheet.create({
   },
   collapsedBeforeAshreiHebrew: {
     fontFamily: fonts.hebrew.semibold,
-    color: colors.primary.main,
+    color: theme.colors.primary.main,
     letterSpacing: 0,
   },
   collapsedBeforeAshreiChevron: {
     fontSize: 12,
-    color: colors.primary.main,
+    color: theme.colors.primary.main,
   },
   retryRow: {
     flexDirection: 'row',
@@ -2938,7 +2948,7 @@ const styles = StyleSheet.create({
   retryRowText: {
     fontFamily: fonts.body.regular,
     fontSize: 14,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
   },
 
   sectionMenuBackdrop: {
@@ -2954,7 +2964,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.06)',
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow.dark,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 12,
@@ -2975,14 +2985,14 @@ const styles = StyleSheet.create({
   sectionMenuHebrew: {
     fontFamily: fonts.hebrew.semibold,
     fontSize: 18,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginBottom: 2,
     letterSpacing: 0,
   },
   sectionMenuEnglish: {
     fontFamily: fonts.body.regular,
     fontSize: 13,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   sectionMenuItemLast: {
     borderBottomWidth: 0,
@@ -3001,7 +3011,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
-    shadowColor: '#000',
+    shadowColor: theme.colors.shadow.dark,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -3017,7 +3027,7 @@ const styles = StyleSheet.create({
   autoscrollLabel: {
     fontFamily: fonts.body.semiBold,
     fontSize: 14,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
   },
   autoscrollButtonRow: {
     flexDirection: 'row',
@@ -3034,7 +3044,7 @@ const styles = StyleSheet.create({
   autoscrollButtonText: {
     fontFamily: fonts.body.semiBold,
     fontSize: 15,
-    color: colors.primary.dark,
+    color: theme.colors.primary.dark,
   },
   speedButton: {
     paddingVertical: spacing.sm,
@@ -3045,7 +3055,7 @@ const styles = StyleSheet.create({
   speedButtonText: {
     fontFamily: fonts.body.semiBold,
     fontSize: 14,
-    color: colors.secondary.dark,
+    color: theme.colors.secondary.dark,
   },
   speedRow: {
     flexDirection: 'row',
@@ -3055,7 +3065,7 @@ const styles = StyleSheet.create({
   speedLabel: {
     fontFamily: fonts.body.medium,
     fontSize: 13,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     minWidth: 40,
   },
   speedSlider: {
@@ -3100,7 +3110,7 @@ const styles = StyleSheet.create({
   speedValue: {
     fontFamily: fonts.body.semiBold,
     fontSize: 14,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     minWidth: 28,
     textAlign: 'right',
   },
@@ -3110,7 +3120,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.8)',
-    shadowColor: colors.shadow.light,
+    shadowColor: theme.colors.shadow.light,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -3139,19 +3149,19 @@ const styles = StyleSheet.create({
   sectionHebrewTitle: {
     fontFamily: fonts.hebrew.semibold,
     fontSize: 20,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     marginBottom: spacing.xs,
     letterSpacing: 0,
   },
   sectionEnglishTitle: {
     fontFamily: fonts.body.regular,
     fontSize: 14,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     letterSpacing: 0.2,
   },
   sectionArrow: {
     fontSize: 12,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
   },
   sectionContent: {
     width: '100%',
@@ -3173,14 +3183,14 @@ const styles = StyleSheet.create({
   sectionLoadingText: {
     fontFamily: fonts.body.regular,
     fontSize: 13,
-    color: colors.text.tertiary,
+    color: theme.colors.text.tertiary,
     marginTop: spacing.sm,
   },
   hebrewText: {
     // Medium is a touch thicker than Regular without going bold
     fontFamily: fonts.hebrew.medium,
     fontSize: 22,
-    color: colors.text.primary,
+    color: theme.colors.text.primary,
     lineHeight: 42,
     textAlign: 'right',
     writingDirection: 'rtl',
@@ -3199,7 +3209,7 @@ const styles = StyleSheet.create({
   daySpecificLabel: {
     fontFamily: fonts.body.semibold,
     fontSize: 12,
-    color: colors.primary.dark,
+    color: theme.colors.primary.dark,
     textAlign: 'right',
     writingDirection: 'rtl',
     marginBottom: spacing.xs,
@@ -3207,7 +3217,7 @@ const styles = StyleSheet.create({
   },
   instructionText: {
     fontStyle: 'italic',
-    color: colors.neutral[600],
+    color: theme.colors.neutral[600],
   },
   instructionBlock: {
     marginTop: 2,
@@ -3215,7 +3225,7 @@ const styles = StyleSheet.create({
   },
   englishText: {
     fontFamily: fonts.body.regular,
-    color: colors.text.secondary,
+    color: theme.colors.text.secondary,
     textAlign: 'left',
     marginTop: spacing.sm,
   },
@@ -3225,8 +3235,9 @@ const styles = StyleSheet.create({
   errorText: {
     fontFamily: fonts.body.regular,
     fontSize: 14,
-    color: colors.semantic.error,
+    color: theme.colors.semantic.error,
     textAlign: 'center',
     paddingVertical: spacing.md,
   },
 });
+}
