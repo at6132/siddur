@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, type ComponentProps } from 'react';
 import {
   View,
   Text,
@@ -16,14 +16,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { Screen, Section, ListRow, Chip, GlassButton, EmptyState } from '../../components/ui';
+import { Screen, Section, ListRow, GlassButton, EmptyState } from '../../components/ui';
+import { BrandGlassTile, type BrandGlassTint } from '../../components/ui/BrandGlassTile';
 import { useTheme } from '../../src/design/theme';
 import { colorWithAlpha } from '../../src/design/colorAlpha';
+import { fonts } from '../../src/design/typography';
 import { MESECHTAS } from '../gemara/GemaraScreen';
 import { MISHNA_TRACTATES } from '../../src/services/MishnaYomiService';
 import { NACH_BOOKS } from '../../src/services/NachYomiService';
 import { RAMBAM_BOOKS } from '../../src/services/RambamStructure';
 import { navigateOrComingSoon, LIBRARY_GRID_COMING_SOON_IDS } from '../../src/feature/LibraryFeatureAccess';
+
+type IconName = ComponentProps<typeof Ionicons>['name'];
 
 interface PrayerItem {
   id: string;
@@ -44,12 +48,34 @@ interface LibraryItem {
 const LIBRARY_QUICK_ACCESS_KEY = '@library_quick_access_perakim';
 const DEFAULT_QUICK_ACCESS_PERAKIM = [23, 91, 121, 100];
 
-/** Rows that still land on Coming soon read quieter. */
-const MUTED_OPACITY = 0.55;
 /** Clearance for the floating tab bar + mini-player. */
 const TAB_BAR_CLEARANCE = 144;
 const SEARCH_ICON_SIZE = 18;
 const SEARCH_MIN_HEIGHT = 44;
+
+const PRAYER_VISUAL: Record<
+  PrayerItem['service'],
+  { icon: IconName; tint: BrandGlassTint }
+> = {
+  shacharis: { icon: 'sunny-outline', tint: 'rose' },
+  mincha: { icon: 'partly-sunny-outline', tint: 'gold' },
+  maariv: { icon: 'moon-outline', tint: 'lavender' },
+};
+
+const LIBRARY_VISUAL: Record<string, { icon: IconName; tint: BrandGlassTint }> = {
+  asher_yatzar: { icon: 'water-outline', tint: 'sky' },
+  bedtime: { icon: 'moon-outline', tint: 'lavender' },
+  tehillim: { icon: 'book-outline', tint: 'rose' },
+  tefilas_haderech: { icon: 'navigate-outline', tint: 'sage' },
+  bentching: { icon: 'restaurant-outline', tint: 'gold' },
+  gemara: { icon: 'library-outline', tint: 'sky' },
+  nach: { icon: 'bookmark-outline', tint: 'rose' },
+  mishna: { icon: 'reader-outline', tint: 'sage' },
+  rambam: { icon: 'school-outline', tint: 'gold' },
+  chumash: { icon: 'book-outline', tint: 'lavender' },
+  pirkei_avos: { icon: 'people-outline', tint: 'sage' },
+  parsha: { icon: 'leaf-outline', tint: 'sage' },
+};
 
 // Hebrew letters for perek numbers 1–150 (same as TehillimListScreen)
 const TEHILLIM_HEBREW_NUMBERS = [
@@ -188,9 +214,6 @@ function buildSearchableItems(
       keywords: `${p.title} ${p.hebrewTitle} שחרית מנחה מעריב morning afternoon evening prayer`,
       onPress: () => handlePrayerPress(p),
     })),
-    { id: 'quick_asher_yatzar', title: 'Asher Yatzar', keywords: 'asher yatzar bathroom blessing ברכה', onPress: () => nav.navigate('SiddurReader', { service: 'asher_yatzar' }) },
-    { id: 'quick_tehillim', title: 'Tehillim', keywords: 'tehillim psalm perakim 150 תהלים', onPress: () => nav.navigate('TehillimList') },
-    { id: 'quick_bentching', title: 'Bentching', keywords: 'bentching birkas hamazon grace meals ברכת המזון', onPress: () => nav.navigate('SiddurReader', { service: 'bentching' }) },
     { id: 'parsha', title: 'Parsha', keywords: 'parsha torah portion weekly sedra פרשה', onPress: () => navigateOrComingSoon(nav, { type: 'screen', name: 'Parsha' }) },
     { id: 'chumash_search', title: 'Chumash', keywords: 'chumash torah five books shneyim mikra targum חומש שניים מקרא', onPress: () => navigateOrComingSoon(nav, { type: 'screen', name: 'Chumash' }) },
     ...LIBRARY_ITEMS.map((i) => ({
@@ -248,7 +271,7 @@ export const LibraryScreen: React.FC = () => {
   const navigation = useNavigation();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { spacing, radii, type, hebrew } = theme.tokens;
+  const { spacing, radii, type } = theme.tokens;
 
   const handlePrayerPress = useCallback((item: PrayerItem) => {
     navigation.navigate('SiddurReader' as never, { service: item.service } as never);
@@ -337,19 +360,6 @@ export const LibraryScreen: React.FC = () => {
 
   const isSearching = searchQuery.trim().length > 0;
 
-  const hebrewTrailing = (text: string) => (
-    <Text
-      style={[hebrew.textStyles.caption, { color: theme.colors.text.secondary }]}
-      accessibilityLanguage="he"
-    >
-      {text}
-    </Text>
-  );
-
-  const soonTrailing = (
-    <Text style={[type.textStyles.caption, { color: theme.colors.text.tertiary }]}>Soon</Text>
-  );
-
   const openCustomize = () => {
     void Haptics.selectionAsync();
     setQuickAccessCustomizeVisible(true);
@@ -360,9 +370,46 @@ export const LibraryScreen: React.FC = () => {
     setQuickAccessCustomizeVisible(false);
   };
 
+  const availableTexts = useMemo(
+    () => LIBRARY_ITEMS.filter((item) => !LIBRARY_GRID_COMING_SOON_IDS.has(item.id)),
+    [],
+  );
+  const comingSoonTexts = useMemo(
+    () => LIBRARY_ITEMS.filter((item) => LIBRARY_GRID_COMING_SOON_IDS.has(item.id)),
+    [],
+  );
+
+  const sectionLabel = (label: string) => (
+    <Text
+      style={[
+        type.textStyles.caption,
+        {
+          color: theme.colors.text.secondary,
+          textTransform: 'uppercase',
+          letterSpacing: type.letterSpacing.wider,
+          marginBottom: spacing.sm,
+          marginTop: spacing.md,
+          marginHorizontal: spacing.xs,
+          fontFamily: fonts.body.semibold,
+        },
+      ]}
+    >
+      {label}
+    </Text>
+  );
+
   const header = (
     <View>
-      <Text style={[type.textStyles.h2, { color: theme.colors.text.primary }]}>Library</Text>
+      <Text
+        style={{
+          fontFamily: fonts.heading.bold,
+          fontSize: 40,
+          letterSpacing: 0.3,
+          color: theme.colors.text.primary,
+        }}
+      >
+        Library
+      </Text>
 
       <View
         style={[
@@ -370,12 +417,17 @@ export const LibraryScreen: React.FC = () => {
           {
             minHeight: SEARCH_MIN_HEIGHT,
             marginTop: spacing.md,
-            marginBottom: spacing.lg,
+            marginBottom: spacing.md,
             paddingHorizontal: spacing.md,
-            borderRadius: radii.lg,
-            backgroundColor: colorWithAlpha(theme.colors.text.primary, theme.isDark ? 0.1 : 0.06),
+            borderRadius: radii.xl,
+            backgroundColor: colorWithAlpha(
+              theme.colors.background.primary,
+              theme.isDark ? 0.35 : 0.65,
+            ),
             borderWidth: StyleSheet.hairlineWidth * 2,
-            borderColor: searchFocused ? theme.colors.primary.main : 'transparent',
+            borderColor: searchFocused
+              ? theme.colors.primary.main
+              : colorWithAlpha(theme.colors.primary.light, 0.5),
           },
         ]}
       >
@@ -409,81 +461,125 @@ export const LibraryScreen: React.FC = () => {
 
       {!isSearching ? (
         <>
-          <Section title="Daily Tefillos">
-            {PRAYER_ITEMS.map((item) => (
-              <ListRow
-                key={item.id}
-                title={item.title}
-                trailing={hebrewTrailing(item.hebrewTitle)}
-                showChevron
-                onPress={() => handlePrayerPress(item)}
-              />
-            ))}
-          </Section>
-
-          <Text
-            style={[
-              type.textStyles.caption,
-              {
-                color: theme.colors.text.secondary,
-                textTransform: 'uppercase',
-                letterSpacing: type.letterSpacing.wider,
-                marginBottom: spacing.sm,
-                marginHorizontal: spacing.sm,
-              },
-            ]}
-          >
-            Quick Links
-          </Text>
-          <View style={[styles.chipRow, { gap: spacing.sm, marginBottom: spacing.lg }]}>
-            <Chip
-              label="Asher Yatzar"
-              onPress={() => navigation.navigate('SiddurReader' as never, { service: 'asher_yatzar' } as never)}
-            />
-            <Chip
-              label="Tehillim"
-              onPress={() => navigation.navigate('TehillimList' as never)}
-            />
-            <Chip
-              label="Bentching"
-              onPress={() => navigation.navigate('SiddurReader' as never, { service: 'bentching' } as never)}
-            />
-          </View>
-
-          <Section title="More Texts">
-            <ListRow
-              title="Parsha"
-              trailing={soonTrailing}
-              showChevron
-              style={{ opacity: MUTED_OPACITY }}
-              onPress={() => navigateOrComingSoon(navigation as any, { type: 'screen', name: 'Parsha' })}
-            />
-            {LIBRARY_ITEMS.map((item) => {
-              const muted = LIBRARY_GRID_COMING_SOON_IDS.has(item.id);
+          {sectionLabel('Daily Tefillos')}
+          <View style={{ gap: spacing.sm, marginBottom: spacing.sm }}>
+            {PRAYER_ITEMS.map((item) => {
+              const visual = PRAYER_VISUAL[item.service];
               return (
-                <ListRow
+                <BrandGlassTile
                   key={item.id}
                   title={item.title}
-                  trailing={muted ? soonTrailing : undefined}
-                  showChevron
-                  style={muted ? { opacity: MUTED_OPACITY } : undefined}
-                  onPress={() => handleItemPress(item)}
+                  trailing={item.hebrewTitle}
+                  icon={visual.icon}
+                  tint={visual.tint}
+                  onPress={() => handlePrayerPress(item)}
                 />
               );
             })}
-          </Section>
+          </View>
 
-          <Section title="Quick Access">
-            {quickAccessPerakim.map((perek) => (
-              <ListRow
-                key={perek}
-                title={`Tehillim ${perek}`}
-                trailing={hebrewTrailing(`תהלים ${perekToHebrew(perek)}`)}
-                showChevron
-                onPress={() => navigation.navigate('TehillimReader' as never, { psalm: perek } as never)}
+          {sectionLabel('More Texts')}
+          <View style={styles.tileGrid}>
+            {availableTexts.map((item) => {
+              const visual = LIBRARY_VISUAL[item.id] ?? {
+                icon: 'book-outline' as IconName,
+                tint: 'neutral' as BrandGlassTint,
+              };
+              return (
+                <View key={item.id} style={styles.tileHalf}>
+                  <BrandGlassTile
+                    title={item.title}
+                    icon={visual.icon}
+                    tint={visual.tint}
+                    compact
+                    onPress={() => handleItemPress(item)}
+                  />
+                </View>
+              );
+            })}
+            <View style={styles.tileHalf}>
+              <BrandGlassTile
+                title="Parsha"
+                icon={LIBRARY_VISUAL.parsha.icon}
+                tint={LIBRARY_VISUAL.parsha.tint}
+                compact
+                muted
+                badge="Soon"
+                onPress={() =>
+                  navigateOrComingSoon(navigation as any, { type: 'screen', name: 'Parsha' })
+                }
               />
+            </View>
+            {comingSoonTexts.map((item) => {
+              const visual = LIBRARY_VISUAL[item.id] ?? {
+                icon: 'book-outline' as IconName,
+                tint: 'neutral' as BrandGlassTint,
+              };
+              return (
+                <View key={item.id} style={styles.tileHalf}>
+                  <BrandGlassTile
+                    title={item.title}
+                    icon={visual.icon}
+                    tint={visual.tint}
+                    compact
+                    muted
+                    badge="Soon"
+                    onPress={() => handleItemPress(item)}
+                  />
+                </View>
+              );
+            })}
+          </View>
+
+          {sectionLabel('Quick Access')}
+          <View style={[styles.chipWrap, { gap: spacing.sm, marginBottom: spacing.sm }]}>
+            {quickAccessPerakim.map((perek) => (
+              <Pressable
+                key={perek}
+                onPress={() => {
+                  void Haptics.selectionAsync();
+                  navigation.navigate('TehillimReader' as never, { psalm: perek } as never);
+                }}
+                style={({ pressed }) => [
+                  styles.quickChip,
+                  {
+                    opacity: pressed ? 0.85 : 1,
+                    backgroundColor: colorWithAlpha(
+                      theme.colors.primary.light,
+                      theme.isDark ? 0.28 : 0.5,
+                    ),
+                    borderColor: colorWithAlpha(theme.colors.primary.main, 0.25),
+                    borderRadius: radii.full,
+                    paddingHorizontal: spacing.md,
+                    paddingVertical: spacing.sm,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Tehillim ${perek}`}
+              >
+                <Text
+                  style={{
+                    fontFamily: fonts.body.semibold,
+                    fontSize: 14,
+                    color: theme.colors.text.primary,
+                  }}
+                >
+                  {perek}
+                </Text>
+                <Text
+                  style={{
+                    fontFamily: fonts.hebrew.regular,
+                    fontSize: 13,
+                    color: theme.colors.text.secondary,
+                    marginLeft: spacing.xs,
+                  }}
+                  accessibilityLanguage="he"
+                >
+                  {`תהלים ${perekToHebrew(perek)}`}
+                </Text>
+              </Pressable>
             ))}
-          </Section>
+          </View>
           <GlassButton
             title="Customize"
             variant="ghost"
@@ -510,19 +606,23 @@ export const LibraryScreen: React.FC = () => {
     return (
       <View
         style={{
-          backgroundColor: theme.colors.background.primary,
-          borderTopLeftRadius: isFirst ? radii.lg : 0,
-          borderTopRightRadius: isFirst ? radii.lg : 0,
-          borderBottomLeftRadius: isLast ? radii.lg : 0,
-          borderBottomRightRadius: isLast ? radii.lg : 0,
+          backgroundColor: colorWithAlpha(
+            theme.colors.background.primary,
+            theme.isDark ? 0.45 : 0.72,
+          ),
+          borderTopLeftRadius: isFirst ? radii.xl : 0,
+          borderTopRightRadius: isFirst ? radii.xl : 0,
+          borderBottomLeftRadius: isLast ? radii.xl : 0,
+          borderBottomRightRadius: isLast ? radii.xl : 0,
           overflow: 'hidden',
+          marginBottom: isLast ? spacing.md : 0,
         }}
       >
         {!isFirst ? (
           <View
             style={{
               height: StyleSheet.hairlineWidth,
-              backgroundColor: theme.colors.neutral[300],
+              backgroundColor: colorWithAlpha(theme.colors.primary.main, 0.18),
               marginLeft: spacing.md,
             }}
           />
@@ -604,22 +704,35 @@ export const LibraryScreen: React.FC = () => {
                     title={`Tehillim ${perek}`}
                     trailing={
                       <View style={[styles.modalTrailing, { gap: spacing.md }]}>
-                        {hebrewTrailing(`תהלים ${perekToHebrew(perek)}`)}
-                      <Pressable
-                        onPress={() => {
-                          void Haptics.selectionAsync();
-                          removeQuickAccessPerek(perek);
-                        }}
-                        disabled={lastOne}
-                        hitSlop={spacing.sm}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Remove Tehillim ${perek}`}
-                        style={[styles.removeButton, { opacity: lastOne ? 0.45 : 1 }]}
-                      >
-                        <Text style={[type.textStyles.label, { color: theme.colors.semantic.error }]}>
-                          Remove
+                        <Text
+                          style={[
+                            type.textStyles.caption,
+                            {
+                              fontFamily: fonts.hebrew.regular,
+                              color: theme.colors.text.secondary,
+                            },
+                          ]}
+                          accessibilityLanguage="he"
+                        >
+                          {`תהלים ${perekToHebrew(perek)}`}
                         </Text>
-                      </Pressable>
+                        <Pressable
+                          onPress={() => {
+                            void Haptics.selectionAsync();
+                            removeQuickAccessPerek(perek);
+                          }}
+                          disabled={lastOne}
+                          hitSlop={spacing.sm}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Remove Tehillim ${perek}`}
+                          style={[styles.removeButton, { opacity: lastOne ? 0.45 : 1 }]}
+                        >
+                          <Text
+                            style={[type.textStyles.label, { color: theme.colors.semantic.error }]}
+                          >
+                            Remove
+                          </Text>
+                        </Pressable>
                       </View>
                     }
                   />
@@ -675,9 +788,26 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 0,
   },
-  chipRow: {
+  tileGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginHorizontal: -4,
+    marginBottom: 4,
+  },
+  tileHalf: {
+    width: '50%',
+    padding: 4,
+  },
+  chipWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  quickChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth * 2,
+    minHeight: 40,
   },
   customizeButton: {
     alignSelf: 'flex-start',
