@@ -3,7 +3,7 @@
     "name": "Siddur",
     "slug": "siddur",
     "scheme": "siddur",
-    "version": "1.8.2",
+    "version": "1.8.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "splash": {
@@ -14,20 +14,12 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.siddur.app",
-      "buildNumber": "19",
+      "buildNumber": "22",
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "We need your location to calculate accurate prayer times (zmanim).",
+        "NSLocationWhenInUseUsageDescription": "Siddur uses your location while you use the app to calculate zmanim, schedule sunset-based reminders, and point Mizrach toward Jerusalem. Location stays on your device.",
         "NSUserNotificationsUsageDescription": "We'll send reminders for davening, zmanim, and the features you turn on.",
-        "UIBackgroundModes": [
-          "fetch",
-          "remote-notification",
-          "fetch",
-          "remote-notification",
-          "fetch",
-          "remote-notification"
-        ],
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -41,7 +33,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "We need your location to calculate accurate prayer times."
+          "locationWhenInUsePermission": "Siddur uses your location while you use the app to calculate zmanim, schedule sunset-based reminders, and point Mizrach toward Jerusalem. Location stays on your device."
         }
       ],
       "expo-splash-screen",
@@ -51,7 +43,14 @@
       "eas": {
         "projectId": "44bb4af8-f301-486a-9a3a-d43ea10755dc"
       },
-      "analyticsUrl": "https://analytics-api-production-cb55.up.railway.app"
+      "analyticsUrl": "https://analytics-api-production-cb55.up.railway.app",
+      "legal": {
+        "privacyUrl": "https://www.siddur24seven.com/privacy",
+        "termsUrl": "https://www.siddur24seven.com/terms",
+        "supportUrl": "https://www.siddur24seven.com/support",
+        "supportPhone": "347-554-7549",
+        "supportEmail": "shevastudios@gmail.com"
+      }
     },
     "owner": "avitaub",
     "runtimeVersion": {
@@ -61,7 +60,7 @@
       "url": "https://u.expo.dev/44bb4af8-f301-486a-9a3a-d43ea10755dc"
     },
     "android": {
-      "versionCode": 19,
+      "versionCode": 22,
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"

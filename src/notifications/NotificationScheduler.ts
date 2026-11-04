@@ -118,6 +118,10 @@ export class NotificationScheduler {
     // Cancel existing notifications first
     await this.cancelAllNotifications();
 
+    if (!(await this.hasPermission())) {
+      return;
+    }
+
     // Erev Shabbos clock — runs even if master notifications are off
     if (preferences.notifications.shabbosClockEnabled) {
       await this.scheduleShabbosClock(preferences, context);
@@ -850,22 +854,23 @@ export class NotificationScheduler {
     }
   }
 
-  /**
-   * Request notification permissions
-   */
+  /** Check current status. Does not show the system dialog. */
+  static async hasPermission(): Promise<boolean> {
+    if (!isNative) return true;
+    const { status } = await Notifications.getPermissionsAsync();
+    return status === 'granted';
+  }
+
+  /** Show the system dialog only if not already determined. */
   static async requestPermissions(): Promise<boolean> {
-    if (!isNative) return true; // Skip permission check on web
-    
-    const { status: existingStatus } =
-      await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
+    if (!isNative) return true;
 
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    if (existingStatus === 'granted') return true;
+    if (existingStatus !== 'undetermined') return false;
 
-    return finalStatus === 'granted';
+    const { status } = await Notifications.requestPermissionsAsync();
+    return status === 'granted';
   }
 }
 

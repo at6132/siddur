@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Text,
   Linking,
+  AppState,
+  type AppStateStatus,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import {
@@ -33,8 +35,15 @@ import {
   Nunito_600SemiBold,
   Nunito_700Bold,
 } from '@expo-google-fonts/nunito';
+import {
+  FrankRuhlLibre_400Regular,
+  FrankRuhlLibre_500Medium,
+  FrankRuhlLibre_600SemiBold,
+  FrankRuhlLibre_700Bold,
+} from '@expo-google-fonts/frank-ruhl-libre';
 import AppNavigator from './src/navigation/AppNavigator';
 import { NotificationService } from './src/notifications/NotificationService';
+import { LocationRefreshService } from './src/services/LocationRefreshService';
 import { ThemeProvider, useTheme } from './src/design/theme';
 import { bootstrapLifecycle } from './src/analytics/lifecycle';
 import { track, getPreviousScreenInfo, SCREEN_EVENTS, events } from './src/analytics';
@@ -332,12 +341,18 @@ export default function App() {
     Nunito_500Medium,
     Nunito_600SemiBold,
     Nunito_700Bold,
+    FrankRuhlLibre_400Regular,
+    FrankRuhlLibre_500Medium,
+    FrankRuhlLibre_600SemiBold,
+    FrankRuhlLibre_700Bold,
   });
 
   useEffect(() => {
     async function prepare() {
       try {
         await NotificationService.initialize();
+        // Fresh location on open — non-blocking so splash doesn't wait on GPS
+        LocationRefreshService.refreshAndSave().catch(() => {});
       } catch (e) {
         console.warn(e);
       } finally {
@@ -345,6 +360,19 @@ export default function App() {
       }
     }
     prepare();
+  }, []);
+
+  // Refresh location when returning from background (app "open")
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    let appState: AppStateStatus = AppState.currentState;
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (appState.match(/inactive|background/) && nextState === 'active') {
+        LocationRefreshService.refreshAndSave().catch(() => {});
+      }
+      appState = nextState;
+    });
+    return () => sub.remove();
   }, []);
 
   const appStartTimeRef = React.useRef<number>(Date.now());

@@ -10,30 +10,25 @@ import { UserPreferencesService } from '../storage/UserPreferences';
 
 export class NotificationService {
   /**
-   * Initialize and schedule all notifications
+   * Schedule if permission is already granted. Never shows the system dialog.
    */
   static async initialize(): Promise<boolean> {
-    // Request permissions
-    const hasPermission = await NotificationScheduler.requestPermissions();
+    const hasPermission = await NotificationScheduler.hasPermission();
     if (!hasPermission) {
       return false;
     }
 
-    // Get user preferences
     const preferences = await UserPreferencesService.getPreferences();
     if (!preferences) {
-      return false; // No preferences yet, will schedule after onboarding
+      return false;
     }
 
-    // Build calendar context
     const context: CalendarContext = {
       nusach: preferences.nusach,
       location: preferences.location,
     };
 
-    // Schedule notifications
     await NotificationScheduler.scheduleNotifications(preferences, context);
-
     return true;
   }
 
@@ -62,11 +57,24 @@ export class NotificationService {
     await NotificationScheduler.cancelAllNotifications();
   }
 
-  /**
-   * Check if notifications are enabled
-   */
+  /** Check only — does not prompt. */
   static async hasPermission(): Promise<boolean> {
+    return NotificationScheduler.hasPermission();
+  }
+
+  /** User-initiated prompt only. Does not schedule. */
+  static async requestPermissions(): Promise<boolean> {
     return NotificationScheduler.requestPermissions();
   }
-}
 
+  /**
+   * User-initiated prompt (onboarding). If allowed, schedule all defaults.
+   */
+  static async requestPermissionsAndSchedule(): Promise<boolean> {
+    const granted = await NotificationScheduler.requestPermissions();
+    if (granted) {
+      await this.reschedule();
+    }
+    return granted;
+  }
+}

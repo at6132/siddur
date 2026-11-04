@@ -1,18 +1,24 @@
 {
   "name": "siddur",
-  "version": "1.8.2",
+  "version": "1.8.3",
   "main": "expo/AppEntry.js",
   "scripts": {
-    "test:sefaria": "node scripts/test-sefaria-api.mjs",
     "start": "expo start --tunnel",
     "start:lan": "expo start --lan",
     "start:localhost": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "build:mincha-offline": "node scripts/build-mincha-offline.mjs --nusach=both",
+    "build:shacharit-offline": "node scripts/build-shacharit-offline.mjs --nusach=both",
+    "build:maariv-offline": "node scripts/build-maariv-offline.mjs --nusach=both",
+    "build:standalone-offline": "node scripts/build-standalone-offline.mjs --nusach=both",
+    "build:tehillim-offline": "node scripts/build-tehillim-offline.mjs",
+    "test:sefaria": "node scripts/test-sefaria-api.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/cormorant-garamond": "^0.4.1",
+    "@expo-google-fonts/frank-ruhl-libre": "^0.4.1",
     "@expo-google-fonts/nunito": "^0.4.2",
     "@expo/metro-runtime": "~6.1.2",
     "@hebcal/core": "^6.0.8",
@@ -25,6 +31,7 @@
     "expo": "~54.0.33",
     "expo-blur": "~15.0.8",
     "expo-font": "^14.0.11",
+    "expo-glass-effect": "~0.1.10",
     "expo-linear-gradient": "~15.0.8",
     "expo-location": "~19.0.8",
     "expo-notifications": "~0.32.16",
@@ -47,6 +54,7 @@
   "devDependencies": {
     "@babel/core": "^7.20.0",
     "@types/react": "~19.1.10",
+    "babel-preset-expo": "^54.0.12",
     "sharp": "^0.34.5",
     "typescript": "^5.1.3"
   },
