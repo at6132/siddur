@@ -45,21 +45,21 @@ type SettingsRouteParams = {
 };
 
 type TimePickerKind =
-  | 'shacharis'
-  | 'mincha'
-  | 'maariv'
-  | 'tehillim'
-  | 'hallelAnenu'
-  | 'roshChodesh'
-  | 'fastDays'
-  | 'dailyGratitude'
-  | 'daveningYaalehVyavo'
-  | 'daveningAlHanissim'
-  | 'daveningMashivVtenTal'
-  | 'daveningAneinu'
-  | 'daveningNachem'
-  | 'daveningAvinuMalkeinu'
-  | 'daveningSelichos'
+    | 'shacharis'
+    | 'mincha'
+    | 'maariv'
+    | 'tehillim'
+    | 'hallelAnenu'
+    | 'roshChodesh'
+    | 'fastDays'
+    | 'dailyGratitude'
+    | 'daveningYaalehVyavo'
+    | 'daveningAlHanissim'
+    | 'daveningMashivVtenTal'
+    | 'daveningAneinu'
+    | 'daveningNachem'
+    | 'daveningAvinuMalkeinu'
+    | 'daveningSelichos'
   | 'shabbosClock';
 
 type PrayerKey = 'shacharis' | 'mincha' | 'maariv';
@@ -331,19 +331,19 @@ export const SettingsScreen: React.FC = () => {
     };
 
     const scrollToBlock = (block: View | null, fallbackY: number) => {
-      const scroller = scrollViewRef.current;
-      if (block && scroller) {
+        const scroller = scrollViewRef.current;
+        if (block && scroller) {
         block.measureInWindow((ex: number, ey: number) => {
           (scroller as any).measureInWindow((sx: number, sy: number) => {
             const y = Math.max(0, ey - sy - spacing.sm);
-            scroller.scrollTo({ y, animated: true });
-            clearScrollParam();
+              scroller.scrollTo({ y, animated: true });
+              clearScrollParam();
+            });
           });
-        });
-      } else {
+        } else {
         scroller?.scrollTo({ y: fallbackY, animated: true });
-        clearScrollParam();
-      }
+          clearScrollParam();
+        }
     };
 
     if (st === 'dailyGratitude') {
@@ -644,7 +644,7 @@ export const SettingsScreen: React.FC = () => {
   }
 
   if (!preferences) {
-    return (
+  return (
       <Screen
         state="error"
         errorMessage="Could not load your settings."
@@ -669,7 +669,7 @@ export const SettingsScreen: React.FC = () => {
 
   return (
     <Screen contentStyle={{ paddingTop: spacing.sm }}>
-      <ScrollView
+      <ScrollView 
         ref={scrollViewRef}
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: spacing['3xl'] }}
@@ -677,12 +677,12 @@ export const SettingsScreen: React.FC = () => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={{ marginBottom: spacing.lg }}>
-          <LiquidGlassSegmentedControl
-            tabs={[
-              { key: 'notifications', label: 'Notifications' },
-              { key: 'general', label: 'General' },
-              { key: 'about', label: 'About' },
-            ]}
+        <LiquidGlassSegmentedControl
+          tabs={[
+            { key: 'notifications', label: 'Notifications' },
+            { key: 'general', label: 'General' },
+            { key: 'about', label: 'About' },
+          ]}
             activeIndex={TAB_KEYS.indexOf(activeTab)}
             onIndexChange={(index) => setActiveTab(TAB_KEYS[index])}
           />
@@ -690,7 +690,7 @@ export const SettingsScreen: React.FC = () => {
 
         {/* ============ NOTIFICATIONS TAB ============ */}
         {activeTab === 'notifications' && (
-          <>
+        <>
             <View ref={shabbosAlarmBlockRef} collapsable={false}>
               <Section
                 title="Shabbos alarm"
@@ -704,7 +704,7 @@ export const SettingsScreen: React.FC = () => {
                   title="Shabbos alarm"
                   subtitle="Wake up without touching your phone"
                   value={shabbosEnabled}
-                  onValueChange={onShabbosClockEnabledChange}
+                    onValueChange={onShabbosClockEnabledChange}
                 >
                   {shabbosEnabled ? (
                     <>
@@ -712,7 +712,7 @@ export const SettingsScreen: React.FC = () => {
                         nested
                         label="Wake-up time"
                         value={formatTehillimTimeForDisplay(n.shabbosClockTime || '08:00')}
-                        onPress={() => openTimePicker('shabbosClock')}
+                      onPress={() => openTimePicker('shabbosClock')}
                       />
                       <Hairline />
                       <DurationSlider
@@ -747,7 +747,7 @@ export const SettingsScreen: React.FC = () => {
                           void saveShabbosRingDuration(shabbosRingMin, Math.round(v));
                         }}
                       />
-                    </>
+                  </>
                   ) : null}
                 </ToggleRow>
               </Section>
@@ -758,7 +758,7 @@ export const SettingsScreen: React.FC = () => {
                 title="Enable notifications"
                 subtitle="Turn all reminders on or off"
                 value={n.enabled}
-                onValueChange={(value) => onNotificationsEnabledChange(value)}
+                  onValueChange={(value) => onNotificationsEnabledChange(value)}
               />
             </Section>
 
@@ -792,14 +792,14 @@ export const SettingsScreen: React.FC = () => {
                   {timedToggle('dailyTehillim', 'dailyTehillimTime', '09:00', 'tehillim', 'Daily Tehillim')}
                   <View ref={gratitudeBlockRef} collapsable={false}>
                     {timedToggle('dailyGratitude', 'dailyGratitudeTime', '20:00', 'dailyGratitude', 'Daily gratitude')}
-                  </View>
+                      </View>
                 </Section>
 
                 <Section title="Shabbos and zmanim" footer="Candle lighting, sunset and Shabbos prep">
                   <ToggleRow
                     title="Shabbos reminders"
                     value={n.shabbosReminders}
-                    onValueChange={(value) => updateNotificationPreference('shabbosReminders', value)}
+                      onValueChange={(value) => updateNotificationPreference('shabbosReminders', value)}
                   >
                     {n.shabbosReminders ? (
                       <ValueRow
@@ -812,7 +812,7 @@ export const SettingsScreen: React.FC = () => {
                   <ToggleRow
                     title="Shekiya (sunset)"
                     value={n.shekiyaReminder}
-                    onValueChange={(value) => updateNotificationPreference('shekiyaReminder', value)}
+                      onValueChange={(value) => updateNotificationPreference('shekiyaReminder', value)}
                   >
                     {n.shekiyaReminder ? (
                       <ValueRow
@@ -832,7 +832,7 @@ export const SettingsScreen: React.FC = () => {
                   <ToggleRow
                     title="Sefiras HaOmer"
                     value={n.sefirasHaomer}
-                    onValueChange={(value) => updateNotificationPreference('sefirasHaomer', value)}
+                      onValueChange={(value) => updateNotificationPreference('sefirasHaomer', value)}
                   >
                     {n.sefirasHaomer ? (
                       <ValueRow nested note label="At tzeit (nightfall) for your location" />
@@ -908,27 +908,27 @@ export const SettingsScreen: React.FC = () => {
                   />
                 </Section>
               </>
-            )}
-          </>
+              )}
+        </>
         )}
 
         {/* ============ GENERAL TAB ============ */}
         {activeTab === 'general' && (
-          <>
+        <>
             <Section title="Nusach">
               <CheckRow
                 title="אשכנז"
                 subtitle="Ashkenaz"
                 titleStyle={hebrewBody}
                 selected={preferences.nusach === 'ashkenaz'}
-                onPress={() => UserPreferencesService.setNusach('ashkenaz').then(loadPreferences)}
+              onPress={() => UserPreferencesService.setNusach('ashkenaz').then(loadPreferences)}
               />
               <CheckRow
                 title="ספרד"
                 subtitle="Sfard"
                 titleStyle={hebrewBody}
                 selected={preferences.nusach === 'sfard'}
-                onPress={() => UserPreferencesService.setNusach('sfard').then(loadPreferences)}
+              onPress={() => UserPreferencesService.setNusach('sfard').then(loadPreferences)}
               />
             </Section>
 
@@ -1017,40 +1017,40 @@ export const SettingsScreen: React.FC = () => {
                       </PressableScale>
                     );
                   })}
+                  </View>
                 </View>
-              </View>
               <ToggleRow
                 title="Show transliteration"
                 subtitle="English translations are coming in a future update"
-                value={false}
+                    value={false}
                 disabled
                 onValueChange={() => {}}
-              />
+                  />
             </Section>
-          </>
+        </>
         )}
 
         {/* ============ ABOUT TAB ============ */}
         {activeTab === 'about' && (
-          <>
+        <>
             <Section title="Support" footer="Project by Avi Taub at Sheva Studios">
               <ListRow
                 title="Visit support site"
                 subtitle="siddur24seven.com/support"
                 showChevron
-                onPress={() => Linking.openURL(LEGAL.supportUrl)}
+                  onPress={() => Linking.openURL(LEGAL.supportUrl)}
               />
               <ListRow
                 title="Call"
                 subtitle={LEGAL.supportPhoneDisplay}
                 showChevron
-                onPress={() => Linking.openURL(LEGAL.supportPhoneTel)}
+                  onPress={() => Linking.openURL(LEGAL.supportPhoneTel)}
               />
               <ListRow
                 title="Email"
                 subtitle={LEGAL.supportEmail}
                 showChevron
-                onPress={() => Linking.openURL(mailtoSupport())}
+                  onPress={() => Linking.openURL(mailtoSupport())}
               />
               <ListRow title="Privacy Policy" showChevron onPress={() => Linking.openURL(LEGAL.privacyUrl)} />
               <ListRow title="Terms of Use" showChevron onPress={() => Linking.openURL(LEGAL.termsUrl)} />
@@ -1081,9 +1081,9 @@ export const SettingsScreen: React.FC = () => {
               <Text style={[type.textStyles.h3, { color: theme.colors.text.primary }]}>24/7</Text>
               <Text style={[type.textStyles.caption, { color: theme.colors.text.tertiary, marginTop: spacing.xs }]}>
                 With you, when you choose.
-              </Text>
-            </View>
-          </>
+                  </Text>
+                </View>
+        </>
         )}
       </ScrollView>
 
@@ -1127,25 +1127,25 @@ export const SettingsScreen: React.FC = () => {
           <Chip
             label="Male · בן"
             selected={refuahDraftGender === 'male'}
-            onPress={() => setRefuahDraftGender('male')}
+                onPress={() => setRefuahDraftGender('male')}
           />
           <Chip
             label="Female · בת"
             selected={refuahDraftGender === 'female'}
-            onPress={() => setRefuahDraftGender('female')}
+                onPress={() => setRefuahDraftGender('female')}
           />
-        </View>
+            </View>
         <PracticeField
           label="Choleh's Hebrew name"
-          value={refuahDraftName}
-          onChangeText={setRefuahDraftName}
+              value={refuahDraftName}
+              onChangeText={setRefuahDraftName}
           placeholder="e.g. שְׁמוּאֵל"
           style={{ ...hebrewBody, textAlign: 'right' }}
         />
         <PracticeField
           label="Mother's Hebrew name"
-          value={refuahDraftMother}
-          onChangeText={setRefuahDraftMother}
+              value={refuahDraftMother}
+              onChangeText={setRefuahDraftMother}
           placeholder="e.g. שָׂרָה"
           style={{ ...hebrewBody, textAlign: 'right' }}
         />
@@ -1167,18 +1167,18 @@ export const SettingsScreen: React.FC = () => {
             ]}
           >
             Set reminder time
-          </Text>
+              </Text>
         ) : null}
         <View style={{ alignItems: 'center' }}>
-          <DateTimePicker
-            value={pickerDate}
-            mode="time"
+              <DateTimePicker
+                value={pickerDate}
+                mode="time"
             display="spinner"
-            onChange={(_, date) => date != null && setPickerDate(date)}
-            textColor={theme.colors.text.primary}
-            themeVariant={theme.isDark ? 'dark' : 'light'}
-          />
-        </View>
+                onChange={(_, date) => date != null && setPickerDate(date)}
+                textColor={theme.colors.text.primary}
+                themeVariant={theme.isDark ? 'dark' : 'light'}
+              />
+            </View>
       </SheetModal>
 
       {/* Shekiya: minutes before sunset */}
@@ -1188,7 +1188,7 @@ export const SettingsScreen: React.FC = () => {
         onClose={() => setShekiyaMinutesPickerOpen(false)}
       >
         <Text
-          style={[
+                  style={[
             type.textStyles.bodySmall,
             { color: theme.colors.text.secondary, textAlign: 'center', marginBottom: spacing.md },
           ]}
@@ -1201,13 +1201,13 @@ export const SettingsScreen: React.FC = () => {
               key={mins}
               label={`${mins} min`}
               selected={preferences.notifications.shekiyaMinutesBefore === mins}
-              onPress={async () => {
-                await updateNotificationPreference('shekiyaMinutesBefore', mins);
-                setShekiyaMinutesPickerOpen(false);
-              }}
+                  onPress={async () => {
+                    await updateNotificationPreference('shekiyaMinutesBefore', mins);
+                    setShekiyaMinutesPickerOpen(false);
+                  }}
             />
-          ))}
-        </View>
+              ))}
+            </View>
       </SheetModal>
     </Screen>
   );

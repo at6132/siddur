@@ -48,7 +48,6 @@ import { AddTzedakahScreen } from '../../app/tzedakah/AddTzedakahScreen';
 import { SettingsScreen } from '../../app/settings/SettingsScreen';
 import { SearchScreen } from '../../app/search/SearchScreen';
 import { LiquidGlassTabBar } from '../../components/navigation/LiquidGlassTabBar';
-import { ContinueReadingChrome } from '../../components/navigation/ContinueReadingChrome';
 import { UserPreferencesService } from '../storage/UserPreferences';
 import { useTheme } from '../design/theme';
 import { textStyles } from '../design/typography';
@@ -123,12 +122,11 @@ function MainTabs() {
   );
 }
 
-/** Main tabs + continue-reading MiniPlayer above the tab bar. */
+/** Main tabs shell. Continue-reading MiniPlayer is hidden for now. */
 function MainWithChrome() {
   return (
     <View style={styles.mainShell}>
       <MainTabs />
-      <ContinueReadingChrome />
     </View>
   );
 }

@@ -124,9 +124,9 @@ export const TzedakahScreen: React.FC = () => {
 
       {sorted.length === 0 ? (
         <EmptyState
-          title="No gifts logged"
+          title="No donations logged"
           message="Log a donation to see it here."
-          action={<GlassButton title="Log a gift" onPress={goAdd} />}
+          action={<GlassButton title="Log a donation" onPress={goAdd} />}
         />
       ) : (
         <Section title="History">

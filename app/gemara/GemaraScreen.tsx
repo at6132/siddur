@@ -3,7 +3,7 @@
  * Presentation lives in components/learning/LearningParts.
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { LearningIndex } from '../../components/learning/LearningParts';
 import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
