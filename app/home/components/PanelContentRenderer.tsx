@@ -197,7 +197,7 @@ export function renderPanelContent(
             <View style={styles.halfPanelInner}>
               <View style={styles.tehillimHalfHeader}>
                 <View style={styles.tehillimHalfIcon}>
-                  <Text style={styles.tehillimHalfIconText}>📖</Text>
+                  <Ionicons name="book-outline" size={18} color={iconColor} />
                 </View>
                 <View style={styles.tehillimHalfInfo}>
                   <Text
@@ -255,7 +255,7 @@ export function renderPanelContent(
         <GlassCard compact={half} style={styles.tehillimCard} onPress={handleTehillimPress}>
           <View style={styles.tehillimHeader}>
             <View style={styles.tehillimIcon}>
-              <Text style={styles.tehillimIconText}>📖</Text>
+              <Ionicons name="book-outline" size={24} color={iconColor} />
             </View>
             <View style={styles.tehillimInfo}>
               <Text
@@ -837,7 +837,7 @@ export function renderPanelContent(
             activeOpacity={0.75}
             style={[styles.dafYomiButton, half && styles.dafYomiButtonHalf, half && styles.halfPanelInner]}
           >
-            <Text style={[styles.dafButtonIcon, half && styles.dafButtonIconHalf]}>📖</Text>
+            <Ionicons name="book-outline" size={half ? 16 : 22} color={iconColor} />
             <Text style={[styles.dafButtonTitle, half && styles.dafButtonTitleHalf]}>Nach Yomi</Text>
             <Text style={[styles.dafButtonSubtext, half && styles.dafButtonSubtextHalf]} numberOfLines={2} adjustsFontSizeToFit>
               {nachYomiText ?? "Today's chapter"}
@@ -854,7 +854,7 @@ export function renderPanelContent(
             activeOpacity={0.75}
             style={[styles.dafYomiButton, half && styles.dafYomiButtonHalf, half && styles.halfPanelInner]}
           >
-            <Text style={[styles.dafButtonIcon, half && styles.dafButtonIconHalf]}>📕</Text>
+            <Ionicons name="bookmark-outline" size={half ? 16 : 22} color={iconColor} />
             <Text style={[styles.dafButtonTitle, half && styles.dafButtonTitleHalf]}>Mishna Yomi</Text>
             <Text style={[styles.dafButtonSubtext, half && styles.dafButtonSubtextHalf]} numberOfLines={2} adjustsFontSizeToFit>
               {mishnaYomiText ?? "Today's perek"}
@@ -889,7 +889,7 @@ export function renderPanelContent(
             activeOpacity={0.75}
             style={[styles.dafYomiButton, half && styles.dafYomiButtonHalf, half && styles.halfPanelInner]}
           >
-            <Text style={[styles.dafButtonIcon, half && styles.dafButtonIconHalf]}>📚</Text>
+            <Ionicons name="library-outline" size={half ? 16 : 22} color={iconColor} />
             <Text style={[styles.dafButtonTitle, half && styles.dafButtonTitleHalf]}>Daf Yomi</Text>
             <Text
               style={[styles.dafButtonSubtext, half && styles.dafButtonSubtextHalf]}
@@ -946,7 +946,7 @@ export function renderPanelContent(
             activeOpacity={0.75}
             style={[styles.dafYomiButton, half && styles.dafYomiButtonHalf, half && styles.halfPanelInner]}
           >
-            <Text style={[styles.dafButtonIcon, half && styles.dafButtonIconHalf]}>📕</Text>
+            <Ionicons name="bookmark-outline" size={half ? 16 : 22} color={iconColor} />
             <Text style={[styles.dafButtonTitle, half && styles.dafButtonTitleHalf]}>Rambam Daily</Text>
             <Text
               style={[styles.dafButtonSubtext, half && styles.dafButtonSubtextHalf]}
@@ -1146,7 +1146,7 @@ export function renderPanelContent(
       return (
         <GlassCard compact={half} onPress={() => !isEditing && (navigation as any).navigate('Hub')}>
           <View style={[styles.counterPanel, half && styles.halfCenterStack, half && styles.halfPanelInner]}>
-            <Text style={[styles.counterIcon, half && { fontSize: 18, marginBottom: 2 }]}>💯</Text>
+            <Ionicons name="checkmark-done-outline" size={half ? 18 : 24} color={iconColor} style={half ? { marginBottom: 2 } : undefined} />
             <Text style={[styles.counterNumber, half && styles.counterNumberHalf]} numberOfLines={1}>
               {brachosCount}/100
             </Text>

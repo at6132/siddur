@@ -9,6 +9,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import Svg, { Circle, G, Line, Path } from 'react-native-svg';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../src/design/theme';
 import { spacing } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
@@ -114,7 +115,7 @@ export function ReaderChrome({
               style={styles.iconButton}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Text style={styles.hamburgerIcon}>☰</Text>
+              <Ionicons name="menu" size={22} color={theme.colors.text.primary} />
             </TouchableOpacity>
           )}
         </View>

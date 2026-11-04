@@ -15,9 +15,11 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { fonts } from '../../src/design/typography';
 import { colors } from '../../src/design/colors';
 import { spacing } from '../../src/design/spacing';
+import { colorWithAlpha } from '../../src/design/colorAlpha';
 
 const { width: W, height: H } = Dimensions.get('window');
 const springCeleb = { damping: 14, stiffness: 120 };
@@ -90,10 +92,15 @@ export const AllDoneCelebration: React.FC<AllDoneCelebrationProps> = ({ visible,
         <View style={styles.centered}>
           <Animated.View style={cardStyle}>
             <LinearGradient
-              colors={['rgba(255,255,255,0.98)', 'rgba(255,248,250,0.98)']}
+              colors={[
+                colorWithAlpha(colors.background.primary, 0.98),
+                colorWithAlpha(colors.primary.light, 0.98),
+              ]}
               style={styles.card}
             >
-              <Animated.Text style={[styles.emoji, starStyle]}>✨ 🌟 ✨</Animated.Text>
+              <Animated.View style={[{ alignItems: 'center', marginBottom: spacing.sm }, starStyle]}>
+                <Ionicons name="sparkles" size={36} color={colors.primary.main} />
+              </Animated.View>
               <Animated.Text style={[styles.title, textStyle]}>All done!</Animated.Text>
               <Animated.Text style={[styles.subtitle, starStyle]}>
                 You crushed today's goals
@@ -138,7 +145,12 @@ function FloatingParticle({ index, visible }: { index: number; visible: boolean 
   return <Animated.View style={style} />;
 }
 
-const CONFETTI_COLORS = [colors.primary.main, colors.primary.light, colors.accent?.gold ?? '#E8D4A5', colors.accent?.lavender ?? '#D4C4E8'];
+const CONFETTI_COLORS = [
+  colors.primary.main,
+  colors.primary.light,
+  colors.accent.gold,
+  colors.accent.lavender,
+];
 
 function ConfettiBit({ index, visible }: { index: number; visible: boolean }) {
   const translateY = useSharedValue(0);
@@ -195,7 +207,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     borderRadius: 24,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: colors.shadow.dark,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.2,
     shadowRadius: 24,

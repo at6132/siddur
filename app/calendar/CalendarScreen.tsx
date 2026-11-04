@@ -383,15 +383,15 @@ export const CalendarScreen: React.FC = () => {
                 <Text style={styles.legendText}>Today</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#E8D4A5' }]} />
+                <View style={[styles.legendDot, { backgroundColor: theme.colors.accent.gold }]} />
                 <Text style={styles.legendText}>Shabbos</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#A5C4D4' }]} />
+                <View style={[styles.legendDot, { backgroundColor: theme.colors.secondary.main }]} />
                 <Text style={styles.legendText}>Yom Tov</Text>
               </View>
               <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: '#D4A5A5' }]} />
+                <View style={[styles.legendDot, { backgroundColor: theme.colors.semantic.error }]} />
                 <Text style={styles.legendText}>Fast</Text>
               </View>
             </View>
@@ -578,7 +578,7 @@ function createCalendarStyles(theme: AppTheme) {
     backgroundColor: theme.isDark ? 'rgba(30,30,45,0.9)' : 'rgba(255,255,255,0.8)',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: theme.isDark ? '#000' : 'rgba(0,0,0,0.3)',
+    shadowColor: theme.colors.shadow.dark,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: theme.isDark ? 0.45 : 0.25,
     shadowRadius: theme.isDark ? 10 : 8,
@@ -629,7 +629,7 @@ function createCalendarStyles(theme: AppTheme) {
     paddingTop: GRID_PADDING_V,
     paddingBottom: GRID_PADDING_V,
     paddingHorizontal: spacing.xs,
-    shadowColor: theme.isDark ? '#000' : 'rgba(0,0,0,0.2)',
+    shadowColor: theme.colors.shadow.medium,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: theme.isDark ? 0.4 : 0.2,
     shadowRadius: theme.isDark ? 20 : 12,
@@ -803,19 +803,19 @@ function createCalendarStyles(theme: AppTheme) {
   tagText: {
     fontFamily: fonts.body.medium,
     fontSize: 11,
-    color: '#fff',
+    color: theme.colors.text.inverse,
   },
   shabbosTag: {
-    backgroundColor: '#E8D4A5',
+    backgroundColor: theme.colors.accent.gold,
   },
   yomTovTag: {
-    backgroundColor: '#A5C4D4',
+    backgroundColor: theme.colors.secondary.main,
   },
   roshChodeshTag: {
     backgroundColor: theme.colors.primary.main,
   },
   fastTag: {
-    backgroundColor: '#D4A5A5',
+    backgroundColor: theme.colors.semantic.error,
   },
   zmanimLoading: {
     marginTop: spacing.md,
@@ -860,7 +860,7 @@ function createCalendarStyles(theme: AppTheme) {
     alignItems: 'center',
     borderWidth: 1,
     borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.85)',
-    shadowColor: theme.isDark ? '#000' : 'rgba(0,0,0,0.08)',
+    shadowColor: theme.colors.shadow.light,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: theme.isDark ? 0.25 : 0.1,
     shadowRadius: 3,

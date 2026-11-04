@@ -93,7 +93,7 @@ export const NotificationBanner: React.FC<NotificationBannerProps> = ({ onSetup 
   const BannerContent = (
     <View style={styles.content}>
       <View style={styles.textContainer}>
-        <Text style={styles.title}>🔔 Set up notifications</Text>
+        <Text style={styles.title}>Set up notifications</Text>
         <Text style={styles.subtitle}>Get reminders for davening times</Text>
       </View>
       <View style={styles.actions}>

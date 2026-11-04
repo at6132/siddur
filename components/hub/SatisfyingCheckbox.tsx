@@ -140,6 +140,6 @@ const styles = StyleSheet.create({
   },
   check: {
     fontFamily: fonts.body.bold,
-    color: '#fff',
+    color: colors.text.inverse,
   },
 });
