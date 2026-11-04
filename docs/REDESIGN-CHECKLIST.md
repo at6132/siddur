@@ -26,7 +26,7 @@ Stack note: App uses **React Navigation** (`src/navigation/AppNavigator.tsx`), n
 | Main tabs shell | `src/navigation/AppNavigator.tsx` (`MainWithChrome`) | Home / Library / Hub / Calendar / Search; Settings off-tab | done — IA |
 | LiquidGlassTabBar | `components/navigation/LiquidGlassTabBar.tsx` | Custom liquid-glass tab bar | done — selection haptics; absoluteFill fix |
 | ContinueReadingChrome | `components/navigation/ContinueReadingChrome.tsx` | MiniPlayer above tab bar → SiddurReader | done |
-| Search tab | `app/search/SearchScreen.tsx` | Global jump index | done — thin redesign if needed |
+| Search tab | `app/search/SearchScreen.tsx` | Global jump index | done — wrapped in `Screen` (gradient, safe areas, empty state), grouped `Section`/`ListRow` list, token-only styling |
 | App bootstrap / deep links / notification nav | `App.tsx` | Theme, deep links, notification tap | done — Settings off-tab routing |
 
 ## Prayer reader
@@ -49,7 +49,7 @@ Stack note: App uses **React Navigation** (`src/navigation/AppNavigator.tsx`), n
 
 | Route / id | Owning file | FEATURES coverage | Status |
 |------------|-------------|-------------------|--------|
-| Intro | `app/intro/IntroScreen.tsx` | Brand pitch → Begin | todo |
+| Intro | `app/intro/IntroScreen.tsx` | Brand pitch → Begin | done — emoji replaced with Ionicons rows (hairlines, no cards), theme tokens, Reanimated springs + reduced motion, `onBegin` unchanged |
 | Onboarding | `app/onboarding/OnboardingScreen.tsx` | Shell Nusach → Welcome | todo |
 | NusachSelection | `app/onboarding/NusachSelection.tsx` | Ashkenaz / Sfard / skip | todo |
 | Welcome | `app/onboarding/WelcomeScreen.tsx` | Notifications permission + schedule | todo |
@@ -62,7 +62,7 @@ Stack note: App uses **React Navigation** (`src/navigation/AppNavigator.tsx`), n
 | Route / id | Owning file | FEATURES coverage | Status |
 |------------|-------------|-------------------|--------|
 | LibraryHome | `app/library/LibraryScreen.tsx` | Daily tefillos, More Texts, quick Tehillim, search shortcuts | todo |
-| ComingSoon | `app/library/ComingSoonScreen.tsx` | Gated feature placeholder | todo |
+| ComingSoon | `app/library/ComingSoonScreen.tsx` | Gated feature placeholder | done — `Screen` + `BackButton` + `EmptyState`, no hex or emoji |
 | TehillimList | `app/tehillim/TehillimListScreen.tsx` | 150 perakim, progress, campaigns | todo |
 | TehillimReader | `app/tehillim/TehillimReaderScreen.tsx` | Chapter reader | todo |
 | TehillimSettings | `app/tehillim/TehillimSettingsScreen.tsx` | Daily goal type | todo |

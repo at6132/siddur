@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/design/theme';
 import { ListRow } from '../../components/ui/ListRow';
 import { Section } from '../../components/ui/Section';
+import { Screen } from '../../components/ui/Screen';
 import { navigateOrComingSoon } from '../../src/feature/LibraryFeatureAccess';
 
 type SearchAction =
@@ -131,45 +132,52 @@ export function SearchScreen() {
     [navigation],
   );
 
-  return (
-    <View
-      style={[
-        styles.root,
-        {
-          paddingTop: insets.top + spacing.sm,
-          backgroundColor: theme.colors.background.secondary,
-        },
-      ]}
-    >
-      <View style={{ paddingHorizontal: spacing.gutter, marginBottom: spacing.md }}>
-        <Text style={[type.textStyles.h2, { color: theme.colors.text.primary, marginBottom: spacing.sm }]}>
-          Search
-        </Text>
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Pray, Tehillim, Hub, Settings…"
-          placeholderTextColor={theme.colors.text.tertiary}
-          autoCorrect={false}
-          autoCapitalize="none"
-          clearButtonMode="while-editing"
-          style={[
-            styles.input,
-            {
-              backgroundColor: theme.colors.background.primary,
-              color: theme.colors.text.primary,
-              borderRadius: radii.lg,
-              paddingHorizontal: spacing.md,
-              paddingVertical: spacing.sm + spacing['2xs'],
-              fontFamily: type.fonts.body.regular,
-              fontSize: type.fontSize.base,
-              minHeight: 44,
-            },
-          ]}
-          accessibilityLabel="Search features"
-        />
-      </View>
+  const hasQuery = query.trim().length > 0;
 
+  return (
+    <Screen
+      state={grouped.length === 0 ? 'empty' : 'ready'}
+      emptyTitle="No matches"
+      emptyMessage={hasQuery ? `Nothing found for “${query.trim()}”.` : undefined}
+      contentStyle={{ paddingHorizontal: 0 }}
+      header={
+        <View style={{ marginBottom: spacing.md }}>
+          <Text
+            style={[
+              type.textStyles.h2,
+              { color: theme.colors.text.primary, marginBottom: spacing.sm },
+            ]}
+            accessibilityRole="header"
+          >
+            Search
+          </Text>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Pray, Tehillim, Hub, Settings…"
+            placeholderTextColor={theme.colors.text.tertiary}
+            autoCorrect={false}
+            autoCapitalize="none"
+            clearButtonMode="while-editing"
+            returnKeyType="search"
+            style={[
+              styles.input,
+              {
+                backgroundColor: theme.colors.background.primary,
+                borderColor: theme.colors.neutral[300],
+                color: theme.colors.text.primary,
+                borderRadius: radii.lg,
+                paddingHorizontal: spacing.md,
+                paddingVertical: spacing.sm + spacing['2xs'],
+                fontFamily: type.fonts.body.regular,
+                fontSize: type.fontSize.base,
+              },
+            ]}
+            accessibilityLabel="Search features"
+          />
+        </View>
+      }
+    >
       <FlatList
         data={grouped}
         keyExtractor={([group]) => group}
@@ -178,16 +186,8 @@ export function SearchScreen() {
           paddingBottom: insets.bottom + spacing['2xl'],
         }}
         keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={
-          <Text
-            style={[
-              type.textStyles.body,
-              { color: theme.colors.text.secondary, textAlign: 'center', marginTop: spacing.xl },
-            ]}
-          >
-            No matches
-          </Text>
-        }
+        keyboardDismissMode="on-drag"
+        showsVerticalScrollIndicator={false}
         renderItem={({ item: [group, items] }) => (
           <Section title={group}>
             {items.map((row) => (
@@ -202,15 +202,13 @@ export function SearchScreen() {
           </Section>
         )}
       />
-    </View>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
   input: {
     borderWidth: StyleSheet.hairlineWidth,
+    minHeight: 44,
   },
 });
