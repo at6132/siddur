@@ -1,15 +1,23 @@
 /**
- * Hub – at-a-glance practice stats and quick navigation to sub-pages.
- * Grouped rows on the screen gradient; the brachos sheet is a native page sheet.
+ * Hub – at-a-glance practice stats and quick navigation.
+ * Glass practice cards + liquid-glass timeframe; brachos sheet stays native pageSheet.
  */
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, Modal, ScrollView, Platform } from 'react-native';
+import { View, Text, Modal, ScrollView, Platform, StyleSheet } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../src/design/theme';
 import { Screen, Section, ListRow, Chip, GlassButton } from '../../components/ui';
+import { BrandGlassTile } from '../../components/ui/BrandGlassTile';
+import { LiquidGlassSegmentedControl } from '../../components/navigation/LiquidGlassSegmentedControl';
+import { MiniProgressBar } from '../../components/hub/MiniProgressBar';
 import { GroupLabel } from '../../components/hub/PracticeKit';
+import { fonts } from '../../src/design/typography';
+import { colorWithAlpha } from '../../src/design/colorAlpha';
 import {
   getBrachosCount,
   addBrachos,
@@ -22,10 +30,10 @@ import { DailyGoalsService } from '../../src/storage/DailyGoalsService';
 
 type TimeFrame = 'day' | 'week' | 'month';
 
-const TIME_FRAMES: { value: TimeFrame; label: string }[] = [
-  { value: 'day', label: 'Today' },
-  { value: 'week', label: 'Week' },
-  { value: 'month', label: 'Month' },
+const TIME_FRAME_TABS: { key: TimeFrame; label: string }[] = [
+  { key: 'day', label: 'Today' },
+  { key: 'week', label: 'Week' },
+  { key: 'month', label: 'Month' },
 ];
 
 function getTimeOfDay(): string {
@@ -38,9 +46,10 @@ function getTimeOfDay(): string {
 export const HubOverviewScreen: React.FC = () => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const { spacing, type } = theme.tokens;
+  const { spacing, type, radii } = theme.tokens;
   const navigation = useNavigation();
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('day');
+  const [loading, setLoading] = useState(true);
   const [brachosCount, setBrachosCount] = useState(0);
   const [brachosTotal, setBrachosTotal] = useState(0);
   const [tehillimProgress, setTehillimProgress] = useState({ percentComplete: 0, dayName: '' });
@@ -48,7 +57,10 @@ export const HubOverviewScreen: React.FC = () => {
   const [tehillimDaysCompleted, setTehillimDaysCompleted] = useState(0);
   const [tzedakahTotal, setTzedakahTotal] = useState(0);
   const [goalsSummary, setGoalsSummary] = useState({ total: 0, completed: 0 });
-  const [goalsRangeSummary, setGoalsRangeSummary] = useState<{ daysCompleted: number; totalDays: number } | null>(null);
+  const [goalsRangeSummary, setGoalsRangeSummary] = useState<{
+    daysCompleted: number;
+    totalDays: number;
+  } | null>(null);
   const [brachosMenuVisible, setBrachosMenuVisible] = useState(false);
 
   const getDateRange = useCallback((tf: TimeFrame) => {
@@ -82,16 +94,17 @@ export const HubOverviewScreen: React.FC = () => {
       setGoalsSummary(goals);
       setGoalsRangeSummary(null);
     } else {
-      const [brachos, brachosRange, tProgress, tStreak, tehillimDays, tzedakah, goals, goalsRange] = await Promise.all([
-        getBrachosCount(),
-        getBrachosTotalForRange(start, end),
-        DailyTehillimTracker.getTodaysProgress(),
-        DailyTehillimTracker.getStreak(),
-        DailyTehillimTracker.getCompletedDaysInRange(start, end),
-        TzedakahTracker.getTotalForDateRange(start, end),
-        DailyGoalsService.getTodaySummary(),
-        DailyGoalsService.getRangeSummary(start, end),
-      ]);
+      const [brachos, brachosRange, tProgress, tStreak, tehillimDays, tzedakah, goals, goalsRange] =
+        await Promise.all([
+          getBrachosCount(),
+          getBrachosTotalForRange(start, end),
+          DailyTehillimTracker.getTodaysProgress(),
+          DailyTehillimTracker.getStreak(),
+          DailyTehillimTracker.getCompletedDaysInRange(start, end),
+          TzedakahTracker.getTotalForDateRange(start, end),
+          DailyGoalsService.getTodaySummary(),
+          DailyGoalsService.getRangeSummary(start, end),
+        ]);
       setBrachosCount(brachos);
       setBrachosTotal(brachosRange);
       setTehillimProgress(tProgress);
@@ -101,12 +114,20 @@ export const HubOverviewScreen: React.FC = () => {
       setGoalsSummary(goals);
       setGoalsRangeSummary(goalsRange);
     }
+    setLoading(false);
   }, [timeFrame, getDateRange]);
 
-  useFocusEffect(useCallback(() => { load(); }, [load]));
-  useEffect(() => { load(); }, [timeFrame]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+  useEffect(() => {
+    load();
+  }, [timeFrame]);
 
   const handleBrachosAdd = async (amount: number) => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const next = await addBrachos(amount);
     setBrachosCount(next);
     if (timeFrame === 'day') setBrachosTotal(next);
@@ -119,14 +140,27 @@ export const HubOverviewScreen: React.FC = () => {
 
   const { days } = getDateRange(timeFrame);
   const brachosGoal = timeFrame === 'day' ? 100 : timeFrame === 'week' ? 700 : 3000;
-  const dayName = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  const dayName = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
 
   const goalsValue =
     timeFrame === 'day'
-      ? `${goalsSummary.completed}/${goalsSummary.total}`
+      ? `${goalsSummary.completed}/${goalsSummary.total || 0}`
       : goalsRangeSummary
         ? `${goalsRangeSummary.daysCompleted}/${goalsRangeSummary.totalDays}`
-        : 'n/a';
+        : '0/0';
+
+  const goalsProgress =
+    timeFrame === 'day'
+      ? goalsSummary.total > 0
+        ? goalsSummary.completed / goalsSummary.total
+        : 0
+      : goalsRangeSummary && goalsRangeSummary.totalDays > 0
+        ? goalsRangeSummary.daysCompleted / goalsRangeSummary.totalDays
+        : 0;
 
   const tehillimValue =
     timeFrame === 'day' ? `${tehillimProgress.percentComplete}%` : `${tehillimDaysCompleted}/${days}`;
@@ -134,12 +168,17 @@ export const HubOverviewScreen: React.FC = () => {
     timeFrame === 'day'
       ? tehillimStreak > 0
         ? `${tehillimStreak} day streak`
-        : tehillimProgress.dayName
+        : tehillimProgress.dayName || 'Today’s perakim'
       : 'days completed';
+  const tehillimProgressPct =
+    timeFrame === 'day'
+      ? tehillimProgress.percentComplete / 100
+      : days > 0
+        ? tehillimDaysCompleted / days
+        : 0;
 
-  const statValue = (value: string) => (
-    <Text style={[type.textStyles.h4, { color: theme.colors.text.primary }]}>{value}</Text>
-  );
+  const brachosProgress = Math.min(1, brachosTotal / brachosGoal);
+  const timeFrameIndex = TIME_FRAME_TABS.findIndex((t) => t.key === timeFrame);
 
   const brachosOptions: { key: string; title: string; amount: number }[] = [
     { key: 'one', title: 'One bracha', amount: 1 },
@@ -148,17 +187,124 @@ export const HubOverviewScreen: React.FC = () => {
     { key: 'maariv', title: 'Maariv', amount: BRACHOS_PER_TEFILLA.maariv },
   ];
 
+  const PRACTICE_CARD_HEIGHT = 148;
+
+  const practiceCard = (
+    title: string,
+    value: string,
+    subtitle: string,
+    progress: number,
+    tint: 'rose' | 'sky' | 'lavender' | 'gold' | 'sage',
+    icon: React.ComponentProps<typeof Ionicons>['name'],
+    onPress: () => void,
+    extra?: React.ReactNode,
+  ) => (
+    <View style={[styles.half, { height: PRACTICE_CARD_HEIGHT }]}>
+      <BrandGlassTile
+        title={title}
+        tint={tint}
+        compact
+        fill
+        onPress={onPress}
+        style={{ height: '100%' }}
+      >
+        <View style={styles.practiceInner}>
+          <View style={styles.cardTop}>
+            <View
+              style={[
+                styles.iconWell,
+                {
+                  backgroundColor: colorWithAlpha(
+                    theme.colors.background.primary,
+                    theme.isDark ? 0.18 : 0.45,
+                  ),
+                  borderRadius: radii.md,
+                },
+              ]}
+            >
+              <Ionicons name={icon} size={18} color={theme.colors.primary.dark} />
+            </View>
+            {extra ?? <View style={styles.extraSpacer} />}
+          </View>
+          <View style={styles.practiceCopy}>
+            <Text
+              style={{
+                fontFamily: fonts.heading.bold,
+                fontSize: 28,
+                color: theme.colors.text.primary,
+                letterSpacing: 0.2,
+                lineHeight: 32,
+              }}
+              numberOfLines={1}
+            >
+              {loading ? '—' : value}
+            </Text>
+            <Text
+              style={{
+                fontFamily: fonts.body.semibold,
+                fontSize: 13,
+                color: theme.colors.text.primary,
+                marginTop: 2,
+              }}
+              numberOfLines={1}
+            >
+              {title}
+            </Text>
+            <Text
+              style={{
+                fontFamily: fonts.body.regular,
+                fontSize: 12,
+                color: theme.colors.text.secondary,
+                marginTop: 2,
+                minHeight: 16,
+              }}
+              numberOfLines={1}
+            >
+              {subtitle}
+            </Text>
+          </View>
+          <View style={styles.progressSlot}>
+            <MiniProgressBar progress={loading ? 0 : progress} />
+          </View>
+        </View>
+      </BrandGlassTile>
+    </View>
+  );
+
+  const sectionLabel = (label: string) => (
+    <Text
+      style={[
+        type.textStyles.caption,
+        {
+          color: theme.colors.text.secondary,
+          textTransform: 'uppercase',
+          letterSpacing: type.letterSpacing.wider,
+          marginBottom: spacing.sm,
+          marginTop: spacing.md,
+          fontFamily: fonts.body.semibold,
+        },
+      ]}
+    >
+      {label}
+    </Text>
+  );
+
   return (
     <Screen
       scroll
       bottomExtra={spacing['3xl'] + spacing.lg}
       header={
-        <View style={{ paddingBottom: spacing.md }}>
+        <View style={{ paddingBottom: spacing.sm }}>
           <Text
             accessibilityRole="header"
-            style={[type.textStyles.h2, { color: theme.colors.text.primary }]}
+            style={{
+              fontFamily: fonts.heading.bold,
+              fontSize: 36,
+              letterSpacing: 0.3,
+              color: theme.colors.text.primary,
+            }}
           >
-            Good {getTimeOfDay()}
+            {`Good ${getTimeOfDay()}`}
           </Text>
           <Text
             style={[
@@ -171,101 +317,108 @@ export const HubOverviewScreen: React.FC = () => {
         </View>
       }
     >
-      <View
-        style={{
-          flexDirection: 'row',
-          gap: spacing.sm,
-          marginBottom: spacing.lg,
-        }}
-      >
-        {TIME_FRAMES.map((tf) => (
-          <Chip
-            key={tf.value}
-            label={tf.label}
-            selected={timeFrame === tf.value}
-            onPress={() => setTimeFrame(tf.value)}
-            style={{ flex: 1, alignSelf: 'stretch' }}
-          />
-        ))}
+      <View style={{ marginBottom: spacing.md, alignItems: 'center' }}>
+        <LiquidGlassSegmentedControl
+          tabs={TIME_FRAME_TABS}
+          activeIndex={Math.max(0, timeFrameIndex)}
+          onIndexChange={(index) => {
+            const next = TIME_FRAME_TABS[index];
+            if (next) setTimeFrame(next.key);
+          }}
+        />
       </View>
 
-      <Section title="Practice">
-        <ListRow
-          title="Goals"
-          subtitle={timeFrame === 'day' ? 'completed' : 'days completed'}
-          trailing={statValue(goalsValue)}
-          showChevron
-          onPress={() => (navigation as any).navigate('DailyGoals')}
-        />
-        <ListRow
-          title="Tehillim"
-          subtitle={tehillimSubtitle}
-          trailing={statValue(tehillimValue)}
-          showChevron
-          onPress={() => (navigation as any).navigate('TehillimList')}
-        />
-        <ListRow
-          title="Brachos"
-          subtitle={`of ${brachosGoal} goal`}
-          trailing={
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              {statValue(`${brachosTotal}`)}
-              {timeFrame === 'day' ? (
-                <Chip label="Add" onPress={() => setBrachosMenuVisible(true)} />
-              ) : null}
-            </View>
-          }
-          showChevron
-          onPress={() => (navigation as any).navigate('Library')}
-        />
-        <ListRow
-          title="Tzedakah"
-          subtitle={timeFrame === 'day' ? 'given today' : `given this ${timeFrame}`}
-          trailing={statValue(tzedakahTotal > 0 ? `$${tzedakahTotal.toFixed(0)}` : '$0')}
-          showChevron
-          onPress={() => (navigation as any).navigate('Tzedakah')}
-        />
-      </Section>
+      <View style={styles.grid}>
+        {practiceCard(
+          'Goals',
+          goalsValue,
+          timeFrame === 'day' ? (goalsSummary.total === 0 ? 'Add a goal' : 'completed') : 'days completed',
+          goalsProgress,
+          'rose',
+          'checkbox-outline',
+          () => (navigation as any).navigate('DailyGoals'),
+        )}
+        {practiceCard(
+          'Tehillim',
+          tehillimValue,
+          tehillimSubtitle,
+          tehillimProgressPct,
+          'lavender',
+          'book-outline',
+          () => (navigation as any).navigate('TehillimList'),
+        )}
+        {practiceCard(
+          'Brachos',
+          `${brachosTotal}`,
+          `of ${brachosGoal} goal`,
+          brachosProgress,
+          'sky',
+          'sparkles-outline',
+          () => (navigation as any).navigate('Library'),
+          timeFrame === 'day' ? (
+            <Chip
+              label="Add"
+              onPress={() => {
+                void Haptics.selectionAsync();
+                setBrachosMenuVisible(true);
+              }}
+            />
+          ) : null,
+        )}
+        {practiceCard(
+          'Tzedakah',
+          tzedakahTotal > 0 ? `$${tzedakahTotal.toFixed(0)}` : '$0',
+          timeFrame === 'day' ? 'given today' : `given this ${timeFrame}`,
+          tzedakahTotal > 0 ? Math.min(1, tzedakahTotal / 18) : 0,
+          'gold',
+          'heart-outline',
+          () => (navigation as any).navigate('Tzedakah'),
+        )}
+      </View>
 
-      <Section title="Quick actions">
-        <ListRow
+      <View style={{ marginTop: spacing['2xl'], gap: spacing.sm }}>
+        <BrandGlassTile
           title="Gratitude journal"
           subtitle="What are you thankful for?"
-          showChevron
+          icon="journal-outline"
+          tint="sage"
           onPress={() => (navigation as any).navigate('Gratitude')}
         />
-        <ListRow
+        <BrandGlassTile
           title="Shabbos alarm"
-          subtitle="Ring for a few seconds each Shabbos morning"
-          showChevron
+          subtitle="Morning ring on Shabbos"
+          icon="alarm-outline"
+          tint="rose"
           onPress={() => (navigation as any).navigate('Settings', { scrollTo: 'shabbosAlarm' })}
         />
-      </Section>
+      </View>
 
-      <Section title="Explore">
-        <ListRow
+      {sectionLabel('Explore')}
+      <View style={{ gap: spacing.sm }}>
+        <BrandGlassTile
           title="Shared Tehillim"
           subtitle="Create or join a shared Tehillim page"
-          showChevron
+          icon="people-outline"
+          tint="lavender"
           onPress={() => (navigation as any).navigate('CreateSharedTehillim')}
         />
-        <ListRow
+        <BrandGlassTile
           title="Minyan finder"
           subtitle="Find nearby minyanim"
-          disabled
-          trailing={
-            <Text style={[type.textStyles.caption, { color: theme.colors.text.secondary }]}>Soon</Text>
-          }
+          icon="navigate-outline"
+          tint="sky"
+          muted
+          badge="Soon"
         />
-        <ListRow
+        <BrandGlassTile
           title="Kosher restaurants"
           subtitle="Discover kosher dining"
-          disabled
-          trailing={
-            <Text style={[type.textStyles.caption, { color: theme.colors.text.secondary }]}>Soon</Text>
-          }
+          icon="restaurant-outline"
+          tint="gold"
+          muted
+          badge="Soon"
         />
-      </Section>
+      </View>
 
       <Modal
         visible={brachosMenuVisible}
@@ -273,10 +426,12 @@ export const HubOverviewScreen: React.FC = () => {
         presentationStyle="pageSheet"
         onRequestClose={() => setBrachosMenuVisible(false)}
       >
-        <View
+        <LinearGradient
+          colors={[...theme.backgroundGradient]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
           style={{
             flex: 1,
-            backgroundColor: theme.colors.background.secondary,
             paddingHorizontal: spacing.gutter,
             paddingTop: Platform.OS === 'android' ? insets.top + spacing.md : spacing.lg,
             paddingBottom: insets.bottom + spacing.md,
@@ -296,7 +451,7 @@ export const HubOverviewScreen: React.FC = () => {
                   key={opt.key}
                   title={opt.title}
                   trailing={
-                    <Text style={[type.textStyles.bodyBold, { color: theme.colors.text.primary }]}>
+                    <Text style={[type.textStyles.bodyBold, { color: theme.colors.primary.dark }]}>
                       {`+${opt.amount}`}
                     </Text>
                   }
@@ -307,11 +462,53 @@ export const HubOverviewScreen: React.FC = () => {
           </ScrollView>
           <GlassButton
             title="Close"
-            variant="secondary"
+            variant="primary"
             onPress={() => setBrachosMenuVisible(false)}
           />
-        </View>
+        </LinearGradient>
       </Modal>
     </Screen>
   );
 };
+
+const styles = StyleSheet.create({
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: -4,
+    alignItems: 'stretch',
+  },
+  half: {
+    width: '50%',
+    padding: 4,
+  },
+  practiceInner: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  practiceCopy: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  progressSlot: {
+    width: '100%',
+    height: 6,
+    marginTop: 4,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 32,
+  },
+  extraSpacer: {
+    width: 44,
+    height: 32,
+  },
+  iconWell: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
