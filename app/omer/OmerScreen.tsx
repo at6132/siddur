@@ -3,22 +3,18 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Animated,
+  Pressable,
   LayoutAnimation,
   Platform,
   UIManager,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FadeIn } from '../../components/animations/FadeIn';
-import { BackButton } from '../../components/ui/BackButton';
-import { GlassCard } from '../home/components/GlassCard';
-import { spacing, borderRadius } from '../../src/design/spacing';
-import { fonts } from '../../src/design/typography';
-import { useTheme } from '../../src/design/theme';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Screen, Section, ListRow, GlassButton } from '../../components/ui';
+import { PracticeHeader } from '../../components/hub/PracticeKit';
+import { useTheme, type AppTheme } from '../../src/design/theme';
+import { colorWithAlpha } from '../../src/design/colorAlpha';
 import { OmerCalculator } from '../../src/core/omer/OmerCalculator';
 import { ZmanimService } from '../../src/core/zmanim/ZmanimService';
 import { StorageService } from '../../src/storage/StorageService';
@@ -52,9 +48,9 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 export const OmerScreen: React.FC = () => {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(), []);
+  const styles = useMemo(() => createStyles(theme), [theme]);
+  const { spacing } = theme.tokens;
 
   const [todayCounted, setTodayCounted] = useState(false);
   /** Sunset + tzeit for today; display/count nights derived with clock (see OmerCalculator). */
@@ -63,7 +59,6 @@ export const OmerScreen: React.FC = () => {
     tzeis: Date | null;
   } | null>(null);
   const [clock, setClock] = useState(() => new Date());
-  const [checkAnim] = useState(new Animated.Value(0));
   const [showReflection, setShowReflection] = useState(false);
   const [showExtraAfterOmer, setShowExtraAfterOmer] = useState(false);
 
@@ -136,23 +131,6 @@ export const OmerScreen: React.FC = () => {
     }, [loadOmerData])
   );
 
-  useEffect(() => {
-    if (todayCounted) {
-      Animated.spring(checkAnim, {
-        toValue: 1,
-        tension: 55,
-        friction: 8,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(checkAnim, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [todayCounted, checkAnim]);
-
   const tzeis = omerZmanim?.tzeis ?? null;
   const sunset = omerZmanim?.sunset ?? null;
   const displayNight =
@@ -177,40 +155,22 @@ export const OmerScreen: React.FC = () => {
     setShowExtraAfterOmer((v) => !v);
   };
 
-  const checkScale = checkAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 1.2],
-  });
+  const header = (
+    <PracticeHeader onBack={() => navigation.goBack()} />
+  );
 
   if (omerZmanim === null) {
-    return (
-      <View style={styles.root}>
-        <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
-        <View style={[styles.headerMinimal, { paddingTop: insets.top + spacing.xs }]}>
-          <BackButton onPress={() => navigation.goBack()} />
-        </View>
-      </View>
-    );
+    return <Screen header={header} state="loading" />;
   }
 
   if (displayNight === null) {
     return (
-      <View style={styles.root}>
-        <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
-        <View style={[styles.headerMinimal, { paddingTop: insets.top + spacing.xs }]}>
-          <BackButton onPress={() => navigation.goBack()} />
-        </View>
-        <View style={styles.emptyOuter}>
-          <FadeIn delay={0}>
-            <Text style={[styles.emptyKicker, { color: theme.colors.text.tertiary }]}>Rest</Text>
-            <Text style={[styles.emptyTitle, { color: theme.colors.text.primary }]}>Not counting now</Text>
-            <Text style={[styles.emptyBody, { color: theme.colors.text.secondary }]}>
-              Omer is between Pesach and Shavuos. When it starts, this screen stays simple: tonight's words
-              and one tap when you're done.
-            </Text>
-          </FadeIn>
-        </View>
-      </View>
+      <Screen
+        header={header}
+        state="empty"
+        emptyTitle="Not counting now"
+        emptyMessage="Omer is between Pesach and Shavuos. When it starts, this screen stays simple: tonight's words and one tap when you're done."
+      />
     );
   }
 
@@ -221,6 +181,11 @@ export const OmerScreen: React.FC = () => {
   const toggleToday = async () => {
     if (nightKeyForMark == null) return;
     const newCounted = !todayCounted;
+    if (newCounted) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } else {
+      void Haptics.selectionAsync();
+    }
     await StorageService.markOmerDay(nightKeyForMark, newCounted);
     await StorageService.setOmerWidgetCountdownAfterNight(newCounted ? nightKeyForMark : null);
     setTodayCounted(newCounted);
@@ -234,393 +199,242 @@ export const OmerScreen: React.FC = () => {
   const progress = (displayNight / 49) * 100;
   const isLagBaomer = displayNight === 33;
 
+  const extraSections = [
+    ...OMER_EXTRA_AFTER_COUNT,
+    {
+      title: 'רבונו של עולם',
+      bodyHebrew: getOmerRibonoShelOlamParagraph(blessing.sefiraHebrew),
+    },
+  ];
+
   return (
-    <View style={styles.root}>
-      <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
-
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: insets.bottom + spacing.xl * 2 },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={[styles.headerMinimal, { paddingTop: insets.top + spacing.xs }]}>
-          <BackButton onPress={() => navigation.goBack()} />
+    <Screen scroll header={header} bottomExtra={spacing.lg}>
+      {/* Tonight's count */}
+      <View style={styles.focal}>
+        <Text style={styles.overline}>{`Night ${displayNight} · week ${weekNum}`}</Text>
+        <View style={styles.digitRow}>
+          <Text style={styles.bigDay} accessibilityLabel={`Night ${displayNight} of 49`}>
+            {displayNight}
+          </Text>
+          <Text style={styles.ofLabel}>of 49</Text>
         </View>
-
-        <View style={styles.focal}>
-          <View style={styles.focalTop}>
-            <Text style={[styles.nightWhisper, { color: theme.colors.text.tertiary }]}>
-              Night {displayNight} · week {weekNum}
-            </Text>
-            {!tzeis ? (
-              <TouchableOpacity
-                onPress={async () => {
-                  const granted = await requestLocationFromUser();
-                  if (granted) await loadOmerData();
-                }}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.nightWhisper, { color: theme.colors.text.tertiary, marginTop: spacing.xs }]}>
-                  Nightfall {ZmanimService.formatTime(null)}. {LOCATION_REQUIRED_MESSAGE}
-                </Text>
-              </TouchableOpacity>
-            ) : null}
-            {isLagBaomer && (
-              <Text style={[styles.lagWhisper, { color: theme.colors.primary.dark }]}>
-                Lag BaOmer — a lighter day
-              </Text>
-            )}
-          </View>
-          <View style={styles.focalDigitWrap}>
-            <Text style={[styles.bigDay, { color: theme.colors.primary.main }]}>{displayNight}</Text>
-          </View>
-          <View style={styles.focalBottom}>
-            <Text style={[styles.bigDayCaption, { color: theme.colors.text.secondary }]}>of 49</Text>
-            <View style={[styles.progressLine, { backgroundColor: `${theme.colors.primary.main}18` }]}>
-              <View
-                style={[
-                  styles.progressLineFill,
-                  { width: `${progress}%`, backgroundColor: theme.colors.primary.main },
-                ]}
-              />
-            </View>
-          </View>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${progress}%` }]} />
         </View>
-
-        <GlassCard style={styles.mainCard}>
-          <Text style={[styles.brachaHebrew, { color: theme.colors.text.primary }]}>
-            {blessing.blessingHebrew}
-          </Text>
-
-          <View style={[styles.softRule, { backgroundColor: theme.colors.neutral[200] }]} />
-
-          <Text style={[styles.countHebrew, { color: theme.colors.text.primary }]}>
-            {blessing.countHebrew}
-          </Text>
-
-          <View style={[styles.softRule, { backgroundColor: theme.colors.neutral[200] }]} />
-
-          <Text style={[styles.harachamanHebrew, { color: theme.colors.text.primary }]}>
-            {OMER_HARACHAMAN_HEBREW}
-          </Text>
-
-          <View style={styles.extraAfterOmerWrap}>
-            <TouchableOpacity
-              onPress={toggleExtraAfterOmer}
-              activeOpacity={0.7}
-              style={styles.disclosureRow}
-            >
-              <Text style={[styles.disclosureLabel, { color: theme.colors.text.secondary }]}>
-                {showExtraAfterOmer ? 'Hide' : 'More tefillos after Harachaman'}
-              </Text>
-              <Text style={[styles.disclosureChevron, { color: theme.colors.text.tertiary }]}>
-                {showExtraAfterOmer ? '⌃' : '⌄'}
-              </Text>
-            </TouchableOpacity>
-            {showExtraAfterOmer && (
-              <View style={styles.extraAfterOmerBody}>
-                {[
-                  ...OMER_EXTRA_AFTER_COUNT,
-                  {
-                    title: 'רבונו של עולם',
-                    bodyHebrew: getOmerRibonoShelOlamParagraph(blessing.sefiraHebrew),
-                  },
-                ].map((section) => (
-                  <View key={section.title} style={styles.extraLiturgySection}>
-                    <Text style={[styles.extraLiturgyTitle, { color: theme.colors.text.secondary }]}>
-                      {section.title}
-                    </Text>
-                    <Text style={[styles.extraLiturgyHebrew, { color: theme.colors.text.primary }]}>
-                      {section.bodyHebrew}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-
-          {!afterTzeis && todayCounted && (
-            <Text style={[styles.doneButtonCaption, { color: theme.colors.text.secondary }]}>
-              {`Today is day ${displayNight}. ${waitUntilTzeis ? `In ${waitUntilTzeis}: day ${countNight}` : `Next: day ${countNight}`} (after nightfall ${formatTimeLocal(tzeis ?? undefined)}).`}
-            </Text>
-          )}
-          <TouchableOpacity
-            style={[
-              styles.doneButton,
-              {
-                backgroundColor: todayCounted
-                  ? !afterTzeis
-                    ? theme.isDark
-                      ? theme.colors.neutral[600]
-                      : theme.colors.neutral[200]
-                    : theme.colors.semantic.success
-                  : theme.colors.primary.main,
-              },
-            ]}
-            onPress={toggleToday}
-            activeOpacity={0.88}
-            disabled={nightKeyForMark == null}
+        {isLagBaomer ? <Text style={styles.lagNote}>Lag BaOmer, a lighter day</Text> : null}
+        {!tzeis ? (
+          <Pressable
+            onPress={async () => {
+              const granted = await requestLocationFromUser();
+              if (granted) await loadOmerData();
+            }}
+            accessibilityRole="button"
+            style={styles.locationPrompt}
           >
-            {todayCounted ? (
-              <Animated.Text
-                style={[
-                  styles.doneButtonText,
-                  {
-                    color: !afterTzeis
-                      ? theme.isDark
-                        ? '#fff'
-                        : theme.colors.text.primary
-                      : '#fff',
-                    transform: [{ scale: checkScale }],
-                  },
-                ]}
-              >
-                Counted ✓
-              </Animated.Text>
-            ) : (
-              <Text style={styles.doneButtonText}>Mark as complete</Text>
-            )}
-          </TouchableOpacity>
-        </GlassCard>
+            <Text style={styles.locationPromptText}>
+              {`Nightfall ${ZmanimService.formatTime(null)}. ${LOCATION_REQUIRED_MESSAGE}`}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
 
-        {meditation && (
-          <View style={styles.optionalBlock}>
-            <TouchableOpacity onPress={toggleReflection} activeOpacity={0.7} style={styles.disclosureRow}>
-              <Text style={[styles.disclosureLabel, { color: theme.colors.text.secondary }]}>
-                {showReflection ? 'Close' : 'Something to work on today'}
+      {/* Liturgy: plain text on the gradient, separated by hairlines */}
+      <View style={styles.liturgy}>
+        <Text style={styles.brachaHebrew}>{blessing.blessingHebrew}</Text>
+        <View style={styles.softRule} />
+        <Text style={styles.countHebrew}>{blessing.countHebrew}</Text>
+        <View style={styles.softRule} />
+        <Text style={styles.harachamanHebrew}>{OMER_HARACHAMAN_HEBREW}</Text>
+      </View>
+
+      <Section>
+        <ListRow
+          title={showExtraAfterOmer ? 'Hide' : 'More tefillos after Harachaman'}
+          trailing={
+            <Ionicons
+              name={showExtraAfterOmer ? 'chevron-up' : 'chevron-down'}
+              size={theme.tokens.type.fontSize.lg}
+              color={theme.colors.text.tertiary}
+            />
+          }
+          onPress={toggleExtraAfterOmer}
+        />
+      </Section>
+      {showExtraAfterOmer ? (
+        <View style={styles.extraAfterOmerBody}>
+          {extraSections.map((section) => (
+            <View key={section.title} style={styles.extraLiturgySection}>
+              <Text style={styles.extraLiturgyTitle}>{section.title}</Text>
+              <Text style={styles.extraLiturgyHebrew}>{section.bodyHebrew}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
+      {/* Primary action */}
+      {!afterTzeis && todayCounted ? (
+        <Text style={styles.doneButtonCaption}>
+          {`Today is day ${displayNight}. ${waitUntilTzeis ? `In ${waitUntilTzeis}: day ${countNight}` : `Next: day ${countNight}`} (after nightfall ${formatTimeLocal(tzeis ?? undefined)}).`}
+        </Text>
+      ) : null}
+      <GlassButton
+        title={todayCounted ? 'Counted' : 'Mark as complete'}
+        variant={todayCounted ? 'secondary' : 'primary'}
+        size="lg"
+        onPress={toggleToday}
+        disabled={nightKeyForMark == null}
+        style={styles.doneButton}
+      />
+
+      {meditation ? (
+        <View style={styles.optionalBlock}>
+          <Section>
+            <ListRow
+              title={showReflection ? 'Close' : 'Something to work on today'}
+              trailing={
+                <Ionicons
+                  name={showReflection ? 'chevron-up' : 'chevron-down'}
+                  size={theme.tokens.type.fontSize.lg}
+                  color={theme.colors.text.tertiary}
+                />
+              }
+              onPress={toggleReflection}
+            />
+          </Section>
+          {showReflection ? (
+            <View>
+              <Text style={styles.reflectionMeta}>
+                <Text style={styles.reflectionStrong}>{`You're on night ${displayNight}`}</Text>
+                {' of the count. Tradition gives this night a focus: '}
+                <Text style={styles.reflectionStrong}>{omerTonightTheme}</Text>
+                {'. The lines below are meant as a small, practical way to connect with that idea today.'}
               </Text>
-              <Text style={[styles.disclosureChevron, { color: theme.colors.text.tertiary }]}>
-                {showReflection ? '⌃' : '⌄'}
+              <Text style={styles.reflectionBody}>
+                {meditation.meditation} {meditation.question}
               </Text>
-            </TouchableOpacity>
-            {showReflection && (
-              <View>
-                <Text style={[styles.reflectionMeta, { color: theme.colors.text.tertiary }]}>
-                  <Text style={{ fontFamily: fonts.body.semiBold, color: theme.colors.text.secondary }}>
-                    You're on night {displayNight}
-                  </Text>
-                  {' '}
-                  of the count. Tradition gives this night a focus —{' '}
-                  <Text style={{ fontFamily: fonts.body.semiBold, color: theme.colors.text.secondary }}>
-                    {omerTonightTheme}
-                  </Text>
-                  . The lines below are meant as a small, practical way to connect with that idea today.
-                </Text>
-                <Text style={[styles.reflectionBody, { color: theme.colors.text.secondary }]}>
-                  {meditation.meditation} {meditation.question}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-      </ScrollView>
-    </View>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+    </Screen>
   );
 };
 
-function createStyles() {
+function createStyles(theme: AppTheme) {
+  const { spacing, radii, type, hebrew } = theme.tokens;
+  const hebrewBlock = (size: 'xsmall' | 'small' | 'medium') => ({
+    ...hebrew.readerStyle(size),
+    color: theme.colors.text.primary,
+    textAlign: 'center' as const,
+  });
+
   return StyleSheet.create({
-    root: {
-      flex: 1,
-    },
-    scroll: {
-      flex: 1,
-    },
-    scrollContent: {
-      paddingHorizontal: spacing.lg + spacing.xs,
-    },
-    headerMinimal: {
-      marginBottom: spacing.sm,
-    },
     focal: {
-      alignItems: 'center',
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.md,
+      marginBottom: spacing.lg,
+      marginHorizontal: spacing.sm,
     },
-    focalTop: {
-      alignItems: 'center',
-      width: '100%',
+    overline: {
+      ...type.textStyles.label,
+      color: theme.colors.text.secondary,
+      textTransform: 'uppercase',
     },
-    nightWhisper: {
-      fontFamily: fonts.body.medium,
-      fontSize: 13,
-      letterSpacing: 0.3,
-      marginBottom: 2,
-    },
-    lagWhisper: {
-      fontFamily: fonts.body.medium,
-      fontSize: 13,
-      marginBottom: 0,
-    },
-    focalDigitWrap: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: '100%',
-      paddingVertical: spacing.xs,
-    },
-    focalBottom: {
-      alignItems: 'center',
-      width: '100%',
+    digitRow: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      gap: spacing.sm,
+      marginTop: spacing.xs,
     },
     bigDay: {
-      fontFamily: fonts.heading.bold,
-      fontSize: 72,
-      lineHeight: 72,
-      letterSpacing: -2,
-      textAlign: 'center',
+      fontFamily: type.fonts.heading.bold,
+      fontSize: type.fontSize['5xl'] * 1.5,
+      lineHeight: type.fontSize['5xl'] * 1.5,
+      letterSpacing: type.letterSpacing.tighter,
+      color: theme.colors.primary.main,
     },
-    bigDayCaption: {
-      fontFamily: fonts.body.regular,
-      fontSize: 16,
-      marginTop: 2,
-      marginBottom: spacing.sm,
+    ofLabel: {
+      ...type.textStyles.bodyLarge,
+      color: theme.colors.text.secondary,
     },
-    progressLine: {
-      width: '100%',
-      maxWidth: 200,
-      height: 3,
-      borderRadius: 2,
+    progressTrack: {
+      height: spacing.xs,
+      borderRadius: radii.full,
       overflow: 'hidden',
-      marginBottom: spacing.sm,
+      marginTop: spacing.md,
+      backgroundColor: colorWithAlpha(theme.colors.primary.main, 0.18),
     },
-    progressLineFill: {
+    progressFill: {
       height: '100%',
-      borderRadius: 2,
+      borderRadius: radii.full,
+      backgroundColor: theme.colors.primary.main,
     },
-    mainCard: {
+    lagNote: {
+      ...type.textStyles.label,
+      color: theme.colors.text.primary,
+      marginTop: spacing.sm,
+    },
+    locationPrompt: {
+      minHeight: 44,
+      justifyContent: 'center',
+      marginTop: spacing.xs,
+    },
+    locationPromptText: {
+      ...type.textStyles.bodySmall,
+      color: theme.colors.text.secondary,
+    },
+    liturgy: {
+      paddingVertical: spacing.md,
       marginBottom: spacing.lg,
     },
-    brachaHebrew: {
-      fontFamily: fonts.hebrew.regular,
-      fontSize: 18,
-      lineHeight: 30,
-      textAlign: 'center',
-      writingDirection: 'rtl',
-    },
+    brachaHebrew: hebrewBlock('small'),
+    countHebrew: hebrewBlock('medium'),
+    harachamanHebrew: hebrewBlock('small'),
     softRule: {
       height: StyleSheet.hairlineWidth,
+      backgroundColor: theme.colors.neutral[300],
       marginVertical: spacing.lg,
       alignSelf: 'stretch',
     },
-    countHebrew: {
-      fontFamily: fonts.hebrew.regular,
-      fontSize: 22,
-      lineHeight: 34,
-      textAlign: 'center',
-      writingDirection: 'rtl',
-      marginBottom: 0,
-    },
-    harachamanHebrew: {
-      fontFamily: fonts.hebrew.regular,
-      fontSize: 19,
-      lineHeight: 31,
-      textAlign: 'center',
-      writingDirection: 'rtl',
-      marginBottom: spacing.md,
-    },
-    extraAfterOmerWrap: {
-      marginBottom: spacing.lg,
-    },
     extraAfterOmerBody: {
-      paddingTop: spacing.xs,
       paddingBottom: spacing.sm,
+      marginBottom: spacing.md,
     },
     extraLiturgySection: {
       marginBottom: spacing.lg,
     },
     extraLiturgyTitle: {
-      fontFamily: fonts.body.semiBold,
-      fontSize: 13,
+      ...type.textStyles.label,
+      color: theme.colors.text.secondary,
       textAlign: 'center',
       marginBottom: spacing.sm,
     },
-    extraLiturgyHebrew: {
-      fontFamily: fonts.hebrew.regular,
-      fontSize: 17,
-      lineHeight: 28,
-      textAlign: 'center',
-      writingDirection: 'rtl',
-    },
-    doneButton: {
-      borderRadius: borderRadius.lg,
-      paddingVertical: spacing.md + 4,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
+    extraLiturgyHebrew: hebrewBlock('xsmall'),
     doneButtonCaption: {
-      fontFamily: fonts.body.regular,
-      fontSize: 14,
-      lineHeight: 21,
+      ...type.textStyles.bodySmall,
+      color: theme.colors.text.secondary,
       textAlign: 'center',
       marginBottom: spacing.md,
       paddingHorizontal: spacing.sm,
     },
-    doneButtonText: {
-      fontFamily: fonts.body.semiBold,
-      fontSize: 17,
-      color: '#fff',
+    doneButton: {
+      marginBottom: spacing.lg,
     },
     optionalBlock: {
-      marginBottom: spacing.xl,
-    },
-    disclosureRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.sm,
-      paddingVertical: spacing.sm,
-    },
-    disclosureLabel: {
-      fontFamily: fonts.body.medium,
-      fontSize: 15,
-    },
-    disclosureChevron: {
-      fontSize: 14,
-      marginTop: 2,
+      marginBottom: spacing.lg,
     },
     reflectionMeta: {
-      fontFamily: fonts.body.regular,
-      fontSize: 13,
-      lineHeight: 20,
-      textAlign: 'center',
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.sm,
+      ...type.textStyles.bodySmall,
+      color: theme.colors.text.tertiary,
+      paddingHorizontal: spacing.sm,
       marginBottom: spacing.md,
+    },
+    reflectionStrong: {
+      fontFamily: type.fonts.body.semibold,
+      color: theme.colors.text.secondary,
     },
     reflectionBody: {
-      fontFamily: fonts.body.regular,
-      fontSize: 15,
-      lineHeight: 24,
-      textAlign: 'center',
-      paddingHorizontal: spacing.md,
-      paddingTop: spacing.sm,
-    },
-    emptyOuter: {
-      flex: 1,
-      justifyContent: 'center',
-      paddingHorizontal: spacing.lg + spacing.md,
-      paddingBottom: spacing.xl * 2,
-    },
-    emptyKicker: {
-      fontFamily: fonts.body.medium,
-      fontSize: 12,
-      letterSpacing: 1.2,
-      textTransform: 'uppercase',
-      marginBottom: spacing.sm,
-    },
-    emptyTitle: {
-      fontFamily: fonts.heading.semiBold,
-      fontSize: 28,
-      letterSpacing: -0.5,
-      marginBottom: spacing.md,
-    },
-    emptyBody: {
-      fontFamily: fonts.body.regular,
-      fontSize: 16,
-      lineHeight: 25,
+      ...type.textStyles.body,
+      color: theme.colors.text.secondary,
+      paddingHorizontal: spacing.sm,
     },
   });
 }
