@@ -3,150 +3,47 @@
  */
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { FadeIn } from '../../components/animations/FadeIn';
-import { BackButton } from '../../components/ui/BackButton';
-import { spacing } from '../../src/design/spacing';
-import { fonts } from '../../src/design/typography';
-import { useTheme } from '../../src/design/theme';
-import type { AppTheme } from '../../src/design/theme';
+import {
+  LearningPicker,
+  LearningNotFound,
+  type PickerItem,
+} from '../../components/learning/LearningParts';
 import { MISHNA_TRACTATES } from '../../src/services/MishnaYomiService';
 import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
 
 type RouteParams = { tractate: string };
 
-function createStyles(theme: AppTheme) {
-  return StyleSheet.create({
-    container: { flex: 1 },
-    scrollView: { flex: 1 },
-    content: {
-      padding: spacing.lg,
-      paddingTop: spacing.xl + spacing.safeTopInset,
-      paddingBottom: 120,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginBottom: spacing.md,
-      direction: 'ltr',
-    },
-    backButton: {
-      paddingVertical: spacing.sm,
-      paddingRight: spacing.md,
-    },
-    backText: {
-      fontFamily: fonts.body.medium,
-      fontSize: 16,
-      color: theme.colors.text.secondary,
-    },
-    title: {
-      fontFamily: fonts.hebrew.bold,
-      fontSize: 26,
-      color: theme.colors.text.primary,
-      writingDirection: 'rtl',
-      textAlign: 'right',
-      letterSpacing: 0,
-    },
-    subtitle: {
-      fontFamily: fonts.hebrew.regular,
-      fontSize: 14,
-      color: theme.colors.text.tertiary,
-      marginTop: 4,
-      writingDirection: 'rtl',
-      textAlign: 'right',
-      letterSpacing: 0,
-    },
-    grid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      marginTop: spacing.lg,
-      marginHorizontal: -spacing.xs,
-    },
-    perekWrapper: {
-      width: '25%',
-      padding: spacing.xs,
-    },
-    perekCard: {
-      borderRadius: 12,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.7)',
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.sm,
-      alignItems: 'center',
-      justifyContent: 'center',
-      minHeight: 52,
-      backgroundColor: theme.isDark ? 'rgba(40,38,55,0.8)' : 'rgba(255,255,255,0.7)',
-    },
-    perekTextHebrew: {
-      fontFamily: fonts.hebrew.semibold,
-      fontSize: 14,
-      color: theme.colors.text.primary,
-      writingDirection: 'rtl',
-      textAlign: 'center',
-      letterSpacing: 0,
-    },
-  });
-}
-
 export const MishnaTractateScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { tractate } = (route.params || {}) as RouteParams;
-  const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const info = MISHNA_TRACTATES.find((t) => t.sefariaName === tractate);
   const perakim = info?.perakim ?? 0;
 
-  const openPerek = (perek: number) => {
-    (navigation as any).navigate('MishnaReader', { tractate, perek });
-  };
+  const items = useMemo<PickerItem[]>(
+    () =>
+      Array.from({ length: perakim }, (_, i) => i + 1).map((p) => ({
+        key: String(p),
+        label: `פרק ${JewishCalendarService.numberToHebrew(p)}`,
+        onPress: () => (navigation as any).navigate('MishnaReader', { tractate, perek: p }),
+      })),
+    [navigation, perakim, tractate],
+  );
 
   if (!tractate || !info) {
-    return (
-      <View style={styles.container}>
-        <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
-        <View style={styles.content}>
-          <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
-          <Text style={styles.title}>Tractate not found</Text>
-        </View>
-      </View>
-    );
+    return <LearningNotFound title="Tractate not found" onBack={() => navigation.goBack()} />;
   }
 
   return (
-    <View style={styles.container}>
-      <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.headerRow}>
-          <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
-        </View>
-        <Text style={styles.title}>{info.hebrew}</Text>
-        <Text style={styles.subtitle}>{JewishCalendarService.numberToHebrew(perakim)} פרקים</Text>
-
-        <View style={styles.grid}>
-          {Array.from({ length: perakim }, (_, i) => i + 1).map((p, i) => (
-            <View key={p} style={styles.perekWrapper}>
-              <FadeIn delay={Math.min(i * 5, 400)}>
-                <TouchableOpacity
-                  style={styles.perekCard}
-                  onPress={() => openPerek(p)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.perekTextHebrew}>פרק {JewishCalendarService.numberToHebrew(p)}</Text>
-                </TouchableOpacity>
-              </FadeIn>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
-    </View>
+    <LearningPicker
+      title={info.hebrew}
+      titleIsHebrew
+      subtitle={`${JewishCalendarService.numberToHebrew(perakim)} פרקים`}
+      subtitleIsHebrew
+      onBack={() => navigation.goBack()}
+      items={items}
+    />
   );
 };

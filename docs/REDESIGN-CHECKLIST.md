@@ -100,24 +100,24 @@ Stack note: App uses **React Navigation** (`src/navigation/AppNavigator.tsx`), n
 
 | Route / id | Owning file | FEATURES coverage | Status |
 |------------|-------------|-------------------|--------|
-| Parsha | `app/library/ParshaScreen.tsx` | Weekly Parsha UI | todo |
-| PirkeiAvos | `app/library/PirkeiAvosScreen.tsx` | 6 perakim → MishnaReader | todo |
-| Gemara | `app/gemara/GemaraScreen.tsx` | Browse + Daf Yomi | todo |
-| GemaraTractate | `app/gemara/GemaraTractateScreen.tsx` | Tractate / daf picker | todo |
-| GemaraReader | `app/gemara/GemaraReaderScreen.tsx` | Page reader | todo |
-| Nach | `app/nach/NachScreen.tsx` | Books + Nach Yomi | todo |
-| NachBook | `app/nach/NachBookScreen.tsx` | Chapters | todo |
-| NachReader | `app/nach/NachReaderScreen.tsx` | Chapter reader | todo |
-| Mishna | `app/mishna/MishnaScreen.tsx` | Tractates + Mishna Yomi | todo |
-| MishnaTractate | `app/mishna/MishnaTractateScreen.tsx` | Perakim | todo |
-| MishnaReader | `app/mishna/MishnaReaderScreen.tsx` | Perek reader | todo |
-| Rambam | `app/rambam/RambamScreen.tsx` | Books + Yomi | todo |
-| RambamBook | `app/rambam/RambamBookScreen.tsx` | Sections | todo |
-| RambamSection | `app/rambam/RambamSectionScreen.tsx` | Hilchos chapters | todo |
-| RambamReader | `app/rambam/RambamReaderScreen.tsx` | Chapter reader | todo |
-| Chumash | `app/chumash/ChumashScreen.tsx` | Shneyim Mikra hub | todo |
-| ChumashParshahPicker | `app/chumash/ChumashParshahPickerScreen.tsx` | Parsha picker | todo |
-| ChumashReader | `app/chumash/ChumashReaderScreen.tsx` | Chumash / Targum reader | todo |
+| Parsha | `app/library/ParshaScreen.tsx` | Weekly Parsha UI | done — shared LearningParts chrome |
+| PirkeiAvos | `app/library/PirkeiAvosScreen.tsx` | 6 perakim → MishnaReader | done — LearningParts list |
+| Gemara | `app/gemara/GemaraScreen.tsx` | Browse + Daf Yomi | done — LearningIndex |
+| GemaraTractate | `app/gemara/GemaraTractateScreen.tsx` | Tractate / daf picker | done — LearningParts |
+| GemaraReader | `app/gemara/GemaraReaderScreen.tsx` | Page reader | done — ReaderParts |
+| Nach | `app/nach/NachScreen.tsx` | Books + Nach Yomi | done — LearningIndex |
+| NachBook | `app/nach/NachBookScreen.tsx` | Chapters | done — LearningParts |
+| NachReader | `app/nach/NachReaderScreen.tsx` | Chapter reader | done — ReaderParts |
+| Mishna | `app/mishna/MishnaScreen.tsx` | Tractates + Mishna Yomi | done — LearningIndex |
+| MishnaTractate | `app/mishna/MishnaTractateScreen.tsx` | Perakim | done — LearningParts |
+| MishnaReader | `app/mishna/MishnaReaderScreen.tsx` | Perek reader | done — ReaderParts |
+| Rambam | `app/rambam/RambamScreen.tsx` | Books + Yomi | done — LearningIndex |
+| RambamBook | `app/rambam/RambamBookScreen.tsx` | Sections | done — LearningParts |
+| RambamSection | `app/rambam/RambamSectionScreen.tsx` | Hilchos chapters | done — LearningParts |
+| RambamReader | `app/rambam/RambamReaderScreen.tsx` | Chapter reader | done — ReaderParts |
+| Chumash | `app/chumash/ChumashScreen.tsx` | Shneyim Mikra hub | done — LearningParts |
+| ChumashParshahPicker | `app/chumash/ChumashParshahPickerScreen.tsx` | Parsha picker | done — LearningParts |
+| ChumashReader | `app/chumash/ChumashReaderScreen.tsx` | Chumash / Targum reader | done — ReaderParts |
 
 ---
 

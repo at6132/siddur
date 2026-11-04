@@ -8,9 +8,7 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
+  ScrollView,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -21,11 +19,15 @@ import { ReaderToolbar, HEBREW_FONT_SIZES, HEBREW_LINE_HEIGHTS } from '../../com
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
 import { useAutoscroll } from '../../components/reader/useAutoscroll';
 import { spacing } from '../../src/design/spacing';
-import { fonts } from '../../src/design/typography';
 import { useTheme } from '../../src/design/theme';
+import {
+  createReaderStyles,
+  ReaderNavRow,
+  ReaderLoading,
+  ReaderMessage,
+} from '../../components/learning/ReaderParts';
 import { SefariaService, SefariaText } from '../../src/services/SefariaService';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
-import type { AppTheme } from '../../src/design/theme';
 import type { DisplayPreferences } from '../../src/types/preferences';
 import { getTodayMishnaYomi, MISHNA_TRACTATES } from '../../src/services/MishnaYomiService';
 import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
@@ -36,142 +38,13 @@ type RouteParams = {
   perek?: number;
 };
 
-function createStyles(theme: AppTheme) {
-  return StyleSheet.create({
-    container: { flex: 1 },
-    staticTopBar: {
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 10,
-      paddingHorizontal: spacing.lg,
-      paddingBottom: spacing.sm,
-      backgroundColor: theme.isDark ? 'rgba(20,18,32,0.98)' : 'rgba(250,249,247,0.98)',
-      borderBottomWidth: 1,
-      borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-    },
-    scrollView: { flex: 1 },
-    content: {
-      padding: spacing.lg,
-      paddingBottom: 120,
-    },
-    headerRow: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: spacing.lg,
-      direction: 'rtl',
-    },
-    backButton: {
-      paddingVertical: spacing.sm,
-      paddingRight: spacing.md,
-    },
-    backText: {
-      fontFamily: fonts.body.medium,
-      fontSize: 16,
-      color: theme.colors.text.secondary,
-    },
-    headerTitleBlock: {
-      flex: 1,
-      marginLeft: spacing.sm,
-      marginRight: spacing.sm,
-    },
-    title: {
-      fontFamily: fonts.heading.bold,
-      fontSize: 22,
-      color: theme.colors.text.primary,
-    },
-    tractateLabel: {
-      fontFamily: fonts.body.regular,
-      fontSize: 12,
-      color: theme.colors.text.tertiary,
-      marginBottom: 2,
-    },
-    perekLabel: {
-      fontFamily: fonts.body.regular,
-      fontSize: 12,
-      color: theme.colors.text.tertiary,
-    },
-    navRow: {
-      flexDirection: 'row-reverse',
-      alignItems: 'center',
-      gap: spacing.sm,
-      direction: 'rtl',
-    },
-    navButton: {
-      paddingVertical: spacing.xs,
-      paddingHorizontal: spacing.sm,
-      borderRadius: 12,
-      backgroundColor: theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.06)',
-    },
-    navButtonText: {
-      fontFamily: fonts.body.medium,
-      fontSize: 14,
-      color: theme.colors.primary?.main || theme.colors.text.secondary,
-    },
-    navButtonDisabled: {
-      opacity: 0.4,
-    },
-    card: {
-      borderRadius: 16,
-      overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.8)',
-      marginBottom: spacing.lg,
-      backgroundColor: theme.isDark ? 'rgba(30,28,45,0.9)' : 'rgba(255,255,255,0.85)',
-      padding: spacing.lg,
-    },
-    hebrewBlock: {
-      fontFamily: fonts.hebrew.regular,
-      fontSize: 20,
-      lineHeight: 34,
-      letterSpacing: 0,
-      color: theme.colors.text.primary,
-      marginBottom: spacing.md,
-      textAlign: 'right',
-      writingDirection: 'rtl',
-    },
-    englishBlock: {
-      fontFamily: fonts.body.regular,
-      fontSize: 16,
-      lineHeight: 26,
-      color: theme.colors.text.secondary,
-      marginBottom: spacing.sm,
-      textAlign: 'left',
-    },
-    loadingContainer: {
-      padding: spacing.xl,
-      alignItems: 'center',
-    },
-    loadingText: {
-      fontFamily: fonts.body.regular,
-      fontSize: 14,
-      color: theme.colors.text.tertiary,
-      marginTop: spacing.md,
-    },
-    errorText: {
-      fontFamily: fonts.body.regular,
-      fontSize: 15,
-      color: theme.colors.text.secondary,
-      marginTop: spacing.md,
-    },
-    attribution: {
-      fontFamily: fonts.body.regular,
-      fontSize: 12,
-      color: theme.colors.text.tertiary,
-      marginTop: spacing.lg,
-    },
-  });
-}
-
 export const MishnaReaderScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const params = (route.params || {}) as RouteParams;
   const { theme } = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
+  const styles = useMemo(() => createReaderStyles(theme), [theme]);
 
   const { height: viewportHeight } = useWindowDimensions();
   const [tractate, setTractate] = useState<string | null>(params.tractate || null);
@@ -320,31 +193,11 @@ export const MishnaReaderScreen: React.FC = () => {
         onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
         onContentSizeChange={(_, h) => { contentHeightRef.current = h; }}
       >
-        <View style={styles.navRow}>
-          <TouchableOpacity
-            onPress={goNext}
-            style={[styles.navButton, !hasNext && styles.navButtonDisabled]}
-            disabled={!hasNext}
-          >
-            <Text style={[styles.navButtonText, { writingDirection: 'rtl' }]}>← Next</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={goPrev}
-            style={[styles.navButton, !hasPrev && styles.navButtonDisabled]}
-            disabled={!hasPrev}
-          >
-            <Text style={[styles.navButtonText, { writingDirection: 'rtl' }]}>Prev →</Text>
-          </TouchableOpacity>
-        </View>
+        <ReaderNavRow onNext={goNext} onPrev={goPrev} hasNext={!!hasNext} hasPrev={!!hasPrev} />
         {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary.main} />
-            <Text style={styles.loadingText}>Loading Mishna...</Text>
-          </View>
+          <ReaderLoading label="Loading Mishna..." />
         ) : error ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
+          <ReaderMessage message={error} />
         ) : data ? (
           <View style={styles.card}>
             {(() => {
