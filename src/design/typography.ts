@@ -5,6 +5,7 @@
  * Fonts:
  * - Cormorant Garamond: Elegant serif for headings
  * - Nunito: Soft, friendly sans-serif for body
+ * - Frank Ruhl Libre: Literary Hebrew serif (pairs with Cormorant; Medium for prayer body)
  */
 
 export const fonts = {
@@ -13,6 +14,8 @@ export const fonts = {
     regular: 'CormorantGaramond_400Regular',
     medium: 'CormorantGaramond_500Medium',
     semibold: 'CormorantGaramond_600SemiBold',
+    /** Alias — many screens used camelCase `semiBold` (was undefined → different web vs native fallbacks). */
+    semiBold: 'CormorantGaramond_600SemiBold',
     bold: 'CormorantGaramond_700Bold',
   },
   // Body font - soft sans-serif
@@ -20,13 +23,16 @@ export const fonts = {
     regular: 'Nunito_400Regular',
     medium: 'Nunito_500Medium',
     semibold: 'Nunito_600SemiBold',
+    /** Alias — many screens used camelCase `semiBold` (was undefined → different web vs native fallbacks). */
+    semiBold: 'Nunito_600SemiBold',
     bold: 'Nunito_700Bold',
   },
-  // Hebrew font - serif with full nikkud/taamim mark anchoring
+  // Hebrew serif — elegant companion to Cormorant (loaded in App.tsx)
   hebrew: {
     regular: 'FrankRuhlLibre_400Regular',
     medium: 'FrankRuhlLibre_500Medium',
     semibold: 'FrankRuhlLibre_600SemiBold',
+    semiBold: 'FrankRuhlLibre_600SemiBold',
     bold: 'FrankRuhlLibre_700Bold',
   },
 } as const;

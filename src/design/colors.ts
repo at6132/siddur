@@ -33,12 +33,12 @@ export const lightColors = {
     glass: 'rgba(255, 255, 255, 0.7)', // Glass overlay
   },
 
-  // Text colors
+  // Text colors — strong steps so title vs meta never looks identical
   text: {
-    primary: '#2C2C2C', // Soft black
-    secondary: '#6B6B6B', // Medium gray
-    tertiary: '#9B9B9B', // Light gray
-    inverse: '#FFFFFF', // White text
+    primary: '#1A1A1A',
+    secondary: '#6A6A6A',
+    tertiary: '#9A9A9A',
+    inverse: '#FFFFFF',
   },
 
   // Neutral grays
