@@ -5,31 +5,31 @@
 import { Nusach } from './nusach';
 
 export interface Zmanim {
-  shacharis: Date;
-  mincha: Date;
-  maariv: Date;
+  shacharis: Date | null;
+  mincha: Date | null;
+  maariv: Date | null;
   shabbosStart: Date | null;
   shabbosEnd: Date | null;
   candleLighting: Date | null;
 }
 
 export interface ExtendedZmanim extends Zmanim {
-  alosHashachar: Date;      // Dawn - 72 minutes before sunrise (astronomical twilight)
-  misheyakir: Date;         // Earliest time for tallis/tefillin
-  sunrise: Date;            // Hanetz hachama
-  sofZmanShemaGRA: Date;    // Latest Shema (GRA - 3 hours after sunrise)
-  sofZmanShemaMA: Date;     // Latest Shema (Magen Avraham - 3 hours after alos)
-  sofZmanShmoneEsreiGRA: Date; // Latest Shemoneh Esrei (GRA)
-  sofZmanShmoneEsreiMA: Date;  // Latest Shemoneh Esrei (MA)
-  chatzos: Date;            // Midday
-  minchaGedola: Date;       // Earliest Mincha (30 min after chatzos)
-  minchaKetana: Date;       // "Small" Mincha (2.5 hours before sunset)
-  plagHamincha: Date;       // 1.25 hours before sunset
-  sunset: Date;             // Shkiah
-  tzeis: Date;              // Nightfall (3 stars visible)
-  tzeisRT: Date;            // Nightfall (Rabbeinu Tam - 72 min after sunset)
-  shaahZmanis: number;      // Length of halachic hour in minutes (GRA)
-  shaahZmanisMA: number;    // Length of halachic hour in minutes (MA)
+  alosHashachar: Date | null;
+  misheyakir: Date | null;
+  sunrise: Date | null;
+  sofZmanShemaGRA: Date | null;
+  sofZmanShemaMA: Date | null;
+  sofZmanShmoneEsreiGRA: Date | null;
+  sofZmanShmoneEsreiMA: Date | null;
+  chatzos: Date | null;
+  minchaGedola: Date | null;
+  minchaKetana: Date | null;
+  plagHamincha: Date | null;
+  sunset: Date | null;
+  tzeis: Date | null;
+  tzeisRT: Date | null;
+  shaahZmanis: number | null;
+  shaahZmanisMA: number | null;
 }
 
 export interface DaveningChanges {

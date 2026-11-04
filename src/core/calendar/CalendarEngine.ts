@@ -8,7 +8,7 @@ import { JewishCalendarService } from './JewishCalendar';
 import { ZmanimService } from '../zmanim/ZmanimService';
 import { OmerCalculator } from '../omer/OmerCalculator';
 import { SpiritualCuesService } from '../spiritual/SpiritualCues';
-import * as Location from 'expo-location';
+import type { LocationObject } from 'expo-location';
 
 export class CalendarEngine {
   /**
@@ -19,7 +19,7 @@ export class CalendarEngine {
     context: CalendarContext
   ): Promise<DayInfo> {
     // Get location
-    let location: Location.LocationObject | null = null;
+    let location: LocationObject | null = null;
     if (context.location) {
       location = {
         coords: {
@@ -32,16 +32,7 @@ export class CalendarEngine {
           speed: null,
         },
         timestamp: Date.now(),
-      } as Location.LocationObject;
-    } else {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          location = await Location.getCurrentPositionAsync({});
-        }
-      } catch (e) {
-        console.warn('Location error:', e);
-      }
+      } as LocationObject;
     }
 
     // Calculate zmanim

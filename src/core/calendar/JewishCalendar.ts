@@ -249,41 +249,89 @@ export class JewishCalendarService {
   }
 
   /**
-   * True only when the Hebrew date is one of the known fast days.
+   * True only when the Hebrew date is one of the known public fast days.
    * Used to avoid false positives from Hebcal (e.g. Feb 16 incorrectly flagged).
+   *
+   * Postponements (when the nominal day is Shabbat):
+   * - Tzom Gedaliah: 3 → 4 Tishrei
+   * - 17 Tammuz: 17 → 18
+   * - Tisha B’Av: 9 → 10 Av
+   * - Ta’anit Esther: if 13 Adar is Shabbat → Thursday 11 Adar
+   *   (leap year: Adar II only; never Adar I)
    */
   private static isKnownFastHebrewDate(hdate: HDate): boolean {
+    const year = hdate.getFullYear();
     const month = hdate.getMonth();
     const day = hdate.getDate();
-    if (month === months.TISHREI && (day === 3 || day === 10)) return true; // Tzom Gedaliah, Yom Kippur
-    if (month === months.TEVET && day === 10) return true; // Asara B'Tevet
-    if ((month === months.ADAR_I || month === months.ADAR_II) && (day === 11 || day === 13)) return true; // Ta'anit Esther
-    if (month === months.TAMUZ && day === 17) return true; // 17 Tammuz
-    if (month === months.AV && day === 9) return true; // Tisha B'Av
+
+    // Yom Kippur
+    if (month === months.TISHREI && day === 10) return true;
+
+    // Tzom Gedaliah — 3 Tishrei, or 4 when 3 is Shabbat
+    if (month === months.TISHREI) {
+      const d3Weekday = new HDate(3, months.TISHREI, year).greg().getDay();
+      if (d3Weekday === 6) {
+        if (day === 4) return true;
+      } else if (day === 3) {
+        return true;
+      }
+    }
+
+    // Asara B'Tevet (never postponed in practice / fixed calendar)
+    if (month === months.TEVET && day === 10) return true;
+
+    // Ta'anit Esther — Adar (Adar II in leap years); 13, or Thursday 11 when 13 is Shabbat
+    const isLeapYear = HDate.isLeapYear(year);
+    const estherMonth = isLeapYear ? months.ADAR_II : months.ADAR_I;
+    if (month === estherMonth) {
+      const d13Weekday = new HDate(13, estherMonth, year).greg().getDay();
+      if (d13Weekday === 6) {
+        if (day === 11) return true;
+      } else if (day === 13) {
+        return true;
+      }
+    }
+
+    // 17 Tammuz — or 18 when 17 is Shabbat
+    if (month === months.TAMUZ) {
+      const d17Weekday = new HDate(17, months.TAMUZ, year).greg().getDay();
+      if (d17Weekday === 6) {
+        if (day === 18) return true;
+      } else if (day === 17) {
+        return true;
+      }
+    }
+
+    // Tisha B’Av — 9 Av, or 10 when 9 fell on Shabbat
+    if (month === months.AV) {
+      const d9Weekday = new HDate(9, months.AV, year).greg().getDay();
+      if (day === 9) return d9Weekday !== 6;
+      if (day === 10) return d9Weekday === 6;
+    }
+
     return false;
   }
 
   /**
-   * Check if date is a fast day.
-   * Requires both Hebcal to report a fast AND the Hebrew date to be a known fast (avoids false positives).
+   * Check if date is a public fast day for Aneinu / related liturgy.
+   * Uses fixed Hebrew calendar (incl. postponed Tisha B’Av) — not solely Hebcal flags.
    */
   static isFastDay(date: Date = new Date()): boolean {
-    const hdate = this.getJewishDate(date);
-    if (!this.isKnownFastHebrewDate(hdate)) return false;
-    const events = this.getHolidays(date);
-    if (!events || events.length === 0) return false;
-    return events.some((event) => {
-      const eventFlags = event.getFlags?.() || 0;
-      return (eventFlags & flags.MINOR_FAST) || (eventFlags & flags.MAJOR_FAST);
-    });
+    return this.isKnownFastHebrewDate(this.getJewishDate(date));
   }
 
   /**
-   * Check if date is Tisha B'Av
+   * Tisha B’Av: observed 9 Av, or 10 Av when 9 is Shabbat (postponed).
+   * Used for Mincha נחם and related gates.
    */
   static isTishaBAv(date: Date = new Date()): boolean {
     const hdate = this.getJewishDate(date);
-    return hdate.getMonth() === months.AV && hdate.getDate() === 9;
+    if (hdate.getMonth() !== months.AV) return false;
+    const day = hdate.getDate();
+    const d9Weekday = new HDate(9, months.AV, hdate.getFullYear()).greg().getDay();
+    if (day === 9) return d9Weekday !== 6;
+    if (day === 10) return d9Weekday === 6;
+    return false;
   }
 
   /**
@@ -307,35 +355,30 @@ export class JewishCalendarService {
   }
 
   /**
-   * Check if date is during Chanukah
+   * Chanukah day number 1–8, or undefined if not Chanukah.
+   * Uses Kislev length so we never include an extra Tevet day after nightfall of day 8.
    */
-  static isChanukah(date: Date = new Date()): boolean {
+  static getChanukahDay(date: Date = new Date()): number | undefined {
     const hdate = this.getJewishDate(date);
     const month = hdate.getMonth();
     const day = hdate.getDate();
-    
-    // Chanukah: 25 Kislev - 2/3 Teves
-    if (month === months.KISLEV && day >= 25) return true;
-    if (month === months.TEVET && day <= 3) return true;
-    return false;
+
+    if (month === months.KISLEV && day >= 25) {
+      return day - 24; // 25 → 1 … up to Kislev length
+    }
+    if (month === months.TEVET) {
+      const kislevDays = HDate.daysInMonth(months.KISLEV, hdate.getFullYear());
+      const n = kislevDays - 24 + day;
+      if (n >= 1 && n <= 8) return n;
+    }
+    return undefined;
   }
 
   /**
-   * Get Chanukah day number (1-8)
+   * Check if date is during Chanukah (exactly 8 days).
    */
-  static getChanukahDay(date: Date = new Date()): number | undefined {
-    if (!this.isChanukah(date)) return undefined;
-    const hdate = this.getJewishDate(date);
-    const month = hdate.getMonth();
-    const day = hdate.getDate();
-    
-    if (month === months.KISLEV) {
-      return day - 24; // 25th = day 1
-    } else {
-      // Teves - depends on if Kislev had 29 or 30 days
-      const kislevDays = HDate.daysInMonth(months.KISLEV, hdate.getFullYear());
-      return (kislevDays - 24) + day;
-    }
+  static isChanukah(date: Date = new Date()): boolean {
+    return this.getChanukahDay(date) != null;
   }
 
   /**
@@ -345,11 +388,11 @@ export class JewishCalendarService {
     const hdate = this.getJewishDate(date);
     const month = hdate.getMonth();
     const day = hdate.getDate();
-    
+
     // In a leap year, Purim is in Adar II
     const isLeapYear = HDate.isLeapYear(hdate.getFullYear());
     const purimMonth = isLeapYear ? months.ADAR_II : months.ADAR_I;
-    
+
     if (month === purimMonth && (day === 14 || day === 15)) return true;
     return false;
   }
@@ -742,38 +785,56 @@ export class JewishCalendarService {
   }
 
   /**
-   * Check if we say V'ten Tal Umatar (in diaspora: Dec 4th until Pesach)
+   * Check if we say V'ten Tal Umatar (rain request) vs summer "V'ten Bracha".
+   * - Ends: 15 Nisan (same local Hebrew day as summer season start).
+   * - Israel: from 7 Cheshvan through 14 Nisan (during mashiv/winter half-year after start).
+   * - Diaspora: from 4 Dec (5 Dec when the following civil year is a leap year) through 14 Nisan.
+   *
+   * Uses device-local `Date` for civil Dec and Hebrew calendar via HDate.
    */
   static isVtenTalUmatar(date: Date = new Date(), isIsrael: boolean = false): boolean {
-    const hdate = this.getJewishDate(date);
-    const month = hdate.getMonth();
-    const day = hdate.getDate();
-    
-    // Before Pesach
-    if (month === months.NISAN && day >= 15) return false;
-    
+    // Summer half of the year (Pesach musaf through erev Shmini Atzeres musaf simplified to days): no rain request
+    if (this.getSeason(date) === 'summer') return false;
+
     if (isIsrael) {
-      // In Israel: from 7 Cheshvan
-      if (month === months.CHESHVAN && day >= 7) return true;
-      if (month === months.KISLEV || month === months.TEVET || 
-          month === months.SHVAT || month === months.ADAR_I || 
-          month === months.ADAR_II) return true;
-      if (month === months.NISAN && day < 15) return true;
-    } else {
-      // In diaspora: from December 4th (or 5th in year before civil leap year)
-      const civilMonth = date.getMonth(); // 0-indexed
-      const civilDay = date.getDate();
-      const year = date.getFullYear();
-      
-      // Check if next year is a leap year
-      const startDay = ((year + 1) % 4 === 0) ? 5 : 4;
-      
-      if (civilMonth === 11 && civilDay >= startDay) return true; // December
-      if (civilMonth >= 0 && civilMonth <= 2) return true; // Jan-March
-      if (month === months.NISAN && day < 15) return true;
+      const hdate = this.getJewishDate(date);
+      const month = hdate.getMonth();
+      const day = hdate.getDate();
+      // Winter after Shmini: still before 7 Cheshvan → no
+      if (month === months.TISHREI) return false;
+      if (month === months.CHESHVAN && day < 7) return false;
+      return true;
     }
-    
-    return false;
+
+    // Diaspora: after Dec 4/5 of the winter season, until 15 Nisan
+    const start = this.getDiasporaVtenTalUmatarStartDate(date);
+    if (!start) return false;
+    const dayMid = new Date(date);
+    dayMid.setHours(0, 0, 0, 0);
+    const startMid = new Date(start);
+    startMid.setHours(0, 0, 0, 0);
+    return dayMid.getTime() >= startMid.getTime();
+  }
+
+  /**
+   * Diaspora start of ותן טל ומטר for the winter season containing `date`.
+   * Traditional public practice: 4 Dec, or 5 Dec when the next civil year is a Gregorian leap year.
+   * Uses local midnight (same as rest of calendar utilities).
+   */
+  static getDiasporaVtenTalUmatarStartDate(date: Date = new Date()): Date | null {
+    if (this.getSeason(date) === 'summer') return null;
+    // Dec of the year that sits in this winter: if before Nov, use previous year's Dec
+    let year = date.getFullYear();
+    if (date.getMonth() < 10) {
+      // Jan–Oct: start was previous December
+      year = year - 1;
+    }
+    // Day: 5 if following civil year is leap, else 4
+    const nextYear = year + 1;
+    const nextIsLeap =
+      (nextYear % 4 === 0 && nextYear % 100 !== 0) || nextYear % 400 === 0;
+    const day = nextIsLeap ? 5 : 4;
+    return new Date(year, 11, day, 0, 0, 0, 0);
   }
 
   /**

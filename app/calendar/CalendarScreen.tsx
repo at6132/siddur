@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import * as Location from 'expo-location';
 import { FadeIn } from '../../components/animations/FadeIn';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { textStyles, fonts } from '../../src/design/typography';
@@ -21,6 +20,8 @@ import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
 import { ZmanimService } from '../../src/core/zmanim/ZmanimService';
 import { ExtendedZmanim } from '../../src/types/calendar';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
+import { LocationRefreshService } from '../../src/services/LocationRefreshService';
+import { LOCATION_REQUIRED_MESSAGE, requestLocationFromUser } from '../../src/services/LocationAccess';
 import { DayInfo, CalendarContext } from '../../src/types/calendar';
 import { useTheme } from '../../src/design/theme';
 import { colors } from '../../src/design/colors';
@@ -70,50 +71,29 @@ export const CalendarScreen: React.FC = () => {
     }
   }, [currentMonth, context]);
 
+  useEffect(() => {
+    if (currentLocation && selectedDay) {
+      loadZmanimForDay(selectedDay);
+    }
+  }, [currentLocation]);
+
   const loadContext = async () => {
     const preferences = await UserPreferencesService.getPreferences();
-    let currentLocation = preferences?.location;
+    const refreshed = await LocationRefreshService.refreshAndSave();
+    const currentLocation = refreshed ?? preferences?.location ?? null;
 
-    // Get current GPS location for accurate zmanim
-    if (Platform.OS !== 'web') {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
-          currentLocation = {
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude,
-          };
-          
-          // Save location for future use
-          if (preferences) {
-            await UserPreferencesService.setLocation({
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              cityName: preferences.location?.cityName,
-            });
-          }
-        }
-      } catch (locError) {
-        console.log('Using stored location, GPS unavailable:', locError);
-      }
-    }
-
-    // Store location in state for zmanim calculations
-    setCurrentLocation(currentLocation || null);
+    setCurrentLocation(currentLocation);
 
     if (preferences) {
       setContext({
         nusach: preferences.nusach,
-        location: currentLocation,
+        location: currentLocation ?? undefined,
         isIsrael: false,
       });
     } else {
       setContext({
         nusach: 'ashkenaz',
-        location: currentLocation,
+        location: currentLocation ?? undefined,
         isIsrael: false,
       });
     }
@@ -194,46 +174,35 @@ export const CalendarScreen: React.FC = () => {
   };
   
   // Helper function to load zmanim for a day
+  const handleAllowLocation = async () => {
+    const granted = await requestLocationFromUser();
+    if (granted) {
+      await loadContext();
+    }
+  };
+
   const loadZmanimForDay = async (day: CalendarDay) => {
     setZmanimLoading(true);
     try {
       let location = currentLocation;
       
-      if (Platform.OS !== 'web' && !location) {
-        try {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status === 'granted') {
-            const loc = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.Balanced,
-            });
-            location = {
-              latitude: loc.coords.latitude,
-              longitude: loc.coords.longitude,
-            };
-            setCurrentLocation(location);
+      const locationObj = location
+        ? {
+            coords: {
+              latitude: location.latitude,
+              longitude: location.longitude,
+              altitude: null,
+              accuracy: null,
+              altitudeAccuracy: null,
+              heading: null,
+              speed: null,
+            },
+            timestamp: Date.now(),
           }
-        } catch (e) {
-          console.log('GPS unavailable:', e);
-        }
-      }
-      
-      if (location) {
-        const locationObj = {
-          coords: {
-            latitude: location.latitude,
-            longitude: location.longitude,
-            altitude: null,
-            accuracy: null,
-            altitudeAccuracy: null,
-            heading: null,
-            speed: null,
-          },
-          timestamp: Date.now(),
-        };
-        
-        const zmanim = await ZmanimService.calculateExtendedZmanim(day.date, locationObj);
-        setSelectedDayZmanim(zmanim);
-      }
+        : null;
+
+      const zmanim = await ZmanimService.calculateExtendedZmanim(day.date, locationObj);
+      setSelectedDayZmanim(zmanim);
     } catch (error) {
       console.error('Error loading zmanim:', error);
     } finally {
@@ -286,9 +255,8 @@ export const CalendarScreen: React.FC = () => {
     }).start();
   }, []);
 
-  const formatZmanTime = (date: Date | undefined) => {
-    if (!date) return '--:--';
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const formatZmanTime = (date: Date | null | undefined) => {
+    return ZmanimService.formatTime(date);
   };
 
   const hebrewMonthName = () => {
@@ -513,6 +481,13 @@ export const CalendarScreen: React.FC = () => {
         ) : selectedDayZmanim && (
           <View style={styles.zmanimSection}>
             <Text style={styles.zmanimTitle}>Zmanim</Text>
+            {!currentLocation ? (
+              <TouchableOpacity onPress={handleAllowLocation} activeOpacity={0.7}>
+                <Text style={styles.zmanimRequired}>
+                  {LOCATION_REQUIRED_MESSAGE}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
             <View style={styles.zmanimGrid}>
               <View style={styles.zmanItem}>
                 <Text style={styles.zmanLabel}>Alos</Text>
@@ -554,9 +529,16 @@ export const CalendarScreen: React.FC = () => {
           </View>
         )}
         {!zmanimLoading && !selectedDayZmanim && selectedDay && (
-          <View style={styles.zmanimLoading}>
-            <Text style={styles.zmanimLoadingText}>Tap to load zmanim</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.zmanimLoading}
+            onPress={currentLocation ? undefined : handleAllowLocation}
+            activeOpacity={currentLocation ? 1 : 0.7}
+            disabled={!!currentLocation}
+          >
+            <Text style={styles.zmanimLoadingText}>
+              {currentLocation ? 'Tap to load zmanim' : LOCATION_REQUIRED_MESSAGE}
+            </Text>
+          </TouchableOpacity>
         )}
       </>
     );
@@ -852,6 +834,14 @@ function createCalendarStyles(theme: AppTheme) {
     color: theme.colors.text.primary,
     textAlign: 'center',
     marginBottom: 2,
+  },
+  zmanimRequired: {
+    fontFamily: fonts.body.regular,
+    fontSize: 13,
+    color: theme.colors.text.tertiary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+    lineHeight: 18,
   },
   zmanimGrid: {
     flexDirection: 'row',

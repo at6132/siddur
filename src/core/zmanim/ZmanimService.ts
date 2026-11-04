@@ -6,6 +6,7 @@
 
 import { LocationObject } from 'expo-location';
 import { Zmanim, ExtendedZmanim } from '../../types/calendar';
+import { LOCATION_TIME_PLACEHOLDER } from '../../services/LocationAccess';
 
 // Solar calculation constants
 const ZENITH_OFFICIAL = 90.833; // Official sunrise/sunset
@@ -22,7 +23,7 @@ export class ZmanimService {
     location: LocationObject | null
   ): Promise<Zmanim> {
     if (!location) {
-      return this.getDefaultZmanim(date);
+      return this.unavailableZmanim();
     }
 
     const lat = location.coords.latitude;
@@ -90,7 +91,7 @@ export class ZmanimService {
     location: LocationObject | null
   ): Promise<ExtendedZmanim> {
     if (!location) {
-      return this.getDefaultExtendedZmanim(date);
+      return this.unavailableExtendedZmanim();
     }
 
     const lat = location.coords.latitude;
@@ -297,50 +298,44 @@ export class ZmanimService {
     return hours;
   }
 
-  private static getDefaultZmanim(date: Date): Zmanim {
-    const base = new Date(date);
+  private static unavailableZmanim(): Zmanim {
     return {
-      shacharis: new Date(base.setHours(6, 0, 0, 0)),
-      mincha: new Date(base.setHours(13, 30, 0, 0)),
-      maariv: new Date(base.setHours(19, 30, 0, 0)),
+      shacharis: null,
+      mincha: null,
+      maariv: null,
       shabbosStart: null,
       shabbosEnd: null,
       candleLighting: null,
     };
   }
 
-  private static getDefaultExtendedZmanim(date: Date): ExtendedZmanim {
-    const base = new Date(date);
+  private static unavailableExtendedZmanim(): ExtendedZmanim {
     return {
-      shacharis: new Date(base.setHours(6, 0, 0, 0)),
-      mincha: new Date(base.setHours(13, 30, 0, 0)),
-      maariv: new Date(base.setHours(19, 30, 0, 0)),
-      shabbosStart: null,
-      shabbosEnd: null,
-      candleLighting: null,
-      alosHashachar: new Date(base.setHours(4, 30, 0, 0)),
-      misheyakir: new Date(base.setHours(5, 15, 0, 0)),
-      sunrise: new Date(base.setHours(6, 0, 0, 0)),
-      sofZmanShemaGRA: new Date(base.setHours(9, 0, 0, 0)),
-      sofZmanShemaMA: new Date(base.setHours(8, 30, 0, 0)),
-      sofZmanShmoneEsreiGRA: new Date(base.setHours(10, 0, 0, 0)),
-      sofZmanShmoneEsreiMA: new Date(base.setHours(9, 30, 0, 0)),
-      chatzos: new Date(base.setHours(12, 30, 0, 0)),
-      minchaGedola: new Date(base.setHours(13, 0, 0, 0)),
-      minchaKetana: new Date(base.setHours(16, 30, 0, 0)),
-      plagHamincha: new Date(base.setHours(17, 45, 0, 0)),
-      sunset: new Date(base.setHours(19, 0, 0, 0)),
-      tzeis: new Date(base.setHours(19, 30, 0, 0)),
-      tzeisRT: new Date(base.setHours(20, 15, 0, 0)),
-      shaahZmanis: 65,
-      shaahZmanisMA: 75,
+      ...this.unavailableZmanim(),
+      alosHashachar: null,
+      misheyakir: null,
+      sunrise: null,
+      sofZmanShemaGRA: null,
+      sofZmanShemaMA: null,
+      sofZmanShmoneEsreiGRA: null,
+      sofZmanShmoneEsreiMA: null,
+      chatzos: null,
+      minchaGedola: null,
+      minchaKetana: null,
+      plagHamincha: null,
+      sunset: null,
+      tzeis: null,
+      tzeisRT: null,
+      shaahZmanis: null,
+      shaahZmanisMA: null,
     };
   }
 
   /**
-   * Format time for display
+   * Format time for display. No location → "--".
    */
-  static formatTime(date: Date): string {
+  static formatTime(date: Date | null | undefined): string {
+    if (!date || Number.isNaN(date.getTime())) return LOCATION_TIME_PLACEHOLDER;
     return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
