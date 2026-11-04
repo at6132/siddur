@@ -24,8 +24,9 @@ import { LocationRefreshService } from '../../src/services/LocationRefreshServic
 import { LOCATION_REQUIRED_MESSAGE, requestLocationFromUser } from '../../src/services/LocationAccess';
 import { DayInfo, CalendarContext } from '../../src/types/calendar';
 import { useTheme } from '../../src/design/theme';
-import { colors } from '../../src/design/colors';
 import type { AppTheme } from '../../src/design/theme';
+import { colorWithAlpha } from '../../src/design/colorAlpha';
+import * as Haptics from 'expo-haptics';
 
 const { width } = Dimensions.get('window');
 const CELL_GAP = spacing.sm; // spacing between days
@@ -212,7 +213,8 @@ export const CalendarScreen: React.FC = () => {
 
   const handleDayPress = async (day: CalendarDay) => {
     if (day.dayOfMonth === 0) return;
-    
+    void Haptics.selectionAsync();
+
     if (selectedDay?.date.getTime() === day.date.getTime()) {
       // Clicking same day - deselect
       setSelectedDay(null);
@@ -226,6 +228,7 @@ export const CalendarScreen: React.FC = () => {
   };
 
   const navigateMonth = (direction: number) => {
+    void Haptics.selectionAsync();
     setSelectedDay(null);
     setSelectedDayZmanim(null);
     setCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + direction, 1));
@@ -709,7 +712,7 @@ function createCalendarStyles(theme: AppTheme) {
     paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.lg,
     marginTop: spacing.md,
-    shadowColor: theme.isDark ? '#000' : 'rgba(0,0,0,0.15)',
+    shadowColor: theme.colors.shadow.dark,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: theme.isDark ? 0.35 : 0.15,
     shadowRadius: 10,
@@ -733,7 +736,7 @@ function createCalendarStyles(theme: AppTheme) {
     borderRadius: borderRadius['2xl'],
     padding: spacing.lg,
     backgroundColor: theme.isDark ? 'rgba(20,20,32,0.92)' : 'rgba(255,255,255,0.75)',
-    shadowColor: theme.isDark ? '#000' : 'rgba(0,0,0,0.2)',
+    shadowColor: theme.colors.shadow.dark,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: theme.isDark ? 0.4 : 0.15,
     shadowRadius: 24,

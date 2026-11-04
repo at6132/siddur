@@ -87,7 +87,7 @@ Stack note: App uses **React Navigation** (`src/navigation/AppNavigator.tsx`), n
 
 | Route / id | Owning file | FEATURES coverage | Status |
 |------------|-------------|-------------------|--------|
-| Calendar | `app/calendar/CalendarScreen.tsx` | Month, day detail, zmanim, location | todo |
+| Calendar | `app/calendar/CalendarScreen.tsx` | Month, day detail, zmanim, location | done — selection haptics; shadow tokens; dropped static colors import |
 
 ## Settings
 
