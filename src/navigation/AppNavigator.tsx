@@ -85,7 +85,7 @@ function MainTabs() {
       screenOptions={{
         headerShown: false,
       }}
-      sceneContainerStyle={styles.sceneContainer}
+      sceneStyle={styles.sceneContainer}
     >
       <Tab.Screen
         name="Home"
