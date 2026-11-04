@@ -6,10 +6,6 @@
     "version": "1.8.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "splash": {
-      "backgroundColor": "#FAF9F7",
-      "resizeMode": "contain"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -27,7 +23,9 @@
       [
         "expo-notifications",
         {
-          "sounds": ["./assets/sounds/shabbos-alarm.wav"]
+          "sounds": [
+            "./assets/sounds/shabbos-alarm.wav"
+          ]
         }
       ],
       [
@@ -36,8 +34,17 @@
           "locationWhenInUsePermission": "Siddur uses your location while you use the app to calculate zmanim, schedule sunset-based reminders, and point Mizrach toward Jerusalem. Location stays on your device."
         }
       ],
-      "expo-splash-screen",
-      "@react-native-community/datetimepicker"
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FAF9F7",
+          "image": "./assets/icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain"
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-font"
     ],
     "extra": {
       "eas": {

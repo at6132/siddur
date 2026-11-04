@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, LayoutChangeEvent, InteractionManager } from 'react-native';
+import { View, StyleSheet, LayoutChangeEvent } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -65,7 +65,7 @@ export const DraggableGrid: React.FC<DraggableGridProps> = ({
 
   const workingOrder = useRef<HomePanel[]>([]);
   const isDragActive = useRef(false);
-  const pendingHandle = useRef<ReturnType<typeof InteractionManager.runAfterInteractions> | null>(null);
+  const pendingHandle = useRef<number | null>(null);
 
   const onReorderRef = useRef(onReorder);
   onReorderRef.current = onReorder;
@@ -143,8 +143,8 @@ export const DraggableGrid: React.FC<DraggableGridProps> = ({
 
   const cancelPending = useCallback(() => {
     try {
-      if (pendingHandle.current) {
-        pendingHandle.current.cancel();
+      if (pendingHandle.current != null) {
+        cancelIdleCallback(pendingHandle.current as number);
         pendingHandle.current = null;
       }
     } catch (e) {
@@ -252,7 +252,7 @@ export const DraggableGrid: React.FC<DraggableGridProps> = ({
 
         const finalOrder = workingOrder.current.map((p, i) => ({ ...p, order: i }));
 
-        const handle = InteractionManager.runAfterInteractions(() => {
+        const handle = requestIdleCallback(() => {
           try {
             isDragActive.current = false;
             dragLayoutCompensateX.value = 0;

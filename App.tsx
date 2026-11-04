@@ -279,7 +279,7 @@ function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
       go();
     };
 
-    Linking.getInitialURL().then(navigateToTehillimCampaign);
+    Linking.getInitialURL().then((url) => navigateToTehillimCampaign(url ?? null));
     const sub = Linking.addEventListener('url', ({ url }) => navigateToTehillimCampaign(url));
     return () => sub.remove();
   }, []);
@@ -365,7 +365,7 @@ export default function App() {
   // Refresh location when returning from background (app "open")
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    let appState: AppStateStatus = AppState.currentState;
+    let appState: AppStateStatus = AppState.currentState ?? 'active';
     const sub = AppState.addEventListener('change', (nextState) => {
       if (appState.match(/inactive|background/) && nextState === 'active') {
         LocationRefreshService.refreshAndSave().catch(() => {});
