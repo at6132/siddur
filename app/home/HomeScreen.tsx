@@ -12,6 +12,8 @@ import {
   Pressable,
   TextInput,
   Linking,
+  ActionSheetIOS,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/core';
@@ -615,6 +617,35 @@ export const HomeScreen: React.FC = () => {
     setIsEditing(prev => !prev);
   }, []);
 
+  const openHomeMenu = useCallback(() => {
+    void Haptics.selectionAsync();
+    const goSettings = () => navigation.navigate('Settings' as never);
+    const startEdit = () => {
+      setIsEditing(true);
+      void Haptics.selectionAsync();
+    };
+
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Edit Home', 'Settings', 'Cancel'],
+          cancelButtonIndex: 2,
+        },
+        (index) => {
+          if (index === 0) startEdit();
+          else if (index === 1) goSettings();
+        },
+      );
+      return;
+    }
+
+    Alert.alert('Home', undefined, [
+      { text: 'Edit Home', onPress: startEdit },
+      { text: 'Settings', onPress: goSettings },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }, [navigation]);
+
   const autoPanelsForToday = useMemo((): HomePanel[] => {
     if (!dayInfo) return [];
     const list: HomePanel[] = [];
@@ -752,35 +783,40 @@ export const HomeScreen: React.FC = () => {
           headerContent={
             <View style={styles.headerContentWrapper}>
               <View style={styles.headerRow}>
-                <Text style={[styles.greeting, { color: theme.colors.text.primary, fontSize: 34 }]}>
+                <Text
+                  style={[styles.greeting, { color: theme.colors.text.primary }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                >
                   {greeting}
                 </Text>
                 <View style={styles.headerActions}>
-                  <TouchableOpacity
-                    style={styles.settingsGearButton}
-                    onPress={() => navigation.navigate('Settings' as never)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Settings"
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Ionicons name="settings-outline" size={22} color={theme.colors.text.secondary} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.editButton, isEditing && styles.editButtonActive]}
-                    onPress={toggleEditMode}
-                    accessibilityRole="button"
-                    accessibilityLabel={isEditing ? 'Done editing home' : 'Edit home'}
-                  >
-                    <Text
-                      style={[
-                        styles.editButtonText,
-                        isEditing && styles.editButtonTextActive,
-                        !isEditing && { color: theme.colors.text.secondary, fontSize: 14 },
-                      ]}
+                  {isEditing ? (
+                    <TouchableOpacity
+                      style={[styles.editButton, styles.editButtonActive]}
+                      onPress={toggleEditMode}
+                      accessibilityRole="button"
+                      accessibilityLabel="Done editing home"
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
-                      {isEditing ? 'Done' : 'Edit'}
-                    </Text>
-                  </TouchableOpacity>
+                      <Text style={[styles.editButtonText, styles.editButtonTextActive]}>Done</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.menuButton}
+                      onPress={openHomeMenu}
+                      accessibilityRole="button"
+                      accessibilityLabel="Home menu"
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons
+                        name="ellipsis-horizontal"
+                        size={24}
+                        color={theme.colors.text.secondary}
+                      />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
 
@@ -817,7 +853,7 @@ export const HomeScreen: React.FC = () => {
                     style={styles.emptyStateIcon}
                   />
                   <Text style={styles.emptyStateText}>No panels added yet</Text>
-                  <Text style={styles.emptyStateSubtext}>Tap Edit, then add a panel</Text>
+                  <Text style={styles.emptyStateSubtext}>Open the menu to edit and add a panel</Text>
                 </View>
               )}
               {!isEditing && (
@@ -826,7 +862,7 @@ export const HomeScreen: React.FC = () => {
                   activeOpacity={0.88}
                   onPress={() => Linking.openURL(KOSHER_AI_APP_STORE_URL)}
                   accessibilityRole="link"
-                  accessibilityLabel="Download Kosher AI, our kosher chat app, on the App Store"
+                  accessibilityLabel="Download KosherChat, our kosher chat app, on the App Store"
                 >
                   <LinearGradient
                     colors={[
@@ -843,7 +879,7 @@ export const HomeScreen: React.FC = () => {
                     </View>
                     <View style={styles.kosherAiBannerTextCol}>
                       <Text style={styles.kosherAiBannerEyebrow}>From our family</Text>
-                      <Text style={styles.kosherAiBannerTitle}>Try Kosher AI</Text>
+                      <Text style={styles.kosherAiBannerTitle}>Try KosherChat</Text>
                       <Text style={styles.kosherAiBannerSub}>
                         A kosher chat companion, free on the App Store
                       </Text>
@@ -980,28 +1016,31 @@ function createHomeStyles(theme: AppTheme) {
     paddingBottom: spacing.md,
   },
   headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    position: 'relative',
     marginBottom: spacing.md,
   },
   headerActions: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    zIndex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-  settingsGearButton: {
+  menuButton: {
     minWidth: 44,
     minHeight: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
   greeting: {
-    flex: 1,
+    width: '100%',
+    paddingRight: 48,
     fontFamily: fonts.heading.bold,
-    fontSize: 34,
+    fontSize: 40,
     color: theme.colors.text.primary,
-    letterSpacing: 0.5,
+    letterSpacing: 0.35,
   },
   editButton: {
     paddingHorizontal: spacing.md,
