@@ -18,6 +18,7 @@ export type { MiniPlayerProps } from './MiniPlayer';
 
 export { BackButton } from './BackButton';
 export { GlassCard } from './GlassCard';
+export { BrandGlassTile } from './BrandGlassTile';
 export { GlassPanel } from './GlassPanel';
 export { LoadingSpinner } from './LoadingSpinner';
 export { ErrorView } from './ErrorView';
