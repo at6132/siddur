@@ -163,7 +163,7 @@ function isZochreinuParagraph(para: string): boolean {
 function isMeiAvHarachamimAseretParagraph(para: string): boolean {
   const t = stripNikkud(stripHtml(para)).replace(/\s+/g, ' ').trim();
   return (
-    /מי\s+כמוך(ך|כה)?\s+אב\s+הרחמים/.test(t) &&
+    /מי\s+כמוך(ך|כה)?\s+אב\s+הרחמ(ים|ן)/.test(t) &&
     /זוכר\s+יצורי/.test(t) &&
     /לחיים/.test(t) &&
     /ברחמים/.test(t)
@@ -185,8 +185,10 @@ function applyAseretInlineHebrewBlock(hebrew: string, inAseret: boolean): string
   const labelRun = `(?:[:׃]\\s*)*${tag}(?:${dayPrefix})${tag}\\s*[:׃]?\\s*`;
 
   // כָמֽוֹךָ ends with final kaf ך (not hei); Sefaria often has a space after מִי
+  // אב הרחמן (some siddurim) or אב הרחמים (Sefaria Ashkenaz Minchah)
   // Trailing : or ׃ after בְּרַחֲמִים is common — include so the block still matches
-  const meiPhrase = `מ${nik}י${nik}(?:${tag}|\\s)*כ${nik}מ${nik}ו${nik}[ךכ]${nik}(?:${tag}|\\s)*א${nik}ב(?:${tag}|\\s)*ה${nik}ר${nik}ח${nik}מ${nik}ן(?:${tag}|\\s)*ז${nik}ו${nik}כ${nik}ר(?:${tag}|\\s)*י${nik}צ${nik}ו${nik}ר${nik}י${nik}ו(?:${tag}|\\s)*ל${nik}ח${nik}י${nik}י${nik}ם(?:${tag}|\\s)*ב${nik}ר${nik}ח${nik}מ${nik}י${nik}[מם]${nik}\\s*[:׃]?`;
+  const meiPhrase =
+    `מ${nik}י${nik}(?:${tag}|\\s)*כ${nik}מ${nik}ו${nik}[ךכ]${nik}(?:${tag}|\\s)*א${nik}ב(?:${tag}|\\s)*ה${nik}ר${nik}ח${nik}מ${nik}(?:ן|י${nik}[מם])(?:${tag}|\\s)*ז${nik}ו${nik}כ${nik}ר(?:${tag}|\\s)*י${nik}צ${nik}ו${nik}ר${nik}י${nik}ו(?:${tag}|\\s)*ל${nik}ח${nik}י${nik}י${nik}ם(?:${tag}|\\s)*ב${nik}ר${nik}ח${nik}מ${nik}י${nik}[מם]${nik}\\s*[:׃]?`;
   const reMei = new RegExp(`${labelRun}(${meiPhrase})`, 'gu');
 
   const zochLead = `ז${nik}כ${nik}ר${nik}נ${nik}ו`;
@@ -235,6 +237,17 @@ function applyAseretInlineHebrewBlock(hebrew: string, inAseret: boolean): string
   out = out.replace(afterNewlineBashitUchtov, (_m, nl: string, vch: string) =>
     inAseret ? `${nl}${vch.trim()} ` : nl
   );
+
+  // Concluding: עֹשֶׂה (בעשי"ת הַשָּׁלוֹם) שָׁלוֹם בִּמְרוֹמָיו
+  // Aseret → עשה השלום; year-round → עשה שלום
+  const osehHashalomParen = new RegExp(
+    `(ע${nik}ש${nik}ה${nik})\\s*\\(\\s*(?:${dayPrefix})\\s*(ה${nik}ש${nik}ל${nik}ו${nik}ם${nik})\\s*\\)\\s*ש${nik}ל${nik}ו${nik}ם`,
+    'gu'
+  );
+  out = out.replace(osehHashalomParen, (_m, oseh: string, haShalom: string) =>
+    inAseret ? `${oseh} ${haShalom.trim()}` : `${oseh} שָׁלוֹם`
+  );
+
   return out.replace(/ {2,}/g, ' ');
 }
 
@@ -487,31 +500,59 @@ function findAleinuSplitOffsetInHebrew(hebrew: string): number {
   return -1;
 }
 
+/** If `על הנסים` matched inside `ועל הנסים`, keep the leading vav (Sefard). */
+function includeLeadingVavIfPresent(stripped: string, i: number): number {
+  if (i > 0 && stripped[i - 1] === 'ו') return i - 1;
+  return i;
+}
+
 /** Maqaf becomes a space in `stripped`; some editions have `ו` + maqaf + `על` → `ו על`. */
 function findStrippedAlHanissimStart(stripped: string): number {
-  const tries = ['ועל הנסים', 'ועל הניסים', 'ו על הנסים', 'ו על הניסים'];
+  // Prefer the prayer body (not the forgotten-halacha note that also says "על הנסים").
+  // Vav-prefixed forms first: `על הנסים ועל הפרקן` is a suffix of `ועל הנסים ועל הפרקן`
+  // and would otherwise leave a stray וְ before וְעַל כולם (Sefard).
+  const prayerBodies = [
+    'ועל הנסים ועל הפרקן',
+    'ועל הנסים ועל הפורקן',
+    'ועל הניסים ועל הפרקן',
+    'על הנסים ועל הפרקן',
+    'על הנסים ועל הפורקן',
+    'על הניסים ועל הפרקן',
+  ] as const;
+  for (const t of prayerBodies) {
+    const i = stripped.indexOf(t);
+    if (i !== -1) return includeLeadingVavIfPresent(stripped, i);
+  }
+  const tries = ['ועל הנסים', 'ועל הניסים', 'ו על הנסים', 'ו על הניסים'] as const;
   for (const t of tries) {
     const i = stripped.indexOf(t);
-    if (i !== -1) return i;
+    if (i !== -1) return includeLeadingVavIfPresent(stripped, i);
   }
   const m = stripped.match(/ו\s+על\s+הניסים|ו\s+על\s+הנסים/);
-  return m?.index ?? -1;
+  if (m?.index !== undefined) return includeLeadingVavIfPresent(stripped, m.index);
+  // Last resort: "על הנסים … בימים ההם" prayer open (no leading vav; Metsudah Ashkenaz)
+  const bare = stripped.match(/על\s+הנסים\s+ועל\s+הפ[רו]קן|על\s+הנסים[\s\S]{0,80}?בימים\s+ההם/);
+  if (bare?.index === undefined) return -1;
+  return includeLeadingVavIfPresent(stripped, bare.index);
 }
 
 /**
- * Modim after על הנסים continues `…וְעַל הַכֹּל שֶׁהֶקֵישׁ לָנוּ…` (nikkud omitted in `stripped`).
- * Require this tail so we never anchor on stray `ועל כל` / `ועל הכל` inside holiday bodies or Sim Shalom.
+ * Modim after על הנסים continues `…וְעַל הַכֹּל …` or (Metsudah) `וְעַל כֻּלָּם יִתְבָּרַךְ…`.
+ * Require this tail so we never anchor on stray `ועל כל` inside holiday bodies or Sim Shalom.
  */
 function looksLikeAlHanissimAfterVealHakolSuffix(stripped: string, j: number): boolean {
   const tail = stripped.slice(j, Math.min(stripped.length, j + 130));
   const flat = tail.replace(/[\s\u200e\u200f\u200c\u200d\u05BE]+/g, ' ');
+  // Metsudah / many Ashkenaz: וְעַל כֻּלָּם יִתְבָּרַךְ וְיִתְרוֹמַם שִׁמְךָ
+  if (/ועל\s*כלם?\s*יתברך|ועלכלם\s*יתברך|ועל\s*כולם\s*יתברך/.test(flat)) return true;
+  if (/יתברך/.test(flat) && /יתרומם|שמך/.test(flat)) return true;
   return (
     /שהיקיש|שהקיש|שהקדש|שיקיש|שקדש|הקיש לנו|הקדשת לך|והכל שלמים|והכלשלמים/.test(flat) ||
     (/לנו/.test(flat) && /קדוש/.test(flat) && /ברוך/.test(flat))
   );
 }
 
-/** First `ועל הכל` / defective `ועל כל` at or after `from` that is clearly the על הנסים closing. */
+/** First `ועל הכל` / `ועל כולם` after `from` that closes the על הנסים insertion. */
 function findStrippedVealHakolClosingFrom(stripped: string, from: number): number {
   let best = -1;
   const consider = (j: number) => {
@@ -519,6 +560,12 @@ function findStrippedVealHakolClosingFrom(stripped: string, from: number): numbe
     if (!looksLikeAlHanissimAfterVealHakolSuffix(stripped, j)) return;
     if (best === -1 || j < best) best = j;
   };
+
+  // Explicit Metsudah close (often written without space after stripping odd whitespace)
+  for (const n of ['ועלכלם יתברך', 'ועל כולם יתברך', 'ועל כלם יתברך', 'ו על כולם יתברך'] as const) {
+    const j = stripped.indexOf(n, from);
+    consider(j);
+  }
 
   for (const n of ['ועל הכול', 'ועל הכל', 'ו על הכול', 'ו על הכל'] as const) {
     let pos = from;
@@ -536,9 +583,13 @@ function findStrippedVealHakolClosingFrom(stripped: string, from: number): numbe
       const j = stripped.indexOf(n, pos);
       if (j === -1) break;
       const after = stripped[j + n.length];
+      // Skip “ועל כל עם/ישראל” style (Sim Shalom) but keep “ועל כולם יתברך”
       if (after === 'ם') {
-        pos = j + 1;
-        continue;
+        const peek = stripped.slice(j, j + 40).replace(/\s+/g, '');
+        if (!/ועלכלם?יתברך|ועלכולםיתברך/.test(peek)) {
+          pos = j + 1;
+          continue;
+        }
       }
       const afterTrim = stripped
         .slice(j + n.length, j + n.length + 48)
@@ -548,9 +599,10 @@ function findStrippedVealHakolClosingFrom(stripped: string, from: number): numbe
       const ixAmo = afterTrim.indexOf('עמו');
       const ixYis = afterTrim.indexOf('ישראל');
       if (
-        (ixAm !== -1 && ixAm <= near) ||
-        (ixAmo !== -1 && ixAmo <= near) ||
-        (ixYis !== -1 && ixYis <= near)
+        after !== 'ם' &&
+        ((ixAm !== -1 && ixAm <= near) ||
+          (ixAmo !== -1 && ixAmo <= near) ||
+          (ixYis !== -1 && ixYis <= near))
       ) {
         pos = j + 1;
         continue;
@@ -975,6 +1027,29 @@ function isAseretMesayemMelechMishpatInstructionParagraph(para: string): boolean
   return /ברוך אתה/.test(t);
 }
 
+function isOnlyBashitMesayemHaMelechHaMishpatLabelParagraph(para: string): boolean {
+  const t = stripNikkud(stripHtml(para)).replace(/\s+/g, ' ').trim();
+  // e.g. בעשי"ת יסיים: המלך המשפט:  (no full ברוך אתה sample)
+  return (
+    /בעשי["״\u05F4]?ת/.test(t) &&
+    /י?סיים/.test(t) &&
+    /המלך המשפט/.test(t) &&
+    !/ברוך אתה/.test(t) &&
+    t.length < 80
+  );
+}
+
+function isOnlyBashitMesayemHaMelechHaKadoshLabelParagraph(para: string): boolean {
+  const t = stripNikkud(stripHtml(para)).replace(/\s+/g, ' ').trim();
+  return (
+    /בעשי["״\u05F4]?ת/.test(t) &&
+    /י?סיים/.test(t) &&
+    /המלך הקדוש/.test(t) &&
+    !/ברוך אתה/.test(t) &&
+    t.length < 90
+  );
+}
+
 function isOnlyBarchuHaMelechHaMishpatSampleParagraph(para: string): boolean {
   const t = stripNikkud(stripHtml(para)).replace(/\s+/g, ' ').trim();
   if (!/^ברוך אתה/.test(t)) return false;
@@ -999,6 +1074,13 @@ function removeAseretMesayemInstructionParagraphs(
       continue;
     }
     if (isAseretMesayemMelechMishpatInstructionParagraph(hebParas[i])) {
+      drop.add(i);
+      continue;
+    }
+    if (
+      isOnlyBashitMesayemHaMelechHaMishpatLabelParagraph(hebParas[i]) ||
+      isOnlyBashitMesayemHaMelechHaKadoshLabelParagraph(hebParas[i])
+    ) {
       drop.add(i);
       continue;
     }
@@ -1267,16 +1349,89 @@ function stripEnglishAneinuInstructionLineLoose(english: string): string {
 }
 
 /**
+ * Peace bracha (Ashkenaz weekday Mincha): שָׁלוֹם רָב year-round;
+ * on public fasts replace with שִׂים שָׁלוֹם (Sefaria prints both under `לתענית ציבור:`).
+ * Not used for Shacharit (Sim Shalom always) or Maariv (typically Shalom Rav only).
+ */
+export function applyAmidahPeaceBrachaByPublicFast(
+  hebrew: string,
+  english: string,
+  date: Date = new Date(),
+  amidahSlot: 'shacharit' | 'mincha' | 'maariv' = 'mincha'
+): { hebrew: string; english: string } {
+  // Shacharit always uses Sim Shalom in Ashkenaz; Maariv stays Shalom Rav — only Mincha duals.
+  if (amidahSlot !== 'mincha') return { hebrew, english };
+
+  const isFast = JewishCalendarService.isFastDay(date);
+  const hebParas = stripHtmlKeepLineBreaks(hebrew)
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const engParas = stripHtmlKeepLineBreaks(english)
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const aligned = engParas.length === hebParas.length;
+
+  const isShalomRavPara = (para: string): boolean => {
+    const st = stripNikkud(stripHtml(para)).replace(/\s+/g, ' ').trim();
+    return /^שלום\s+רב/.test(st) && /בשלומך/.test(st);
+  };
+  const isSimShalomPara = (para: string): boolean => {
+    const st = stripNikkud(stripHtml(para)).replace(/\s+/g, ' ').trim();
+    if (/שים\s+שלום/.test(st) && /ברכנו\s+אבינו/.test(st) && /תורת\s+חיים/.test(st)) return true;
+    if (/לתענית/.test(st) && /שים\s+שלום/.test(st)) return true;
+    return false;
+  };
+  const stripSimLabel = (para: string): string => {
+    const nik = '[\\u0591-\\u05C7]*';
+    const tag = '(?:<[^>]*>\\s*)*';
+    const re = new RegExp(
+      `^\\s*(?:ל${nik})?ת${nik}ע${nik}נ${nik}י${nik}ת(?:\\s|${tag})+צ${nik}י${nik}ב${nik}ו${nik}ר\\s*[:׃]?\\s*`,
+      'iu'
+    );
+    return para.replace(re, '').trim();
+  };
+
+  const keptHeb: string[] = [];
+  const keptEng: string[] = [];
+  for (let i = 0; i < hebParas.length; i++) {
+    const p = hebParas[i];
+    const e = aligned ? engParas[i] : '';
+    if (isFast) {
+      if (isShalomRavPara(p)) continue;
+      if (isSimShalomPara(p)) {
+        keptHeb.push(stripSimLabel(p));
+        if (aligned) keptEng.push(e.replace(/^\s*(?:On\s+)?(?:public\s+)?fast\s+days?\s*[,:]\s*/i, '').trim() || e);
+        continue;
+      }
+    } else if (isSimShalomPara(p)) {
+      continue;
+    }
+    keptHeb.push(p);
+    if (aligned) keptEng.push(e);
+  }
+
+  return {
+    hebrew: keptHeb.join('\n\n').replace(/\n{3,}/g, '\n\n').trim(),
+    english: (aligned ? keptEng.join('\n\n') : english).replace(/\n{3,}/g, '\n\n').trim() || english,
+  };
+}
+
+/**
  * עננו (Shomea Tefillah): Sefaria inserts `בתענית ציבור אומר כאן הש"ץ עננו:` or
  * `בתענית ציבור אומרים כאן עננו בתפילת הלחש:` + full עננו + ברכה.
- * Remove entirely except on fast days; on fast days strip the instruction line only.
+ * Remove entirely except on public-fast Shacharit/Mincha; never keep at Maariv.
+ * On those fast slots, strip the instruction line only.
  */
 export function applyAmidahAneinuPublicFast(
   hebrew: string,
   english: string,
-  date: Date = new Date()
+  date: Date = new Date(),
+  amidahSlot: 'shacharit' | 'mincha' | 'maariv' = 'mincha'
 ): { hebrew: string; english: string } {
-  const isFast = JewishCalendarService.isFastDay(date);
+  // Aneinu is not said at Maariv (individual: Mincha; chazan: Shacharit).
+  const isFast = amidahSlot !== 'maariv' && JewishCalendarService.isFastDay(date);
   const nik = '[\\u0591-\\u05C7]*';
   const tag = '(?:<[^>]*>\\s*)*';
 
@@ -1410,33 +1565,44 @@ export function removeBirkatKohanimTaanitTziburInsertion(
     .split(/\n\s*\n/)
     .map((p) => p.trim())
     .filter(Boolean);
+  /** Real silent Amidah resumes here — never swallow peace bracha / elohai netzor / chatima. */
+  const isAmidahResumesAfterBkNote = (sj: string): boolean => {
+    if (/^שלום\s+רב/.test(sj) || /שים\s+שלום/.test(sj)) return true;
+    if (/על כל עמך|עמך בית ישראל/.test(sj)) return true;
+    if (/ברוך אתה/.test(sj) && (/הטוב שמך|בשלום|המברך\s+את\s+עמו/.test(sj))) return true;
+    if (/כל החיים\s+יודו|וכל החיים|ו?כול החיים/.test(sj)) return true;
+    if (/אלהי\s+נצור|אלקי\s+נצור|יהיו\s+לרצון|עשה\s+שלום|עושה\s+שלום/.test(sj)) return true;
+    if (/יהי\s+רצון/.test(sj) && /בית\s+המקדש/.test(sj)) return true;
+    return false;
+  };
+  /** Only priestly-blessing body / stage labels after the taanit-tzibur note. */
+  const isBirkatKohanimBodyPara = (sj: string): boolean => {
+    if (isAmidahResumesAfterBkNote(sj)) return false;
+    if (/^שליח\s+ציבור\s*[:׃]?$/.test(sj) || /^חזן\s*[:׃]?$/.test(sj)) return true;
+    if (/אלהינו\s+ואלהי\s+אבותינו\s+ברכנו/.test(sj) && /משולשת|אהרן|כהנים/.test(sj)) return true;
+    if (/יברכך\s+יהוה/.test(sj) && (/יאר\s+יהוה|ישא\s+יהוה|וישם\s+לך\s+שלום/.test(sj) || /כהנים/.test(sj)))
+      return true;
+    if (/אדיר\s+במרום/.test(sj) && (/משמרת|למשמרת|רצון/.test(sj) || sj.length > 120)) return true;
+    if (/משמרת\s+שלום|למשמרת\s+שלום/.test(sj) && sj.length < 400) return true;
+    return false;
+  };
   const drop = new Set<number>();
   for (let i = 0; i < hebParas.length; i++) {
     if (drop.has(i)) continue;
     const st = stripNikkud(stripHtml(hebParas[i])).replace(/\s+/g, ' ').trim();
     if (/עננו\s+יהוה/.test(st)) continue;
     if (!/בתענית\s+ציבור/.test(st) || !/ברכת\s+כהנים/.test(st)) continue;
-    if (/משמרת\s+שלום|למשמרת\s+שלום/.test(st) || (/אדיר\s+במרום/.test(st) && /משמרת|למשמרת/.test(st))) {
-      drop.add(i);
-      continue;
-    }
+    // Instruction line (and any self-contained אדיר…משמרת blob already in the same para).
     drop.add(i);
-    for (let j = i + 1; j < Math.min(hebParas.length, i + 16); j++) {
+    // Only peel the next BK body paragraphs — never the rest of the Amidah (old code dropped 15).
+    for (let j = i + 1; j < Math.min(hebParas.length, i + 8); j++) {
       const sj = stripNikkud(stripHtml(hebParas[j])).replace(/\s+/g, ' ').trim();
-      // Halacha note is only אדיר…משמרת blocks; real Amidah resumes at Modim's וכל החיים / chatima — do not drop those.
-      if (/כל החיים\s+יודו|וכל החיים|ו?כול החיים/.test(sj)) break;
-      if (/ברוך אתה/.test(sj) && /הטוב שמך/.test(sj)) break;
-      // Sim Shalom begins here — למשמרת שלום in halacha must not consume this bracha.
-      if (/על כל עמך|עמך בית ישראל/.test(sj)) break;
-      if (/משמרת\s+שלום|למשמרת\s+שלום/.test(sj)) {
+      if (isAmidahResumesAfterBkNote(sj)) break;
+      if (isBirkatKohanimBodyPara(sj)) {
         drop.add(j);
-        break;
+        continue;
       }
-      if (/אדיר\s+במרום/.test(sj) && (/משמרת|למשמרת|רצון/.test(sj) || sj.length > 200)) {
-        drop.add(j);
-        break;
-      }
-      drop.add(j);
+      break;
     }
   }
   const keptHeb = hebParas.filter((_, i) => !drop.has(i));
@@ -1857,7 +2023,7 @@ export function removeRefuahAruchaUmarpeClause(
   h = h.replace(reInsertAfterVehaale, `$1 ${refuahShleimaPhrase}`);
   h = h.replace(/ {2,}/g, ' ').replace(/[ \t]+\n/g, '\n').replace(/\n[ \t]+/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 
-  return { hebrew: h, english };
+  return { hebrew: flattenRefuahJoinPoints(h), english };
 }
 
 /** Fixed Hebrew for personal מי שבירך after רְפוּאָה שְׁלֵמָה לְכָל מַכּוֹתֵינוּ in רפאנו */
@@ -1865,6 +2031,58 @@ const REFUAH_MI_SHEBEIRACH_PREFIX =
   'יְהִי רָצוֹן מִלְּפָנֶיךָ יְהֹוָה אֱלֹהֵינוּ וֵאלֹהֵי אֲבֹתֵינוּ שֶׁתִּשְׁלַח מְהֵרָה רְפוּאָה שְׁלֵמָה מִן הַשָּׁמַיִם, רְפוּאַת הַנֶּפֶשׁ וּרְפוּאַת הַגּוּף, ';
 
 const REFUAH_MI_SHEBEIRACH_SUFFIX = ' בְּתוֹךְ שְׁאָר חוֹלֵי יִשְׂרָאֵל:';
+
+/** Any space/line-break (incl. exotic Unicode spaces) — never leave a line break before chatimah. */
+const REFUAH_ANY_WS = '[\\s\\u00a0\\u1680\\u2000-\\u200b\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+';
+
+/**
+ * Force continuous text (single spaces only) at Refuah join points:
+ * - …מכותינו [optional mi-shebeirach …בתוך שאר חולי ישראל:] כי אל מלך רופא…
+ * Reader treats `\n` as a full line break; remove all of them here.
+ */
+export function flattenRefuahJoinPoints(hebrew: string): string {
+  if (!hebrew) return hebrew;
+  const nik = '[\\u0591-\\u05C7]*';
+  const letterWs = `(?:${REFUAH_ANY_WS}|־|\\u05BE|-)*`;
+  const colon = `\\s*[:׃\\u05C3.]?`;
+  const makos = `מ${nik}כ${nik}ו${nik}ת${nik}י${nik}נ${nik}ו${nik}`;
+  const betoch =
+    `ב${nik}ת${nik}ו${nik}ך${nik}${letterWs}ש${nik}א${nik}ר${nik}${letterWs}ח${nik}ו${nik}ל${nik}י${nik}${letterWs}י${nik}ש${nik}ר${nik}א${nik}ל${nik}`;
+  const kiElRofa =
+    `כ${nik}י${nik}${letterWs}א${nik}ל${nik}${letterWs}מ${nik}ל${nik}ך${nik}${letterWs}ר${nik}ו${nik}פ${nik}א`;
+
+  // 1) בתוך שאר חולי ישראל:  <--no line break-->  כי אל מלך רופא
+  const reBetochToKiEl = new RegExp(`(${betoch})(${colon})${REFUAH_ANY_WS}(${kiElRofa})`, 'gu');
+  // 2) מכותינו  <--no line break-->  כי אל… (no personal names)
+  const reMakosToKiEl = new RegExp(`(${makos})(${colon})${REFUAH_ANY_WS}(${kiElRofa})`, 'gu');
+  // 3) מכותינו  <--no line break-->  יהי רצון… (personal names block)
+  const reMakosToYehi = new RegExp(
+    `(${makos})(${colon})${REFUAH_ANY_WS}(י${nik}ה${nik}י${nik}${letterWs}ר${nik}צ${nik}ו${nik}ן)`,
+    'gu'
+  );
+
+  let h = hebrew;
+  const joinOneSpace = (_m: string, a: string, col: string | undefined, b: string) =>
+    col?.trim() ? `${a}${col.trimEnd()} ${b}` : `${a} ${b}`;
+  h = h.replace(reBetochToKiEl, joinOneSpace);
+  h = h.replace(reMakosToKiEl, joinOneSpace);
+  h = h.replace(reMakosToYehi, joinOneSpace);
+  // Flatten any newlines still inside the optional מי שבירך bridge (mishaps / multi-line insert).
+  const reBridge = new RegExp(
+    `(${makos})(${colon})([\\s\\S]{0,900}?)(${kiElRofa})`,
+    'gu'
+  );
+  h = h.replace(reBridge, (_m, a: string, col: string | undefined, mid: string, b: string) => {
+    if (!/[\r\n]/.test(mid)) {
+      return col?.trim() ? `${a}${col.trimEnd()}${mid}${b}` : `${a}${mid}${b}`;
+    }
+    const midFlat = mid.replace(new RegExp(REFUAH_ANY_WS, 'g'), ' ').replace(/ {2,}/g, ' ');
+    const left = col?.trim() ? `${a}${col.trimEnd()}` : a;
+    return `${left}${midFlat.startsWith(' ') ? '' : ' '}${midFlat.trimEnd()}${midFlat.endsWith(' ') ? '' : ' '}${b}`
+      .replace(/ {2,}/g, ' ');
+  });
+  return h.replace(/ {2,}/g, ' ');
+}
 
 export function buildRefuahPersonalNamesClause(names: RefuahPersonalName[]): string | null {
   const parts: string[] = [];
@@ -1907,15 +2125,246 @@ export function injectRefuahMiShebeirachAfterShleimaMakos(
   hebrew: string,
   names: RefuahPersonalName[]
 ): string {
-  if (!names?.length) return hebrew;
+  if (!names?.length) return flattenRefuahJoinPoints(hebrew);
   const block = buildRefuahMiShebeirachInsertionBlock(names);
-  if (!block) return hebrew;
+  if (!block) return flattenRefuahJoinPoints(hebrew);
   const idx = findRefuahShleimaMakosInsertIndex(hebrew);
-  if (idx < 0) return hebrew;
-  return `${hebrew.slice(0, idx).trimEnd()} ${block} ${hebrew.slice(idx).trimStart()}`.replace(/\s{2,}/g, ' ').trim();
+  if (idx < 0) return flattenRefuahJoinPoints(hebrew);
+  // Single continuous string — no \n before/after the personal clause.
+  const before = hebrew.slice(0, idx).replace(new RegExp(`${REFUAH_ANY_WS}$`, 'u'), '');
+  const after = hebrew.slice(idx).replace(new RegExp(`^${REFUAH_ANY_WS}`, 'u'), '');
+  return flattenRefuahJoinPoints(`${before} ${block} ${after}`.replace(/ {2,}/g, ' ').trim());
 }
 
 export type HebrewInstructionSegment = { text: string; italic: boolean };
+
+function mapStrippedRangeToOriginal(
+  full: string,
+  startStripped: number,
+  endStripped: number
+): { startOriginal: number; endOriginal: number } {
+  const strippedToOriginal: number[] = [];
+  for (let i = 0; i < full.length; i++) {
+    if (!/[\u0591-\u05C7]/.test(full[i])) strippedToOriginal.push(i);
+  }
+  const startOriginal = strippedToOriginal[startStripped] ?? startStripped;
+  const endOriginal =
+    endStripped > 0 && endStripped <= strippedToOriginal.length
+      ? (strippedToOriginal[endStripped - 1] ?? endStripped - 1) + 1
+      : full.length;
+  return { startOriginal, endOriginal };
+}
+
+function normalizeSmallVersePhrase(phrase: string): string {
+  return phrase
+    .replace(/[\n\r]+/g, ' ')
+    .replace(/[ \t\u00a0]+/g, ' ')
+    .trim();
+}
+
+/**
+ * Small/grey first "יהיו לרצון… וגואלי" only (after peace chatima, before Elohai Netzor).
+ * The second (closing Elohai Netzor) stays full body size. Non-italic segments only.
+ */
+function markYehiyuLeratzonParagraphSmall(
+  segs: HebrewInstructionSegment[]
+): HebrewInstructionSegment[] {
+  const stripNikkud = (s: string) => s.replace(/[\u0591-\u05C7]/g, '');
+  const out: HebrewInstructionSegment[] = [];
+  let markedFirst = false;
+
+  for (const seg of segs) {
+    if (markedFirst || seg.italic || !seg.text) {
+      out.push(seg);
+      continue;
+    }
+
+    const full = seg.text;
+    const stripped = stripNikkud(full);
+    const isLikelyEnglish = !/[\u0590-\u05FF]/.test(stripped.slice(0, Math.min(200, stripped.length)));
+
+    let start = -1;
+    let end = -1;
+
+    if (isLikelyEnglish) {
+      const re = /May the words of my mouth[\s\S]*?my Redeemer\.?/i;
+      const m = re.exec(full);
+      if (m) {
+        start = m.index;
+        end = m.index + m[0].length;
+      }
+    } else {
+      const startStripped = stripped.indexOf('יהיו לרצון');
+      if (startStripped !== -1) {
+        let endStripped = stripped.indexOf('וגואלי', startStripped);
+        if (endStripped !== -1) {
+          endStripped += 'וגואלי'.length;
+          while (endStripped < stripped.length && /[:׃.\s]/.test(stripped[endStripped])) endStripped++;
+          const mapped = mapStrippedRangeToOriginal(full, startStripped, endStripped);
+          start = mapped.startOriginal;
+          end = mapped.endOriginal;
+        }
+      }
+    }
+
+    if (start < 0 || end < 0) {
+      out.push(seg);
+      continue;
+    }
+
+    markedFirst = true;
+    const before = full.slice(0, start).replace(/[\n\r\t\u0020\u00a0]+$/g, '');
+    const phrase = normalizeSmallVersePhrase(full.slice(start, end));
+    const after = full.slice(end).replace(/^[\n\r\t\u0020\u00a0]+/g, '');
+    if (before) out.push({ text: before, italic: false });
+    if (phrase) out.push({ text: phrase, italic: true });
+    if (after) out.push({ text: after, italic: false });
+  }
+
+  return out.length > 0 ? out : segs;
+}
+
+/**
+ * Small/grey closing "יהי רצון מלפניך… שיבנה בית המקדש… קדמוניות" (after Oseh Shalom).
+ */
+function markYehiRatzonSheyibanehSmall(
+  segs: HebrewInstructionSegment[]
+): HebrewInstructionSegment[] {
+  const stripNikkud = (s: string) => s.replace(/[\u0591-\u05C7]/g, '');
+  const out: HebrewInstructionSegment[] = [];
+  let marked = false;
+
+  for (const seg of segs) {
+    if (marked || seg.italic || !seg.text) {
+      out.push(seg);
+      continue;
+    }
+
+    const full = seg.text;
+    const stripped = stripNikkud(full);
+    const isLikelyEnglish = !/[\u0590-\u05FF]/.test(stripped.slice(0, Math.min(200, stripped.length)));
+
+    let start = -1;
+    let end = -1;
+
+    if (isLikelyEnglish) {
+      // Metsudah / Sefaria: Temple rebuild closing petition after Oseh Shalom.
+      const re =
+        /May it be Your will[\s\S]*?Holy Temple be rebuilt[\s\S]*?days of old and in earlier years\.?/i;
+      const m = re.exec(full);
+      if (m) {
+        start = m.index;
+        end = m.index + m[0].length;
+      }
+    } else {
+      // Prefer the Temple-rebuild formula (not other יהי רצון inserts).
+      let startStripped = stripped.indexOf('יהי רצון מלפניך');
+      if (startStripped === -1) {
+        const loose = stripped.search(/יהי\s+רצון\s+מלפניך/);
+        startStripped = loose;
+      }
+      if (startStripped !== -1) {
+        const mikdash = stripped.indexOf('בית המקדש', startStripped);
+        if (mikdash !== -1 && mikdash - startStripped < 120) {
+          // Full block ends at the last "קדמוניות" of this petition (there are two).
+          const firstKad = stripped.indexOf('קדמוניות', mikdash);
+          if (firstKad !== -1) {
+            let endStripped = firstKad + 'קדמוניות'.length;
+            const secondKad = stripped.indexOf('קדמוניות', endStripped);
+            if (secondKad !== -1 && secondKad - firstKad < 120) {
+              endStripped = secondKad + 'קדמוניות'.length;
+            }
+            while (endStripped < stripped.length && /[:׃.\s]/.test(stripped[endStripped])) endStripped++;
+            const mapped = mapStrippedRangeToOriginal(full, startStripped, endStripped);
+            start = mapped.startOriginal;
+            end = mapped.endOriginal;
+          }
+        }
+      }
+    }
+
+    if (start < 0 || end < 0) {
+      out.push(seg);
+      continue;
+    }
+
+    marked = true;
+    const before = full.slice(0, start).replace(/[\n\r\t\u0020\u00a0]+$/g, '');
+    const phrase = normalizeSmallVersePhrase(full.slice(start, end));
+    const after = full.slice(end).replace(/^[\n\r\t\u0020\u00a0]+/g, '');
+    if (before) out.push({ text: before, italic: false });
+    if (phrase) out.push({ text: phrase, italic: true });
+    if (after) out.push({ text: after, italic: false });
+  }
+
+  return out.length > 0 ? out : segs;
+}
+
+/**
+ * Small/grey Amidah frame verses (same style):
+ * - Intro: "כי שם… / אדני שפתי…" before Avot
+ * - First "יהיו לרצון… וגואלי" only (not the Elohai Netzor close)
+ * - Closing "יהי רצון… שיבנה בית המקדש… קדמוניות"
+ * One line each; no extra gap after.
+ */
+export function markSefataiParagraphSmall(
+  segs: HebrewInstructionSegment[]
+): HebrewInstructionSegment[] {
+  const stripNikkud = (s: string) => s.replace(/[\u0591-\u05C7]/g, '');
+  const full = segs.map((s) => s.text).join('');
+  const stripped = stripNikkud(full);
+  let startStripped: number;
+  let endStripped: number;
+  const isLikelyEnglish = !/[\u0590-\u05FF]/.test(stripped.slice(0, Math.min(200, stripped.length)));
+  let sefataiMarked: HebrewInstructionSegment[];
+  if (isLikelyEnglish) {
+    startStripped = stripped.search(/Lord,?\s*open\s+my\s+lips|Open\s+my\s+lips/i);
+    if (startStripped === -1) startStripped = stripped.search(/When I call out the name/i);
+    if (startStripped === -1) {
+      sefataiMarked = segs;
+    } else {
+      const praiseMatch = stripped.slice(startStripped).match(/Your\s+praise\.?/i);
+      endStripped = praiseMatch
+        ? startStripped + (stripped.slice(startStripped).indexOf(praiseMatch[0]) + praiseMatch[0].length)
+        : stripped.length;
+      const { startOriginal, endOriginal } = mapStrippedRangeToOriginal(full, startStripped, endStripped);
+      const before = full.slice(0, startOriginal);
+      const phrase = normalizeSmallVersePhrase(full.slice(startOriginal, endOriginal));
+      const after = full.slice(endOriginal).replace(/^[\n\r\t\u0020\u00a0]+/g, '');
+      const out: HebrewInstructionSegment[] = [];
+      if (before.trim()) out.push({ text: before, italic: false });
+      if (phrase) out.push({ text: phrase, italic: true });
+      if (after.trim()) out.push({ text: after, italic: false });
+      sefataiMarked = out.length > 0 ? out : segs;
+    }
+  } else {
+    const startMarker = 'כי שם';
+    const endMarker = 'תהלתך';
+    startStripped = stripped.indexOf(startMarker);
+    if (startStripped === -1) startStripped = stripped.indexOf('שפתי תפתח');
+    if (startStripped === -1) {
+      sefataiMarked = segs;
+    } else {
+      endStripped = stripped.indexOf(endMarker, startStripped);
+      if (endStripped === -1) {
+        sefataiMarked = segs;
+      } else {
+        endStripped += endMarker.length;
+        while (endStripped < stripped.length && /[:\s\u0591-\u05C7]/.test(stripped[endStripped])) endStripped++;
+        const { startOriginal, endOriginal } = mapStrippedRangeToOriginal(full, startStripped, endStripped);
+        const before = full.slice(0, startOriginal);
+        const phrase = normalizeSmallVersePhrase(full.slice(startOriginal, endOriginal));
+        const after = full.slice(endOriginal).replace(/^[\n\r\t\u0020\u00a0]+/g, '');
+        const out: HebrewInstructionSegment[] = [];
+        if (before.trim()) out.push({ text: before, italic: false });
+        if (phrase) out.push({ text: phrase, italic: true });
+        if (after.trim()) out.push({ text: after, italic: false });
+        sefataiMarked = out.length > 0 ? out : segs;
+      }
+    }
+  }
+  return markYehiRatzonSheyibanehSmall(markYehiyuLeratzonParagraphSmall(sefataiMarked));
+}
 
 /**
  * Same insertion as {@link injectRefuahMiShebeirachAfterShleimaMakos}, preserving segment boundaries when
@@ -1938,22 +2387,46 @@ export function injectRefuahMiShebeirachIntoHebrewSegments(
   const insertion = ` ${block} `;
   let pos = 0;
   const out = segments.map((s) => ({ ...s }));
+  const finish = (segs: HebrewInstructionSegment[]) => {
+    const mapped = segs.map((s) => ({ ...s, text: flattenRefuahJoinPoints(s.text) }));
+    const flat = flattenRefuahJoinPoints(mapped.map((s) => s.text).join(''));
+    // If flatten only needed cross-segment join, re-sync one segment that held the insert:
+    if (flat !== mapped.map((s) => s.text).join('')) {
+      return { hebrew: flat, segments: [{ text: flat, italic: false }] };
+    }
+    return { hebrew: flat, segments: mapped };
+  };
   for (let i = 0; i < out.length; i++) {
     const len = out[i].text.length;
     const end = pos + len;
     if (idx < end) {
       const local = idx - pos;
-      out[i] = { ...out[i], text: out[i].text.slice(0, local) + insertion + out[i].text.slice(local) };
-      return { hebrew: out.map((s) => s.text).join(''), segments: out };
+      const left = out[i].text.slice(0, local).replace(new RegExp(`${REFUAH_ANY_WS}$`, 'u'), '');
+      const right = out[i].text.slice(local).replace(new RegExp(`^${REFUAH_ANY_WS}`, 'u'), '');
+      out[i] = { ...out[i], text: `${left}${insertion}${right}`.replace(/ {2,}/g, ' ') };
+      return finish(out);
     }
     if (idx === end && i < out.length - 1) {
       const next = out[i + 1];
-      out[i + 1] = { ...next, text: insertion.trimEnd() + ' ' + next.text };
-      return { hebrew: out.map((s) => s.text).join(''), segments: out };
+      out[i] = { ...out[i], text: out[i].text.replace(new RegExp(`${REFUAH_ANY_WS}$`, 'u'), '') };
+      out[i + 1] = {
+        ...next,
+        text: `${insertion}${next.text.replace(new RegExp(`^${REFUAH_ANY_WS}`, 'u'), '')}`.replace(
+          / {2,}/g,
+          ' '
+        ),
+      };
+      return finish(out);
     }
     if (idx === end && i === out.length - 1) {
-      out[i] = { ...out[i], text: out[i].text + insertion };
-      return { hebrew: out.map((s) => s.text).join(''), segments: out };
+      out[i] = {
+        ...out[i],
+        text: `${out[i].text.replace(new RegExp(`${REFUAH_ANY_WS}$`, 'u'), '')}${insertion}`.replace(
+          / {2,}/g,
+          ' '
+        ),
+      };
+      return finish(out);
     }
     pos = end;
   }
@@ -1965,6 +2438,8 @@ export function injectRefuahIntoAmidahPrayerTextData<T extends {
   hebrewSegments?: HebrewInstructionSegment[];
   hebrewBeforeKedushaFoldout?: string;
   hebrewBeforeKedushaFoldoutSegments?: HebrewInstructionSegment[];
+  hebrewBeforeModimDerabananFoldout?: string;
+  hebrewBeforeModimDerabananFoldoutSegments?: HebrewInstructionSegment[];
 }>(data: T, names: RefuahPersonalName[]): T {
   if (!names?.length) return data;
   let next: T = { ...data };
@@ -1989,6 +2464,22 @@ export function injectRefuahIntoAmidahPrayerTextData<T extends {
       };
     }
   }
+  // After kedusha/modim foldouts, רפאנו lives in the modim prefix (not main suffix).
+  if (next.hebrewBeforeModimDerabananFoldout) {
+    const preMod = injectRefuahMiShebeirachIntoHebrewSegments(
+      next.hebrewBeforeModimDerabananFoldout,
+      next.hebrewBeforeModimDerabananFoldoutSegments,
+      names
+    );
+    if (preMod.hebrew !== next.hebrewBeforeModimDerabananFoldout) {
+      changed = true;
+      next = {
+        ...next,
+        hebrewBeforeModimDerabananFoldout: preMod.hebrew,
+        hebrewBeforeModimDerabananFoldoutSegments: preMod.segments,
+      };
+    }
+  }
   return changed ? next : data;
 }
 
@@ -2004,8 +2495,8 @@ export type AmidahKedushaFoldoutSplit = {
 
 /**
  * After removing the Chazaras Kedushah block, split main text so the foldout sits after גבורות
- * (through מחיה המתים) and before the next bracha’s "אתה קדוש ושמך".
- * Uses nikkud-stripped search + index map so Sefaria vocalization does not break the split.
+ * (through מחיה המתים) and before the next bracha ("אתה קדוש…" or, if that was folded out, "אתה חונן…").
+ * Uses nikkud-stripped search + index map so vocalization does not break the split.
  */
 function splitAmidahMainAroundKedushaFoldoutSlot(
   mainHebrew: string,
@@ -2027,8 +2518,14 @@ function splitAmidahMainAroundKedushaFoldoutSlot(
   }
   if (stripped.length === 0 || stripped.length !== toOrig.length) return null;
 
+  // Suffix starts at Kedushat Hashem (silent) when present; else first middle petition after kedusha.
   let kedSt = stripped.indexOf('אתה קדוש ושמך קדוש');
   if (kedSt === -1) kedSt = stripped.indexOf('אתה קדוש ושמך');
+  if (kedSt === -1) kedSt = stripped.indexOf('אתה קדוש');
+  if (kedSt === -1) {
+    const atahChonen = stripped.search(/אתה חונן(?:\s+ל אדם|\s+לאדם)?/);
+    kedSt = atahChonen !== -1 ? atahChonen : stripped.indexOf('אתה חונן');
+  }
   if (kedSt < 0) return null;
 
   const beforeKed = stripped.slice(0, kedSt);
@@ -2051,7 +2548,7 @@ function splitAmidahMainAroundKedushaFoldoutSlot(
 
   const endOrig = bestEndS < toOrig.length ? toOrig[bestEndS] : hNo.length;
   const kedOrig = toOrig[kedSt];
-  if (kedOrig < endOrig) return null;
+  if (kedOrig === undefined || kedOrig < endOrig) return null;
 
   const prefixHebrew = hNo.slice(0, endOrig).trimEnd();
   const suffixHebrew = hNo.slice(kedOrig).trimStart();
@@ -2061,18 +2558,20 @@ function splitAmidahMainAroundKedushaFoldoutSlot(
   let prefixEnglish = '';
   let suffixEnglish = '';
   if (en.trim()) {
-    const idxHoly = en.search(/\bYou are holy\b/i);
-    if (idxHoly !== -1) {
-      const sub = en.slice(0, idxHoly);
+    let idxSuffix = en.search(/\bYou are holy\b/i);
+    if (idxSuffix === -1) idxSuffix = en.search(/\bYou favor man\b/i);
+    if (idxSuffix === -1) idxSuffix = en.search(/\bYou grant\b[\s\S]{0,40}\bknowledge\b/i);
+    if (idxSuffix !== -1) {
+      const sub = en.slice(0, idxSuffix);
       const blessedDeadRe = /Blessed are You[\s\S]{0,1600}?\bdead\b[\s.:]*/gi;
       let lastEnd = -1;
       blessedDeadRe.lastIndex = 0;
       while ((m = blessedDeadRe.exec(sub)) !== null) {
         lastEnd = m.index + m[0].length;
       }
-      if (lastEnd !== -1 && lastEnd <= idxHoly) {
+      if (lastEnd !== -1 && lastEnd <= idxSuffix) {
         prefixEnglish = en.slice(0, lastEnd).trimEnd();
-        suffixEnglish = en.slice(idxHoly).trimStart();
+        suffixEnglish = en.slice(idxSuffix).trimStart();
       }
     }
     if (!suffixEnglish) {
@@ -2087,9 +2586,144 @@ function splitAmidahMainAroundKedushaFoldoutSlot(
   return { prefixHebrew, suffixHebrew, prefixEnglish, suffixEnglish };
 }
 
+/** Stripped indices: chazaras open (נקדישך / thrice-holy / בחזרת…קדושה). */
+function findStrippedAmidahKedushaFoldoutStart(stripped: string): number {
+  /** Walk up a short window for instruction / open / stacked קהל labels. */
+  const backToInstruction = (from: number): number => {
+    const windowStart = Math.max(0, from - 280);
+    const win = stripped.slice(windowStart, from);
+    const candidates: number[] = [];
+    const bch = win.search(/בחזרת[\s\S]{0,100}?קדושה/);
+    if (bch !== -1) candidates.push(windowStart + bch);
+    for (const open of ['נקדישך', 'נעריצך', 'נקדש'] as const) {
+      const i = win.indexOf(open);
+      if (i !== -1) candidates.push(windowStart + i);
+    }
+    const labels = /(?:קהל\s+וחזן|קהל\s+ו?חזן|שליח\s+ציבור)\s*[:׃]?/g;
+    let lm: RegExpExecArray | null;
+    while ((lm = labels.exec(win)) !== null) {
+      candidates.push(windowStart + lm.index);
+    }
+    if (candidates.length) return Math.min(...candidates);
+    return from;
+  };
+
+  // Sfard: נקדישך / נעריצך. Ashkenaz weekday often opens נקדש את שמך (not נקדישך).
+  for (const open of ['נקדישך', 'נעריצך', 'נקדש'] as const) {
+    const i = stripped.indexOf(open);
+    if (i !== -1) return backToInstruction(i);
+  }
+
+  const thrice = stripped.indexOf('קדוש קדוש קדוש');
+  if (thrice !== -1) return backToInstruction(thrice);
+
+  const mPrimary = stripped.match(/בחזרת[\s\S]{0,320}?קדושה/);
+  if (mPrimary?.index !== undefined) return mPrimary.index;
+  const mAlt = stripped.match(/חזרת[\s\S]{0,60}?הש["״\u05F4]?צ[\s\S]{0,240}?קדושה/);
+  return mAlt?.index ?? -1;
+}
+
+/** End exclusive of foldout on stripped text: לדור chatima when present, else through הללויה. */
+function findStrippedAmidahKedushaFoldoutEnd(stripped: string, startS: number): number {
+  // Ashkenaz: full לדור ודור … האל/המלך הקדוש (prefer over earlier defective לדר in ימלך).
+  // Cap window so Modim's "אתה הוא לדור ודור" cannot swallow the rest of the Amidah.
+  const KEDUSHA_LEDOR_MAX_FROM_START = 2800;
+  const fullLed = stripped.indexOf('לדור ודור', startS);
+  if (fullLed !== -1 && fullLed - startS < KEDUSHA_LEDOR_MAX_FROM_START) {
+    const slice = stripped.slice(fullLed, Math.min(stripped.length, fullLed + 750));
+    let endRel = -1;
+    const chatima = /(?:האל|המלך)\s*הקדוש/g;
+    let cm: RegExpExecArray | null;
+    while ((cm = chatima.exec(slice)) !== null) {
+      endRel = cm.index + cm[0].length;
+    }
+    if (endRel !== -1) {
+      let endS = fullLed + endRel;
+      while (endS < stripped.length && /[:׃\s.\u05be־;]/.test(stripped[endS])) endS++;
+      return endS;
+    }
+  }
+
+  // Sfard weekday: thrice often ends at ימלך … לדר ודר: הללויה (no separate לדור).
+  const defLed = stripped.indexOf('לדר ודר', startS);
+  if (defLed !== -1) {
+    const nearHl = stripped.indexOf('הללויה', defLed);
+    if (nearHl !== -1 && nearHl - defLed < 40) {
+      const after = stripped.slice(nearHl, nearHl + 220);
+      if (!/לדור\s+ודור/.test(after)) {
+        let endS = nearHl + 'הללויה'.length;
+        while (endS < stripped.length && /[:׃\s.\u05be־;]/.test(stripped[endS])) endS++;
+        return endS;
+      }
+    }
+  }
+
+  const hl = 'הללויה';
+  const hIdx = stripped.indexOf(hl, startS);
+  if (hIdx === -1) return -1;
+  let endS = hIdx + hl.length;
+  while (endS < stripped.length && /[:׃\s.\u05be־;]/.test(stripped[endS])) endS++;
+  // Metsudah: שליח ציבור / לדור after early הללויה
+  const after = stripped.slice(endS, Math.min(stripped.length, endS + 400));
+  if (/שליח\s+ציבור|לדור/.test(after) && !/אתה\s+קדוש/.test(after.slice(0, 60))) {
+    const iLed2 = stripped.indexOf('לדור ודור', endS);
+    if (iLed2 !== -1 && iLed2 - endS < 80) {
+      const slice = stripped.slice(iLed2, Math.min(stripped.length, iLed2 + 750));
+      let endRel = -1;
+      const chatima = /(?:האל|המלך)\s*הקדוש/g;
+      let cm: RegExpExecArray | null;
+      while ((cm = chatima.exec(slice)) !== null) {
+        endRel = cm.index + cm[0].length;
+      }
+      if (endRel !== -1) {
+        let e = iLed2 + endRel;
+        while (e < stripped.length && /[:׃\s.\u05be־;]/.test(stripped[e])) e++;
+        return e;
+      }
+    }
+    const iChonen = stripped.indexOf('אתה חונן', endS);
+    if (iChonen !== -1 && iChonen - endS < 500) return iChonen;
+  }
+  return endS;
+}
+
+/** Drop lone chazaras instruction line left between Gevuros and Kedushat Hashem. */
+function stripLeftoverChazarasKedushaInstruction(hebrew: string): string {
+  const nik = '[\u0591-\u05C7]*';
+  const re = new RegExp(
+    '(?:^|\\n)\\s*ב' +
+      nik +
+      'ח' +
+      nik +
+      'ז' +
+      nik +
+      'ר' +
+      nik +
+      'ת' +
+      nik +
+      '[\\s\\S]{0,120}?ק' +
+      nik +
+      'ד' +
+      nik +
+      'ו' +
+      nik +
+      'ש' +
+      nik +
+      'ה' +
+      nik +
+      '\\s*[:׃]?\\s*(?=\\n|$)',
+    'gmu'
+  );
+  return hebrew
+    .replace(re, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 /**
- * Split Chazaras ha-shatz Kedushah (Sefaria: בחזרת הש"ץ אומרים כאן קדושה … הללויה) from the main Amidah
- * so it can live in a collapsible "קדושה" section like Mincha Korbanot.
+ * Split Chazaras ha-shatz Kedushah from the main Amidah into a collapsible "קדושה" section.
+ * Metsudah packs silent אתה קדוש before congregational קדוש×3 — fold out only the chazaras
+ * responses through לדור ודור (not silent Kedushat Hashem), so the dropdown can sit after גבורות.
  */
 export function extractAmidahKedushaFoldout(hebrew: string, english: string): AmidahKedushaFoldoutSplit {
   const hNo = stripHtml(hebrew).replace(/<br\s*\/?>/gi, '\n');
@@ -2098,38 +2732,27 @@ export function extractAmidahKedushaFoldout(hebrew: string, english: string): Am
   for (let i = 0; i < hNo.length; i++) {
     if (!/[\u0591-\u05C7]/.test(hNo[i])) toOrig.push(i);
   }
-  if (toOrig.length === 0) return { mainHebrew: hebrew, mainEnglish: english, kedushaHebrew: null, kedushaEnglish: null };
-
-  let startS = -1;
-  const mPrimary = stripped.match(/בחזרת[\s\S]{0,320}?קדושה/);
-  if (mPrimary && mPrimary.index !== undefined) {
-    const win = mPrimary[0];
-    if (/אומרים|אומרין|כאן/.test(win)) startS = mPrimary.index;
-    else startS = mPrimary.index;
-  }
-  if (startS === -1) {
-    const mAlt = stripped.match(/חזרת[\s\S]{0,60}?הש["״\u05F4]?צ[\s\S]{0,240}?קדושה/);
-    if (mAlt && mAlt.index !== undefined) startS = mAlt.index;
-  }
-  if (startS === -1) {
+  if (toOrig.length === 0) {
     return { mainHebrew: hebrew, mainEnglish: english, kedushaHebrew: null, kedushaEnglish: null };
   }
 
-  const hl = 'הללויה';
-  const hIdx = stripped.indexOf(hl, startS);
-  if (hIdx === -1) {
+  const startS = findStrippedAmidahKedushaFoldoutStart(stripped);
+  if (startS === -1) {
     return { mainHebrew: hebrew, mainEnglish: english, kedushaHebrew: null, kedushaEnglish: null };
   }
-  let endS = hIdx + hl.length;
-  while (endS < stripped.length && /[:\s.\u05be־;]/.test(stripped[endS])) endS++;
+  const endS = findStrippedAmidahKedushaFoldoutEnd(stripped, startS);
+  if (endS === -1 || endS <= startS) {
+    return { mainHebrew: hebrew, mainEnglish: english, kedushaHebrew: null, kedushaEnglish: null };
+  }
 
   const startOrig = startS < toOrig.length ? toOrig[startS] : 0;
   const endOrigExcl = endS < toOrig.length ? toOrig[endS] : hNo.length;
 
   const kedHeb = hNo.slice(startOrig, endOrigExcl).trim();
-  const mainHeb = (hNo.slice(0, startOrig).trimEnd() + '\n\n' + hNo.slice(endOrigExcl).trimStart())
+  let mainHeb = (hNo.slice(0, startOrig).trimEnd() + '\n\n' + hNo.slice(endOrigExcl).trimStart())
     .replace(/\n\n\n+/g, '\n\n')
     .trim();
+  mainHeb = stripLeftoverChazarasKedushaInstruction(mainHeb);
 
   const splitEnglish = (): { main: string; ked: string | null } => {
     const en = english ?? '';
@@ -2143,6 +2766,8 @@ export function extractAmidahKedushaFoldout(hebrew: string, english: string): Am
       "in the chazan's repetition",
       "during the chazzan's repetition",
       "leader's repetition",
+      'the congregation says and the chazzan',
+      'congregation says and chazzan',
     ];
     let es = -1;
     for (const h of heads) {
@@ -2151,10 +2776,23 @@ export function extractAmidahKedushaFoldout(hebrew: string, english: string): Am
     }
     let ee = -1;
     if (es !== -1) {
-      const hi = low.indexOf('hallelujah', es);
-      if (hi !== -1) {
-        ee = hi + 'hallelujah'.length;
-        while (ee < en.length && /[\s.:;!—\-'"’]/.test(en[ee])) ee++;
+      const fromGeneration = low.indexOf('from generation to generation', es);
+      if (fromGeneration !== -1) {
+        const blessed = low.indexOf('blessed are you', fromGeneration);
+        if (blessed !== -1) {
+          const holyOne = low.indexOf('holy one', blessed);
+          if (holyOne !== -1 && holyOne - blessed < 120) {
+            ee = holyOne + 'holy one'.length;
+            while (ee < en.length && /[\s.:;!—\-'"’]/.test(en[ee])) ee++;
+          }
+        }
+      }
+      if (ee === -1) {
+        const hi = low.indexOf('hallelujah', es);
+        if (hi !== -1) {
+          ee = hi + 'hallelujah'.length;
+          while (ee < en.length && /[\s.:;!—\-'"’]/.test(en[ee])) ee++;
+        }
       }
     }
     if (es !== -1 && ee !== -1 && ee > es) {
@@ -2200,6 +2838,7 @@ export function extractAmidahKedushaFoldout(hebrew: string, english: string): Am
     kedushaEnglish: kedEn && kedEn.length > 0 ? kedEn : null,
   };
 }
+
 
 /** Modim deRabbanan (מודים אנחנו לך … ברוך אל ההודאות) split out for a collapsible row in the reader. */
 export type ModimDerabananFoldoutSplit = {
@@ -2423,8 +3062,8 @@ export function collapseUmatzmichYesuahToNeemanLehachayotMetimBreak(
 }
 
 /**
- * Collapse line/paragraph break between "…ובצדק ובמשפט" (end of Din / fourth blessing body) and
- * "ברוך אתה … מלך אוהב" (chatima). Sefaria often inserts an extra newline here.
+ * Collapse paragraph break before Din chatima.
+ * Covers Sefaria “…ובצדק ובמשפט” and Ashkenaz “…וברחמים וצדקנו במשפט”.
  */
 export function collapseRachamimTzedekMishpatToBarchuMelechOhevBreak(
   hebrew: string,
@@ -2433,8 +3072,19 @@ export function collapseRachamimTzedekMishpatToBarchuMelechOhevBreak(
   const nik = '[\\u0591-\\u05C7]*';
   const tag = '(?:<[^>]*>\\s*)*';
   const br = '(?:\\s|\\r?\\n|<br\\s*\\/?>)+';
+  // either “וצדקנו בצדק ובמשפט” or “וברחמים וצדקנו במשפט” (this pack)
+  const bodyEnd =
+    `(?:` +
+    `ו${nik}ב${nik}ר${nik}ח${nik}מ${nik}י${nik}ם${nik}\\s+ו${nik}צ${nik}ד${nik}ק${nik}נ${nik}ו${nik}\\s+ב${nik}מ${nik}ש${nik}פ${nik}ט` +
+    `|` +
+    `ו${nik}צ${nik}ד${nik}ק${nik}נ${nik}ו${nik}\\s+ב${nik}צ${nik}ד${nik}ק${nik}\\s+ו${nik}ב${nik}מ${nik}ש${nik}פ${nik}ט` +
+    `|` +
+    `ו${nik}ב${nik}ר${nik}ח${nik}מ${nik}י${nik}ם${nik}\\s+ו${nik}צ${nik}ד${nik}ק${nik}נ${nik}ו${nik}\\s+ב${nik}צ${nik}ד${nik}ק${nik}\\s+ו${nik}ב${nik}מ${nik}ש${nik}פ${nik}ט` +
+    `)`;
+  const chatima =
+    `ב${nik}ר${nik}ו${nik}ך${nik}\\s+א${nik}ת${nik}ה${nik}\\s+י${nik}ה${nik}ו${nik}ה${nik}\\s+מ${nik}ל${nik}ך${nik}\\s+א${nik}ה${nik}ב`;
   const hebRe = new RegExp(
-    `(ו${nik}ב${nik}ר${nik}ח${nik}מ${nik}י${nik}ם${nik}\\s+ו${nik}צ${nik}ד${nik}ק${nik}נ${nik}ו${nik}\\s+ב${nik}צ${nik}ד${nik}ק${nik}\\s+ו${nik}ב${nik}מ${nik}ש${nik}פ${nik}ט)(\\s*[:׃])?${tag}\\s*${br}\\s*${tag}(ב${nik}ר${nik}ו${nik}ך${nik}\\s+א${nik}ת${nik}ה${nik}\\s+י${nik}ה${nik}ו${nik}ה${nik}\\s+מ${nik}ל${nik}ך${nik}\\s+א${nik}ה${nik}ב)`,
+    `(${bodyEnd})(\\s*[:׃])?${tag}\\s*${br}\\s*${tag}(${chatima})`,
     'gu'
   );
   const hebOut = hebrew.replace(hebRe, (_m, g1: string, g2: string | undefined, g3: string) =>
@@ -2690,20 +3340,36 @@ function collapseGevurosPhraseLineBreaks(hebrew: string): string {
     ),
     '$1 $2'
   );
+  // Also join להושיע: → מכלכל when summer silence left no middle phrase
+  out = out.replace(
+    new RegExp(
+      `(ל${nik}ה${nik}ו${nik}ש${nik}י${nik}ע${nik})\\s*[:׃]\\s*(מ${nik}כ${nik}ל${nik}כ${nik}ל)`,
+      'gu'
+    ),
+    '$1: $2'
+  );
   return out;
 }
 
 /**
  * Gevuros (2nd bracha): Sefaria often prints both summer (מוריד הטל) and winter (משיב הרוח ומוריד הגשם)
- * with labels בקיץ:/בחורף:. Keep only the phrase for the current season (JewishCalendarService.isMashivHaruach)
- * and drop the labels. English: "In summer:" / "In winter:" when both appear.
+ * with labels בקיץ:/בחורף:.
+ *
+ * - Winter (Mashiv Haruach season): keep משיב הרוח ומוריד הגשם only.
+ * - Summer, classic Nusach Ashkenaz: silence (drop both phrases and labels). Morid HaTal is
+ *   Sfard / some Israeli minhagim — same as SiddurService.getGevurosInsertion (sfard-gated).
+ * - Summer with `sayMoridHatalInSummer: true`: keep מוריד הטל only.
+ *
+ * English: same summer/winter dual block handling.
  */
 export function applyGevurosSeasonalMoridOrMashiv(
   hebrew: string,
   english: string,
-  date: Date = new Date()
+  date: Date = new Date(),
+  options?: { sayMoridHatalInSummer?: boolean }
 ): { hebrew: string; english: string } {
   const winter = JewishCalendarService.isMashivHaruach(date);
+  const sayTalSummer = options?.sayMoridHatalInSummer === true;
   const nik = '[\\u0591-\\u05C7]*';
   const tag = '(?:<[^>]*>\\s*)*';
   const lblColon = '\\s*[:׃]'; // ASCII colon or Hebrew sof pasuq (some siddur editions)
@@ -2714,20 +3380,54 @@ export function applyGevurosSeasonalMoridOrMashiv(
   // קיץ/חורף labels may use final or non-final tsadi/pe (צ/ץ, פ/ף)
   // Final word is הגשם / הגשם with sofit ם
   const hebRe = new RegExp(
-    `${tag}ב${nik}ק${nik}י${nik}[ץצ]${nik}${lblColon}${tag}\\s*(מ${nik}ו${nik}ר${nik}י${nik}ד(?:${tag}|\\s|־)*ה${nik}ט${nik}ל)(?:${tag}|\\s)*(ב${nik}ח${nik}ו?${nik}ר${nik}[ףפ])${tag}${lblColon}${tag}\\s*(מ${nik}ש${nik}י${nik}ב(?:${tag}|\\s)*ה${nik}ר${nik}ו${nik}ח${nik}(?:${tag}|\\s)*ו${nik}מ${nik}ו${nik}ר${nik}י${nik}ד(?:${tag}|\\s)*ה${nik}ג${nik}ש${nik}[מם]${nik})`,
+    `${tag}ב${nik}ק${nik}י${nik}[ץצ]${nik}${lblColon}${tag}\\s*(מ${nik}ו${nik}ר${nik}י${nik}ד(?:${tag}|\\s|־)*ה${nik}ט${nik}ל${nik})\\s*[:׃]?` +
+      `(?:${tag}|\\s)*(ב${nik}ח${nik}ו?${nik}ר${nik}[ףפ])${tag}${lblColon}${tag}\\s*` +
+      `(מ${nik}ש${nik}י${nik}ב(?:${tag}|\\s)*ה${nik}ר${nik}ו${nik}ח${nik}(?:${tag}|\\s)*ו${nik}מ${nik}ו${nik}ר${nik}י${nik}ד(?:${tag}|\\s)*ה${nik}ג${nik}ש${nik}[מם]${nik})\\s*[:׃]?`,
     'gu'
   );
+  const pickGevurosPhrase = (summerPhrase: string, winterPhrase: string): string => {
+    if (winter) return winterPhrase.trim();
+    if (sayTalSummer) return summerPhrase.trim();
+    return ''; // Ashkenaz summer silence
+  };
   let hebOut = hebNorm.replace(hebRe, (_m, summerPhrase: string, _bhLabel: string, winterPhrase: string) =>
-    (winter ? winterPhrase : summerPhrase).trim()
+    pickGevurosPhrase(summerPhrase, winterPhrase)
   );
+
+  // Residual sweep: if summer Ashkenaz still has a lone מוריד הטל (labels already stripped).
+  if (!winter && !sayTalSummer) {
+    hebOut = hebOut.replace(
+      new RegExp(
+        `(?:ב${nik}ק${nik}י${nik}[ץצ]${nik}${lblColon}\\s*)?מ${nik}ו${nik}ר${nik}י${nik}ד(?:${tag}|\\s|־)*ה${nik}ט${nik}ל${nik}\\s*[:׃]?`,
+        'gu'
+      ),
+      ''
+    );
+    // Drop a remaining winter-only label if summer silence left it hanging (rare partial match).
+    hebOut = hebOut.replace(
+      new RegExp(`ב${nik}ח${nik}ו?${nik}ר${nik}[ףפ]${nik}${lblColon}\\s*`, 'gu'),
+      ''
+    );
+    hebOut = hebOut.replace(new RegExp(`ב${nik}ק${nik}י${nik}[ץצ]${nik}${lblColon}\\s*`, 'gu'), '');
+  }
+
   hebOut = collapseGevurosPhraseLineBreaks(hebOut);
+  hebOut = hebOut.replace(/[ \t]{2,}/g, ' ').replace(/\n{3,}/g, '\n\n');
 
   let engOut = english;
   const engRe =
     /\bIn\s+summer\s*:\s*([\s\S]*?)\s+In\s+winter\s*:\s*([\s\S]*?)(?=\n\n[^\n]|$|Who\s+restores)/i;
-  engOut = english.replace(engRe, (_all, summerEn: string, winterEn: string) =>
-    (winter ? winterEn : summerEn).trim().replace(/\n{3,}/g, '\n\n')
-  );
+  engOut = english.replace(engRe, (_all, summerEn: string, winterEn: string) => {
+    if (winter) return winterEn.trim().replace(/\n{3,}/g, '\n\n');
+    if (sayTalSummer) return summerEn.trim().replace(/\n{3,}/g, '\n\n');
+    return '';
+  });
+  if (!winter && !sayTalSummer) {
+    engOut = engOut
+      .replace(/\bHe causes the dew to descend\.?\s*/gi, '')
+      .replace(/\bIn\s+summer\s*:\s*/gi, '')
+      .replace(/\bIn\s+winter\s*:\s*/gi, '');
+  }
 
   return { hebrew: hebOut, english: engOut || english };
 }
@@ -2858,4 +3558,134 @@ export function applyBirkasHashanimSeasonalVtenBrachaOrTalUmatar(
   hebOut = collapseBirkasHashanimVtenParagraphGaps(hebOut);
 
   return { hebrew: hebOut, english: engOut || english };
+}
+
+/**
+ * Strip bare Amidah bracha title lines (אבות / גבורות / …) even when packs use
+ * single `\n` instead of paragraph breaks (Sfard raw often does this).
+ */
+export function stripAmidahBrachaTitleLines(
+  hebrew: string,
+  english: string
+): { hebrew: string; english: string } {
+  const titlesSet = new Set(AMIDAH_BRACHA_TITLES);
+  const normalize = (s: string) =>
+    stripNikkud(stripHtml(s)).replace(/[\s:.\-]+$/g, '').trim();
+  const out = hebrew
+    .split('\n')
+    .filter((line) => {
+      const t = line.trim();
+      if (!t) return true;
+      return !titlesSet.has(normalize(t));
+    })
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return { hebrew: out, english };
+}
+
+/** Starts of weekday Amidah brachot (denikkud) — used to restore `\n\n` between them. */
+const AMIDAH_NEXT_BRACHA_STARTS = [
+  'אתה גבור',
+  'אתה קדוש',
+  'אתה חונן',
+  'השיבנו',
+  'סלח לנו',
+  'ראה נא',
+  'רפאנו',
+  'ברך עלינו',
+  'תקע בשופר',
+  'השיבה שופטינו',
+  'ולמלשינים',
+  'על הצדיקים',
+  'ולירושלים',
+  'את צמח',
+  'שמע קולנו',
+  'רצה',
+  'מודים',
+  'שים שלום',
+  'שלום רב',
+  'יעלה ויבא',
+  'יעלה ויבוא',
+  'ועל הנסים',
+  'על הנסים',
+  'עננו',
+  'נחם',
+] as const;
+
+/**
+ * Reader treats `\n\n` as paragraph spacing. Sfard (and some Ashkenaz) packs join
+ * brachot with a single `\n`. Upgrade those boundaries so each bracha groups cleanly
+ * — does not add/remove liturgy, only spacing.
+ */
+export function ensureAmidahBrachaParagraphBreaks(
+  hebrew: string,
+  english: string
+): { hebrew: string; english: string } {
+  if (!hebrew.trim()) return { hebrew, english };
+  const { flat, orig } = (() => {
+    let flat = '';
+    const orig: number[] = [];
+    for (let i = 0; i < hebrew.length; i++) {
+      if (/[\u0591-\u05C7]/.test(hebrew[i])) continue;
+      flat += hebrew[i];
+      orig.push(i);
+    }
+    return { flat, orig };
+  })();
+
+  const insertAt = new Set<number>();
+  for (const start of AMIDAH_NEXT_BRACHA_STARTS) {
+    let pos = 0;
+    while (true) {
+      const i = flat.indexOf(start, pos);
+      if (i === -1) break;
+      // Look back over whitespace for a single newline (not already paragraph)
+      let j = i - 1;
+      while (j >= 0 && (flat[j] === ' ' || flat[j] === '\t' || flat[j] === '\r')) j--;
+      if (j >= 0 && flat[j] === '\n') {
+        const prev = j - 1;
+        if (prev < 0 || flat[prev] !== '\n') {
+          // Insert an extra \n just before this bracha start (original index)
+          insertAt.add(orig[i] ?? i);
+        }
+      }
+      pos = i + start.length;
+    }
+  }
+
+  if (insertAt.size === 0) {
+    return { hebrew: hebrew.replace(/\n{3,}/g, '\n\n'), english };
+  }
+  const points = [...insertAt].sort((a, b) => a - b);
+  let out = '';
+  let cursor = 0;
+  for (const p of points) {
+    out += hebrew.slice(cursor, p) + '\n';
+    cursor = p;
+  }
+  out += hebrew.slice(cursor);
+  return { hebrew: out.replace(/\n{3,}/g, '\n\n').trim(), english };
+}
+
+/**
+ * Soft layout helper for non-Amidah sections (Sfard continuous blobs especially):
+ * 1) `\n\n` before each `ברוך אתה` that only had a single newline
+ * 2) `\n\n` after a line-ending colon/`׃` when the next line continues (matches how
+ *    Ashkenaz packs already use paragraph gaps between Sefaria leaves)
+ *
+ * Does not add or remove liturgy — spacing only.
+ */
+export function ensureBaruchAtahParagraphBreaks(
+  hebrew: string,
+  english: string
+): { hebrew: string; english: string } {
+  const nik = '[\\u0591-\\u05C7]*';
+  const baruch = `ב${nik}ר${nik}ו${nik}ך${nik}\\s+א${nik}ת${nik}ה`;
+  const out = hebrew
+    .replace(new RegExp(`(?<!\\n)\\n(?!\\n)(?=${baruch})`, 'gu'), '\n\n')
+    .replace(/([:׃])\r?\n(?!\n)(?=\S)/g, '$1\n\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  return { hebrew: out, english };
 }

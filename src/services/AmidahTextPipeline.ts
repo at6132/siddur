@@ -1,23 +1,12 @@
 /**
- * Weekday Amidah (Shacharit / Mincha / Maariv) — **single ordered pipeline** from Sefaria raw text
- * to reader-ready Hebrew/English (before `extractAmidahKedushaFoldout` in `SefariaService`).
+ * Weekday Amidah — one ordered client-side pipeline (raw → reader text).
  *
- * ## How to add, remove, or calendar-gate a change
- * 1. Implement `{ hebrew, english } → { hebrew, english }` in `MinchaTextRules.ts` (or a small helper).
- * 2. Add one entry to `WEEKDAY_AMIDAH_PIPELINE_STEPS` with a stable `id` and a one-line `description`.
- * 3. For “only on / except on” days, use `ctx.date` (and optional `ctx.israelForRainInsertion`) with
- *    `JewishCalendarService` inside your `apply` — do not call `new Date()` inside scattered rules.
- * 4. Keep order intentional: broad paragraph drops → inline strips → collapses → seasonal → refuah clause strip.
- *
- * ## Caller
- * `SefariaService.fetchSiddurSection` for `amidah` | `mincha_amidah` | `maariv_amidah` only.
- *
- * ## Other Shacharit / siddur sections
- * Non-Amidah Shacharit string cuts (e.g. concluding Aleinu / Kaddish) live in `ShacharitSectionPipelines.ts`.
- *
- * **English:** Same shape as Shacharit pipelines — `english` is carried for compatibility; Hebrew is what we maintain.
+ * Add/change a rule: implement in MinchaTextRules → append a step below.
+ * Nusach differences come from `ctx.policy` (ashkenaz/sefard pack), not forked pipelines.
  */
 
+import type { MinchaNusachPolicy } from '../content/siddur/mincha/packTypes';
+import { MINCHA_ASHKENAZ_POLICY } from '../content/siddur/mincha/ashkenaz/policy';
 import {
   normalizeSefariaAmidahSource,
   stripEtSemachVeguParenthetical,
@@ -42,6 +31,7 @@ import {
   collapseRachamimTzedekMishpatToBarchuMelechOhevBreak,
   applyAseretThirdBlessingHaMelechHaKadosh,
   applyAmidahAneinuPublicFast,
+  applyAmidahPeaceBrachaByPublicFast,
   removeBirkatKohanimTaanitTziburInsertion,
   removeRefuahAruchaUmarpeClause,
   applyGevurosSeasonalMoridOrMashiv,
@@ -50,6 +40,8 @@ import {
   collapseBarchuBonehYerushalayimToMeheraTachinBreak,
   collapseChanenuShomeaTefilaBreak,
   collapseBeRovOzShalomToBarchuBreak,
+  stripAmidahBrachaTitleLines,
+  ensureAmidahBrachaParagraphBreaks,
 } from './MinchaTextRules';
 
 export type WeekdayAmidahPipelineContext = {
@@ -57,12 +49,18 @@ export type WeekdayAmidahPipelineContext = {
   date: Date;
   /**
    * When true, ותן טל ומטר follows Israel (7 Cheshvan); when false, diaspora (Dec 4/5).
-   * Inferred from saved location in `SefariaService` (rough bbox), not a separate setting.
+   * Inferred from saved location (rough bbox), not a separate setting.
    */
   israelForRainInsertion?: boolean;
   /** Which Amidah fetch (נחם is Mincha on Tisha B'Av only). */
   amidahSlot?: 'shacharit' | 'mincha' | 'maariv';
+  /** Nusach flags (tal, peace bracha, …). Defaults to Ashkenaz. */
+  policy?: MinchaNusachPolicy;
 };
+
+function policyOf(ctx: WeekdayAmidahPipelineContext): MinchaNusachPolicy {
+  return ctx.policy ?? MINCHA_ASHKENAZ_POLICY;
+}
 
 export type WeekdayAmidahPipelineStep = {
   id: string;
@@ -200,8 +198,19 @@ export const WEEKDAY_AMIDAH_PIPELINE_STEPS: readonly WeekdayAmidahPipelineStep[]
   },
   {
     id: 'aneinu_public_fast',
-    description: 'Remove עננו block except fast days; on fast days strip בתענית ציבור… instruction only',
-    apply: (h, e, ctx) => applyAmidahAneinuPublicFast(h, e, ctx.date),
+    description:
+      'Remove עננו except public-fast Shacharit/Mincha; never keep at Maariv; on fast days strip בתענית ציבור… instruction only',
+    apply: (h, e, ctx) => applyAmidahAneinuPublicFast(h, e, ctx.date, ctx.amidahSlot ?? 'mincha'),
+  },
+  {
+    id: 'peace_bracha_fast_mincha',
+    description:
+      'Mincha peace bracha: year-round שלום רב; public fast → שים שלום when pack policy says so',
+    apply: (h, e, ctx) => {
+      const p = policyOf(ctx);
+      if (!p.minchaPeaceBrachaSwapOnPublicFast) return { hebrew: h, english: e };
+      return applyAmidahPeaceBrachaByPublicFast(h, e, ctx.date, ctx.amidahSlot ?? 'mincha');
+    },
   },
   {
     id: 'birkat_kohanim_taanit_tzibur_note',
@@ -224,7 +233,7 @@ export const WEEKDAY_AMIDAH_PIPELINE_STEPS: readonly WeekdayAmidahPipelineStep[]
   {
     id: 'collapse_chanenu_shomea_tefila',
     description:
-      'Collapse break between חננו ועננו ושמע תפילתנו and כי אתה שומע תפילת (Shomea Tefillah)',
+      'Collapse break after שמע קולנו: חננו ועננו… / ריקם אל תשיבנו → כי אתה שומע… (or עננו on fast)',
     apply: (h, e) => collapseChanenuShomeaTefilaBreak(h, e),
   },
   {
@@ -240,8 +249,11 @@ export const WEEKDAY_AMIDAH_PIPELINE_STEPS: readonly WeekdayAmidahPipelineStep[]
   },
   {
     id: 'gevuros_seasonal_morid',
-    description: 'Gevuros: seasonal מוריד הטל / משיב הרוח and line joins by calendar',
-    apply: (h, e, ctx) => applyGevurosSeasonalMoridOrMashiv(h, e, ctx.date),
+    description: 'Gevuros: winter = משיב הרוח; summer = silence or מוריד הטל per pack policy',
+    apply: (h, e, ctx) =>
+      applyGevurosSeasonalMoridOrMashiv(h, e, ctx.date, {
+        sayMoridHatalInSummer: policyOf(ctx).sayMoridHatalInSummer,
+      }),
   },
   {
     id: 'birkas_hashanim_seasonal_vten',
@@ -255,11 +267,26 @@ export const WEEKDAY_AMIDAH_PIPELINE_STEPS: readonly WeekdayAmidahPipelineStep[]
         ctx.israelForRainInsertion ?? false
       ),
   },
+  {
+    id: 'strip_amidah_bracha_title_lines',
+    description: 'Drop bare bracha title lines (אבות / גבורות / …) left by Sfard single-\\n packs',
+    apply: (h, e) => stripAmidahBrachaTitleLines(h, e),
+  },
+  {
+    id: 'ensure_amidah_bracha_paragraph_breaks',
+    description:
+      'Restore \\n\\n between Amidah brachot when pack only used a single newline (reader paragraph spacing)',
+    apply: (h, e) => ensureAmidahBrachaParagraphBreaks(h, e),
+  },
 ];
 
 /** Stable ids for tests / logging */
 export const WEEKDAY_AMIDAH_PIPELINE_STEP_IDS: readonly string[] = WEEKDAY_AMIDAH_PIPELINE_STEPS.map((s) => s.id);
 
+/**
+ * One ordered pass: clean Sefaria/bundled raw → reader-ready Hebrew (and english carried for compat).
+ * All steps always run — no split cosmetic/seasonal phases.
+ */
 export function applyWeekdayAmidahTextPipeline(
   hebrew: string,
   english: string,

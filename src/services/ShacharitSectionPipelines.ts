@@ -163,6 +163,36 @@ export const SHACHARIT_SIDDUR_PIPELINE_STEPS: Partial<
       apply: (h, e) => removeShacharitPreparatoryPreTefillahZoharBundle(h, e),
     },
   ],
+  pesukei_dzimra: [
+    {
+      id: 'collapse_paragraph_breaks_to_single_newline_within_units',
+      description: 'Keep leaf blocks, collapse leftover triple breaks',
+      apply: (h, e) => ({
+        hebrew: h.replace(/\n{3,}/g, '\n\n').trim(),
+        english: e.replace(/\n{3,}/g, '\n\n').trim(),
+      }),
+    },
+  ],
+  yotzer_or: [
+    {
+      id: 'collapse_extra_breaks',
+      description: 'Normalize extra blank lines in Birkot Krias Shema',
+      apply: (h, e) => ({
+        hebrew: h.replace(/\n{3,}/g, '\n\n').trim(),
+        english: e.replace(/\n{3,}/g, '\n\n').trim(),
+      }),
+    },
+  ],
+  shema: [
+    {
+      id: 'collapse_extra_breaks',
+      description: 'Normalize extra blank lines in Shema',
+      apply: (h, e) => ({
+        hebrew: h.replace(/\n{3,}/g, '\n\n').trim(),
+        english: e.replace(/\n{3,}/g, '\n\n').trim(),
+      }),
+    },
+  ],
   concluding: [
     {
       id: 'strip_full_kaddish_before_aleinu',

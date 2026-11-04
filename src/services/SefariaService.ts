@@ -33,9 +33,12 @@ import {
   trimAlHanissimInsertionByCalendar,
   splitMinchaAmidahBeforeStandaloneAleinu,
   extractBirchosHashacharExpansionFoldout,
+  markSefataiParagraphSmall,
 } from './MinchaTextRules';
 import { applyWeekdayAmidahTextPipeline } from './AmidahTextPipeline';
 import { applyShacharitSiddurSectionPipeline } from './ShacharitSectionPipelines';
+import { getMinchaNusachPolicy } from '../content/siddur/mincha/resolvePack';
+import type { MinchaNusachId } from '../content/siddur/mincha/packTypes';
 
 const SEFARIA_API_BASE = 'https://www.sefaria.org/api';
 const SEFARIA_V3_TEXTS = 'https://www.sefaria.org/api/v3/texts';
@@ -69,6 +72,13 @@ export interface TehillimChapterData {
 export interface PrayerTextSegment {
   text: string;
   italic: boolean;
+  /**
+   * Day-only siddur insert (e.g. Yaaleh, Al HaNissim, Aneinu) — soft highlight box in the reader.
+   * Not used for year-round seasonal *swaps* (משיב / מוריד הטל).
+   */
+  seasonalHighlight?: boolean;
+  /** Short Hebrew/English label shown above a seasonal highlight when present. */
+  seasonalLabel?: string;
 }
 
 export interface PrayerTextData {
@@ -332,6 +342,9 @@ export class SefariaService {
     // Maariv
     maariv_shema: 'Siddur Ashkenaz, Weekday, Maariv, The Shema',
     maariv_amidah: 'Siddur Ashkenaz, Weekday, Maariv, Amidah',
+    maariv_aleinu: 'Siddur Ashkenaz, Weekday, Maariv, Alenu',
+    maariv_motzaei: "Siddur Ashkenaz, Weekday, Maariv, Additions for Motza'ei Shabbat",
+    maariv_omer: 'Siddur Ashkenaz, Weekday, Maariv, Sefirat HaOmer',
     // Brachos / standalone
     netilas_yadayim: 'Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Netilat Yadayim',
     asher_yatzar: 'Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Asher Yatzar',
@@ -340,7 +353,7 @@ export class SefariaService {
     tefilas_haderech: 'Siddur Ashkenaz, Berachot, Tefillat HaDerech',
     birchas_hamazon: 'Siddur Ashkenaz, Berachot, Birkat HaMazon',
     al_hamichya: 'Siddur Ashkenaz, Berachot, Birkat Hanehenin, Eating, Brachot Achronot, Al Hamichyah',
-    krias_shema_al_hamita: 'Siddur Sefard, Bedtime Shema',
+    krias_shema_al_hamita: "Siddur Ashkenaz, Weekday, Maariv, Keri'at Shema al Hamita",
     kabbalas_shabbos: 'Siddur Ashkenaz, Kabbalat Shabbat',
     lecha_dodi: 'Siddur Ashkenaz, Kabbalat Shabbat, Lekha Dodi',
     kiddush_friday: 'Siddur Ashkenaz, Kiddush, Friday Night',
@@ -369,14 +382,17 @@ export class SefariaService {
     // Maariv
     maariv_shema: 'Siddur Sefard, Weekday Maariv, The Shema',
     maariv_amidah: 'Siddur Sefard, Weekday Maariv, Amidah',
-    // Brachos / standalone – Siddur Sefard lacks these; use Ashkenaz refs (same text)
+    maariv_aleinu: 'Siddur Sefard, Weekday Shacharit, Aleinu',
+    maariv_motzaei: 'Siddur Sefard, Weekday Maariv, Motzaei Shabbat',
+    maariv_omer: 'Siddur Sefard, Weekday Maariv, Sefirat HaOmer',
+    // Brachos / standalone — Sefard-specific where the tree has them; Ashkenaz leaves otherwise
     netilas_yadayim: 'Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Netilat Yadayim',
     asher_yatzar: 'Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Asher Yatzar',
     birchos_hatorah: 'Siddur Ashkenaz, Weekday, Shacharit, Torah Reading, Reading from Sefer, Birkat HaTorah',
     modeh_ani: 'Siddur Sefard, Upon Arising, Modeh Ani',
-    tefilas_haderech: 'Siddur Sefard, Berachot, Tefillat HaDerech',
-    birchas_hamazon: 'Siddur Ashkenaz, Berachot, Birkat HaMazon',
-    al_hamichya: 'Siddur Ashkenaz, Berachot, Birkat Hanehenin, Eating, Brachot Achronot, Al Hamichyah',
+    tefilas_haderech: "Siddur Sefard, Blessings, Traveler's Prayer",
+    birchas_hamazon: 'Siddur Sefard, Birchat HaMazon, Birchat HaMazon',
+    al_hamichya: "Siddur Sefard, Blessings, Me'ein Shalosh",
     krias_shema_al_hamita: 'Siddur Sefard, Bedtime Shema',
     kabbalas_shabbos: 'Siddur Sefard, Kabbalat Shabbat',
     lecha_dodi: 'Siddur Sefard, Kabbalat Shabbat, Lekha Dodi',
@@ -411,6 +427,9 @@ export class SefariaService {
     maariv: [
       { key: 'maariv_shema', title: 'The Shema', hebrewTitle: 'קריאת שמע' },
       { key: 'maariv_amidah', title: 'Amidah', hebrewTitle: 'עמידה' },
+      { key: 'maariv_motzaei', title: "Motza'ei Shabbat", hebrewTitle: 'מוצאי שבת' },
+      { key: 'maariv_omer', title: 'Sefirat HaOmer', hebrewTitle: 'ספירת העומר' },
+      { key: 'maariv_aleinu', title: 'Aleinu', hebrewTitle: 'עלינו' },
     ],
   };
 
@@ -526,6 +545,7 @@ export class SefariaService {
           date: amidahDate,
           israelForRainInsertion: israelForRain,
           amidahSlot,
+          policy: getMinchaNusachPolicy(nusach as MinchaNusachId),
         });
         rawHebrewStr = piped.hebrew;
         rawEnglishStr = piped.english;
@@ -1094,7 +1114,7 @@ export class SefariaService {
         english = finalEnglishSegments.map((s) => s.text).join('').replace(/\n\s*\n/g, '\n\n').trim();
       }
 
-      // Amidah: render "כי שם ה' אקרא... אדוני שפתי תפתח" in smaller text
+      // Amidah: render frame verses (כי שם / אדני שפתי, first יהיו לרצון, closing יהי רצון שיבנה) in smaller grey text
       let hebrewBeforeKedushaFoldout: string | undefined;
       let englishBeforeKedushaFoldout: string | undefined;
       let hebrewBeforeKedushaFoldoutSegments: PrayerTextSegment[] | undefined;
@@ -1105,19 +1125,19 @@ export class SefariaService {
       let englishBeforeModimDerabananFoldoutSegments: PrayerTextSegment[] | undefined;
       if (sectionKey === 'amidah' || sectionKey === 'maariv_amidah' || sectionKey === 'mincha_amidah') {
         if (finalHebrewBeforeKedushaSegments?.length) {
-          finalHebrewBeforeKedushaSegments = this.markSefataiParagraphSmall(finalHebrewBeforeKedushaSegments);
+          finalHebrewBeforeKedushaSegments = markSefataiParagraphSmall(finalHebrewBeforeKedushaSegments);
         }
         if (finalEnglishBeforeKedushaSegments?.length) {
-          finalEnglishBeforeKedushaSegments = this.markSefataiParagraphSmall(finalEnglishBeforeKedushaSegments);
+          finalEnglishBeforeKedushaSegments = markSefataiParagraphSmall(finalEnglishBeforeKedushaSegments);
         }
         if (finalHebrewBeforeModimSegments?.length) {
-          finalHebrewBeforeModimSegments = this.markSefataiParagraphSmall(finalHebrewBeforeModimSegments);
+          finalHebrewBeforeModimSegments = markSefataiParagraphSmall(finalHebrewBeforeModimSegments);
         }
         if (finalEnglishBeforeModimSegments?.length) {
-          finalEnglishBeforeModimSegments = this.markSefataiParagraphSmall(finalEnglishBeforeModimSegments);
+          finalEnglishBeforeModimSegments = markSefataiParagraphSmall(finalEnglishBeforeModimSegments);
         }
-        finalHebrewSegments = this.markSefataiParagraphSmall(finalHebrewSegments);
-        finalEnglishSegments = this.markSefataiParagraphSmall(finalEnglishSegments);
+        finalHebrewSegments = markSefataiParagraphSmall(finalHebrewSegments);
+        finalEnglishSegments = markSefataiParagraphSmall(finalEnglishSegments);
         const collapseParaBreaks = (s: string) =>
           s.replace(/\n\s*\n/g, '\n\n').replace(/\n{3,}/g, '\n\n').trim();
         hebrew = collapseParaBreaks(finalHebrewSegments.map((s) => s.text).join(''));
@@ -1417,58 +1437,6 @@ export class SefariaService {
         .replace(/\n\s*\n\s*/g, '\n\n')
         .trim()
     );
-  }
-
-  /**
-   * Mark the "כי שם ה' אקרא... אדוני שפתי תפתח" paragraph as smaller (italic) in Amidah segments.
-   * Works for both Hebrew and English (detects by content).
-   */
-  private static markSefataiParagraphSmall(segs: PrayerTextSegment[]): PrayerTextSegment[] {
-    const stripNikkud = (s: string) => s.replace(/[\u0591-\u05C7]/g, '');
-    const full = segs.map((s) => s.text).join('');
-    const stripped = stripNikkud(full);
-    let startStripped: number;
-    let endStripped: number;
-    const isLikelyEnglish = !/[\u0590-\u05FF]/.test(stripped.slice(0, Math.min(200, stripped.length)));
-    if (isLikelyEnglish) {
-      startStripped = stripped.search(/Lord,?\s*open\s+my\s+lips|Open\s+my\s+lips/i);
-      if (startStripped === -1) startStripped = stripped.search(/When I call out the name/i);
-      if (startStripped === -1) return segs;
-      const praiseMatch = stripped.slice(startStripped).match(/Your\s+praise\.?/i);
-      endStripped = praiseMatch
-        ? startStripped + (stripped.slice(startStripped).indexOf(praiseMatch[0]) + praiseMatch[0].length)
-        : stripped.length;
-    } else {
-      const startMarker = 'כי שם';
-      const endMarker = 'תהלתך';
-      startStripped = stripped.indexOf(startMarker);
-      if (startStripped === -1) startStripped = stripped.indexOf('שפתי תפתח');
-      if (startStripped === -1) return segs;
-      endStripped = stripped.indexOf(endMarker, startStripped);
-      if (endStripped === -1) return segs;
-      endStripped += endMarker.length;
-      while (endStripped < stripped.length && /[:\s\u0591-\u05C7]/.test(stripped[endStripped])) endStripped++;
-    }
-    const strippedToOriginal: number[] = [];
-    for (let i = 0; i < full.length; i++) {
-      if (!/[\u0591-\u05C7]/.test(full[i])) strippedToOriginal.push(i);
-    }
-    const startOriginal = strippedToOriginal[startStripped] ?? startStripped;
-    const endOriginal =
-      endStripped > 0 && endStripped <= strippedToOriginal.length
-        ? (strippedToOriginal[endStripped - 1] ?? endStripped - 1) + 1
-        : full.length;
-    const before = full.slice(0, startOriginal);
-    let phrase = full.slice(startOriginal, endOriginal);
-    let after = full.slice(endOriginal);
-    // Avoid huge vertical gap: trim extra newlines/spaces between "תהלתך:" and "בָּרוּךְ אַתָּה..."
-    phrase = phrase.replace(/[\n\r\t\u0020]+$/g, '');
-    after = after.replace(/^[\n\r\t\u0020]+/g, '');
-    const out: PrayerTextSegment[] = [];
-    if (before.trim()) out.push({ text: before, italic: false });
-    if (phrase.trim()) out.push({ text: phrase, italic: true });
-    if (after.trim()) out.push({ text: after, italic: false });
-    return out.length > 0 ? out : segs;
   }
 
   /**
