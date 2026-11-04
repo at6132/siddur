@@ -73,15 +73,15 @@ Stack note: App uses **React Navigation** (`src/navigation/AppNavigator.tsx`), n
 
 | Route / id | Owning file | FEATURES coverage | Status |
 |------------|-------------|-------------------|--------|
-| HubOverview | `app/hub/HubOverviewScreen.tsx` | Stats, brachos, quick actions, coming-soon cards | todo |
-| DailyGoals | `app/hub/DailyGoalsScreen.tsx` | Morning–night goals | todo |
-| GoalsHistory | `app/hub/GoalsHistoryScreen.tsx` | Past completion | todo |
-| Gratitude | `app/hub/GratitudeScreen.tsx` | Journal + streak | todo |
-| AddGratitude | `app/hub/AddGratitudeScreen.tsx` | Add entry | todo |
-| Habits | `app/habits/HabitsScreen.tsx` | Habit check-off | todo |
-| Tzedakah | `app/tzedakah/TzedakahScreen.tsx` | History / totals | todo |
-| AddTzedakah | `app/tzedakah/AddTzedakahScreen.tsx` | Log gift | todo |
-| Omer | `app/omer/OmerScreen.tsx` | Sefiras HaOmer + liturgy | todo |
+| HubOverview | `app/hub/HubOverviewScreen.tsx` | Stats, brachos, quick actions, coming-soon cards | done - `Screen` + grouped `Section`/`ListRow` stats, `Chip` time frames, brachos in a native page sheet; nav + loading unchanged |
+| DailyGoals | `app/hub/DailyGoalsScreen.tsx` | Morning–night goals | done - grouped goal list with spring check-off + selection/success haptics, `PracticeField`, quick-add `Chip`s; no emoji |
+| GoalsHistory | `app/hub/GoalsHistoryScreen.tsx` | Past completion | done - inset list of days, `Screen` empty state, day detail as native page sheet with Close |
+| Gratitude | `app/hub/GratitudeScreen.tsx` | Journal + streak | done - FAB replaced by header Add, entries in grouped `Section`, reminder row, loading/empty states |
+| AddGratitude | `app/hub/AddGratitudeScreen.tsx` | Add entry | done - `PracticeField` + `GlassButton` Save, inline error, notification haptics on save outcome |
+| Habits | `app/habits/HabitsScreen.tsx` | Habit check-off | done - blur cards and emoji removed; `GlassButton` mark-today with haptics, goals/recent days as grouped rows |
+| Tzedakah | `app/tzedakah/TzedakahScreen.tsx` | History / totals | done - large total, `Chip` period/sort, history `ListRow`s, FAB replaced by header Add, empty state |
+| AddTzedakah | `app/tzedakah/AddTzedakahScreen.tsx` | Log gift | done - `PracticeField` inputs, `GlassButton` Save, inline error, no hex fallbacks, save haptics |
+| Omer | `app/omer/OmerScreen.tsx` | Sefiras HaOmer + liturgy | done - glass card removed, Hebrew via token `readerStyle`, disclosure `ListRow`s, `GlassButton` count toggle with haptics; Omer logic unchanged |
 
 ## Calendar
 
