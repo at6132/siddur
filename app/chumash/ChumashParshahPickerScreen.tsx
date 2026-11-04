@@ -15,7 +15,7 @@ export const ChumashParshahPickerScreen: React.FC = () => {
   const { sefariaName } = (route.params || {}) as RouteParams;
 
   const book = CHUMASH_BOOKS.find((b) => b.sefariaName === sefariaName);
-  const parshiyot = (sefariaName && PARSHIYOT_BY_BOOK[sefariaName]) ?? [];
+  const parshiyot: ParshahOption[] = sefariaName ? PARSHIYOT_BY_BOOK[sefariaName] ?? [] : [];
 
   const openParshah = (p: ParshahOption) => {
     (navigation as any).navigate('ChumashReader', {

@@ -1,7 +1,7 @@
 /**
  * Gemara Reader – displays one daf (Talmud page) from Sefaria.
  * Params: { dafYomi?: true } for today's daf, or { tractate, daf, side: 'a'|'b' }.
- * Styled like SiddurReader (gradient, glass, readable text).
+ * Shared reader presentation lives in components/learning/ReaderParts.
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -10,25 +10,23 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  Platform,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../components/reader/ReaderChrome';
 import { ReaderToolbar, HEBREW_FONT_SIZES, HEBREW_LINE_HEIGHTS } from '../../components/reader/ReaderToolbar';
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
 import { useAutoscroll } from '../../components/reader/useAutoscroll';
-import { spacing, borderRadius } from '../../src/design/spacing';
+import { spacing } from '../../src/design/spacing';
 import { useTheme } from '../../src/design/theme';
 import {
   createReaderStyles,
   ReaderNavRow,
   ReaderLoading,
   ReaderMessage,
+  ReaderAction,
 } from '../../components/learning/ReaderParts';
 import { SefariaService, SefariaText } from '../../src/services/SefariaService';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
@@ -275,18 +273,15 @@ export const GemaraReaderScreen: React.FC = () => {
               {!params.dafYomi && (
                 <>
                   {nextSide && tractate && (
-                    <TouchableOpacity style={styles.nextAmud} onPress={openNextAmud}>
-                      <Text style={styles.nextAmudText}>Next: {tractate} {currentDaf}{nextSide} →</Text>
-                    </TouchableOpacity>
+                    <ReaderAction variant="outline" label={`Next: ${tractate} ${currentDaf}${nextSide}`} onPress={openNextAmud} icon="arrow-forward" />
                   )}
-                  <Text style={[styles.englishBlock, { marginTop: spacing.lg, fontSize: 12, color: theme.colors.text.tertiary }]}>
-                    Texts provided by Sefaria • sefaria.org
-                  </Text>
+                  <Text style={styles.attribution}>Texts provided by Sefaria • sefaria.org</Text>
                 </>
               )}
             </View>
             {params.dafYomi && dataB && (
-              <View style={[styles.card, { marginTop: spacing.lg }]}>
+              <View style={styles.card}>
+                <View style={styles.sectionDivider} />
                 <Text style={styles.amudSectionHeader}>דף ב – Amud Beis</Text>
                 {(() => {
                   const rawH = dataB.hebrew;
@@ -304,15 +299,11 @@ export const GemaraReaderScreen: React.FC = () => {
                     return clean ? <Text key={`b-e-${i}`} style={[styles.englishBlock, { fontSize: englishFontSize, lineHeight: englishLineHeight }]}>{clean}</Text> : null;
                   });
                 })()}
-                <Text style={[styles.englishBlock, { marginTop: spacing.lg, fontSize: 12, color: theme.colors.text.tertiary }]}>
-                  Texts provided by Sefaria • sefaria.org
-                </Text>
+                <Text style={styles.attribution}>Texts provided by Sefaria • sefaria.org</Text>
               </View>
             )}
             {params.dafYomi && !dataB && data && (
-              <Text style={[styles.englishBlock, { marginTop: spacing.lg, fontSize: 12, color: theme.colors.text.tertiary }]}>
-                Texts provided by Sefaria • sefaria.org
-              </Text>
+              <Text style={styles.attribution}>Texts provided by Sefaria • sefaria.org</Text>
             )}
           </>
         ) : null}

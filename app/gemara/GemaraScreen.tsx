@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Gemara – list of Talmud mesechtas + Daf Yomi button.
  * Presentation lives in components/learning/LearningParts.
  */

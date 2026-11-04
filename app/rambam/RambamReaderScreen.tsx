@@ -8,8 +8,7 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  TouchableOpacity,
+  ScrollView,
   Linking,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -27,6 +26,7 @@ import {
   ReaderNavRow,
   ReaderLoading,
   ReaderMessage,
+  ReaderAction,
 } from '../../components/learning/ReaderParts';
 import { SefariaService, SefariaText } from '../../src/services/SefariaService';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
@@ -144,17 +144,16 @@ export const RambamReaderScreen: React.FC = () => {
         {loading ? (
           <ReaderLoading label="Loading Mishneh Torah..." />
         ) : error ? (
-          <View style={styles.loadingContainer}>
-            <Text style={styles.errorText}>{error}</Text>
+          <ReaderMessage message={error}>
             {rambamInfo?.link && (
-              <TouchableOpacity
-                style={styles.linkButton}
+              <ReaderAction
+                variant="link"
+                label="Open in Sefaria"
+                icon="open-outline"
                 onPress={() => rambamInfo.link && Linking.openURL(rambamInfo.link)}
-              >
-                <Text style={styles.linkButtonText}>Open in Sefaria →</Text>
-              </TouchableOpacity>
+              />
             )}
-          </View>
+          </ReaderMessage>
         ) : data ? (
           <View style={styles.card}>
             {(() => {
@@ -175,12 +174,12 @@ export const RambamReaderScreen: React.FC = () => {
             })()}
             <Text style={styles.attribution}>Texts provided by Sefaria • sefaria.org</Text>
             {rambamInfo?.link && (
-              <TouchableOpacity
-                style={styles.linkButton}
+              <ReaderAction
+                variant="link"
+                label="Open in Sefaria"
+                icon="open-outline"
                 onPress={() => rambamInfo!.link && Linking.openURL(rambamInfo!.link)}
-              >
-                <Text style={styles.linkButtonText}>Open in Sefaria →</Text>
-              </TouchableOpacity>
+              />
             )}
           </View>
         ) : null}

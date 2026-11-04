@@ -8,8 +8,7 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
-  TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +25,8 @@ import {
   ReaderNavRow,
   ReaderLoading,
   ReaderMessage,
+  ReaderAction,
+  ReaderDoneBadge,
 } from '../../components/learning/ReaderParts';
 import { SefariaService, SefariaText } from '../../src/services/SefariaService';
 import { getShneyimMikraData } from '../../src/services/ShneyimMikraService';
@@ -198,18 +199,22 @@ export const ChumashReaderScreen: React.FC = () => {
             {canMarkComplete && (
               <>
                 {aliyahMarked ? (
-                  <View style={styles.markedComplete}>
-                    <Text style={styles.markedCompleteText}>✓ Aliyah {aliyah} marked complete</Text>
-                  </View>
+                  <ReaderDoneBadge label={`Aliyah ${aliyah} marked complete`} />
                 ) : (
-                  <TouchableOpacity style={styles.markCompleteButton} onPress={handleMarkComplete} activeOpacity={0.8}>
-                    <Text style={styles.markCompleteButtonText}>Mark Aliyah {aliyah} Complete</Text>
-                  </TouchableOpacity>
+                  <ReaderAction
+                    label={`Mark Aliyah ${aliyah} Complete`}
+                    onPress={handleMarkComplete}
+                    icon="checkmark-circle-outline"
+                    confirm
+                  />
                 )}
                 {nextAliyahRef && (
-                  <TouchableOpacity style={styles.nextAliyahButton} onPress={handleNextAliyah} activeOpacity={0.8}>
-                    <Text style={styles.nextAliyahButtonText}>Next Aliyah →</Text>
-                  </TouchableOpacity>
+                  <ReaderAction
+                    variant="outline"
+                    label="Next Aliyah"
+                    onPress={handleNextAliyah}
+                    icon="arrow-forward"
+                  />
                 )}
               </>
             )}
