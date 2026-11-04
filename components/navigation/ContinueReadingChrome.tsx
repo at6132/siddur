@@ -6,8 +6,8 @@ import {
   type LastPrayerSession,
 } from '../../src/storage/LastPrayerSession';
 
-/** Clears floating LiquidGlassTabBar (64 bar + 12 margin + gap). */
-const TAB_BAR_CLEARANCE = 88;
+/** Clears floating LiquidGlassTabBar (78 bar + bottom margin + gap). */
+const TAB_BAR_CLEARANCE = 110;
 
 function routeTreeHasSiddurReader(state: unknown): boolean {
   if (!state || typeof state !== 'object') return false;
