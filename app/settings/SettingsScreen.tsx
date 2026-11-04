@@ -20,7 +20,6 @@ import Constants from 'expo-constants';
 import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import * as Location from 'expo-location';
 import { FadeIn } from '../../components/animations/FadeIn';
 import { LiquidGlassSegmentedControl } from '../../components/navigation/LiquidGlassSegmentedControl';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,9 +27,8 @@ import { colors } from '../../src/design/colors';
 import { spacing, borderRadius, shadows } from '../../src/design/spacing';
 import { textStyles, fonts } from '../../src/design/typography';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
+import { LEGAL, mailtoSupport } from '../../src/legal/links';
 import { NotificationService } from '../../src/notifications/NotificationService';
-import { TehillimService } from '../../src/content/tehillim/TehillimService';
-import { SefariaService } from '../../src/services/SefariaService';
 import {
   UserPreferences,
   NotificationPreferences,
@@ -65,19 +63,36 @@ const GlassCard: React.FC<{
       shadowOpacity: theme.isDark ? 0.4 : 1,
       shadowRadius: 12,
       elevation: 6,
+      position: 'relative' as const,
     },
     blur: { overflow: 'hidden' as const },
     inner: {
       padding: spacing.lg,
-      backgroundColor: theme.isDark ? 'rgba(12,10,18,0.6)' : 'rgba(255,255,255,0.5)',
+      // Native BlurView is more transparent than web gradient — denser fill keeps grey hierarchy readable
+      backgroundColor: theme.isDark
+        ? Platform.OS === 'web'
+          ? 'rgba(12,10,18,0.6)'
+          : 'rgba(12,10,18,0.78)'
+        : Platform.OS === 'web'
+          ? 'rgba(255,255,255,0.5)'
+          : 'rgba(255,255,255,0.88)',
     },
   }), [theme]);
   return (
     <View style={[cardStyles.card, style]}>
       {Platform.OS !== 'web' ? (
-        <BlurView intensity={80} tint={theme.isDark ? 'dark' : 'light'} style={cardStyles.blur}>
-          <View style={cardStyles.inner}>{children}</View>
-        </BlurView>
+        <>
+          {/* Blur as sibling — nesting Text inside BlurView kills fontSize/color on iOS */}
+          <BlurView
+            intensity={70}
+            tint={theme.isDark ? 'dark' : 'light'}
+            style={StyleSheet.absoluteFillObject}
+            pointerEvents="none"
+          />
+          <View style={cardStyles.inner} collapsable={false}>
+            {children}
+          </View>
+        </>
       ) : (
         <LinearGradient colors={glassGradient} style={cardStyles.blur}>
           <View style={cardStyles.inner}>{children}</View>
@@ -100,9 +115,6 @@ export const SettingsScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
   const shabbosAlarmBlockRef = useRef<View>(null);
-  const [downloadingContent, setDownloadingContent] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
-  const [locationLoading, setLocationLoading] = useState(false);
   const [reminderMenuId, setReminderMenuId] = useState<string | null>(null);
   const [timePickerFor, setTimePickerFor] = useState<
     | 'shacharis'
@@ -135,7 +147,7 @@ export const SettingsScreen: React.FC = () => {
   /** Shabbos alarm ring duration (sliders) — local until saved onSlidingComplete */
   const [shabbosRingMin, setShabbosRingMin] = useState(1);
   const [shabbosRingSec, setShabbosRingSec] = useState(0);
-  type SettingsTab = 'notifications' | 'general' | 'data' | 'about';
+  type SettingsTab = 'notifications' | 'general' | 'about';
   const [activeTab, setActiveTab] = useState<SettingsTab>('notifications');
 
   /** Format 24h "09:00" as "9:00 AM"; 24h "20:30" as "8:30 PM" */
@@ -368,6 +380,28 @@ export const SettingsScreen: React.FC = () => {
     }
   };
 
+  const promptNotificationsDenied = () => {
+    Alert.alert(
+      'Notifications needed',
+      "This doesn't work until you allow Notifications in Settings.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Open Settings', onPress: () => Linking.openSettings() },
+      ],
+    );
+  };
+
+  const onNotificationsEnabledChange = async (value: boolean) => {
+    if (value) {
+      const granted = await NotificationService.requestPermissions();
+      if (!granted) {
+        promptNotificationsDenied();
+        return;
+      }
+    }
+    await updateNotificationPreference('enabled', value);
+  };
+
   const updateNotificationPreference = async (
     key: keyof NotificationPreferences,
     value: boolean | string | number
@@ -392,6 +426,13 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const onShabbosClockEnabledChange = async (value: boolean) => {
+    if (value) {
+      const granted = await NotificationService.requestPermissions();
+      if (!granted) {
+        promptNotificationsDenied();
+        return;
+      }
+    }
     await updateNotificationPreference('shabbosClockEnabled', value);
     if (value) {
       Alert.alert(
@@ -462,81 +503,6 @@ export const SettingsScreen: React.FC = () => {
     loadPreferences();
   };
 
-  const handleDownloadContent = async () => {
-    setDownloadingContent(true);
-    setDownloadProgress(0);
-    
-    try {
-      await TehillimService.prefetchAll((current, total) => {
-        setDownloadProgress(Math.round((current / total) * 100));
-      });
-      Alert.alert('Success', 'All content downloaded for offline use!');
-    } catch (e) {
-      console.error('Error downloading content:', e);
-      Alert.alert('Error', 'Failed to download content. Please try again.');
-    } finally {
-      setDownloadingContent(false);
-    }
-  };
-
-  const handleUpdateLocation = async () => {
-    setLocationLoading(true);
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Location permission is needed for accurate zmanim.');
-        return;
-      }
-
-      const location = await Location.getCurrentPositionAsync({});
-      
-      // Try to get city name
-      let cityName = 'Current Location';
-      try {
-        const [place] = await Location.reverseGeocodeAsync({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-        if (place?.city) {
-          cityName = place.city;
-        }
-      } catch (e) {
-        // Ignore geocoding errors
-      }
-
-      await UserPreferencesService.setLocation({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-        cityName,
-      });
-      
-      loadPreferences();
-      Alert.alert('Success', `Location updated to ${cityName}`);
-    } catch (e) {
-      Alert.alert('Error', 'Failed to get location. Please try again.');
-    } finally {
-      setLocationLoading(false);
-    }
-  };
-
-  const handleClearCache = async () => {
-    Alert.alert(
-      'Clear Cache',
-      'This will remove all downloaded content. You\'ll need to re-download for offline use.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: async () => {
-            await SefariaService.clearCache();
-            Alert.alert('Success', 'Cache cleared successfully.');
-          },
-        },
-      ]
-    );
-  };
-
   const handleResetOnboarding = async () => {
     Alert.alert(
       'Reset App',
@@ -596,46 +562,19 @@ export const SettingsScreen: React.FC = () => {
           tabs={[
             { key: 'notifications', label: 'Notifications' },
             { key: 'general', label: 'General' },
-            { key: 'data', label: 'Data' },
             { key: 'about', label: 'About' },
           ]}
-          activeIndex={(['notifications', 'general', 'data', 'about'] as const).indexOf(activeTab)}
+          activeIndex={(['notifications', 'general', 'about'] as const).indexOf(activeTab)}
           onIndexChange={(index) =>
-            setActiveTab(['notifications', 'general', 'data', 'about'][index] as SettingsTab)
+            setActiveTab(['notifications', 'general', 'about'][index] as SettingsTab)
           }
         />
 
         {/* ============ NOTIFICATIONS TAB ============ */}
         {activeTab === 'notifications' && (
         <>
-        {/* Master Toggle */}
-        <FadeIn delay={50}>
-          <GlassCard>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Text style={styles.sectionIcon}>🔔</Text>
-                <Text style={styles.sectionTitle}>Notifications</Text>
-              </View>
-            </View>
-            <View style={styles.sectionContent}>
-              <View style={styles.masterToggle}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.optionLabel}>Enable Notifications</Text>
-                  <Text style={styles.optionDescription}>Turn all reminders on or off</Text>
-                </View>
-                <Switch
-                  value={preferences.notifications.enabled}
-                  onValueChange={(value) => updateNotificationPreference('enabled', value)}
-                  trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                  thumbColor={preferences.notifications.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
-                />
-              </View>
-            </View>
-          </GlassCard>
-        </FadeIn>
-
         {/* ══════ SHABBOS ALARM — Always visible ══════ */}
-        <FadeIn delay={75}>
+        <FadeIn delay={50}>
           <View ref={shabbosAlarmBlockRef} collapsable={false} style={styles.shabbosClockCardOuter}>
               <LinearGradient
                 colors={
@@ -742,19 +681,38 @@ export const SettingsScreen: React.FC = () => {
             </View>
           </FadeIn>
 
-        {preferences.notifications.enabled && (
-          <>
-          {/* ══════ DAILY PRAYERS ══════ */}
-          <FadeIn delay={100}>
-            <GlassCard>
-              <View style={styles.sectionHeader}>
+        {/* Master Toggle */}
+        <FadeIn delay={75}>
+          <GlassCard>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Text style={styles.sectionIcon}>🔔</Text>
+                <Text style={styles.sectionTitle}>Notifications</Text>
+              </View>
+            </View>
+            <View style={styles.sectionContent}>
+              <View style={styles.masterToggle}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.optionLabel}>Enable Notifications</Text>
+                  <Text style={styles.optionDescription}>Turn all reminders on or off</Text>
+                </View>
+                <Switch
+                  value={preferences.notifications.enabled}
+                  onValueChange={(value) => onNotificationsEnabledChange(value)}
+                  trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
+                  thumbColor={preferences.notifications.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
+                />
+              </View>
+              {preferences.notifications.enabled && (
+              <>
+              <View style={styles.divider} />
+              <View style={styles.notifGroupHeader}>
                 <View style={styles.sectionTitleRow}>
                   <Text style={styles.sectionIcon}>🕊️</Text>
-                  <Text style={styles.sectionTitle}>Daily Prayers</Text>
+                  <Text style={styles.notifGroupTitle}>Daily Prayers</Text>
                 </View>
-                <Text style={styles.sectionSubtitle}>Shacharis, Mincha & Maariv</Text>
+                <Text style={styles.notifGroupSubtitle}>Shacharis, Mincha & Maariv</Text>
               </View>
-              <View style={styles.sectionContent}>
                 <View style={styles.notifOption}>
                   <View style={styles.notifOptionMain}>
                     <View style={styles.prayerLabelRow}>
@@ -886,21 +844,14 @@ export const SettingsScreen: React.FC = () => {
                     </View>
                   )}
                 </View>
-              </View>
-            </GlassCard>
-          </FadeIn>
-
-          {/* ══════ DAILY REMINDERS ══════ */}
-          <FadeIn delay={150}>
-            <GlassCard>
-              <View style={styles.sectionHeader}>
+              <View style={styles.divider} />
+              <View style={styles.notifGroupHeader}>
                 <View style={styles.sectionTitleRow}>
                   <Text style={styles.sectionIcon}>✨</Text>
-                  <Text style={styles.sectionTitle}>Daily Reminders</Text>
+                  <Text style={styles.notifGroupTitle}>Daily Reminders</Text>
                 </View>
-                <Text style={styles.sectionSubtitle}>Tehillim & gratitude</Text>
+                <Text style={styles.notifGroupSubtitle}>Tehillim & gratitude</Text>
               </View>
-              <View style={styles.sectionContent}>
                 <View style={styles.notifOption}>
                   <View style={styles.notifOptionMain}>
                     <Text style={styles.optionLabel}>Daily Tehillim</Text>
@@ -948,21 +899,14 @@ export const SettingsScreen: React.FC = () => {
                     </View>
                   )}
                 </View>
-              </View>
-            </GlassCard>
-          </FadeIn>
-
-          {/* ══════ SHABBOS & ZMANIM ══════ */}
-          <FadeIn delay={200}>
-            <GlassCard>
-              <View style={styles.sectionHeader}>
+              <View style={styles.divider} />
+              <View style={styles.notifGroupHeader}>
                 <View style={styles.sectionTitleRow}>
                   <Text style={styles.sectionIcon}>🕯️</Text>
-                  <Text style={styles.sectionTitle}>Shabbos & Zmanim</Text>
+                  <Text style={styles.notifGroupTitle}>Shabbos & Zmanim</Text>
                 </View>
-                <Text style={styles.sectionSubtitle}>Candle lighting, sunset & Shabbos prep</Text>
+                <Text style={styles.notifGroupSubtitle}>Candle lighting, sunset & Shabbos prep</Text>
               </View>
-              <View style={styles.sectionContent}>
                 <View style={styles.notifOption}>
                   <View style={styles.notifOptionMain}>
                     <Text style={styles.optionLabel}>Shabbos Reminders</Text>
@@ -1003,21 +947,14 @@ export const SettingsScreen: React.FC = () => {
                     </View>
                   )}
                 </View>
-              </View>
-            </GlassCard>
-          </FadeIn>
-
-          {/* ══════ CALENDAR & SEASONAL ══════ */}
-          <FadeIn delay={250}>
-            <GlassCard>
-              <View style={styles.sectionHeader}>
+              <View style={styles.divider} />
+              <View style={styles.notifGroupHeader}>
                 <View style={styles.sectionTitleRow}>
                   <Text style={styles.sectionIcon}>📅</Text>
-                  <Text style={styles.sectionTitle}>Calendar & Seasonal</Text>
+                  <Text style={styles.notifGroupTitle}>Calendar & Seasonal</Text>
                 </View>
-                <Text style={styles.sectionSubtitle}>Hallel, Rosh Chodesh, fast days & more</Text>
+                <Text style={styles.notifGroupSubtitle}>Hallel, Rosh Chodesh, fast days & more</Text>
               </View>
-              <View style={styles.sectionContent}>
                 <View style={styles.notifOption}>
                   <View style={styles.notifOptionMain}>
                     <Text style={styles.optionLabel}>Hallel</Text>
@@ -1251,17 +1188,11 @@ export const SettingsScreen: React.FC = () => {
                     </View>
                   )}
                 </TouchableOpacity>
-              </View>
-            </GlassCard>
-          </FadeIn>
-
-          {/* ══════ CUSTOM REMINDERS ══════ */}
-          <FadeIn delay={300}>
-            <GlassCard>
-              <View style={styles.sectionHeader}>
-                <View style={[styles.sectionTitleRow, { flex: 1 }]}>
+              <View style={styles.divider} />
+              <View style={styles.notifGroupHeader}>
+                <View style={[styles.sectionTitleRow, { flex: 1, width: '100%' }]}>
                   <Text style={styles.sectionIcon}>⏰</Text>
-                  <Text style={[styles.sectionTitle, { flex: 1 }]}>Custom Reminders</Text>
+                  <Text style={[styles.notifGroupTitle, { flex: 1 }]}>Custom Reminders</Text>
                   <TouchableOpacity
                     style={styles.addReminderButton}
                     onPress={() => navigation.navigate('AddCustomReminder' as never)}
@@ -1270,7 +1201,6 @@ export const SettingsScreen: React.FC = () => {
                   </TouchableOpacity>
                 </View>
               </View>
-              <View style={styles.sectionContent}>
                 {(preferences.customReminders || []).length > 0 ? (
                   (preferences.customReminders || []).map((reminder) => (
                     <View key={reminder.id} style={styles.customReminderItem}>
@@ -1306,9 +1236,11 @@ export const SettingsScreen: React.FC = () => {
                     <Text style={styles.noRemindersSubtext}>Tap + Add to create one</Text>
                   </View>
                 )}
-              </View>
-            </GlassCard>
-          </FadeIn>
+              </>
+              )}
+            </View>
+          </GlassCard>
+        </FadeIn>
 
           {/* Custom reminder edit/delete modal */}
           <Modal visible={reminderMenuId != null} transparent animationType="fade">
@@ -1363,8 +1295,6 @@ export const SettingsScreen: React.FC = () => {
               </Pressable>
             </Pressable>
           </Modal>
-          </>
-        )}
         </>
         )}
 
@@ -1373,65 +1303,42 @@ export const SettingsScreen: React.FC = () => {
         <>
         {/* ============ NUSACH SECTION ============ */}
         <FadeIn delay={50}>
-          <GlassCard style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Text style={styles.sectionIcon}>📜</Text>
-                <Text style={styles.sectionTitle}>Nusach</Text>
-              </View>
-              <Text style={styles.sectionSubtitle}>
-                {preferences.nusach === 'ashkenaz' ? 'Ashkenaz' : 'Sfard'}
+          <View style={styles.nusachContainer}>
+            <TouchableOpacity
+              style={[
+                styles.nusachOption,
+                preferences.nusach === 'ashkenaz' && styles.nusachOptionActive,
+              ]}
+              onPress={() => UserPreferencesService.setNusach('ashkenaz').then(loadPreferences)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: preferences.nusach === 'ashkenaz' }}
+              accessibilityLabel="Ashkenaz"
+            >
+              <Text style={[
+                styles.nusachText,
+                preferences.nusach === 'ashkenaz' && styles.nusachTextActive,
+              ]}>
+                אשכנז
               </Text>
-            </View>
-
-            <View style={styles.sectionContent}>
-                <Text style={styles.optionDescription}>
-                  Choose your prayer tradition for correct text variations
-                </Text>
-                <View style={styles.nusachContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.nusachOption,
-                      preferences.nusach === 'ashkenaz' && styles.nusachOptionActive,
-                    ]}
-                    onPress={() => UserPreferencesService.setNusach('ashkenaz').then(loadPreferences)}
-                  >
-                    <Text style={[
-                      styles.nusachText,
-                      preferences.nusach === 'ashkenaz' && styles.nusachTextActive,
-                    ]}>
-                      Ashkenaz
-                    </Text>
-                    <Text style={[
-                      styles.nusachSubtext,
-                      preferences.nusach === 'ashkenaz' && styles.nusachTextActive,
-                    ]}>
-                      European tradition
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.nusachOption,
-                      preferences.nusach === 'sfard' && styles.nusachOptionActive,
-                    ]}
-                    onPress={() => UserPreferencesService.setNusach('sfard').then(loadPreferences)}
-                  >
-                    <Text style={[
-                      styles.nusachText,
-                      preferences.nusach === 'sfard' && styles.nusachTextActive,
-                    ]}>
-                      Sfard
-                    </Text>
-                    <Text style={[
-                      styles.nusachSubtext,
-                      preferences.nusach === 'sfard' && styles.nusachTextActive,
-                    ]}>
-                      Chassidic tradition
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-            </View>
-          </GlassCard>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.nusachOption,
+                preferences.nusach === 'sfard' && styles.nusachOptionActive,
+              ]}
+              onPress={() => UserPreferencesService.setNusach('sfard').then(loadPreferences)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: preferences.nusach === 'sfard' }}
+              accessibilityLabel="Sfard"
+            >
+              <Text style={[
+                styles.nusachText,
+                preferences.nusach === 'sfard' && styles.nusachTextActive,
+              ]}>
+                ספרד
+              </Text>
+            </TouchableOpacity>
+          </View>
         </FadeIn>
 
         {/* ============ REFUAH NAMES (רפאנו) ============ */}
@@ -1477,52 +1384,6 @@ export const SettingsScreen: React.FC = () => {
               >
                 <Text style={styles.addRefuahButtonText}>+ Add name</Text>
               </TouchableOpacity>
-            </View>
-          </GlassCard>
-        </FadeIn>
-
-        {/* ============ LOCATION SECTION ============ */}
-        <FadeIn delay={150}>
-          <GlassCard style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Text style={styles.sectionIcon}>📍</Text>
-                <Text style={styles.sectionTitle}>Location</Text>
-              </View>
-              <Text style={styles.sectionSubtitle}>
-                {preferences.location?.cityName || 'Not set'}
-              </Text>
-            </View>
-
-            <View style={styles.sectionContent}>
-                <Text style={styles.optionDescription}>
-                  Your location is used to calculate accurate zmanim (prayer times)
-                </Text>
-                
-                {preferences.location && (
-                  <View style={styles.locationInfo}>
-                    <Text style={styles.locationCity}>
-                      {preferences.location.cityName || 'Unknown Location'}
-                    </Text>
-                    <Text style={styles.locationCoords}>
-                      {preferences.location.latitude.toFixed(4)}, {preferences.location.longitude.toFixed(4)}
-                    </Text>
-                  </View>
-                )}
-
-                <TouchableOpacity
-                  style={styles.updateButton}
-                  onPress={handleUpdateLocation}
-                  disabled={locationLoading}
-                >
-                  {locationLoading ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.updateButtonText}>
-                      {preferences.location ? 'Update Location' : 'Set Location'}
-                    </Text>
-                  )}
-                </TouchableOpacity>
             </View>
           </GlassCard>
         </FadeIn>
@@ -1580,60 +1441,6 @@ export const SettingsScreen: React.FC = () => {
         </>
         )}
 
-        {/* ============ DATA TAB ============ */}
-        {activeTab === 'data' && (
-        <>
-        {/* ============ OFFLINE CONTENT SECTION ============ */}
-        <FadeIn delay={50}>
-          <GlassCard style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Text style={styles.sectionIcon}>📥</Text>
-                <Text style={styles.sectionTitle}>Offline Content</Text>
-              </View>
-            </View>
-
-            <View style={styles.sectionContent}>
-                <Text style={styles.optionDescription}>
-                  Download all Tehillim and Siddur content for offline use
-                </Text>
-                
-                {downloadingContent ? (
-                  <View style={styles.downloadProgress}>
-                    <View style={styles.progressBarBg}>
-                      <View style={[styles.progressBarFill, { width: `${downloadProgress}%` }]} />
-                    </View>
-                    <Text style={styles.progressText}>
-                      Downloading... {downloadProgress}%
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.offlineButtons}>
-                    <TouchableOpacity
-                      style={styles.downloadButton}
-                      onPress={handleDownloadContent}
-                    >
-                      <Text style={styles.downloadButtonText}>
-                        Download All Content
-                      </Text>
-                    </TouchableOpacity>
-                    
-                    <TouchableOpacity
-                      style={styles.clearButton}
-                      onPress={handleClearCache}
-                    >
-                      <Text style={styles.clearButtonText}>
-                        Clear Cache
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-            </View>
-          </GlassCard>
-        </FadeIn>
-        </>
-        )}
-
         {/* ============ ABOUT TAB ============ */}
         {activeTab === 'about' && (
         <>
@@ -1643,16 +1450,44 @@ export const SettingsScreen: React.FC = () => {
             <View style={styles.supportSection}>
               <Text style={styles.supportTitle}>Support</Text>
               <Text style={styles.supportText}>
-                Email{' '}
+                Visit{' '}
                 <Text
                   style={styles.link}
-                  onPress={() => Linking.openURL('mailto:shevastudios@gmail.com')}
+                  onPress={() => Linking.openURL(LEGAL.supportUrl)}
                 >
-                  shevastudios@gmail.com
+                  siddur24seven.com/support
                 </Text>
-                {' '}for support
+                {', call '}
+                <Text
+                  style={styles.link}
+                  onPress={() => Linking.openURL(LEGAL.supportPhoneTel)}
+                >
+                  {LEGAL.supportPhoneDisplay}
+                </Text>
+                {', or email '}
+                <Text
+                  style={styles.link}
+                  onPress={() => Linking.openURL(mailtoSupport())}
+                >
+                  {LEGAL.supportEmail}
+                </Text>
               </Text>
               <Text style={styles.supportCredit}>Project by Avi Taub at Sheva Studios</Text>
+              <Text style={[styles.supportText, { marginTop: 12, marginBottom: 0 }]}>
+                <Text
+                  style={styles.link}
+                  onPress={() => Linking.openURL(LEGAL.privacyUrl)}
+                >
+                  Privacy Policy
+                </Text>
+                {'  ·  '}
+                <Text
+                  style={styles.link}
+                  onPress={() => Linking.openURL(LEGAL.termsUrl)}
+                >
+                  Terms of Use
+                </Text>
+              </Text>
             </View>
           </GlassCard>
         </FadeIn>
@@ -2000,6 +1835,23 @@ function createSettingsStyles(theme: AppTheme) {
     height: 1,
     backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
     marginVertical: spacing.md,
+  },
+  notifGroupHeader: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    paddingBottom: spacing.sm,
+  },
+  notifGroupTitle: {
+    fontFamily: fonts.heading.semiBold,
+    fontSize: 15,
+    color: theme.colors.text.primary,
+  },
+  notifGroupSubtitle: {
+    fontFamily: fonts.body.medium,
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    marginTop: 2,
+    marginLeft: 28,
   },
   shabbosClockCardOuter: {
     marginBottom: spacing.lg,
@@ -2497,19 +2349,19 @@ function createSettingsStyles(theme: AppTheme) {
   nusachContainer: {
     flexDirection: 'row',
     gap: spacing.md,
-    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
   },
   nusachOption: {
     flex: 1,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.xl,
     paddingHorizontal: spacing.lg,
     borderRadius: borderRadius.xl,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0, 0, 0, 0.03)',
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.72)',
     alignItems: 'center',
-    minHeight: 80,
+    minHeight: 112,
     justifyContent: 'center',
     borderWidth: 1.5,
-    borderColor: 'rgba(0, 0, 0, 0.05)',
+    borderColor: theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.8)',
   },
   nusachOptionActive: {
     backgroundColor: theme.colors.primary.main,
@@ -2521,54 +2373,11 @@ function createSettingsStyles(theme: AppTheme) {
     elevation: 4,
   },
   nusachText: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 16,
-    color: theme.colors.text.secondary,
-  },
-  nusachSubtext: {
-    fontFamily: fonts.body.regular,
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
-    marginTop: 2,
-  },
-  nusachTextActive: {
-    color: '#fff',
-  },
-
-  // Location
-  locationInfo: {
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.md,
-  },
-  locationCity: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 16,
+    fontFamily: fonts.hebrew.semiBold,
+    fontSize: 28,
     color: theme.colors.text.primary,
   },
-  locationCoords: {
-    fontFamily: fonts.body.regular,
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
-    marginTop: 2,
-  },
-  updateButton: {
-    backgroundColor: theme.colors.primary.main,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.xl,
-    alignItems: 'center',
-    minHeight: 50,
-    justifyContent: 'center',
-    shadowColor: theme.colors.primary.dark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  updateButtonText: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 15,
+  nusachTextActive: {
     color: '#fff',
   },
 
@@ -2628,54 +2437,6 @@ function createSettingsStyles(theme: AppTheme) {
   },
   textSizeTextActive: {
     color: '#fff',
-  },
-
-  // Offline
-  downloadProgress: {
-    alignItems: 'center',
-  },
-  progressBarBg: {
-    width: '100%',
-    height: 8,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 4,
-    overflow: 'hidden',
-    marginBottom: spacing.sm,
-  },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: theme.colors.primary.main,
-    borderRadius: 4,
-  },
-  progressText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 14,
-    color: theme.colors.text.secondary,
-  },
-  offlineButtons: {
-    gap: spacing.sm,
-  },
-  downloadButton: {
-    backgroundColor: theme.colors.primary.main,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-  },
-  downloadButtonText: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 15,
-    color: '#fff',
-  },
-  clearButton: {
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)',
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-  },
-  clearButtonText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 15,
-    color: theme.colors.text.secondary,
   },
 
   // About

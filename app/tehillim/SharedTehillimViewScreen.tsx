@@ -17,6 +17,7 @@ import {
   Dimensions,
   Platform,
   Share,
+  Linking,
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -33,6 +34,7 @@ import {
   joinTehillimCampaign,
   CampaignDetailResponse,
 } from '../../src/api/tehillimApi';
+import { LEGAL } from '../../src/legal/links';
 
 const HEBREW_LETTERS = [
   'א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י',
@@ -261,12 +263,23 @@ export const SharedTehillimViewScreen: React.FC = () => {
     ? new Date(campaign.deadline).toLocaleDateString(undefined, { dateStyle: 'medium' })
     : null;
 
-  const shareLink = `https://siddur24seven.com/tehillim/${campaignId}`;
+  const shareLink = `${LEGAL.site}/tehillim/${campaignId}`;
   const handleShare = () => {
     Share.share({
       message: shareLink,
       title: campaign.title ? `Shared Tehillim: ${campaign.title}` : 'Shared Tehillim link',
     }).catch(() => {});
+  };
+  const handleReport = () => {
+    Alert.alert(
+      'Report this campaign',
+      `If this page is abusive or inappropriate, contact support.\n\n${LEGAL.supportUrl}\n${LEGAL.supportPhoneDisplay}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Call', onPress: () => Linking.openURL(LEGAL.supportPhoneTel) },
+        { text: 'Open Support', onPress: () => Linking.openURL(LEGAL.supportUrl) },
+      ],
+    );
   };
 
   return (
@@ -285,10 +298,16 @@ export const SharedTehillimViewScreen: React.FC = () => {
         <View style={styles.header}>
           <View style={styles.headerRow}>
             <BackButton onPress={() => navigation.goBack()} style={styles.backBtn} />
-            <TouchableOpacity onPress={handleShare} style={styles.shareBtn} hitSlop={8}>
-              <Ionicons name="share-outline" size={24} color={colors.primary.main} />
-              <Text style={styles.shareBtnText}>Share</Text>
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity onPress={handleReport} style={styles.shareBtn} hitSlop={8}>
+                <Ionicons name="flag-outline" size={22} color={colors.primary.main} />
+                <Text style={styles.shareBtnText}>Report</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleShare} style={styles.shareBtn} hitSlop={8}>
+                <Ionicons name="share-outline" size={24} color={colors.primary.main} />
+                <Text style={styles.shareBtnText}>Share</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <Text style={styles.title}>{campaign.title || 'Shared Tehillim'}</Text>
           {campaign.reason ? <Text style={styles.reason}>{campaign.reason}</Text> : null}
@@ -476,6 +495,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   backBtn: { marginBottom: 0 },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   shareBtn: {
     flexDirection: 'row',
     alignItems: 'center',

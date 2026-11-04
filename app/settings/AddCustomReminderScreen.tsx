@@ -30,9 +30,15 @@ const GlassCard: React.FC<{
 }> = ({ children, style }) => (
   <View style={[styles.glassCard, style]}>
     {Platform.OS !== 'web' ? (
-      <BlurView intensity={80} tint="light" style={styles.glassBlur}>
-        <View style={styles.glassInner}>{children}</View>
-      </BlurView>
+      <>
+        <BlurView
+          intensity={80}
+          tint="light"
+          style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
+        />
+        <View style={styles.glassInner} collapsable={false}>{children}</View>
+      </>
     ) : (
       <LinearGradient
         colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
@@ -180,8 +186,7 @@ export const AddCustomReminderScreen: React.FC = () => {
           days: selectedDays as ('sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')[],
           openToScreen,
         });
-        const prefs = await UserPreferencesService.getPreferences();
-        await NotificationService.reschedule(prefs ?? undefined);
+        await NotificationService.requestPermissionsAndSchedule();
         Alert.alert('Reminder Updated', `"${title}" will remind you daily at ${timeToSave}.`, [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);
@@ -196,8 +201,7 @@ export const AddCustomReminderScreen: React.FC = () => {
           openToScreen,
         };
         await UserPreferencesService.addCustomReminder(reminder);
-        const prefs = await UserPreferencesService.getPreferences();
-        await NotificationService.reschedule(prefs ?? undefined);
+        await NotificationService.requestPermissionsAndSchedule();
         Alert.alert('Reminder Added', `"${title}" will remind you daily at ${timeToSave}.`, [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);

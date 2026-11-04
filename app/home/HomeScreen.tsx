@@ -11,17 +11,20 @@ import {
   Modal,
   Pressable,
   TextInput,
+  Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/core';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { ErrorView } from '../../components/ui/ErrorView';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
+import { colorWithAlpha } from '../../src/design/colorAlpha';
 import { CalendarEngine } from '../../src/core/calendar/CalendarEngine';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
+import { LocationRefreshService } from '../../src/services/LocationRefreshService';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { HomePanelsService, HomePanel } from '../../src/storage/HomePanelsService';
 import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
@@ -43,6 +46,8 @@ import { getShneyimMikraData } from '../../src/services/ShneyimMikraService';
 import { ShneyimMikraTracker } from '../../src/storage/ShneyimMikraTracker';
 import { DraggableGrid } from './components/DraggableGrid';
 import { renderPanelContent, type PanelRenderContext } from './components/PanelContentRenderer';
+
+const KOSHER_AI_APP_STORE_URL = 'https://apps.apple.com/us/app/kosherchat/id6778444852';
 
 function toHebrewNumeral(n: number): string {
   if (n <= 0) return String(n);
@@ -514,30 +519,8 @@ export const HomeScreen: React.FC = () => {
         return;
       }
 
-      let currentLocation = preferences.location;
-      
-      if (Platform.OS !== 'web') {
-        try {
-          const { status } = await Location.requestForegroundPermissionsAsync();
-          if (status === 'granted') {
-            const location = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.Balanced,
-            });
-            currentLocation = {
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-            };
-            
-            await UserPreferencesService.setLocation({
-              latitude: location.coords.latitude,
-              longitude: location.coords.longitude,
-              cityName: preferences.location?.cityName,
-            });
-          }
-        } catch (locError) {
-          console.log('Using stored location, GPS unavailable:', locError);
-        }
-      }
+      const refreshed = await LocationRefreshService.refreshAndSave();
+      const currentLocation = refreshed ?? preferences.location;
 
       const context: CalendarContext = {
         nusach: preferences.nusach,
@@ -604,9 +587,8 @@ export const HomeScreen: React.FC = () => {
     [dayInfo],
   );
 
-  const formatTime = (date: Date | undefined) => {
-    if (!date) return '--:--';
-    return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const formatTime = (date: Date | null | undefined) => {
+    return ZmanimService.formatTime(date);
   };
 
   const formatTimeUntil = (until: Date) => {
@@ -762,12 +744,20 @@ export const HomeScreen: React.FC = () => {
           headerContent={
             <View style={styles.headerContentWrapper}>
               <View style={styles.headerRow}>
-                <Text style={styles.greeting}>{greeting}</Text>
+                <Text style={[styles.greeting, { color: theme.colors.text.primary, fontSize: 34 }]}>
+                  {greeting}
+                </Text>
                 <TouchableOpacity
                   style={[styles.editButton, isEditing && styles.editButtonActive]}
                   onPress={toggleEditMode}
                 >
-                  <Text style={[styles.editButtonText, isEditing && styles.editButtonTextActive]}>
+                  <Text
+                    style={[
+                      styles.editButtonText,
+                      isEditing && styles.editButtonTextActive,
+                      !isEditing && { color: theme.colors.text.secondary, fontSize: 14 },
+                    ]}
+                  >
                     {isEditing ? 'Done' : 'Edit'}
                   </Text>
                 </TouchableOpacity>
@@ -803,6 +793,41 @@ export const HomeScreen: React.FC = () => {
                   <Text style={styles.emptyStateText}>No panels added yet</Text>
                   <Text style={styles.emptyStateSubtext}>Tap + to add some</Text>
                 </View>
+              )}
+              {!isEditing && (
+                <TouchableOpacity
+                  style={styles.kosherAiBannerWrap}
+                  activeOpacity={0.88}
+                  onPress={() => Linking.openURL(KOSHER_AI_APP_STORE_URL)}
+                  accessibilityRole="link"
+                  accessibilityLabel="Download Kosher AI, our kosher chat app, on the App Store"
+                >
+                  <LinearGradient
+                    colors={[
+                      colorWithAlpha(theme.colors.primary.main, 0.34),
+                      colorWithAlpha(theme.colors.accent.lavender, 0.2),
+                      colorWithAlpha(theme.colors.secondary.main, 0.18),
+                    ]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.kosherAiBanner}
+                  >
+                    <View style={styles.kosherAiBannerIconWrap}>
+                      <Ionicons name="sparkles" size={18} color={theme.colors.primary.main} />
+                    </View>
+                    <View style={styles.kosherAiBannerTextCol}>
+                      <Text style={styles.kosherAiBannerEyebrow}>From our family</Text>
+                      <Text style={styles.kosherAiBannerTitle}>Try Kosher AI</Text>
+                      <Text style={styles.kosherAiBannerSub}>
+                        A cute kosher chat companion — free on the App Store
+                      </Text>
+                    </View>
+                    <View style={styles.kosherAiBannerCta}>
+                      <Ionicons name="logo-apple" size={14} color={theme.colors.primary.dark} />
+                      <Text style={styles.kosherAiBannerCtaText}>Get</Text>
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
               )}
               <View style={{ height: 24 }} />
             </>
@@ -931,7 +956,7 @@ function createHomeStyles(theme: AppTheme) {
   },
   greeting: {
     fontFamily: fonts.heading.bold,
-    fontSize: 32,
+    fontSize: 34,
     color: theme.colors.text.primary,
     letterSpacing: 0.5,
   },
@@ -1089,13 +1114,16 @@ function createHomeStyles(theme: AppTheme) {
   },
   tehillimTitle: {
     fontFamily: fonts.heading.semibold,
-    fontSize: 15,
+    fontSize: 17,
+    lineHeight: 22,
     color: theme.colors.text.primary,
   },
   tehillimMessage: {
     fontFamily: fonts.body.regular,
-    fontSize: 12,
+    fontSize: 13,
+    lineHeight: 17,
     color: theme.colors.text.secondary,
+    marginTop: 2,
   },
   tehillimPercentContainer: {
     backgroundColor: 'rgba(212, 165, 184, 0.2)',
@@ -1173,13 +1201,15 @@ function createHomeStyles(theme: AppTheme) {
   },
   zmanLabel: {
     fontFamily: fonts.body.regular,
-    fontSize: 11,
+    fontSize: 12,
+    lineHeight: 15,
     color: theme.colors.text.tertiary,
-    marginBottom: 2,
+    marginBottom: 4,
   },
   zmanTime: {
     fontFamily: fonts.body.semibold,
-    fontSize: 15,
+    fontSize: 17,
+    lineHeight: 21,
     color: theme.colors.text.primary,
   },
 
@@ -1230,6 +1260,78 @@ function createHomeStyles(theme: AppTheme) {
     fontFamily: fonts.body.regular,
     fontSize: 14,
     color: theme.colors.text.tertiary,
+  },
+
+  // Kosher AI promo banner
+  kosherAiBannerWrap: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  kosherAiBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: borderRadius.xl,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1,
+    borderColor: colorWithAlpha(theme.colors.primary.main, 0.18),
+    gap: spacing.sm,
+    ...Platform.select({
+      ios: {
+        shadowColor: theme.colors.primary.main,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.12,
+        shadowRadius: 10,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  kosherAiBannerIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: colorWithAlpha(theme.colors.background.primary, 0.72),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  kosherAiBannerTextCol: {
+    flex: 1,
+  },
+  kosherAiBannerEyebrow: {
+    fontFamily: fonts.body.medium,
+    fontSize: 11,
+    color: theme.colors.primary.dark,
+    letterSpacing: 0.3,
+    marginBottom: 1,
+  },
+  kosherAiBannerTitle: {
+    fontFamily: fonts.heading.semibold,
+    fontSize: 15,
+    color: theme.colors.text.primary,
+    marginBottom: 2,
+  },
+  kosherAiBannerSub: {
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    color: theme.colors.text.secondary,
+    lineHeight: 16,
+  },
+  kosherAiBannerCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colorWithAlpha(theme.colors.background.primary, 0.78),
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colorWithAlpha(theme.colors.primary.main, 0.2),
+  },
+  kosherAiBannerCtaText: {
+    fontFamily: fonts.body.semibold,
+    fontSize: 12,
+    color: theme.colors.primary.dark,
   },
 
   // Custom Reminders Panel
@@ -2589,7 +2691,7 @@ function createHomeStyles(theme: AppTheme) {
     marginTop: 2,
   },
 
-  // Half-width tiles (fixed row height): fill slot, tighter type
+  // Half-width tiles — hierarchy must stay in THIS style (often the last style in arrays)
   halfPanelInner: {
     flex: 1,
     minHeight: 0,
@@ -2600,16 +2702,21 @@ function createHomeStyles(theme: AppTheme) {
     paddingVertical: 0,
   },
   halfEmoji: {
-    fontSize: 16,
-    marginBottom: 2,
+    fontSize: 18,
+    marginBottom: 4,
   },
   halfHeading: {
-    fontSize: 11,
-    marginBottom: 0,
+    fontFamily: fonts.heading.semibold,
+    fontSize: 14,
+    lineHeight: 18,
+    color: theme.colors.text.primary,
+    marginBottom: 2,
   },
   halfBody: {
-    fontSize: 10,
-    lineHeight: 13,
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    lineHeight: 16,
+    color: theme.colors.text.secondary,
     marginTop: 2,
   },
   zmanimRowHalf: {
@@ -2638,14 +2745,16 @@ function createHomeStyles(theme: AppTheme) {
   },
   tehillimHalfTitle: {
     fontFamily: fonts.heading.semibold,
-    fontSize: 12,
+    fontSize: 14,
+    lineHeight: 18,
     color: theme.colors.text.primary,
   },
   tehillimHalfMessage: {
     fontFamily: fonts.body.regular,
-    fontSize: 10,
+    fontSize: 11,
+    lineHeight: 14,
     color: theme.colors.text.secondary,
-    marginTop: 1,
+    marginTop: 2,
   },
   tehillimHalfPercentWrap: {
     backgroundColor: 'rgba(212, 165, 184, 0.2)',
@@ -2655,7 +2764,7 @@ function createHomeStyles(theme: AppTheme) {
   },
   tehillimHalfPercent: {
     fontFamily: fonts.body.bold,
-    fontSize: 12,
+    fontSize: 13,
     color: theme.colors.primary.dark,
   },
   tehillimHalfProgressWrap: {
@@ -2675,14 +2784,14 @@ function createHomeStyles(theme: AppTheme) {
   },
   tehillimHalfFooterText: {
     fontFamily: fonts.body.regular,
-    fontSize: 10,
+    fontSize: 11,
     color: theme.colors.text.tertiary,
     flex: 1,
     marginRight: spacing.xs,
   },
   tehillimHalfContinue: {
     fontFamily: fonts.body.semibold,
-    fontSize: 10,
+    fontSize: 11,
     color: theme.colors.primary.main,
   },
   dafYomiButtonHalf: {
@@ -2691,17 +2800,21 @@ function createHomeStyles(theme: AppTheme) {
     paddingHorizontal: spacing.sm,
   },
   dafButtonIconHalf: {
-    fontSize: 15,
+    fontSize: 16,
     marginBottom: 2,
   },
   dafButtonTitleHalf: {
-    fontSize: 12,
-    marginBottom: 0,
+    fontFamily: fonts.heading.semibold,
+    fontSize: 14,
+    lineHeight: 18,
+    color: theme.colors.text.primary,
+    marginBottom: 2,
   },
   dafButtonSubtextHalf: {
-    fontFamily: fonts.body.medium,
-    fontSize: 10,
-    lineHeight: 13,
+    fontFamily: fonts.body.regular,
+    fontSize: 11,
+    lineHeight: 14,
+    color: theme.colors.text.secondary,
   },
   fastDayHalfHeader: {
     marginBottom: spacing.xs,
@@ -2894,11 +3007,14 @@ function createHomeStyles(theme: AppTheme) {
 function useHomeStyles() {
   const { theme } = useTheme();
   return useMemo(() => {
+    const raw = createHomeStyles(theme);
     try {
-      return StyleSheet.create(createHomeStyles(theme));
+      return StyleSheet.create(raw);
     } catch (e) {
-      console.warn('HomeScreen styles error:', e);
-      return StyleSheet.create({ container: { flex: 1 } });
+      // NEVER return an empty sheet — that makes every Text use system defaults
+      // (same size + same color). Plain objects still apply color/fontSize correctly.
+      console.warn('HomeScreen StyleSheet.create failed; using plain styles', e);
+      return raw as ReturnType<typeof StyleSheet.create>;
     }
   }, [theme]);
 }

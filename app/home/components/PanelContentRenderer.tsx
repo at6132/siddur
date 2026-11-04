@@ -21,6 +21,7 @@ import {
 import type { DayInfo, DaveningChanges } from '../../../src/types/calendar';
 import { spacing } from '../../../src/design/spacing';
 import { navigateOrComingSoon, isPanelLibraryPhase2ComingSoon } from '../../../src/feature/LibraryFeatureAccess';
+import { LOCATION_REQUIRED_MESSAGE } from '../../../src/services/LocationAccess';
 
 function coerceDate(d: unknown): Date | null {
   if (d instanceof Date && !Number.isNaN(d.getTime())) return d;
@@ -102,7 +103,7 @@ export interface PanelRenderContext {
   hebrewBirthday: { day: number; month: number } | null;
   setHebrewBirthdayModalVisible: (v: boolean) => void;
   // Helpers
-  formatTime: (date: Date | undefined) => string;
+  formatTime: (date: Date | null | undefined) => string;
   formatTimeUntil: (until: Date) => string | null;
 }
 
@@ -196,12 +197,24 @@ export function renderPanelContent(
                   <Text style={styles.tehillimHalfIconText}>📖</Text>
                 </View>
                 <View style={styles.tehillimHalfInfo}>
-                  <Text style={styles.tehillimHalfTitle} numberOfLines={1}>
+                  <Text
+                    style={[
+                      styles.tehillimHalfTitle,
+                      { color: theme.colors.text.primary, fontSize: 14 },
+                    ]}
+                    numberOfLines={1}
+                  >
                     {tehillimProgress.goalType === 'whenever'
                       ? 'Tehillim'
                       : `${tehillimProgress.dayName || 'Daily'} Tehillim`}
                   </Text>
-                  <Text style={styles.tehillimHalfMessage} numberOfLines={1}>
+                  <Text
+                    style={[
+                      styles.tehillimHalfMessage,
+                      { color: theme.colors.text.secondary, fontSize: 11 },
+                    ]}
+                    numberOfLines={1}
+                  >
                     {tehillimProgress.message}
                   </Text>
                 </View>
@@ -242,12 +255,24 @@ export function renderPanelContent(
               <Text style={styles.tehillimIconText}>📖</Text>
             </View>
             <View style={styles.tehillimInfo}>
-              <Text style={styles.tehillimTitle}>
+              <Text
+                style={[
+                  styles.tehillimTitle,
+                  { color: theme.colors.text.primary, fontSize: 17 },
+                ]}
+              >
                 {tehillimProgress.goalType === 'whenever'
                   ? 'Tehillim'
                   : `${tehillimProgress.dayName || 'Daily'} Tehillim`}
               </Text>
-              <Text style={styles.tehillimMessage}>{tehillimProgress.message}</Text>
+              <Text
+                style={[
+                  styles.tehillimMessage,
+                  { color: theme.colors.text.secondary, fontSize: 13 },
+                ]}
+              >
+                {tehillimProgress.message}
+              </Text>
             </View>
             <View style={styles.tehillimPercentContainer}>
               <Text style={styles.tehillimPercent}>{tehillimProgress.overallPercent}%</Text>
@@ -299,26 +324,90 @@ export function renderPanelContent(
 
     case 'zmanim':
       if (!dayInfo) return null;
-      return (
+      {
+        const zmanimReady = !!dayInfo.extendedZmanim?.sunrise;
+        return (
         <GlassCard compact={half} onPress={() => !isEditing && navigation.navigate('Calendar' as never)}>
           <View style={[styles.zmanimRow, half && styles.zmanimRowHalf]}>
             <View style={styles.zmanItem}>
-              <Text style={[styles.zmanLabel, half && { fontSize: 10, marginBottom: 0 }]}>Sunrise</Text>
-              <Text style={[styles.zmanTime, half && { fontSize: 12 }]}>{formatTime(dayInfo.extendedZmanim?.sunrise)}</Text>
+              <Text
+                style={[
+                  styles.zmanLabel,
+                  half && { fontSize: 11, marginBottom: 2 },
+                  { color: theme.colors.text.tertiary },
+                ]}
+              >
+                Sunrise
+              </Text>
+              <Text
+                style={[
+                  styles.zmanTime,
+                  half && { fontSize: 14 },
+                  { color: theme.colors.text.primary },
+                ]}
+              >
+                {formatTime(dayInfo.extendedZmanim?.sunrise)}
+              </Text>
             </View>
             <View style={[styles.zmanDivider, half && { height: 22 }]} />
             <View style={styles.zmanItem}>
-              <Text style={[styles.zmanLabel, half && { fontSize: 10, marginBottom: 0 }]}>Shema</Text>
-              <Text style={[styles.zmanTime, half && { fontSize: 12 }]}>{formatTime(dayInfo.extendedZmanim?.sofZmanShemaGRA)}</Text>
+              <Text
+                style={[
+                  styles.zmanLabel,
+                  half && { fontSize: 11, marginBottom: 2 },
+                  { color: theme.colors.text.tertiary },
+                ]}
+              >
+                Shema
+              </Text>
+              <Text
+                style={[
+                  styles.zmanTime,
+                  half && { fontSize: 14 },
+                  { color: theme.colors.text.primary },
+                ]}
+              >
+                {formatTime(dayInfo.extendedZmanim?.sofZmanShemaGRA)}
+              </Text>
             </View>
             <View style={[styles.zmanDivider, half && { height: 22 }]} />
             <View style={styles.zmanItem}>
-              <Text style={[styles.zmanLabel, half && { fontSize: 10, marginBottom: 0 }]}>Sunset</Text>
-              <Text style={[styles.zmanTime, half && { fontSize: 12 }]}>{formatTime(dayInfo.extendedZmanim?.sunset)}</Text>
+              <Text
+                style={[
+                  styles.zmanLabel,
+                  half && { fontSize: 11, marginBottom: 2 },
+                  { color: theme.colors.text.tertiary },
+                ]}
+              >
+                Sunset
+              </Text>
+              <Text
+                style={[
+                  styles.zmanTime,
+                  half && { fontSize: 14 },
+                  { color: theme.colors.text.primary },
+                ]}
+              >
+                {formatTime(dayInfo.extendedZmanim?.sunset)}
+              </Text>
             </View>
           </View>
+          {!zmanimReady ? (
+            <Text
+              style={{
+                marginTop: spacing.xs,
+                fontSize: 12,
+                lineHeight: 16,
+                textAlign: 'center',
+                color: theme.colors.text.tertiary,
+              }}
+            >
+              {LOCATION_REQUIRED_MESSAGE}
+            </Text>
+          ) : null}
         </GlassCard>
-      );
+        );
+      }
 
     case 'davening_note':
       if (!dayInfo || !hasNotableDaveningChanges(dayInfo.daveningChanges)) return null;
@@ -397,10 +486,7 @@ export function renderPanelContent(
           inputRange: [0, 100],
           outputRange: ['0%', '100%'],
         });
-        const formatFastTime = (date: Date | null) => {
-          if (!date) return '--:--';
-          return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-        };
+        const formatFastTime = (date: Date | null) => formatTime(date);
         if (half) {
           return (
             <GlassCard compact={half}>
@@ -514,6 +600,19 @@ export function renderPanelContent(
                 <Text style={[styles.shabbosTimeValue, half && { fontSize: 12 }]}>{formatTime(dayInfo?.upcomingShabbos?.havdalah ?? undefined)}</Text>
               </View>
             </View>
+            {!dayInfo?.upcomingShabbos?.candleLighting && !dayInfo?.upcomingShabbos?.havdalah ? (
+              <Text
+                style={{
+                  marginTop: spacing.xs,
+                  fontSize: 12,
+                  lineHeight: 16,
+                  textAlign: 'center',
+                  color: theme.colors.text.tertiary,
+                }}
+              >
+                {LOCATION_REQUIRED_MESSAGE}
+              </Text>
+            ) : null}
           </View>
         </GlassCard>
       );
@@ -527,7 +626,7 @@ export function renderPanelContent(
               Candle Lighting
             </Text>
             <Text style={[styles.candleTime, half && { fontSize: 14 }]} numberOfLines={1}>
-              {dayInfo?.upcomingShabbos?.candleLighting ? formatTime(dayInfo.upcomingShabbos.candleLighting) : 'Friday'}
+              {formatTime(dayInfo?.upcomingShabbos?.candleLighting)}
             </Text>
           </View>
         </GlassCard>

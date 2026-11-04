@@ -10,8 +10,6 @@ import {
   Modal,
   useWindowDimensions,
   PanResponder,
-  Alert,
-  InteractionManager,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/core';
@@ -28,6 +26,10 @@ import {
   injectRefuahIntoAmidahPrayerTextData,
   trimAlHanissimInsertionByCalendar,
 } from '../../src/services/MinchaTextRules';
+import { OfflineMinchaService } from '../../src/content/siddur/mincha/OfflineMinchaService';
+import { OfflineMaarivService } from '../../src/content/siddur/maariv/OfflineMaarivService';
+import { OfflineShacharitService } from '../../src/content/siddur/shacharit/OfflineShacharitService';
+import { OfflineStandaloneService } from '../../src/content/siddur/standalone/OfflineStandaloneService';
 import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { recordDaveningToday } from '../../src/storage/DaveningStreakService';
@@ -37,6 +39,17 @@ import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../componen
 import { ReaderToolbar } from '../../components/reader/ReaderToolbar';
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
 import type { DisplayPreferences } from '../../src/types/preferences';
+
+/**
+ * Prepare Hebrew for on-screen davening.
+ * Siddur sources often include ta'amei mikra (U+0591–U+05AF). Frank Ruhl rarely
+ * anchors those well on mobile, so random letters pick up floating marks / fallbacks.
+ * Keeps nikkud, dagesh, shin/sin dots, and meteg.
+ */
+function prepareHebrewDisplay(text: string): string {
+  if (!text) return text;
+  return text.replace(/[\u0591-\u05AF]/g, '');
+}
 
 interface RouteParams {
   service: 'shacharis' | 'mincha' | 'maariv' | 'brachos' | 'shabbos' | 'bentching' | 'bedtime' | 'shema' | 'modeh_ani' | 'tefilas_haderech' | 'asher_yatzar';
@@ -748,7 +761,34 @@ function trimBirkatHamazon(content: PrayerTextData): PrayerTextData {
 }
 
 /**
+ * Load a siddur section: live (non–coming-soon) content is fully offline.
+ * Shema standalone reuses the weekday Shacharit pack.
+ */
+async function loadSiddurSectionContent(
+  service: RouteParams['service'],
+  sectionKey: string,
+  nusach: 'ashkenaz' | 'sfard'
+): Promise<PrayerTextData | null> {
+  if (service === 'mincha') {
+    return OfflineMinchaService.getSection(sectionKey, { nusach });
+  }
+  if (service === 'shacharis') {
+    return OfflineShacharitService.getSection(sectionKey, { nusach });
+  }
+  if (service === 'maariv') {
+    return OfflineMaarivService.getSection(sectionKey, { nusach });
+  }
+  if (service === 'shema') {
+    return OfflineShacharitService.getSection('shema', { nusach });
+  }
+  const standalone = await OfflineStandaloneService.getSection(sectionKey, { nusach });
+  if (standalone) return standalone;
+  return SefariaService.fetchSiddurSection(sectionKey, nusach);
+}
+
+/**
  * Mincha: remove Chatzi Kaddish block (החזן אומר חצי קדיש ... through last ואימרו אמן in that block).
+ * Offline Mincha already strips this in OfflineMinchaService; kept as safety net.
  * Same pattern as trimBirkatHamazon: work on content.hebrew, strip nikkud, find indices, slice, return new content.
  */
 function processMinchaSectionContent(key: string, content: PrayerTextData): PrayerTextData {
@@ -858,7 +898,7 @@ const AUTOSCROLL_SPEED_MAX = 2;
 /** Tallit & Tefillin are optional (e.g. women don't have); show Hebrew + plus to expand. */
 const OPTIONAL_SECTIONS = ['tallit', 'tefillin'];
 /** Sections before Ashrei that are collapsed by default; tap to expand. Key = sectionKey. */
-const COLLAPSED_BEFORE_ASHREI_MINCHA: string[] = ['mincha_korbanot'];
+const COLLAPSED_BEFORE_ASHREI_MINCHA: string[] = ['mincha_korbanot', 'korbanot', 'torah_reading'];
 /** Amidah sections that may carry a kedushaFoldout (Chazaras ha-shatz Kedushah). */
 /** Sections that use amidah foldouts (קדושה, מודים דרבנן) in the reader. */
 const AMIDAH_KEYS_FOR_KEDUSHA_FOLDOUT = new Set(['amidah', 'mincha_amidah', 'maariv_amidah']);
@@ -866,7 +906,8 @@ const AUTOSCROLL_PIXELS_PER_SECOND = 45; // at speed 1
 
 const TEXT_SIZES: DisplayPreferences['textSize'][] = ['xsmall', 'small', 'medium', 'large'];
 const HEBREW_FONT_SIZES: Record<DisplayPreferences['textSize'], number> = { xsmall: 15, small: 18, medium: 22, large: 26 };
-const HEBREW_LINE_HEIGHTS: Record<DisplayPreferences['textSize'], number> = { xsmall: 26, small: 32, medium: 40, large: 48 };
+// Slightly taller than before so nikkud breathes with Medium weight
+const HEBREW_LINE_HEIGHTS: Record<DisplayPreferences['textSize'], number> = { xsmall: 28, small: 34, medium: 42, large: 50 };
 
 // Cross-platform speed slider: track + thumb, tap and drag
 const SpeedSlider: React.FC<{
@@ -1027,20 +1068,11 @@ export const SiddurReaderScreen: React.FC = () => {
     return () => clearTimeout(fallback);
   }, [loadPreferences]);
 
-  // Record davening streak when user opens siddur; WIP notice for Shacharis & Maariv (not Mincha)
+  // Record davening streak when user opens siddur
   useFocusEffect(
     useCallback(() => {
       recordDaveningToday();
-      if (service !== 'shacharis' && service !== 'maariv') return;
-      const task = InteractionManager.runAfterInteractions(() => {
-        Alert.alert(
-          'Work in progress',
-          'Shacharis and Maariv are still a work in progress. There are many known issues; they will be fixed in subsequent updates.',
-          [{ text: 'OK' }]
-        );
-      });
-      return () => task.cancel();
-    }, [service])
+    }, [])
   );
 
   // Persist autoscroll speed when user changes it (not on initial load)
@@ -1091,13 +1123,23 @@ export const SiddurReaderScreen: React.FC = () => {
     [service]
   );
 
-  /** When refuah name list changes in Settings, refetch amidah text so the מי שבירך clause updates. */
+  /** When refuah names or nusach change in Settings, refresh so Mincha/Amidah match the choice. */
   const lastRefuahNamesJsonRef = useRef<string | null>(null);
+  const lastNusachOnFocusRef = useRef<'ashkenaz' | 'sfard' | null>(null);
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       (async () => {
         const prefs = await UserPreferencesService.getPreferences();
+        const nextNusach =
+          prefs?.nusach === 'sfard' || prefs?.nusach === 'ashkenaz' ? prefs.nusach : null;
+        if (nextNusach && nextNusach !== lastNusachOnFocusRef.current) {
+          lastNusachOnFocusRef.current = nextNusach;
+          if (!cancelled) setNusach(nextNusach);
+        } else if (lastNusachOnFocusRef.current === null && nextNusach) {
+          lastNusachOnFocusRef.current = nextNusach;
+        }
+
         const j = JSON.stringify(prefs?.refuahPersonalNames ?? []);
         if (lastRefuahNamesJsonRef.current === null) {
           lastRefuahNamesJsonRef.current = j;
@@ -1115,9 +1157,10 @@ export const SiddurReaderScreen: React.FC = () => {
           keysToReload.push(effectiveSectionKey);
         }
         const uniqueKeys = [...new Set(keysToReload)];
+        const packNusach = nextNusach ?? nusach;
         for (const key of uniqueKeys) {
           try {
-            const raw = await SefariaService.fetchSiddurSection(key, nusach);
+            const raw = await loadSiddurSectionContent(service, key, packNusach);
             const c = await postProcessSiddurSectionContent(key, raw);
             if (!cancelled) setSectionContent((prev) => ({ ...prev, [key]: c }));
           } catch {
@@ -1129,6 +1172,7 @@ export const SiddurReaderScreen: React.FC = () => {
         cancelled = true;
       };
     }, [
+      service,
       isFullScroll,
       isSingleSectionView,
       effectiveSectionKey,
@@ -1140,7 +1184,14 @@ export const SiddurReaderScreen: React.FC = () => {
   useEffect(() => {
     if (!prefsLoaded) return;
     if (isFullScroll) {
-      const flatSections = SefariaService.getFlatSectionsForFullScroll(service);
+      const flatSections =
+        service === 'mincha'
+          ? OfflineMinchaService.getSections(nusach)
+          : service === 'shacharis'
+            ? OfflineShacharitService.getSections(nusach)
+            : service === 'maariv'
+              ? OfflineMaarivService.getSections(nusach)
+              : SefariaService.getFlatSectionsForFullScroll(service);
       setSections(flatSections);
       setLoading(true);
       (async () => {
@@ -1148,7 +1199,7 @@ export const SiddurReaderScreen: React.FC = () => {
           const results = await Promise.all(
             flatSections.map(async (s) => {
               try {
-                const data = await SefariaService.fetchSiddurSection(s.key, nusach);
+                const data = await loadSiddurSectionContent(service, s.key, nusach);
                 return { key: s.key, data };
               } catch {
                 return { key: s.key, data: null };
@@ -1210,6 +1261,12 @@ export const SiddurReaderScreen: React.FC = () => {
         setSections([{ key: 'tefilas_haderech', title: 'Tefillas HaDerech', hebrewTitle: 'תפילת הדרך' }]);
       } else if (service === 'asher_yatzar') {
         setSections([{ key: 'asher_yatzar', title: 'Asher Yatzar', hebrewTitle: 'אשר יצר' }]);
+      } else if (service === 'shacharis') {
+        setSections(OfflineShacharitService.getSections(nusach));
+      } else if (service === 'mincha') {
+        setSections(OfflineMinchaService.getSections(nusach));
+      } else if (service === 'maariv') {
+        setSections(OfflineMaarivService.getSections(nusach));
       } else {
         const structure = await SefariaService.fetchDaveningService(
           service as 'shacharis' | 'mincha' | 'maariv' | 'musaf',
@@ -1230,7 +1287,7 @@ export const SiddurReaderScreen: React.FC = () => {
     if (sectionContent[sectionKey] && !isAmidah) return;
     setLoadingSection(sectionKey);
     try {
-      const raw = await SefariaService.fetchSiddurSection(sectionKey, nusach);
+      const raw = await loadSiddurSectionContent(service, sectionKey, nusach);
       const content = await postProcessSiddurSectionContent(sectionKey, raw);
       setSectionContent(prev => ({ ...prev, [sectionKey]: content }));
     } catch {
@@ -1245,7 +1302,7 @@ export const SiddurReaderScreen: React.FC = () => {
     async (sectionKey: string) => {
       setLoadingSection(sectionKey);
       try {
-        const raw = await SefariaService.fetchSiddurSection(sectionKey, nusach);
+        const raw = await loadSiddurSectionContent(service, sectionKey, nusach);
         const content = await postProcessSiddurSectionContent(sectionKey, raw);
         setSectionContent(prev => ({ ...prev, [sectionKey]: content }));
       } catch {
@@ -1254,7 +1311,7 @@ export const SiddurReaderScreen: React.FC = () => {
         setLoadingSection(null);
       }
     },
-    [nusach, postProcessSiddurSectionContent]
+    [service, nusach, postProcessSiddurSectionContent]
   );
 
   const handleSectionPress = (key: string) => {
@@ -1364,12 +1421,10 @@ export const SiddurReaderScreen: React.FC = () => {
             const showOptionalCollapsed = isOptional && !isOptionalExpanded;
 
             const isBeforeAshreiCollapsed =
-              service === 'mincha' &&
               COLLAPSED_BEFORE_ASHREI_MINCHA.includes(section.key) &&
               !expandedBeforeAshrei[section.key];
 
             const isBeforeAshreiExpanded =
-              service === 'mincha' &&
               COLLAPSED_BEFORE_ASHREI_MINCHA.includes(section.key) &&
               expandedBeforeAshrei[section.key];
 
@@ -1395,7 +1450,7 @@ export const SiddurReaderScreen: React.FC = () => {
                 ) : isBeforeAshreiCollapsed ? (
                   <TouchableOpacity
                     onPress={() => setExpandedBeforeAshrei(prev => ({ ...prev, [section.key]: true }))}
-                    style={styles.collapsedBeforeAshreiRow}
+                    style={[styles.collapsedBeforeAshreiRow, styles.collapsedBeforeAshreiRowEnd]}
                     activeOpacity={0.7}
                   >
                     <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
@@ -1408,7 +1463,7 @@ export const SiddurReaderScreen: React.FC = () => {
                     {isBeforeAshreiExpanded && (
                       <TouchableOpacity
                         onPress={() => setExpandedBeforeAshrei(prev => ({ ...prev, [section.key]: false }))}
-                        style={styles.collapsedBeforeAshreiRow}
+                        style={[styles.collapsedBeforeAshreiRow, styles.collapsedBeforeAshreiRowEnd]}
                         activeOpacity={0.7}
                       >
                         <Text style={[styles.hebrewText, styles.collapsedBeforeAshreiHebrew, { fontSize: HEBREW_FONT_SIZES[textSize] }]}>
@@ -1431,7 +1486,7 @@ export const SiddurReaderScreen: React.FC = () => {
                       { fontSize: HEBREW_FONT_SIZES[textSize] * 0.8, lineHeight: HEBREW_LINE_HEIGHTS[textSize] * 0.9 },
                     ];
                     const renderSegmentsAsBlocks = (
-                      segs: { text: string; italic: boolean }[],
+                      segs: { text: string; italic: boolean; seasonalHighlight?: boolean; seasonalLabel?: string }[],
                       normalStyle: object,
                       instructionStyle: object,
                       instructionBlockStyle: object
@@ -1440,16 +1495,33 @@ export const SiddurReaderScreen: React.FC = () => {
                       let i = 0;
                       let keyIdx = 0;
                       while (i < segs.length) {
-                        if (segs[i].italic) {
+                        const seg = segs[i];
+                        if (seg.seasonalHighlight) {
+                          nodes.push(
+                            <View key={`seg-${keyIdx++}`} style={styles.daySpecificHighlight}>
+                              {seg.seasonalLabel ? (
+                                <Text allowFontScaling={false} style={styles.daySpecificLabel}>
+                                  {seg.seasonalLabel}
+                                </Text>
+                              ) : null}
+                              {renderTextWithParagraphs(seg.text, normalStyle, spacing.md, true)}
+                            </View>
+                          );
+                          i += 1;
+                        } else if (seg.italic) {
                           nodes.push(
                             <View key={`seg-${keyIdx++}`} style={instructionBlockStyle}>
-                              <Text allowFontScaling={false} style={instructionStyle}>{segs[i].text}</Text>
+                              <Text allowFontScaling={false} style={instructionStyle}>{prepareHebrewDisplay(seg.text)}</Text>
                             </View>
                           );
                           i += 1;
                         } else {
                           const normalParts: string[] = [];
-                          while (i < segs.length && !segs[i].italic) {
+                          while (
+                            i < segs.length &&
+                            !segs[i].italic &&
+                            !segs[i].seasonalHighlight
+                          ) {
                             normalParts.push(segs[i].text);
                             i += 1;
                           }
@@ -2009,7 +2081,15 @@ export const SiddurReaderScreen: React.FC = () => {
               keyboardShouldPersistTaps="handled"
             >
               {sections
-                .filter((s) => s.key !== 'preparatory')
+                .filter(
+                  (s) =>
+                    s.key !== 'preparatory' &&
+                    s.key !== 'mincha_korbanot' &&
+                    s.key !== 'korbanot' &&
+                    s.key !== 'torah_reading' &&
+                    s.key !== 'tallit' &&
+                    s.key !== 'tefillin'
+                )
                 .map((s, idx, arr) => (
                 <TouchableOpacity
                   key={s.key}
@@ -2037,9 +2117,10 @@ export const SiddurReaderScreen: React.FC = () => {
 
   /** Split text by paragraph breaks (\n\n). On iOS use one View+Text per paragraph to avoid RTL run fragmentation and fragment displacement. No RLM; rely on writingDirection + textAlign. */
   const renderTextWithParagraphs = (text: string, textStyle: object, paragraphSpacing?: number, isRtl?: boolean) => {
-    const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+    const source = isRtl ? prepareHebrewDisplay(text) : text;
+    const paragraphs = source.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
     if (paragraphs.length <= 1) {
-      return <Text allowFontScaling={false} style={textStyle}>{text}</Text>;
+      return <Text allowFontScaling={false} style={textStyle}>{source}</Text>;
     }
     const gap = paragraphSpacing ?? spacing.md;
     return (
@@ -2065,7 +2146,7 @@ export const SiddurReaderScreen: React.FC = () => {
       { fontSize: HEBREW_FONT_SIZES[textSize] * 0.8, lineHeight: HEBREW_LINE_HEIGHTS[textSize] * 0.9 },
     ];
     const renderSegmentsAsBlocks = (
-      segs: { text: string; italic: boolean }[],
+      segs: { text: string; italic: boolean; seasonalHighlight?: boolean; seasonalLabel?: string }[],
       normalStyle: object,
       instructionStyle: object,
       instructionBlockStyle: object
@@ -2074,14 +2155,27 @@ export const SiddurReaderScreen: React.FC = () => {
       let i = 0;
       let keyIdx = 0;
       while (i < segs.length) {
-        if (segs[i].italic) {
+        const seg = segs[i];
+        if (seg.seasonalHighlight) {
           nodes.push(
-            <Text key={`seg-${keyIdx++}`} allowFontScaling={false} style={instructionStyle}>{segs[i].text}</Text>
+            <View key={`seg-${keyIdx++}`} style={styles.daySpecificHighlight}>
+              {seg.seasonalLabel ? (
+                <Text allowFontScaling={false} style={styles.daySpecificLabel}>
+                  {seg.seasonalLabel}
+                </Text>
+              ) : null}
+              {renderTextWithParagraphs(seg.text, normalStyle, spacing.md, true)}
+            </View>
+          );
+          i += 1;
+        } else if (seg.italic) {
+          nodes.push(
+            <Text key={`seg-${keyIdx++}`} allowFontScaling={false} style={instructionStyle}>{prepareHebrewDisplay(seg.text)}</Text>
           );
           i += 1;
         } else {
           const normalParts: string[] = [];
-          while (i < segs.length && !segs[i].italic) {
+          while (i < segs.length && !segs[i].italic && !segs[i].seasonalHighlight) {
             normalParts.push(segs[i].text);
             i += 1;
           }
@@ -2762,6 +2856,9 @@ const styles = StyleSheet.create({
     paddingRight: spacing.sm,
     gap: 8,
   },
+  collapsedBeforeAshreiRowEnd: {
+    alignSelf: 'flex-end',
+  },
   collapsedBeforeAshreiHebrew: {
     fontFamily: fonts.hebrew.semibold,
     color: colors.primary.main,
@@ -3019,20 +3116,33 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   hebrewText: {
-    fontFamily: fonts.hebrew.regular,
+    // Medium is a touch thicker than Regular without going bold
+    fontFamily: fonts.hebrew.medium,
     fontSize: 22,
     color: colors.text.primary,
-    lineHeight: 40,
+    lineHeight: 42,
     textAlign: 'right',
     writingDirection: 'rtl',
     letterSpacing: 0,
+    ...(Platform.OS === 'android' ? { includeFontPadding: false } : {}),
   },
   daySpecificHighlight: {
     backgroundColor: 'rgba(212, 165, 184, 0.22)',
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    marginVertical: spacing.xs,
+    paddingVertical: spacing.sm,
+    marginVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(184, 143, 163, 0.45)',
+  },
+  daySpecificLabel: {
+    fontFamily: fonts.body.semibold,
+    fontSize: 12,
+    color: colors.primary.dark,
+    textAlign: 'right',
+    writingDirection: 'rtl',
+    marginBottom: spacing.xs,
+    opacity: 0.9,
   },
   instructionText: {
     fontStyle: 'italic',

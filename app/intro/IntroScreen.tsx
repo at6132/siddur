@@ -3,11 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   Animated,
   Easing,
   Image,
+  ScrollView,
+  useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { GlassButton } from '../../components/ui/GlassButton';
@@ -15,8 +17,6 @@ import { colors } from '../../src/design/colors';
 import { DEFAULT_SCREEN_BACKGROUND } from '../../src/design/screenGradient';
 import { spacing } from '../../src/design/spacing';
 import { textStyles } from '../../src/design/typography';
-
-const { width, height } = Dimensions.get('window');
 
 interface Feature {
   icon: string;
@@ -52,7 +52,10 @@ interface IntroScreenProps {
 }
 
 export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
-  const [currentFeature, setCurrentFeature] = useState(0);
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isCompact = height < 720;
+
   const [showContent, setShowContent] = useState(false);
 
   // Logo animations - starts centered, moves up
@@ -115,6 +118,8 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
     createOrbAnimation(orb2, 5000).start();
     createOrbAnimation(orb3, 6000).start();
 
+    const logoLift = -(height * (isCompact ? 0.18 : 0.22));
+
     // Main animation sequence
     Animated.sequence([
       // Phase 1: Logo appears in center with spring
@@ -152,59 +157,59 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
       // Phase 3: Sparkles
       Animated.stagger(90, [
         Animated.sequence([
-          Animated.timing(sparkle1, { 
-            toValue: 1, 
-            duration: 300, 
+          Animated.timing(sparkle1, {
+            toValue: 1,
+            duration: 300,
             easing: Easing.out(Easing.cubic),
-            useNativeDriver: true 
+            useNativeDriver: true,
           }),
-          Animated.timing(sparkle1, { 
-            toValue: 0, 
-            duration: 300, 
+          Animated.timing(sparkle1, {
+            toValue: 0,
+            duration: 300,
             easing: Easing.in(Easing.cubic),
-            useNativeDriver: true 
+            useNativeDriver: true,
           }),
         ]),
         Animated.sequence([
-          Animated.timing(sparkle2, { 
-            toValue: 1, 
-            duration: 300, 
+          Animated.timing(sparkle2, {
+            toValue: 1,
+            duration: 300,
             easing: Easing.out(Easing.cubic),
-            useNativeDriver: true 
+            useNativeDriver: true,
           }),
-          Animated.timing(sparkle2, { 
-            toValue: 0, 
-            duration: 300, 
+          Animated.timing(sparkle2, {
+            toValue: 0,
+            duration: 300,
             easing: Easing.in(Easing.cubic),
-            useNativeDriver: true 
+            useNativeDriver: true,
           }),
         ]),
         Animated.sequence([
-          Animated.timing(sparkle3, { 
-            toValue: 1, 
-            duration: 300, 
+          Animated.timing(sparkle3, {
+            toValue: 1,
+            duration: 300,
             easing: Easing.out(Easing.cubic),
-            useNativeDriver: true 
+            useNativeDriver: true,
           }),
-          Animated.timing(sparkle3, { 
-            toValue: 0, 
-            duration: 300, 
+          Animated.timing(sparkle3, {
+            toValue: 0,
+            duration: 300,
             easing: Easing.in(Easing.cubic),
-            useNativeDriver: true 
+            useNativeDriver: true,
           }),
         ]),
         Animated.sequence([
-          Animated.timing(sparkle4, { 
-            toValue: 1, 
-            duration: 300, 
+          Animated.timing(sparkle4, {
+            toValue: 1,
+            duration: 300,
             easing: Easing.out(Easing.cubic),
-            useNativeDriver: true 
+            useNativeDriver: true,
           }),
-          Animated.timing(sparkle4, { 
-            toValue: 0, 
-            duration: 300, 
+          Animated.timing(sparkle4, {
+            toValue: 0,
+            duration: 300,
             easing: Easing.in(Easing.cubic),
-            useNativeDriver: true 
+            useNativeDriver: true,
           }),
         ]),
       ]),
@@ -213,17 +218,17 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
       Animated.delay(400),
     ]).start(() => {
       setShowContent(true);
-      
+
       // Logo moves up - liquid smooth
       Animated.parallel([
         Animated.timing(logoPositionY, {
-          toValue: -height * 0.22,
+          toValue: logoLift,
           duration: 800,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(logoScale, {
-          toValue: 0.75,
+          toValue: isCompact ? 0.65 : 0.75,
           duration: 800,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
@@ -321,7 +326,6 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
         ]),
       ]).start();
     });
-
   }, []);
 
   const orb1TranslateY = orb1.interpolate({
@@ -339,6 +343,11 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
     outputRange: [0, 20],
   });
 
+  const contentTop = height * (isCompact ? 0.26 : 0.32);
+  const bottomPad = Math.max(insets.bottom, spacing.md) + spacing.sm;
+  const featureGap = isCompact ? spacing.xs : spacing.sm;
+  const featurePad = isCompact ? spacing.sm : spacing.md;
+
   return (
     <View style={styles.container} pointerEvents="box-none">
       <LinearGradient
@@ -352,22 +361,40 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
       <Animated.View
         style={[
           styles.orb,
-          styles.orb1,
-          { transform: [{ translateY: orb1TranslateY }] },
+          {
+            width: 200,
+            height: 200,
+            backgroundColor: 'rgba(212, 165, 184, 0.3)',
+            top: height * 0.08,
+            left: -50,
+            transform: [{ translateY: orb1TranslateY }],
+          },
         ]}
       />
       <Animated.View
         style={[
           styles.orb,
-          styles.orb2,
-          { transform: [{ translateY: orb2TranslateY }] },
+          {
+            width: 150,
+            height: 150,
+            backgroundColor: 'rgba(165, 196, 212, 0.3)',
+            top: height * 0.25,
+            right: -30,
+            transform: [{ translateY: orb2TranslateY }],
+          },
         ]}
       />
       <Animated.View
         style={[
           styles.orb,
-          styles.orb3,
-          { transform: [{ translateX: orb3TranslateX }] },
+          {
+            width: 180,
+            height: 180,
+            backgroundColor: 'rgba(212, 196, 232, 0.25)',
+            bottom: height * 0.12,
+            left: width * 0.15,
+            transform: [{ translateX: orb3TranslateX }],
+          },
         ]}
       />
 
@@ -398,7 +425,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
         <Animated.View style={{ opacity: logoOpacity }}>
           <Image
             source={require('../../assets/logo.png')}
-            style={styles.logoImage}
+            style={[styles.logoImage, isCompact && styles.logoImageCompact]}
             resizeMode="contain"
           />
         </Animated.View>
@@ -418,61 +445,88 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
         />
       </Animated.View>
 
-      {/* Content Section */}
+      {/* Content Section — scrollable body + pinned CTA so nothing clips on short/iPad heights */}
       {showContent && (
-        <View style={styles.contentSection}>
-          {/* Subtitle / Tagline */}
-          <Animated.Text
-            style={[
-              styles.subtitle,
-              {
-                opacity: subtitleOpacity,
-                transform: [{ translateY: titleTranslateY }],
-              },
-            ]}
+        <View
+          style={[
+            styles.contentSection,
+            {
+              top: contentTop,
+              paddingBottom: bottomPad,
+              paddingTop: insets.top > 0 ? 0 : spacing.sm,
+            },
+          ]}
+        >
+          <ScrollView
+            style={styles.contentScroll}
+            contentContainerStyle={styles.contentScrollInner}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            keyboardShouldPersistTaps="handled"
           >
-            With you, when you choose.
-          </Animated.Text>
+            <Animated.Text
+              style={[
+                styles.subtitle,
+                isCompact && styles.subtitleCompact,
+                {
+                  opacity: subtitleOpacity,
+                  transform: [{ translateY: titleTranslateY }],
+                },
+              ]}
+            >
+              With you, when you choose.
+            </Animated.Text>
 
-          {/* Features */}
-          <Animated.View
-            style={[
-              styles.featuresContainer,
-              {
-                opacity: featuresOpacity,
-                transform: [{ translateY: featuresTranslateY }],
-              },
-            ]}
-          >
-            {FEATURES.map((feature, index) => (
-              <Animated.View
-                key={feature.title}
-                style={[
-                  styles.featureCard,
-                  {
-                    opacity: featureAnimations[index].opacity,
-                    transform: [
-                      { translateX: featureAnimations[index].translateX },
-                    ],
-                  },
-                ]}
-              >
-                <BlurView intensity={40} tint="light" style={styles.featureBlur}>
-                  <Text style={styles.featureIcon}>{feature.icon}</Text>
-                  <View style={styles.featureText}>
-                    <Text style={styles.featureTitle}>{feature.title}</Text>
-                    {feature.description ? (
-                      <Text style={styles.featureDescription}>
-                        {feature.description}
-                      </Text>
-                    ) : null}
-                  </View>
-                </BlurView>
-              </Animated.View>
-            ))}
-          </Animated.View>
+            <Animated.View
+              style={[
+                styles.featuresContainer,
+                {
+                  opacity: featuresOpacity,
+                  transform: [{ translateY: featuresTranslateY }],
+                },
+              ]}
+            >
+              {FEATURES.map((feature, index) => (
+                <Animated.View
+                  key={feature.title}
+                  style={[
+                    styles.featureCard,
+                    { marginBottom: featureGap },
+                    {
+                      opacity: featureAnimations[index].opacity,
+                      transform: [
+                        { translateX: featureAnimations[index].translateX },
+                      ],
+                    },
+                  ]}
+                >
+                  <BlurView
+                    intensity={40}
+                    tint="light"
+                    style={[styles.featureBlur, { padding: featurePad }]}
+                  >
+                    <Text
+                      style={[
+                        styles.featureIcon,
+                        isCompact && styles.featureIconCompact,
+                      ]}
+                    >
+                      {feature.icon}
+                    </Text>
+                    <View style={styles.featureText}>
+                      <Text style={styles.featureTitle}>{feature.title}</Text>
+                      {feature.description ? (
+                        <Text style={styles.featureDescription}>
+                          {feature.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                  </BlurView>
+                </Animated.View>
+              ))}
+            </Animated.View>
+          </ScrollView>
 
-          {/* Begin button */}
           <Animated.View
             style={[
               styles.buttonContainer,
@@ -486,7 +540,7 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
               title="Begin Your Journey"
               onPress={onBegin}
               variant="primary"
-              size="large"
+              size="lg"
             />
           </Animated.View>
         </View>
@@ -498,7 +552,6 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    overflow: 'hidden',
     paddingTop: spacing.safeTopInset,
   },
   gradient: {
@@ -507,27 +560,6 @@ const styles = StyleSheet.create({
   orb: {
     position: 'absolute',
     borderRadius: 999,
-  },
-  orb1: {
-    width: 200,
-    height: 200,
-    backgroundColor: 'rgba(212, 165, 184, 0.3)',
-    top: height * 0.08,
-    left: -50,
-  },
-  orb2: {
-    width: 150,
-    height: 150,
-    backgroundColor: 'rgba(165, 196, 212, 0.3)',
-    top: height * 0.25,
-    right: -30,
-  },
-  orb3: {
-    width: 180,
-    height: 180,
-    backgroundColor: 'rgba(212, 196, 232, 0.25)',
-    bottom: height * 0.12,
-    left: width * 0.15,
   },
 
   // Logo section - centered initially
@@ -550,6 +582,10 @@ const styles = StyleSheet.create({
   logoImage: {
     width: 140,
     height: 140,
+  },
+  logoImageCompact: {
+    width: 112,
+    height: 112,
   },
   sparkle: {
     position: 'absolute',
@@ -578,12 +614,20 @@ const styles = StyleSheet.create({
   // Content section
   contentSection: {
     position: 'absolute',
-    top: height * 0.32,
     left: 0,
     right: 0,
     bottom: 0,
     paddingHorizontal: spacing.lg,
     alignItems: 'center',
+  },
+  contentScroll: {
+    flex: 1,
+    width: '100%',
+  },
+  contentScrollInner: {
+    flexGrow: 1,
+    alignItems: 'center',
+    paddingBottom: spacing.sm,
   },
   subtitle: {
     ...textStyles.bodyLarge,
@@ -592,12 +636,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     textAlign: 'center',
   },
+  subtitleCompact: {
+    marginBottom: spacing.md,
+  },
   featuresContainer: {
     width: '100%',
-    marginBottom: spacing.lg,
   },
   featureCard: {
-    marginBottom: spacing.sm,
     borderRadius: 16,
     overflow: 'hidden',
     borderWidth: 1,
@@ -606,12 +651,15 @@ const styles = StyleSheet.create({
   featureBlur: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
     backgroundColor: 'rgba(255, 255, 255, 0.22)',
   },
   featureIcon: {
     fontSize: 26,
     marginRight: spacing.md,
+  },
+  featureIconCompact: {
+    fontSize: 22,
+    marginRight: spacing.sm,
   },
   featureText: {
     flex: 1,
@@ -629,5 +677,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     marginTop: spacing.sm,
+    flexShrink: 0,
   },
 });

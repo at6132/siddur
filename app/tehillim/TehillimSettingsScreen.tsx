@@ -134,7 +134,7 @@ export const TehillimSettingsScreen: React.FC = () => {
         <View style={styles.header}>
           <BackButton onPress={() => navigation.goBack()} style={styles.backButton} />
           <Text style={styles.title}>Daily Tehillim</Text>
-          <Text style={styles.subtitle}>Choose your daily reading goal</Text>
+          <Text style={styles.subtitle}>Choose your daily goal</Text>
         </View>
 
         {/* Goal Options */}
@@ -162,7 +162,7 @@ export const TehillimSettingsScreen: React.FC = () => {
 
           <GlassOption
             title="Whenever you can"
-            subtitle="No daily goal. Say Tehillim whenever you have time. Complete any perek in any order; progress = % of all 150."
+            subtitle="No daily goal. Say Tehillim whenever you have time. Complete any perek in any order."
             selected={settings.goalType === 'whenever'}
             onPress={() => handleGoalTypeChange('whenever')}
           />

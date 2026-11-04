@@ -24,6 +24,7 @@ import { ZmanimService } from '../../src/core/zmanim/ZmanimService';
 import { StorageService } from '../../src/storage/StorageService';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import type { LocationObject } from 'expo-location';
+import { LOCATION_REQUIRED_MESSAGE, requestLocationFromUser } from '../../src/services/LocationAccess';
 import {
   OMER_EXTRA_AFTER_COUNT,
   OMER_HARACHAMAN_HEBREW,
@@ -42,8 +43,7 @@ function formatTimeUntilAt(now: Date, until: Date): string | null {
 }
 
 function formatTimeLocal(date: Date | undefined): string {
-  if (!date) return '--:--';
-  return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return ZmanimService.formatTime(date);
 }
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -255,6 +255,19 @@ export const OmerScreen: React.FC = () => {
             <Text style={[styles.nightWhisper, { color: theme.colors.text.tertiary }]}>
               Night {displayNight} · week {weekNum}
             </Text>
+            {!tzeis ? (
+              <TouchableOpacity
+                onPress={async () => {
+                  const granted = await requestLocationFromUser();
+                  if (granted) await loadOmerData();
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.nightWhisper, { color: theme.colors.text.tertiary, marginTop: spacing.xs }]}>
+                  Nightfall {ZmanimService.formatTime(null)}. {LOCATION_REQUIRED_MESSAGE}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
             {isLagBaomer && (
               <Text style={[styles.lagWhisper, { color: theme.colors.primary.dark }]}>
                 Lag BaOmer — a lighter day

@@ -7,8 +7,8 @@ import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { spacing } from '../../src/design/spacing';
 import { DEFAULT_SCREEN_BACKGROUND_LOOP } from '../../src/design/screenGradient';
 import { Nusach } from '../../src/types/nusach';
-import * as Location from 'expo-location';
 import { track, ONBOARDING_EVENTS } from '../../src/analytics';
+import { NotificationService } from '../../src/notifications/NotificationService';
 
 type OnboardingStep = 'nusach' | 'welcome';
 
@@ -32,13 +32,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
       step_index: 0,
     });
     stepStartedAt.current = Date.now();
-    track(ONBOARDING_EVENTS.PERMISSION_PROMPT_SHOWN, { permission_type: 'location' });
-    Location.requestForegroundPermissionsAsync().then(({ status }) => {
-      track(ONBOARDING_EVENTS.PERMISSION_RESPONSE, {
-        permission_type: 'location',
-        result: status === 'granted' ? 'granted' : 'denied',
-      });
-    });
   }, []);
 
   useEffect(() => {
@@ -58,20 +51,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
     track(ONBOARDING_EVENTS.ONBOARDING_STEP_COMPLETED, { step_id: 'nusach', completion_time_ms: completionTimeMs });
     await UserPreferencesService.setNusach(selectedNusach);
     await UserPreferencesService.setSpiritualGoals([]);
-
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({});
-        await UserPreferencesService.setLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-      }
-    } catch (e) {
-      console.warn('Location error:', e);
-    }
-
     setStep('welcome');
   };
 
@@ -79,6 +58,12 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
     const totalTimeMs = Date.now() - onboardingStartedAt.current;
     track(ONBOARDING_EVENTS.ONBOARDING_COMPLETED, { total_time_ms: totalTimeMs });
     await UserPreferencesService.markOnboardingComplete();
+    track(ONBOARDING_EVENTS.PERMISSION_PROMPT_SHOWN, { permission_type: 'notifications' });
+    const granted = await NotificationService.requestPermissionsAndSchedule();
+    track(ONBOARDING_EVENTS.PERMISSION_RESPONSE, {
+      permission_type: 'notifications',
+      result: granted ? 'granted' : 'denied',
+    });
     onComplete();
   };
 
@@ -91,18 +76,6 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
             onSkip={async () => {
               track(ONBOARDING_EVENTS.ONBOARDING_SKIPPED, { step_id: 'nusach' });
               await UserPreferencesService.setSpiritualGoals([]);
-              try {
-                const { status } = await Location.requestForegroundPermissionsAsync();
-                if (status === 'granted') {
-                  const location = await Location.getCurrentPositionAsync({});
-                  await UserPreferencesService.setLocation({
-                    latitude: location.coords.latitude,
-                    longitude: location.coords.longitude,
-                  });
-                }
-              } catch (e) {
-                console.warn('Location error:', e);
-              }
               setStep('welcome');
             }}
           />

@@ -14,47 +14,73 @@ interface GlassCardProps {
   compact?: boolean;
 }
 
+/**
+ * Home glass card.
+ * Content View is always a normal View that owns the Text tree.
+ * On native, BlurView is only a background layer (not a Text parent).
+ */
 export const GlassCard: React.FC<GlassCardProps> = ({ children, style, onPress, compact }) => {
   const { theme } = useTheme();
   const glassGradient = theme.isDark
-    ? (['rgba(45,42,60,0.65)', 'rgba(35,32,50,0.55)'] as const)
-    : (['rgba(255,255,255,0.85)', 'rgba(255,255,255,0.65)'] as const);
+    ? (['rgba(45,42,60,0.72)', 'rgba(35,32,50,0.62)'] as const)
+    : (['rgba(255,255,255,0.92)', 'rgba(255,255,255,0.78)'] as const);
 
-  const backdropStyle = compact ? StyleSheet.absoluteFillObject : styles.glassBlur;
-  const innerPadStyle = compact
-    ? [
-        { backgroundColor: theme.isDark ? 'rgba(45,42,60,0.3)' : 'rgba(255,255,255,0.5)' },
-        styles.glassInnerCompactFill,
-      ]
-    : [
-        styles.glassInner,
-        { backgroundColor: theme.isDark ? 'rgba(45,42,60,0.3)' : 'rgba(255,255,255,0.5)' },
-      ];
+  // Opaque enough that greys read as greys (not pastel mush over the gradient)
+  const fillColor = theme.isDark ? 'rgba(45,42,60,0.55)' : 'rgba(255,255,255,0.72)';
+
+  const contentBody = (
+    <View
+      style={[
+        compact ? styles.glassInnerCompact : styles.glassInner,
+        { backgroundColor: fillColor },
+      ]}
+      // Keep child layout measuring correctly under absolute parents
+      collapsable={false}
+    >
+      {children}
+    </View>
+  );
 
   const content = (
     <View
       style={[
         styles.glassCard,
-        { borderColor: theme.isDark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.8)', shadowColor: theme.colors.shadow?.medium || 'rgba(0,0,0,0.1)' },
+        {
+          borderColor: theme.isDark ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.85)',
+          shadowColor: theme.colors.shadow?.medium || 'rgba(0,0,0,0.1)',
+        },
         compact && styles.glassCardCompact,
         style,
       ]}
     >
-      {Platform.OS !== 'web' ? (
-        <BlurView intensity={80} tint={theme.isDark ? 'dark' : 'light'} style={backdropStyle}>
-          <View style={innerPadStyle}>{children}</View>
-        </BlurView>
-      ) : (
-        <LinearGradient colors={glassGradient as unknown as string[]} style={backdropStyle}>
-          <View style={innerPadStyle}>{children}</View>
+      {Platform.OS !== 'web' && (
+        <BlurView
+          intensity={55}
+          tint={theme.isDark ? 'dark' : 'light'}
+          style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
+        />
+      )}
+      {Platform.OS === 'web' ? (
+        <LinearGradient
+          colors={glassGradient as unknown as string[]}
+          style={compact ? styles.flexFill : styles.webBackdrop}
+        >
+          {contentBody}
         </LinearGradient>
+      ) : (
+        contentBody
       )}
     </View>
   );
 
   if (onPress) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={compact ? styles.touchableCompact : undefined}>
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.7}
+        style={compact ? styles.touchableCompact : undefined}
+      >
         {content}
       </TouchableOpacity>
     );
@@ -72,31 +98,33 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
     minHeight: 88,
+    position: 'relative',
   },
   glassCardCompact: {
     minHeight: 0,
     flex: 1,
     alignSelf: 'stretch',
-    /** BlurView ignores flex in many RN builds; absolute backdrop needs an anchor */
-    position: 'relative',
-    overflow: 'hidden',
   },
   touchableCompact: {
     flex: 1,
     alignSelf: 'stretch',
     minHeight: 0,
   },
-  glassBlur: {
+  flexFill: {
+    flex: 1,
+  },
+  webBackdrop: {
     overflow: 'hidden',
   },
   glassInner: {
     padding: spacing.md,
   },
-  /** Fills compact card; padding only (no flex — parent BlurView is position-filled) */
-  glassInnerCompactFill: {
-    ...StyleSheet.absoluteFillObject,
-    paddingVertical: 6,
+  /** Compact fills the card without absolute positioning (absolute was zeroing height on web). */
+  glassInnerCompact: {
+    flex: 1,
+    paddingVertical: 8,
     paddingHorizontal: 10,
     justifyContent: 'center',
+    minHeight: 0,
   },
 });

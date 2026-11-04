@@ -1,10 +1,11 @@
 /**
- * Mizrach Compass - Points toward East (Mizrach) for davening
+ * Mizrach Compass - Points toward Jerusalem for davening
  * variant="apple" = large Apple Compass–style dial for modal
  * variant="compact" = small arrow (legacy)
  *
- * Uses expo-location watchHeadingAsync (system compass) when available,
- * with fallback to Magnetometer + Accelerometer for tilt-compensated heading.
+ * Uses GPS to compute the great-circle bearing to the Kotel / Temple Mount,
+ * expo-location watchHeadingAsync (prefer trueHeading) when available,
+ * Heading uses Location.watchHeadingAsync when When-In-Use location is already granted.
  */
 
 import React, { useEffect, useState, useRef, useCallback, useId } from 'react';
@@ -28,60 +29,63 @@ import Svg, {
 } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
-import Magnetometer from 'expo-sensors/build/Magnetometer';
-import Accelerometer from 'expo-sensors/build/Accelerometer';
 import { useTheme } from '../../src/design/theme';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
+import { UserPreferencesService } from '../../src/storage/UserPreferences';
+import { LOCATION_REQUIRED_MESSAGE, LOCATION_TIME_PLACEHOLDER, requestLocationFromUser } from '../../src/services/LocationAccess';
 
 const COMPACT_SIZE = 100;
 const APPLE_SIZE = 300;
 const ARROW_SIZE = 24;
 
+/** Kotel / Temple Mount — traditional direction for tefillah */
+const JERUSALEM = {
+  latitude: 31.7767,
+  longitude: 35.2345,
+} as const;
+
+/** Default when GPS / stored location is unavailable (classic “east”) */
+const DEFAULT_JERUSALEM_BEARING = 90;
+
 /**
- * Tilt-compensated heading: use gravity (accelerometer) to project the magnetic
- * field onto the horizontal plane, so the compass only responds to rotation
- * (yaw), not to tilting the phone up/down.
- * Returns heading in degrees: 0 = North, 90 = East.
+ * Initial great-circle bearing from (lat1, lon1) to (lat2, lon2).
+ * Returns degrees clockwise from true north: 0 = N, 90 = E.
  */
-function getTiltCompensatedHeading(
-  mx: number,
-  my: number,
-  mz: number,
-  ax: number,
-  ay: number,
-  az: number
+function getBearingTo(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
 ): number {
-  // Roll and pitch from gravity (device tilt)
-  const roll = Math.atan2(ay, az);
-  const pitch = Math.atan2(-ax, Math.sqrt(ay * ay + az * az));
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
-  // Project magnetic vector onto horizontal plane (world frame)
-  const cosPitch = Math.cos(pitch);
-  const sinPitch = Math.sin(pitch);
-  const cosRoll = Math.cos(roll);
-  const sinRoll = Math.sin(roll);
-
-  const xh =
-    mx * cosPitch +
-    my * sinRoll * sinPitch -
-    mz * cosRoll * sinPitch;
-  const yh = my * cosRoll + mz * sinRoll;
-
-  // Magnitude too small = unreliable (e.g. near poles or heavy tilt)
-  const norm = Math.sqrt(xh * xh + yh * yh);
-  if (norm < 0.01) return 0;
-
-  // Heading: 0 = North, 90 = East (same convention as before)
-  let headingRad = Math.atan2(yh, xh);
-  let deg = (headingRad * 180) / Math.PI;
-  deg = (90 - deg + 360) % 360;
-  return deg;
+  const y = Math.sin(Δλ) * Math.cos(φ2);
+  const x =
+    Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+  const θ = Math.atan2(y, x);
+  return ((θ * 180) / Math.PI + 360) % 360;
 }
 
-/** Angle from current heading to East (Mizrach) - for arrow rotation */
-function getMizrachRotation(heading: number): number {
-  return (90 - heading + 360) % 360;
+function getBearingToJerusalem(latitude: number, longitude: number): number {
+  return getBearingTo(
+    latitude,
+    longitude,
+    JERUSALEM.latitude,
+    JERUSALEM.longitude
+  );
+}
+
+/** Clockwise turn from current heading to Jerusalem bearing — for arrow rotation */
+function getMizrachRotation(heading: number, jerusalemBearing: number): number {
+  return (jerusalemBearing - heading + 360) % 360;
+}
+
+/** Signed shortest turn (−180…180): positive = turn right toward Jerusalem */
+function getTurnToJerusalem(heading: number, jerusalemBearing: number): number {
+  return ((jerusalemBearing - heading + 540) % 360) - 180;
 }
 
 // ---- Apple-style compass (large modal) ----
@@ -92,10 +96,14 @@ const FACE_RING_R = APPLE_R - 6;
 
 function AppleCompassFace({
   heading,
+  jerusalemBearing,
+  bearingReady,
   onClose,
   theme,
 }: {
   heading: number;
+  jerusalemBearing: number;
+  bearingReady: boolean;
   onClose?: () => void;
   theme: ReturnType<typeof useTheme>['theme'];
 }) {
@@ -111,23 +119,37 @@ function AppleCompassFace({
 
   const cardinals = [
     { label: 'N', deg: 0, accent: 'north' as const },
-    { label: 'E', deg: 90, accent: 'east' as const },
+    { label: 'E', deg: 90, accent: 'cardinal' as const },
     { label: 'S', deg: 180, accent: 'cardinal' as const },
     { label: 'W', deg: 270, accent: 'cardinal' as const },
   ];
 
-  const eastHighlightR = TICK_R - 4;
-  const wedgeA = (68 * Math.PI) / 180;
-  const wedgeB = (112 * Math.PI) / 180;
-  const wx1 = APPLE_R + eastHighlightR * Math.sin(wedgeA);
-  const wy1 = APPLE_R - eastHighlightR * Math.cos(wedgeA);
-  const wx2 = APPLE_R + eastHighlightR * Math.sin(wedgeB);
-  const wy2 = APPLE_R - eastHighlightR * Math.cos(wedgeB);
-  const eastWedgePath = `M ${APPLE_R} ${APPLE_R} L ${wx1} ${wy1} A ${eastHighlightR} ${eastHighlightR} 0 0 1 ${wx2} ${wy2} Z`;
+  // Highlight wedge ±22° around bearing to Jerusalem (fallback east if unknown)
+  const targetDeg = bearingReady ? jerusalemBearing : DEFAULT_JERUSALEM_BEARING;
+  const highlightR = TICK_R - 4;
+  const halfWedge = 22;
+  const wedgeA = ((targetDeg - halfWedge) * Math.PI) / 180;
+  const wedgeB = ((targetDeg + halfWedge) * Math.PI) / 180;
+  const wx1 = APPLE_R + highlightR * Math.sin(wedgeA);
+  const wy1 = APPLE_R - highlightR * Math.cos(wedgeA);
+  const wx2 = APPLE_R + highlightR * Math.sin(wedgeB);
+  const wy2 = APPLE_R - highlightR * Math.cos(wedgeB);
+  const jerusalemWedgePath = `M ${APPLE_R} ${APPLE_R} L ${wx1} ${wy1} A ${highlightR} ${highlightR} 0 0 1 ${wx2} ${wy2} Z`;
 
-  const cardinalFill = (accent: 'north' | 'east' | 'cardinal') => {
+  // Marker for exact Jerusalem bearing on the dial face
+  const targetRad = (targetDeg * Math.PI) / 180;
+  const markerOuter = TICK_R - 2;
+  const markerInner = TICK_R - 28;
+  const mx1 = APPLE_R + markerInner * Math.sin(targetRad);
+  const my1 = APPLE_R - markerInner * Math.cos(targetRad);
+  const mx2 = APPLE_R + markerOuter * Math.sin(targetRad);
+  const my2 = APPLE_R - markerOuter * Math.cos(targetRad);
+
+  const turn = getTurnToJerusalem(heading, targetDeg);
+  const aligned = Math.abs(turn) < 4;
+
+  const cardinalFill = (accent: 'north' | 'cardinal') => {
     if (accent === 'north') return theme.colors.secondary.dark;
-    if (accent === 'east') return theme.colors.primary.dark;
     return theme.colors.text.tertiary;
   };
 
@@ -151,8 +173,9 @@ function AppleCompassFace({
       ]}
     >
       <LinearGradient colors={sheetGradient} style={StyleSheet.absoluteFill} />
-      <Text style={[appleStyles.sheetKicker, { color: theme.colors.text.tertiary }]}>Compass</Text>
-      <Text style={[appleStyles.sheetTitle, { color: theme.colors.text.primary }]}>מזרח</Text>
+      <Text style={[appleStyles.sheetKicker, { color: theme.colors.text.tertiary }]}>
+        Toward Yerushalayim
+      </Text>
 
       <View style={appleStyles.dialColumn}>
         <View style={appleStyles.headingIndicator} pointerEvents="none">
@@ -229,9 +252,18 @@ function AppleCompassFace({
                   strokeWidth={1}
                 />
                 <Path
-                  d={eastWedgePath}
+                  d={jerusalemWedgePath}
                   fill={theme.colors.primary.main}
                   fillOpacity={theme.isDark ? 0.14 : 0.18}
+                />
+                <Line
+                  x1={mx1}
+                  y1={my1}
+                  x2={mx2}
+                  y2={my2}
+                  stroke={theme.colors.primary.dark}
+                  strokeWidth={3}
+                  strokeLinecap="round"
                 />
                 {Array.from({ length: 36 }, (_, i) => i * 10).map((deg) => {
                   const rad = (deg * Math.PI) / 180;
@@ -271,7 +303,7 @@ function AppleCompassFace({
                     <G key={label} transform={`translate(${x}, ${y})`}>
                       <SvgText
                         fill={cardinalFill(accent)}
-                        fontSize={accent === 'east' ? 22 : 21}
+                        fontSize={21}
                         fontWeight="600"
                         fontFamily={Platform.select({ ios: 'System', default: 'sans-serif' })}
                         textAnchor="middle"
@@ -290,8 +322,20 @@ function AppleCompassFace({
 
       <View style={appleStyles.readout}>
         <Text style={[appleStyles.readoutDeg, { color: theme.colors.text.primary }]}>
-          {Math.round(heading)}°
+          {aligned ? '0°' : `${Math.round(Math.abs(turn))}°`}
         </Text>
+        <Text style={[appleStyles.readoutHint, { color: theme.colors.text.tertiary }]}>
+          {aligned
+            ? 'Facing Yerushalayim'
+            : turn > 0
+              ? 'Turn right'
+              : 'Turn left'}
+        </Text>
+        {bearingReady && (
+          <Text style={[appleStyles.readoutMeta, { color: theme.colors.text.tertiary }]}>
+            Yerushalayim at {Math.round(jerusalemBearing)}° from north
+          </Text>
+        )}
       </View>
       {onClose && (
         <TouchableOpacity
@@ -341,13 +385,7 @@ const appleStyles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.6,
     textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  sheetTitle: {
-    fontFamily: fonts.hebrew.semibold,
-    fontSize: 26,
     marginBottom: spacing.sm,
-    writingDirection: 'rtl',
   },
   dialColumn: {
     alignItems: 'center',
@@ -410,6 +448,16 @@ const appleStyles = StyleSheet.create({
     letterSpacing: -1,
     fontVariant: ['tabular-nums'],
   },
+  readoutHint: {
+    fontFamily: fonts.body.semiBold,
+    fontSize: 14,
+    marginTop: 4,
+  },
+  readoutMeta: {
+    fontFamily: fonts.body.regular,
+    fontSize: 12,
+    marginTop: 6,
+  },
   closeButton: {
     marginTop: spacing.xl,
     paddingVertical: spacing.sm + 2,
@@ -430,10 +478,15 @@ export const MizrachCompass: React.FC<{
 }> = ({ variant = 'compact', onClose }) => {
   const { theme } = useTheme();
   const [available, setAvailable] = useState(false);
+  const [locationBlocked, setLocationBlocked] = useState(false);
+  const [watchNonce, setWatchNonce] = useState(0);
   const [heading, setHeading] = useState(0);
+  const [jerusalemBearing, setJerusalemBearing] = useState(DEFAULT_JERUSALEM_BEARING);
+  const [bearingReady, setBearingReady] = useState(false);
   const arrowRotation = useSharedValue(0);
   const entranceScale = useSharedValue(0.85);
   const entranceOpacity = useSharedValue(0);
+  const jerusalemBearingRef = useRef(DEFAULT_JERUSALEM_BEARING);
 
   useEffect(() => {
     if (available && variant === 'compact') {
@@ -442,14 +495,10 @@ export const MizrachCompass: React.FC<{
     }
   }, [available, variant]);
 
-  // Refs to hold latest sensor values for tilt-compensated heading
-  const magRef = useRef({ x: 0, y: 0, z: 0 });
-  const accelRef = useRef({ x: 0, y: 0, z: 0 });
-
   const applyHeading = useCallback((degrees: number) => {
     const h = (degrees + 360) % 360;
     setHeading(h);
-    const rot = getMizrachRotation(h);
+    const rot = getMizrachRotation(h, jerusalemBearingRef.current);
     arrowRotation.value = withSpring(rot, {
       damping: 15,
       stiffness: 100,
@@ -457,67 +506,117 @@ export const MizrachCompass: React.FC<{
     });
   }, []);
 
-  const updateHeadingFromSensors = useCallback(() => {
-    const { x: mx, y: my, z: mz } = magRef.current;
-    const { x: ax, y: ay, z: az } = accelRef.current;
-    const h = getTiltCompensatedHeading(mx, my, mz, ax, ay, az);
-    applyHeading(h);
-  }, [applyHeading]);
+  const setTargetBearing = useCallback(
+    (bearing: number) => {
+      const b = (bearing + 360) % 360;
+      jerusalemBearingRef.current = b;
+      setJerusalemBearing(b);
+      setBearingReady(true);
+      // Refresh arrow for compact variant with new target
+      setHeading((h) => {
+        const rot = getMizrachRotation(h, b);
+        arrowRotation.value = withSpring(rot, {
+          damping: 15,
+          stiffness: 100,
+          mass: 0.5,
+        });
+        return h;
+      });
+    },
+    [arrowRotation]
+  );
+
+  const resolveJerusalemBearing = useCallback(async (): Promise<void> => {
+    // Prefer live GPS, then stored prefs location
+    try {
+      if (Platform.OS !== 'web') {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const pos = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          setTargetBearing(
+            getBearingToJerusalem(pos.coords.latitude, pos.coords.longitude)
+          );
+          return;
+        }
+      }
+    } catch {
+      // fall through to prefs
+    }
+
+    try {
+      const prefs = await UserPreferencesService.getPreferences();
+      const loc = prefs?.location;
+      if (
+        loc &&
+        typeof loc.latitude === 'number' &&
+        typeof loc.longitude === 'number'
+      ) {
+        setTargetBearing(getBearingToJerusalem(loc.latitude, loc.longitude));
+      }
+    } catch {
+      // keep default east
+    }
+  }, [setTargetBearing]);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
       if (variant === 'apple') setAvailable(true);
+      // Still try prefs-based bearing on web for display
+      resolveJerusalemBearing();
       return;
     }
 
     let mounted = true;
     let locationSub: { remove: () => void } | null = null;
-    let subMag: { remove: () => void } | null = null;
-    let subAccel: { remove: () => void } | null = null;
-
-    const startMagnetometerFallback = () => {
-      Magnetometer.setUpdateInterval(80);
-      Accelerometer.setUpdateInterval(80);
-      subMag = Magnetometer.addListener(({ x, y, z }) => {
-        if (!mounted) return;
-        magRef.current = { x, y, z };
-        updateHeadingFromSensors();
-      });
-      subAccel = Accelerometer.addListener(({ x, y, z }) => {
-        if (!mounted) return;
-        accelRef.current = { x, y, z };
-        updateHeadingFromSensors();
-      });
-    };
 
     (async () => {
-      setAvailable(true);
-
       try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
+        const { status } = await Location.getForegroundPermissionsAsync();
         if (!mounted) return;
         if (status !== 'granted') {
-          if (await Magnetometer.isAvailableAsync()) startMagnetometerFallback();
+          setLocationBlocked(true);
+          setAvailable(true);
           return;
         }
 
-        locationSub = await Location.watchHeadingAsync(({ magHeading }) => {
+        setLocationBlocked(false);
+        setAvailable(true);
+
+        // GPS for Jerusalem bearing (once is enough; direction changes negligibly while standing)
+        await resolveJerusalemBearing();
+        if (!mounted) return;
+
+        locationSub = await Location.watchHeadingAsync(({ trueHeading, magHeading }) => {
           if (!mounted) return;
-          applyHeading(magHeading);
+          // Prefer true heading (matches geographic bearing); fall back to magnetic
+          const h =
+            typeof trueHeading === 'number' && trueHeading >= 0
+              ? trueHeading
+              : magHeading;
+          applyHeading(h);
         });
       } catch {
         if (!mounted) return;
-        if (await Magnetometer.isAvailableAsync()) startMagnetometerFallback();
+        setLocationBlocked(true);
+        setAvailable(true);
       }
     })();
 
     return () => {
       mounted = false;
       locationSub?.remove();
-      subMag?.remove();
-      subAccel?.remove();
     };
-  }, [variant, applyHeading, updateHeadingFromSensors]);
+  }, [variant, applyHeading, resolveJerusalemBearing, watchNonce]);
+
+  const handleAllowLocation = async () => {
+    const granted = await requestLocationFromUser();
+    if (granted) {
+      setLocationBlocked(false);
+      setWatchNonce((n) => n + 1);
+    }
+  };
 
   const arrowStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${arrowRotation.value}deg` }],
@@ -528,11 +627,30 @@ export const MizrachCompass: React.FC<{
     transform: [{ scale: entranceScale.value }],
   }));
 
+  if (locationBlocked) {
+    return (
+      <TouchableOpacity
+        style={[styles.wrapper, styles.placeholder]}
+        onPress={handleAllowLocation}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.hint, { color: theme.colors.text.tertiary, textAlign: 'center' }]}>
+          {LOCATION_REQUIRED_MESSAGE}
+        </Text>
+        <Text style={[styles.hint, { color: theme.colors.text.tertiary, marginTop: spacing.xs }]}>
+          Mizrach {LOCATION_TIME_PLACEHOLDER}
+        </Text>
+      </TouchableOpacity>
+    );
+  }
+
   if (variant === 'apple') {
     return (
       <View style={{ alignItems: 'center', justifyContent: 'center', width: '100%' }}>
         <AppleCompassFace
-          heading={Platform.OS === 'web' ? 90 : heading}
+          heading={Platform.OS === 'web' ? jerusalemBearing : heading}
+          jerusalemBearing={jerusalemBearing}
+          bearingReady={bearingReady}
           onClose={onClose}
           theme={theme}
         />
@@ -543,11 +661,8 @@ export const MizrachCompass: React.FC<{
   if (!available || Platform.OS === 'web') {
     return (
       <View style={[styles.wrapper, styles.placeholder]}>
-        <Text style={[styles.mizrachLabel, { color: theme.colors.text.tertiary }]}>
-          מזרח
-        </Text>
         <Text style={[styles.hint, { color: theme.colors.text.tertiary }]}>
-          Face east to daven
+          Face Yerushalayim to daven
         </Text>
       </View>
     );
@@ -565,9 +680,6 @@ export const MizrachCompass: React.FC<{
           style={[StyleSheet.absoluteFill, styles.gradient]}
         />
         <View style={styles.compassFace}>
-          <Text style={[styles.mizrachLabel, { color: theme.colors.primary.main }]}>
-            מזרח
-          </Text>
           <View style={styles.arrowContainer}>
             <Animated.View style={[styles.arrow, arrowStyle]}>
               <View
@@ -579,7 +691,9 @@ export const MizrachCompass: React.FC<{
             </Animated.View>
           </View>
           <Text style={[styles.hint, { color: theme.colors.text.tertiary }]}>
-            Rotate to face east
+            {bearingReady
+              ? `Yerushalayim · ${Math.round(jerusalemBearing)}°`
+              : 'Rotate to face Yerushalayim'}
           </Text>
         </View>
       </View>
@@ -614,11 +728,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     width: '100%',
     paddingVertical: spacing.sm,
-  },
-  mizrachLabel: {
-    fontFamily: fonts.heading.semiBold,
-    fontSize: 16,
-    marginBottom: spacing.xs,
   },
   arrowContainer: {
     flex: 1,

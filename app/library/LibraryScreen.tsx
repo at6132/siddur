@@ -298,9 +298,15 @@ const GlassCard: React.FC<{
   const content = (
     <View style={[cardStyles.glassCard, style]}>
       {Platform.OS !== 'web' ? (
-        <BlurView intensity={50} style={cardStyles.glassBlur}>
-          <View style={inner}>{children}</View>
-        </BlurView>
+        <>
+          <BlurView
+            intensity={50}
+            tint="light"
+            style={StyleSheet.absoluteFillObject}
+            pointerEvents="none"
+          />
+          <View style={inner} collapsable={false}>{children}</View>
+        </>
       ) : (
         <LinearGradient
           colors={['rgba(255,255,255,0.9)', 'rgba(255,255,255,0.7)']}
@@ -1033,7 +1039,8 @@ function useStyles() {
       return StyleSheet.create(createLibraryStyles(theme));
     } catch (e) {
       console.warn('LibraryScreen styles error:', e);
-      return StyleSheet.create({ container: { flex: 1 } });
+      // Keep full styles as plain objects — empty sheet flattens all Text
+      return createLibraryStyles(theme) as ReturnType<typeof StyleSheet.create>;
     }
   }, [theme]);
 }

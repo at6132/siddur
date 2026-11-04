@@ -31,9 +31,15 @@ const GlassCard: React.FC<{
   const content = (
     <View style={[styles.glassCard, style]}>
       {Platform.OS !== 'web' ? (
-        <BlurView intensity={75} tint="light" style={styles.glassBlur}>
-          <View style={styles.glassInner}>{children}</View>
-        </BlurView>
+        <>
+          <BlurView
+            intensity={75}
+            tint="light"
+            style={StyleSheet.absoluteFillObject}
+            pointerEvents="none"
+          />
+          <View style={styles.glassInner} collapsable={false}>{children}</View>
+        </>
       ) : (
         <LinearGradient
           colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
