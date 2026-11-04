@@ -1,31 +1,32 @@
-import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
-  Switch,
-  TouchableOpacity,
-  ActivityIndicator,
   Linking,
   Alert,
   Platform,
-  Modal,
-  Pressable,
-  TextInput,
+  ActionSheetIOS,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Slider from '@react-native-community/slider';
 import Constants from 'expo-constants';
 import { useNavigation, useFocusEffect, useRoute, RouteProp } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import { FadeIn } from '../../components/animations/FadeIn';
-import { LiquidGlassSegmentedControl } from '../../components/navigation/LiquidGlassSegmentedControl';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../src/design/colors';
-import { spacing, borderRadius, shadows } from '../../src/design/spacing';
-import { textStyles, fonts } from '../../src/design/typography';
+import * as Haptics from 'expo-haptics';
+import { LiquidGlassSegmentedControl } from '../../components/navigation/LiquidGlassSegmentedControl';
+import { Screen, Section, ListRow, Chip } from '../../components/ui';
+import { PracticeField, InlineError } from '../../components/hub/PracticeKit';
+import {
+  ToggleRow,
+  ValueRow,
+  CheckRow,
+  SheetModal,
+  PressableScale,
+  IconButton,
+  TextAction,
+  Hairline,
+} from '../../components/settings/SettingsKit';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { LEGAL, mailtoSupport } from '../../src/legal/links';
 import { NotificationService } from '../../src/notifications/NotificationService';
@@ -33,121 +34,163 @@ import {
   UserPreferences,
   NotificationPreferences,
   DisplayPreferences,
-  CustomCountdown,
   CustomReminder,
   RefuahPersonalName,
   RefuahPersonalNameGender,
 } from '../../src/types/preferences';
 import { useTheme } from '../../src/design/theme';
-import type { AppTheme } from '../../src/design/theme';
-import { colorWithAlpha } from '../../src/design/colorAlpha';
-
-// Glass Card Component - theme-aware for dark mode
-const GlassCard: React.FC<{
-  children: React.ReactNode;
-  style?: any;
-}> = ({ children, style }) => {
-  const { theme } = useTheme();
-  const glassGradient = theme.isDark
-    ? ['rgba(20,18,32,0.92)', 'rgba(24,22,38,0.85)']
-    : ['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)'];
-  const cardStyles = useMemo(() => ({
-    card: {
-      borderRadius: borderRadius.xl,
-      overflow: 'hidden' as const,
-      marginBottom: spacing.lg,
-      borderWidth: 1.5,
-      borderColor: theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.8)',
-      shadowColor: theme.colors.shadow.medium,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: theme.isDark ? 0.4 : 1,
-      shadowRadius: 12,
-      elevation: 6,
-      position: 'relative' as const,
-    },
-    blur: { overflow: 'hidden' as const },
-    inner: {
-      padding: spacing.lg,
-      // Native BlurView is more transparent than web gradient — denser fill keeps grey hierarchy readable
-      backgroundColor: theme.isDark
-        ? Platform.OS === 'web'
-          ? 'rgba(12,10,18,0.6)'
-          : 'rgba(12,10,18,0.78)'
-        : Platform.OS === 'web'
-          ? 'rgba(255,255,255,0.5)'
-          : 'rgba(255,255,255,0.88)',
-    },
-  }), [theme]);
-  return (
-    <View style={[cardStyles.card, style]}>
-      {Platform.OS !== 'web' ? (
-        <>
-          {/* Blur as sibling — nesting Text inside BlurView kills fontSize/color on iOS */}
-          <BlurView
-            intensity={70}
-            tint={theme.isDark ? 'dark' : 'light'}
-            style={StyleSheet.absoluteFillObject}
-            pointerEvents="none"
-          />
-          <View style={cardStyles.inner} collapsable={false}>
-            {children}
-          </View>
-        </>
-      ) : (
-        <LinearGradient colors={glassGradient} style={cardStyles.blur}>
-          <View style={cardStyles.inner}>{children}</View>
-        </LinearGradient>
-      )}
-    </View>
-  );
-};
 
 type SettingsRouteParams = {
   scrollTo?: 'dailyGratitude' | 'shabbosAlarm';
+};
+
+type TimePickerKind =
+  | 'shacharis'
+  | 'mincha'
+  | 'maariv'
+  | 'tehillim'
+  | 'hallelAnenu'
+  | 'roshChodesh'
+  | 'fastDays'
+  | 'dailyGratitude'
+  | 'daveningYaalehVyavo'
+  | 'daveningAlHanissim'
+  | 'daveningMashivVtenTal'
+  | 'daveningAneinu'
+  | 'daveningNachem'
+  | 'daveningAvinuMalkeinu'
+  | 'daveningSelichos'
+  | 'shabbosClock';
+
+type PrayerKey = 'shacharis' | 'mincha' | 'maariv';
+
+type SettingsTab = 'notifications' | 'general' | 'about';
+const TAB_KEYS: SettingsTab[] = ['notifications', 'general', 'about'];
+
+const TIME_PICKER_TITLES: Record<TimePickerKind, string> = {
+  shabbosClock: 'Shabbos alarm',
+  tehillim: 'Tehillim',
+  hallelAnenu: 'Hallel',
+  roshChodesh: 'Rosh Chodesh',
+  fastDays: 'Fast days',
+  dailyGratitude: 'Daily gratitude',
+  daveningYaalehVyavo: "Yaaleh V'Yavo",
+  daveningAlHanissim: 'Al HaNisim',
+  daveningMashivVtenTal: "Mashiv HaRuach & V'ten Tal",
+  daveningAneinu: 'Aneinu',
+  daveningNachem: 'Nachem',
+  daveningAvinuMalkeinu: 'Avinu Malkeinu',
+  daveningSelichos: 'Selichos',
+  shacharis: 'Shacharis',
+  mincha: 'Mincha',
+  maariv: 'Maariv',
+};
+
+const PRAYERS: { key: PrayerKey; title: string; subtitle: string; fallback: string }[] = [
+  { key: 'shacharis', title: 'Shacharis', subtitle: 'Morning prayers', fallback: '7:00 AM' },
+  { key: 'mincha', title: 'Mincha', subtitle: 'Afternoon prayers', fallback: '1:00 PM' },
+  { key: 'maariv', title: 'Maariv', subtitle: 'Evening prayers', fallback: '8:00 PM' },
+];
+
+const DAVENING_ADDONS: {
+  kind: TimePickerKind;
+  label: string;
+  enabledKey: keyof NotificationPreferences;
+  timeKey: keyof NotificationPreferences;
+}[] = [
+  { kind: 'daveningYaalehVyavo', label: "Yaaleh V'Yavo", enabledKey: 'daveningAddOnsYaalehVyavo', timeKey: 'daveningAddOnsYaalehVyavoTime' },
+  { kind: 'daveningAlHanissim', label: 'Al HaNisim', enabledKey: 'daveningAddOnsAlHanissim', timeKey: 'daveningAddOnsAlHanissimTime' },
+  { kind: 'daveningMashivVtenTal', label: "Mashiv HaRuach & V'ten Tal Umatar", enabledKey: 'daveningAddOnsMashivVtenTal', timeKey: 'daveningAddOnsMashivVtenTalTime' },
+  { kind: 'daveningAneinu', label: 'Aneinu', enabledKey: 'daveningAddOnsAneinu', timeKey: 'daveningAddOnsAneinuTime' },
+  { kind: 'daveningNachem', label: 'Nachem', enabledKey: 'daveningAddOnsNachem', timeKey: 'daveningAddOnsNachemTime' },
+  { kind: 'daveningAvinuMalkeinu', label: 'Avinu Malkeinu', enabledKey: 'daveningAddOnsAvinuMalkeinu', timeKey: 'daveningAddOnsAvinuMalkeinuTime' },
+  { kind: 'daveningSelichos', label: 'Selichos', enabledKey: 'daveningAddOnsSelichos', timeKey: 'daveningAddOnsSelichosTime' },
+];
+
+const TEXT_SIZES = ['xsmall', 'small', 'medium', 'large'] as const;
+const SHEKIYA_MINUTES = [5, 10, 15, 20, 25, 30, 45, 60];
+
+/** Small value button shown before a switch (reminder time). */
+const TimePill: React.FC<{ text: string; onPress: () => void; label: string }> = ({ text, onPress, label }) => {
+  const { theme } = useTheme();
+  const { spacing, type } = theme.tokens;
+  return (
+    <PressableScale
+      onPress={onPress}
+      accessibilityLabel={label}
+      style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.xs }}
+    >
+      <Text style={[type.textStyles.label, { color: theme.colors.primary.dark, fontSize: type.fontSize.base }]}>
+        {text}
+      </Text>
+    </PressableScale>
+  );
+};
+
+/** Labeled slider used for the Shabbos alarm ring duration. */
+const DurationSlider: React.FC<{
+  label: string;
+  valueText: string;
+  value: number;
+  max: number;
+  disabled?: boolean;
+  onValueChange: (v: number) => void;
+  onSlidingComplete: (v: number) => void;
+}> = ({ label, valueText, value, max, disabled, onValueChange, onSlidingComplete }) => {
+  const { theme } = useTheme();
+  const { spacing, type } = theme.tokens;
+  return (
+    <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.sm }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={[type.textStyles.body, { color: theme.colors.text.primary }]}>{label}</Text>
+        <Text style={[type.textStyles.body, { color: theme.colors.primary.dark }]}>{valueText}</Text>
+      </View>
+      <Slider
+        style={{ height: 44, marginTop: spacing.xs }}
+        minimumValue={0}
+        maximumValue={max}
+        step={1}
+        value={value}
+        disabled={disabled}
+        accessibilityLabel={label}
+        onValueChange={onValueChange}
+        onSlidingComplete={(v) => {
+          void Haptics.selectionAsync();
+          onSlidingComplete(v);
+        }}
+        minimumTrackTintColor={theme.colors.primary.main}
+        maximumTrackTintColor={theme.colors.neutral[300]}
+        thumbTintColor={theme.colors.primary.main}
+      />
+    </View>
+  );
 };
 
 export const SettingsScreen: React.FC = () => {
   const navigation = useNavigation();
   const route = useRoute<RouteProp<{ Settings: SettingsRouteParams }, 'Settings'>>();
   const { theme } = useTheme();
-  const styles = useMemo(() => createSettingsStyles(theme), [theme]);
+  const { spacing, radii, type } = theme.tokens;
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
   const shabbosAlarmBlockRef = useRef<View>(null);
+  const gratitudeBlockRef = useRef<View>(null);
   const [reminderMenuId, setReminderMenuId] = useState<string | null>(null);
-  const [timePickerFor, setTimePickerFor] = useState<
-    | 'shacharis'
-    | 'mincha'
-    | 'maariv'
-    | 'tehillim'
-    | 'hallelAnenu'
-    | 'roshChodesh'
-    | 'fastDays'
-    | 'dailyGratitude'
-    | 'daveningYaalehVyavo'
-    | 'daveningAlHanissim'
-    | 'daveningMashivVtenTal'
-    | 'daveningAneinu'
-    | 'daveningNachem'
-    | 'daveningAvinuMalkeinu'
-    | 'daveningSelichos'
-    | 'shabbosClock'
-    | null
-  >(null);
+  const [timePickerFor, setTimePickerFor] = useState<TimePickerKind | null>(null);
   const [daveningAddOnsExpanded, setDaveningAddOnsExpanded] = useState(false);
   const [refuahNameModalVisible, setRefuahNameModalVisible] = useState(false);
   const [refuahEditingId, setRefuahEditingId] = useState<string | null>(null);
   const [refuahDraftGender, setRefuahDraftGender] = useState<RefuahPersonalNameGender>('male');
   const [refuahDraftName, setRefuahDraftName] = useState('');
   const [refuahDraftMother, setRefuahDraftMother] = useState('');
+  const [refuahError, setRefuahError] = useState<string | null>(null);
   const [timePickerValue, setTimePickerValue] = useState('');
   const [pickerDate, setPickerDate] = useState(() => new Date());
   const [shekiyaMinutesPickerOpen, setShekiyaMinutesPickerOpen] = useState(false);
   /** Shabbos alarm ring duration (sliders) — local until saved onSlidingComplete */
   const [shabbosRingMin, setShabbosRingMin] = useState(1);
   const [shabbosRingSec, setShabbosRingSec] = useState(0);
-  type SettingsTab = 'notifications' | 'general' | 'about';
   const [activeTab, setActiveTab] = useState<SettingsTab>('notifications');
 
   /** Format 24h "09:00" as "9:00 AM"; 24h "20:30" as "8:30 PM" */
@@ -172,19 +215,6 @@ export const SettingsScreen: React.FC = () => {
     if (h === 12) h = pm ? 12 : 0;
     else if (pm) h += 12;
     return `${String(h).padStart(2, '0')}:${min}`;
-  };
-
-  /** Parse "7:00 AM" for prayer reminders (keep 12h format) */
-  const parseTimeTo12h = (s: string): string | null => {
-    const m = /^\s*(\d{1,2})\s*:\s*(\d{2})\s*(AM|PM)?\s*$/i.exec((s || '').trim());
-    if (!m) return null;
-    let h = parseInt(m[1], 10);
-    const min = m[2];
-    let am = (m[3] || '').toUpperCase() !== 'PM';
-    if (h === 12) am = !am;
-    else if (h > 12) { h -= 12; am = false; }
-    else if (h === 0) h = 12;
-    return `${h}:${min} ${am ? 'AM' : 'PM'}`;
   };
 
   /** Parse "7:00 AM" or 24h "09:00" into today's Date for the wheel picker */
@@ -212,23 +242,6 @@ export const SettingsScreen: React.FC = () => {
   const dateTo24h = (d: Date): string =>
     `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 
-  type TimePickerKind =
-    | 'shacharis'
-    | 'mincha'
-    | 'maariv'
-    | 'tehillim'
-    | 'hallelAnenu'
-    | 'roshChodesh'
-    | 'fastDays'
-    | 'dailyGratitude'
-    | 'daveningYaalehVyavo'
-    | 'daveningAlHanissim'
-    | 'daveningMashivVtenTal'
-    | 'daveningAneinu'
-    | 'daveningNachem'
-    | 'daveningAvinuMalkeinu'
-    | 'daveningSelichos'
-    | 'shabbosClock';
   const openTimePicker = (which: TimePickerKind) => {
     if (!preferences) return;
     const n = preferences.notifications;
@@ -254,7 +267,7 @@ export const SettingsScreen: React.FC = () => {
 
   const saveTimePicker = async () => {
     if (!preferences || !timePickerFor) return;
-    const keyMap: Partial<Record<NonNullable<typeof timePickerFor>, keyof NotificationPreferences>> = {
+    const keyMap: Partial<Record<TimePickerKind, keyof NotificationPreferences>> = {
       tehillim: 'dailyTehillimTime',
       hallelAnenu: 'hallelAnenuTime',
       roshChodesh: 'roshChodeshTime',
@@ -292,6 +305,7 @@ export const SettingsScreen: React.FC = () => {
         loadPreferences();
       }
     }
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setTimePickerFor(null);
   };
 
@@ -313,37 +327,35 @@ export const SettingsScreen: React.FC = () => {
     setActiveTab('notifications');
 
     const clearScrollParam = () => {
-      (navigation as { setParams: (p: Record<string, unknown>) => void }).setParams({ scrollTo: undefined });
+      (navigation as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ scrollTo: undefined });
+    };
+
+    const scrollToBlock = (block: View | null, fallbackY: number) => {
+      const scroller = scrollViewRef.current;
+      if (block && scroller) {
+        block.measureInWindow((ex: number, ey: number) => {
+          (scroller as any).measureInWindow((sx: number, sy: number) => {
+            const y = Math.max(0, ey - sy - spacing.sm);
+            scroller.scrollTo({ y, animated: true });
+            clearScrollParam();
+          });
+        });
+      } else {
+        scroller?.scrollTo({ y: fallbackY, animated: true });
+        clearScrollParam();
+      }
     };
 
     if (st === 'dailyGratitude') {
-      const t = setTimeout(() => {
-        scrollViewRef.current?.scrollTo({ y: 580, animated: true });
-        clearScrollParam();
-      }, 400);
+      const t = setTimeout(() => scrollToBlock(gratitudeBlockRef.current, 580), 400);
       return () => clearTimeout(t);
     }
 
     if (st === 'shabbosAlarm') {
-      const t = setTimeout(() => {
-        const block = shabbosAlarmBlockRef.current;
-        const scroller = scrollViewRef.current;
-        if (block && scroller) {
-          block.measureInWindow((ex, ey) => {
-            scroller.measureInWindow((sx, sy) => {
-              const y = Math.max(0, ey - sy - 12);
-              scroller.scrollTo({ y, animated: true });
-              clearScrollParam();
-            });
-          });
-        } else {
-          scroller?.scrollTo({ y: 960, animated: true });
-          clearScrollParam();
-        }
-      }, 500);
+      const t = setTimeout(() => scrollToBlock(shabbosAlarmBlockRef.current, 960), 500);
       return () => clearTimeout(t);
     }
-  }, [route.params?.scrollTo, loading, navigation]);
+  }, [route.params?.scrollTo, loading, navigation, spacing.sm]);
 
   // Refresh when returning from Add Custom Reminder (or any sub-screen) so new reminders show
   useFocusEffect(
@@ -425,6 +437,23 @@ export const SettingsScreen: React.FC = () => {
     }
   };
 
+  const setPrayerEnabled = async (which: PrayerKey, value: boolean) => {
+    if (!preferences) return;
+    const updated = {
+      ...preferences.notifications,
+      prayerReminders: {
+        ...preferences.notifications.prayerReminders,
+        [which]: {
+          ...preferences.notifications.prayerReminders?.[which],
+          enabled: value,
+        },
+      },
+    };
+    await UserPreferencesService.setNotificationPreferences(updated);
+    await NotificationService.reschedule();
+    loadPreferences();
+  };
+
   const onShabbosClockEnabledChange = async (value: boolean) => {
     if (value) {
       const granted = await NotificationService.requestPermissions();
@@ -434,13 +463,6 @@ export const SettingsScreen: React.FC = () => {
       }
     }
     await updateNotificationPreference('shabbosClockEnabled', value);
-    if (value) {
-      Alert.alert(
-        'Heads up',
-        "To make the alarm work, you need the ringer on. To keep other apps from interrupting you, you can use Airplane mode, or set up a custom Focus mode and only allow notifications from this app.",
-        [{ text: 'OK' }],
-      );
-    }
   };
 
   const updateDisplayPreference = async (
@@ -453,6 +475,7 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const openRefuahNameModal = (entry?: RefuahPersonalName) => {
+    setRefuahError(null);
     if (entry) {
       setRefuahEditingId(entry.id);
       setRefuahDraftGender(entry.gender);
@@ -472,7 +495,8 @@ export const SettingsScreen: React.FC = () => {
     const nm = refuahDraftName.trim();
     const mo = refuahDraftMother.trim();
     if (!nm || !mo) {
-      Alert.alert('Missing names', "Enter the choleh's Hebrew name and the mother's Hebrew name.");
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setRefuahError("Enter the choleh's Hebrew name and the mother's Hebrew name.");
       return;
     }
     const list = [...(preferences.refuahPersonalNames ?? [])];
@@ -492,6 +516,7 @@ export const SettingsScreen: React.FC = () => {
       list.push(row);
     }
     await UserPreferencesService.setRefuahPersonalNames(list);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setRefuahNameModalVisible(false);
     loadPreferences();
   };
@@ -525,691 +550,339 @@ export const SettingsScreen: React.FC = () => {
     );
   };
 
-  if (loading || !preferences) {
+  const editReminder = (reminder: CustomReminder) => {
+    (navigation as any).navigate('AddCustomReminder', { reminder });
+  };
+
+  const confirmDeleteReminder = (reminder: CustomReminder) => {
+    Alert.alert(
+      'Delete Reminder',
+      `Delete "${reminder.title}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await UserPreferencesService.deleteCustomReminder(reminder.id);
+              const prefs = await UserPreferencesService.getPreferences();
+              await NotificationService.reschedule(prefs ?? undefined);
+            } catch (e) {
+              console.error('Delete reminder failed:', e);
+            }
+            loadPreferences();
+          },
+        },
+      ]
+    );
+  };
+
+  const openReminderMenu = (reminder: CustomReminder) => {
+    if (Platform.OS === 'ios') {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          title: reminder.title,
+          options: ['Edit', 'Delete', 'Cancel'],
+          destructiveButtonIndex: 1,
+          cancelButtonIndex: 2,
+        },
+        (index) => {
+          if (index === 0) editReminder(reminder);
+          else if (index === 1) confirmDeleteReminder(reminder);
+        },
+      );
+    } else {
+      setReminderMenuId(reminder.id);
+    }
+  };
+
+  const menuReminder = (preferences?.customReminders || []).find((r) => r.id === reminderMenuId) ?? null;
+
+  /* ------------------------------ render helpers ----------------------------- */
+
+  const timedToggle = (
+    enabledKey: keyof NotificationPreferences,
+    timeKey: keyof NotificationPreferences,
+    fallback: string,
+    kind: TimePickerKind,
+    title: string,
+  ) => {
+    const n = preferences!.notifications;
+    const enabled = Boolean(n[enabledKey]);
     return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={theme.backgroundGradient}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary.main} />
-        </View>
-      </View>
+      <ToggleRow
+        title={title}
+        value={enabled}
+        onValueChange={(v) => updateNotificationPreference(enabledKey, v)}
+      >
+        {enabled ? (
+          <ValueRow
+            nested
+            label="Remind me at"
+            value={formatTehillimTimeForDisplay((n[timeKey] as string | undefined) || fallback)}
+            onPress={() => openTimePicker(kind)}
+          />
+        ) : null}
+      </ToggleRow>
+    );
+  };
+
+  const emptyHint = (text: string) => (
+    <Text
+      style={[
+        type.textStyles.bodySmall,
+        { color: theme.colors.text.secondary, paddingHorizontal: spacing.md, paddingVertical: spacing.md },
+      ]}
+    >
+      {text}
+    </Text>
+  );
+
+  if (loading) {
+    return <Screen state="loading" contentStyle={{ paddingTop: spacing.sm }} />;
+  }
+
+  if (!preferences) {
+    return (
+      <Screen
+        state="error"
+        errorMessage="Could not load your settings."
+        onRetry={() => {
+          setLoading(true);
+          loadPreferences();
+        }}
+        contentStyle={{ paddingTop: spacing.sm }}
+      />
     );
   }
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background.primary }]}>
-      <LinearGradient
-        colors={theme.backgroundGradient}
-        style={StyleSheet.absoluteFill}
-      />
-      
-      <ScrollView 
-        ref={scrollViewRef}
-        style={styles.scrollView} 
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <FadeIn delay={0}>
-          <Text style={styles.pageTitle}>Settings</Text>
-        </FadeIn>
+  const n = preferences.notifications;
+  const shabbosEnabled = n.shabbosClockEnabled;
+  const customReminders = preferences.customReminders || [];
+  const refuahNames = preferences.refuahPersonalNames ?? [];
+  const hebrewBody = {
+    fontFamily: type.fonts.hebrew.medium,
+    fontSize: type.fontSize.lg,
+    writingDirection: 'rtl' as const,
+  };
 
-        {/* Tab bar – liquid glass with draggable orb */}
-        <LiquidGlassSegmentedControl
-          tabs={[
-            { key: 'notifications', label: 'Notifications' },
-            { key: 'general', label: 'General' },
-            { key: 'about', label: 'About' },
-          ]}
-          activeIndex={(['notifications', 'general', 'about'] as const).indexOf(activeTab)}
-          onIndexChange={(index) =>
-            setActiveTab(['notifications', 'general', 'about'][index] as SettingsTab)
-          }
-        />
+  return (
+    <Screen contentStyle={{ paddingTop: spacing.sm }}>
+      <ScrollView
+        ref={scrollViewRef}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: spacing['3xl'] }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={{ marginBottom: spacing.lg }}>
+          <LiquidGlassSegmentedControl
+            tabs={[
+              { key: 'notifications', label: 'Notifications' },
+              { key: 'general', label: 'General' },
+              { key: 'about', label: 'About' },
+            ]}
+            activeIndex={TAB_KEYS.indexOf(activeTab)}
+            onIndexChange={(index) => setActiveTab(TAB_KEYS[index])}
+          />
+        </View>
 
         {/* ============ NOTIFICATIONS TAB ============ */}
         {activeTab === 'notifications' && (
-        <>
-        {/* ══════ SHABBOS ALARM — Always visible ══════ */}
-        <FadeIn delay={50}>
-          <View ref={shabbosAlarmBlockRef} collapsable={false} style={styles.shabbosClockCardOuter}>
-              <LinearGradient
-                colors={
-                  theme.isDark
-                    ? ['rgba(48, 36, 70, 0.95)', 'rgba(32, 26, 48, 0.98)']
-                    : [...theme.backgroundGradient]
+          <>
+            <View ref={shabbosAlarmBlockRef} collapsable={false}>
+              <Section
+                title="Shabbos alarm"
+                footer={
+                  shabbosEnabled
+                    ? "Keep the ringer on. To stop other apps from interrupting, use Airplane mode, or set up a custom Focus that only allows notifications from this app."
+                    : undefined
                 }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.shabbosClockGradient}
               >
-                <View style={styles.shabbosClockHeaderRow}>
-                  <View style={styles.shabbosClockIconBubble}>
-                    <Ionicons name="alarm" size={22} color={theme.colors.primary.main} />
-                  </View>
-                  <View style={styles.shabbosClockTitleBlock}>
-                    <Text style={styles.shabbosClockTitle}>Shabbos Alarm</Text>
-                    <Text style={styles.shabbosClockSubtitle}>Wake up without touching your phone</Text>
-                  </View>
-                  <Switch
-                    value={preferences.notifications.shabbosClockEnabled}
-                    onValueChange={onShabbosClockEnabledChange}
-                    trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                    thumbColor={preferences.notifications.shabbosClockEnabled ? theme.colors.primary.main : theme.colors.neutral[400]}
-                  />
-                </View>
-                {preferences.notifications.shabbosClockEnabled && (
-                  <>
-                    <View style={styles.shabbosClockDivider} />
-                    <TouchableOpacity
-                      style={styles.shabbosClockTimeRowSolo}
-                      onPress={() => openTimePicker('shabbosClock')}
-                      activeOpacity={0.85}
-                    >
-                      <View>
-                        <Text style={styles.shabbosClockTimeLabel}>Wake-up time</Text>
-                        <Text style={styles.shabbosClockTimeButtonTextSolo}>
-                          {formatTehillimTimeForDisplay(
-                            preferences.notifications.shabbosClockTime || '08:00'
-                          )}
-                        </Text>
-                      </View>
-                      <Ionicons name="chevron-forward" size={20} color={theme.colors.text.tertiary} />
-                    </TouchableOpacity>
-                    <Text style={styles.shabbosDurationSectionLabelPad}>How long it will ring</Text>
-                    <View style={styles.shabbosDurationSliderBlock}>
-                      <View style={styles.shabbosDurationSliderRow}>
-                        <Text style={styles.shabbosDurationMeta}>Minutes</Text>
-                        <Text style={styles.shabbosDurationValue}>{shabbosRingMin}</Text>
-                      </View>
-                      <Slider
-                        style={styles.shabbosDurationSlider}
-                        minimumValue={0}
-                        maximumValue={5}
-                        step={1}
+                <ToggleRow
+                  title="Shabbos alarm"
+                  subtitle="Wake up without touching your phone"
+                  value={shabbosEnabled}
+                  onValueChange={onShabbosClockEnabledChange}
+                >
+                  {shabbosEnabled ? (
+                    <>
+                      <ValueRow
+                        nested
+                        label="Wake-up time"
+                        value={formatTehillimTimeForDisplay(n.shabbosClockTime || '08:00')}
+                        onPress={() => openTimePicker('shabbosClock')}
+                      />
+                      <Hairline />
+                      <DurationSlider
+                        label="Ring minutes"
+                        valueText={String(shabbosRingMin)}
                         value={shabbosRingMin}
-                        onValueChange={v => {
+                        max={5}
+                        onValueChange={(v) => {
                           const m = Math.round(v);
                           setShabbosRingMin(m);
                           if (m === 5) setShabbosRingSec(0);
                         }}
-                        onSlidingComplete={v => {
+                        onSlidingComplete={(v) => {
                           const m = Math.round(v);
                           const s = m === 5 ? 0 : shabbosRingSec;
                           void saveShabbosRingDuration(m, s);
                         }}
-                        minimumTrackTintColor={theme.colors.primary.main}
-                        maximumTrackTintColor={theme.colors.neutral[300]}
-                        thumbTintColor={theme.colors.primary.main}
                       />
-                    </View>
-                    <View style={styles.shabbosDurationSliderBlock}>
-                      <View style={styles.shabbosDurationSliderRow}>
-                        <Text style={styles.shabbosDurationMeta}>Seconds</Text>
-                        <Text style={styles.shabbosDurationValue}>{shabbosRingMin >= 5 ? 0 : shabbosRingSec}</Text>
-                      </View>
-                      <Slider
-                        style={styles.shabbosDurationSlider}
-                        minimumValue={0}
-                        maximumValue={shabbosRingMin >= 5 ? 0 : 59}
-                        step={1}
+                      <Hairline />
+                      <DurationSlider
+                        label="Ring seconds"
+                        valueText={String(shabbosRingMin >= 5 ? 0 : shabbosRingSec)}
                         value={shabbosRingMin >= 5 ? 0 : shabbosRingSec}
+                        max={shabbosRingMin >= 5 ? 0 : 59}
                         disabled={shabbosRingMin >= 5}
-                        onValueChange={v => {
+                        onValueChange={(v) => {
                           if (shabbosRingMin >= 5) return;
                           setShabbosRingSec(Math.round(v));
                         }}
-                        onSlidingComplete={v => {
+                        onSlidingComplete={(v) => {
                           if (shabbosRingMin >= 5) return;
                           void saveShabbosRingDuration(shabbosRingMin, Math.round(v));
                         }}
-                        minimumTrackTintColor={theme.colors.primary.main}
-                        maximumTrackTintColor={theme.colors.neutral[300]}
-                        thumbTintColor={theme.colors.primary.main}
                       />
-                    </View>
-                    <View style={styles.shabbosClockHintBox}>
-                      <Ionicons name="information-circle-outline" size={16} color={theme.colors.text.tertiary} />
-                      <Text style={styles.shabbosClockHint}>Keep ringer on. Use Airplane mode or Focus to block other notifications overnight.</Text>
-                    </View>
-                  </>
-                )}
-              </LinearGradient>
+                    </>
+                  ) : null}
+                </ToggleRow>
+              </Section>
             </View>
-          </FadeIn>
 
-        {/* Master Toggle */}
-        <FadeIn delay={75}>
-          <GlassCard>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Text style={styles.sectionIcon}>🔔</Text>
-                <Text style={styles.sectionTitle}>Notifications</Text>
-              </View>
-            </View>
-            <View style={styles.sectionContent}>
-              <View style={styles.masterToggle}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.optionLabel}>Enable Notifications</Text>
-                  <Text style={styles.optionDescription}>Turn all reminders on or off</Text>
-                </View>
-                <Switch
-                  value={preferences.notifications.enabled}
-                  onValueChange={(value) => onNotificationsEnabledChange(value)}
-                  trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                  thumbColor={preferences.notifications.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
-                />
-              </View>
-              {preferences.notifications.enabled && (
+            <Section title="Reminders">
+              <ToggleRow
+                title="Enable notifications"
+                subtitle="Turn all reminders on or off"
+                value={n.enabled}
+                onValueChange={(value) => onNotificationsEnabledChange(value)}
+              />
+            </Section>
+
+            {n.enabled && (
               <>
-              <View style={styles.divider} />
-              <View style={styles.notifGroupHeader}>
-                <View style={styles.sectionTitleRow}>
-                  <Text style={styles.sectionIcon}>🕊️</Text>
-                  <Text style={styles.notifGroupTitle}>Daily Prayers</Text>
-                </View>
-                <Text style={styles.notifGroupSubtitle}>Shacharis, Mincha & Maariv</Text>
-              </View>
-                <View style={styles.notifOption}>
-                  <View style={styles.notifOptionMain}>
-                    <View style={styles.prayerLabelRow}>
-                      <Text style={styles.prayerIcon}>🌅</Text>
-                      <View>
-                        <Text style={styles.optionLabel}>Shacharis</Text>
-                        <Text style={styles.optionDescriptionSmall}>Morning prayers</Text>
-                      </View>
-                    </View>
-                    <Switch
-                      value={preferences.notifications.prayerReminders?.shacharis?.enabled || false}
-                      onValueChange={async (value) => {
-                        const updated = {
-                          ...preferences.notifications,
-                          prayerReminders: {
-                            ...preferences.notifications.prayerReminders,
-                            shacharis: {
-                              ...preferences.notifications.prayerReminders?.shacharis,
-                              enabled: value,
-                            },
-                          },
-                        };
-                        await UserPreferencesService.setNotificationPreferences(updated);
-                        await NotificationService.reschedule();
-                        loadPreferences();
-                      }}
-                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                      thumbColor={preferences.notifications.prayerReminders?.shacharis?.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
-                    />
-                  </View>
-                  {preferences.notifications.prayerReminders?.shacharis?.enabled && (
-                    <View style={styles.notifSubOption}>
-                      <View style={styles.notifSubOptionRow}>
-                        <Text style={styles.subOptionLabel}>Daily at</Text>
-                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('shacharis')}>
-                          <Text style={styles.timeButtonText}>
-                            {preferences.notifications.prayerReminders?.shacharis?.time || '7:00 AM'}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
+                <Section title="Daily prayers" footer="Shacharis, Mincha and Maariv">
+                  {PRAYERS.map((p) => {
+                    const cfg = n.prayerReminders?.[p.key];
+                    return (
+                      <ToggleRow
+                        key={p.key}
+                        title={p.title}
+                        subtitle={p.subtitle}
+                        value={cfg?.enabled || false}
+                        onValueChange={(value) => setPrayerEnabled(p.key, value)}
+                      >
+                        {cfg?.enabled ? (
+                          <ValueRow
+                            nested
+                            label="Daily at"
+                            value={cfg?.time || p.fallback}
+                            onPress={() => openTimePicker(p.key)}
+                          />
+                        ) : null}
+                      </ToggleRow>
+                    );
+                  })}
+                </Section>
 
-                <View style={styles.notifOption}>
-                  <View style={styles.notifOptionMain}>
-                    <View style={styles.prayerLabelRow}>
-                      <Text style={styles.prayerIcon}>☀️</Text>
-                      <View>
-                        <Text style={styles.optionLabel}>Mincha</Text>
-                        <Text style={styles.optionDescriptionSmall}>Afternoon prayers</Text>
-                      </View>
-                    </View>
-                    <Switch
-                      value={preferences.notifications.prayerReminders?.mincha?.enabled || false}
-                      onValueChange={async (value) => {
-                        const updated = {
-                          ...preferences.notifications,
-                          prayerReminders: {
-                            ...preferences.notifications.prayerReminders,
-                            mincha: {
-                              ...preferences.notifications.prayerReminders?.mincha,
-                              enabled: value,
-                            },
-                          },
-                        };
-                        await UserPreferencesService.setNotificationPreferences(updated);
-                        await NotificationService.reschedule();
-                        loadPreferences();
-                      }}
-                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                      thumbColor={preferences.notifications.prayerReminders?.mincha?.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
-                    />
+                <Section title="Daily reminders" footer="Tehillim and gratitude">
+                  {timedToggle('dailyTehillim', 'dailyTehillimTime', '09:00', 'tehillim', 'Daily Tehillim')}
+                  <View ref={gratitudeBlockRef} collapsable={false}>
+                    {timedToggle('dailyGratitude', 'dailyGratitudeTime', '20:00', 'dailyGratitude', 'Daily gratitude')}
                   </View>
-                  {preferences.notifications.prayerReminders?.mincha?.enabled && (
-                    <View style={styles.notifSubOption}>
-                      <View style={styles.notifSubOptionRow}>
-                        <Text style={styles.subOptionLabel}>Daily at</Text>
-                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('mincha')}>
-                          <Text style={styles.timeButtonText}>
-                            {preferences.notifications.prayerReminders?.mincha?.time || '1:00 PM'}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
+                </Section>
 
-                <View style={[styles.notifOption, styles.notifOptionLast]}>
-                  <View style={styles.notifOptionMain}>
-                    <View style={styles.prayerLabelRow}>
-                      <Text style={styles.prayerIcon}>🌙</Text>
-                      <View>
-                        <Text style={styles.optionLabel}>Maariv</Text>
-                        <Text style={styles.optionDescriptionSmall}>Evening prayers</Text>
-                      </View>
-                    </View>
-                    <Switch
-                      value={preferences.notifications.prayerReminders?.maariv?.enabled || false}
-                      onValueChange={async (value) => {
-                        const updated = {
-                          ...preferences.notifications,
-                          prayerReminders: {
-                            ...preferences.notifications.prayerReminders,
-                            maariv: {
-                              ...preferences.notifications.prayerReminders?.maariv,
-                              enabled: value,
-                            },
-                          },
-                        };
-                        await UserPreferencesService.setNotificationPreferences(updated);
-                        await NotificationService.reschedule();
-                        loadPreferences();
-                      }}
-                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                      thumbColor={preferences.notifications.prayerReminders?.maariv?.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
-                    />
-                  </View>
-                  {preferences.notifications.prayerReminders?.maariv?.enabled && (
-                    <View style={styles.notifSubOption}>
-                      <View style={styles.notifSubOptionRow}>
-                        <Text style={styles.subOptionLabel}>Daily at</Text>
-                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('maariv')}>
-                          <Text style={styles.timeButtonText}>
-                            {preferences.notifications.prayerReminders?.maariv?.time || '8:00 PM'}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              <View style={styles.divider} />
-              <View style={styles.notifGroupHeader}>
-                <View style={styles.sectionTitleRow}>
-                  <Text style={styles.sectionIcon}>✨</Text>
-                  <Text style={styles.notifGroupTitle}>Daily Reminders</Text>
-                </View>
-                <Text style={styles.notifGroupSubtitle}>Tehillim & gratitude</Text>
-              </View>
-                <View style={styles.notifOption}>
-                  <View style={styles.notifOptionMain}>
-                    <Text style={styles.optionLabel}>Daily Tehillim</Text>
-                    <Switch
-                      value={preferences.notifications.dailyTehillim}
-                      onValueChange={(value) => updateNotificationPreference('dailyTehillim', value)}
-                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                      thumbColor={preferences.notifications.dailyTehillim ? theme.colors.primary.main : theme.colors.neutral[400]}
-                    />
-                  </View>
-                  {preferences.notifications.dailyTehillim && (
-                    <View style={styles.notifSubOption}>
-                      <View style={styles.notifSubOptionRow}>
-                        <Text style={styles.subOptionLabel}>Remind me at</Text>
-                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('tehillim')}>
-                          <Text style={styles.timeButtonText}>
-                            {formatTehillimTimeForDisplay(preferences.notifications.dailyTehillimTime || '09:00')}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
+                <Section title="Shabbos and zmanim" footer="Candle lighting, sunset and Shabbos prep">
+                  <ToggleRow
+                    title="Shabbos reminders"
+                    value={n.shabbosReminders}
+                    onValueChange={(value) => updateNotificationPreference('shabbosReminders', value)}
+                  >
+                    {n.shabbosReminders ? (
+                      <ValueRow
+                        nested
+                        note
+                        label="Candle lighting and Friday afternoon reminders based on your location's zmanim"
+                      />
+                    ) : null}
+                  </ToggleRow>
+                  <ToggleRow
+                    title="Shekiya (sunset)"
+                    value={n.shekiyaReminder}
+                    onValueChange={(value) => updateNotificationPreference('shekiyaReminder', value)}
+                  >
+                    {n.shekiyaReminder ? (
+                      <ValueRow
+                        nested
+                        label="Remind me"
+                        value={`${n.shekiyaMinutesBefore ?? 15} min before sunset`}
+                        onPress={() => setShekiyaMinutesPickerOpen(true)}
+                      />
+                    ) : null}
+                  </ToggleRow>
+                </Section>
 
-                <View style={[styles.notifOption, styles.notifOptionLast]}>
-                  <View style={styles.notifOptionMain}>
-                    <Text style={styles.optionLabel}>Daily Gratitude</Text>
-                    <Switch
-                      value={preferences.notifications.dailyGratitude}
-                      onValueChange={(value) => updateNotificationPreference('dailyGratitude', value)}
-                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                      thumbColor={preferences.notifications.dailyGratitude ? theme.colors.primary.main : theme.colors.neutral[400]}
-                    />
-                  </View>
-                  {preferences.notifications.dailyGratitude && (
-                    <View style={styles.notifSubOption}>
-                      <View style={styles.notifSubOptionRow}>
-                        <Text style={styles.subOptionLabel}>Remind me at</Text>
-                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('dailyGratitude')}>
-                          <Text style={styles.timeButtonText}>
-                            {formatTehillimTimeForDisplay(preferences.notifications.dailyGratitudeTime || '20:00')}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              <View style={styles.divider} />
-              <View style={styles.notifGroupHeader}>
-                <View style={styles.sectionTitleRow}>
-                  <Text style={styles.sectionIcon}>🕯️</Text>
-                  <Text style={styles.notifGroupTitle}>Shabbos & Zmanim</Text>
-                </View>
-                <Text style={styles.notifGroupSubtitle}>Candle lighting, sunset & Shabbos prep</Text>
-              </View>
-                <View style={styles.notifOption}>
-                  <View style={styles.notifOptionMain}>
-                    <Text style={styles.optionLabel}>Shabbos Reminders</Text>
-                    <Switch
-                      value={preferences.notifications.shabbosReminders}
-                      onValueChange={(value) => updateNotificationPreference('shabbosReminders', value)}
-                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                      thumbColor={preferences.notifications.shabbosReminders ? theme.colors.primary.main : theme.colors.neutral[400]}
-                    />
-                  </View>
-                  {preferences.notifications.shabbosReminders && (
-                    <View style={styles.notifSubOption}>
-                      <Text style={styles.subOptionLabel}>Candle lighting and Friday afternoon reminders based on your location's zmanim</Text>
-                    </View>
-                  )}
-                </View>
-
-                <View style={[styles.notifOption, styles.notifOptionLast]}>
-                  <View style={styles.notifOptionMain}>
-                    <Text style={styles.optionLabel}>Shekiya (Sunset)</Text>
-                    <Switch
-                      value={preferences.notifications.shekiyaReminder}
-                      onValueChange={(value) => updateNotificationPreference('shekiyaReminder', value)}
-                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                      thumbColor={preferences.notifications.shekiyaReminder ? theme.colors.primary.main : theme.colors.neutral[400]}
-                    />
-                  </View>
-                  {preferences.notifications.shekiyaReminder && (
-                    <View style={styles.notifSubOption}>
-                      <View style={styles.notifSubOptionRow}>
-                        <Text style={styles.subOptionLabel}>Remind me</Text>
-                        <TouchableOpacity style={styles.timeButton} onPress={() => setShekiyaMinutesPickerOpen(true)}>
-                          <Text style={styles.timeButtonText}>
-                            {preferences.notifications.shekiyaMinutesBefore ?? 15} min before sunset
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
-              <View style={styles.divider} />
-              <View style={styles.notifGroupHeader}>
-                <View style={styles.sectionTitleRow}>
-                  <Text style={styles.sectionIcon}>📅</Text>
-                  <Text style={styles.notifGroupTitle}>Calendar & Seasonal</Text>
-                </View>
-                <Text style={styles.notifGroupSubtitle}>Hallel, Rosh Chodesh, fast days & more</Text>
-              </View>
-                <View style={styles.notifOption}>
-                  <View style={styles.notifOptionMain}>
-                    <Text style={styles.optionLabel}>Hallel</Text>
-                    <Switch
-                      value={preferences.notifications.hallelAnenu}
-                      onValueChange={(value) => updateNotificationPreference('hallelAnenu', value)}
-                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                      thumbColor={preferences.notifications.hallelAnenu ? theme.colors.primary.main : theme.colors.neutral[400]}
-                    />
-                  </View>
-                  {preferences.notifications.hallelAnenu && (
-                    <View style={styles.notifSubOption}>
-                      <View style={styles.notifSubOptionRow}>
-                        <Text style={styles.subOptionLabel}>Remind me at</Text>
-                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('hallelAnenu')}>
-                          <Text style={styles.timeButtonText}>
-                            {formatTehillimTimeForDisplay(preferences.notifications.hallelAnenuTime || '08:00')}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.notifOption}>
-                  <View style={styles.notifOptionMain}>
-                    <Text style={styles.optionLabel}>Rosh Chodesh</Text>
-                    <Switch
-                      value={preferences.notifications.roshChodesh}
-                      onValueChange={(value) => updateNotificationPreference('roshChodesh', value)}
-                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                      thumbColor={preferences.notifications.roshChodesh ? theme.colors.primary.main : theme.colors.neutral[400]}
-                    />
-                  </View>
-                  {preferences.notifications.roshChodesh && (
-                    <View style={styles.notifSubOption}>
-                      <View style={styles.notifSubOptionRow}>
-                        <Text style={styles.subOptionLabel}>Remind me at</Text>
-                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('roshChodesh')}>
-                          <Text style={styles.timeButtonText}>
-                            {formatTehillimTimeForDisplay(preferences.notifications.roshChodeshTime || '08:00')}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.notifOption}>
-                  <View style={styles.notifOptionMain}>
-                    <Text style={styles.optionLabel}>Fast Days</Text>
-                    <Switch
-                      value={preferences.notifications.fastDays}
-                      onValueChange={(value) => updateNotificationPreference('fastDays', value)}
-                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                      thumbColor={preferences.notifications.fastDays ? theme.colors.primary.main : theme.colors.neutral[400]}
-                    />
-                  </View>
-                  {preferences.notifications.fastDays && (
-                    <View style={styles.notifSubOption}>
-                      <View style={styles.notifSubOptionRow}>
-                        <Text style={styles.subOptionLabel}>Remind me at</Text>
-                        <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('fastDays')}>
-                          <Text style={styles.timeButtonText}>
-                            {formatTehillimTimeForDisplay(preferences.notifications.fastDaysTime || '08:00')}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.notifOption}>
-                  <View style={styles.notifOptionMain}>
-                    <Text style={styles.optionLabel}>Sefiras HaOmer</Text>
-                    <Switch
-                      value={preferences.notifications.sefirasHaomer}
-                      onValueChange={(value) => updateNotificationPreference('sefirasHaomer', value)}
-                      trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                      thumbColor={preferences.notifications.sefirasHaomer ? theme.colors.primary.main : theme.colors.neutral[400]}
-                    />
-                  </View>
-                  {preferences.notifications.sefirasHaomer && (
-                    <View style={styles.notifSubOption}>
-                      <Text style={styles.subOptionLabel}>At tzeit (nightfall) for your location</Text>
-                    </View>
-                  )}
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.notifOption, styles.notifOptionLast]}
-                  onPress={() => setDaveningAddOnsExpanded(!daveningAddOnsExpanded)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.notifOptionMain}>
-                    <View style={styles.daveningAddOnsTitleRow}>
+                <Section title="Calendar and seasonal" footer="Hallel, Rosh Chodesh, fast days and more">
+                  {timedToggle('hallelAnenu', 'hallelAnenuTime', '08:00', 'hallelAnenu', 'Hallel')}
+                  {timedToggle('roshChodesh', 'roshChodeshTime', '08:00', 'roshChodesh', 'Rosh Chodesh')}
+                  {timedToggle('fastDays', 'fastDaysTime', '08:00', 'fastDays', 'Fast days')}
+                  <ToggleRow
+                    title="Sefiras HaOmer"
+                    value={n.sefirasHaomer}
+                    onValueChange={(value) => updateNotificationPreference('sefirasHaomer', value)}
+                  >
+                    {n.sefirasHaomer ? (
+                      <ValueRow nested note label="At tzeit (nightfall) for your location" />
+                    ) : null}
+                  </ToggleRow>
+                  <ToggleRow
+                    title="Davening add-ons"
+                    subtitle="Yaaleh V'Yavo, Al HaNisim and more"
+                    value={n.daveningAddOns}
+                    onValueChange={(value) => updateNotificationPreference('daveningAddOns', value)}
+                    onPressTitle={() => setDaveningAddOnsExpanded((v) => !v)}
+                    leading={
                       <Ionicons
                         name={daveningAddOnsExpanded ? 'chevron-down' : 'chevron-forward'}
-                        size={20}
+                        size={type.fontSize.lg}
                         color={theme.colors.text.tertiary}
-                        style={styles.daveningAddOnsChevron}
                       />
-                      <View>
-                        <Text style={styles.optionLabel}>Davening Add-ons</Text>
-                        <Text style={styles.optionDescriptionSmall}>Yaaleh V'Yavo, Al HaNisim & more</Text>
-                      </View>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }} onStartShouldSetResponder={() => true}>
-                      <Switch
-                        value={preferences.notifications.daveningAddOns}
-                        onValueChange={(value) => updateNotificationPreference('daveningAddOns', value)}
-                        trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                        thumbColor={preferences.notifications.daveningAddOns ? theme.colors.primary.main : theme.colors.neutral[400]}
-                      />
-                    </View>
-                  </View>
-                  {daveningAddOnsExpanded && (
-                    <View style={styles.daveningAddOnsDropdown}>
-                      <View style={styles.daveningAddOnsRow}>
-                        <Text style={styles.daveningAddOnsRowLabel}>Yaaleh V'Yavo</Text>
-                        <View style={styles.daveningAddOnsRowControls}>
-                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningYaalehVyavo')}>
-                            <Text style={styles.timeButtonText}>
-                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsYaalehVyavoTime ?? '08:00')}
-                            </Text>
-                          </TouchableOpacity>
-                          <Switch
-                            value={preferences.notifications.daveningAddOnsYaalehVyavo}
-                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsYaalehVyavo', value)}
-                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                            thumbColor={preferences.notifications.daveningAddOnsYaalehVyavo ? theme.colors.primary.main : theme.colors.neutral[400]}
-                          />
-                        </View>
-                      </View>
-                      <View style={styles.daveningAddOnsRow}>
-                        <Text style={styles.daveningAddOnsRowLabel}>Al HaNisim</Text>
-                        <View style={styles.daveningAddOnsRowControls}>
-                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningAlHanissim')}>
-                            <Text style={styles.timeButtonText}>
-                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsAlHanissimTime ?? '08:00')}
-                            </Text>
-                          </TouchableOpacity>
-                          <Switch
-                            value={preferences.notifications.daveningAddOnsAlHanissim}
-                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsAlHanissim', value)}
-                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                            thumbColor={preferences.notifications.daveningAddOnsAlHanissim ? theme.colors.primary.main : theme.colors.neutral[400]}
-                          />
-                        </View>
-                      </View>
-                      <View style={styles.daveningAddOnsRow}>
-                        <Text style={styles.daveningAddOnsRowLabel}>Mashiv HaRuach & V'ten Tal Umatar</Text>
-                        <View style={styles.daveningAddOnsRowControls}>
-                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningMashivVtenTal')}>
-                            <Text style={styles.timeButtonText}>
-                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsMashivVtenTalTime ?? '08:00')}
-                            </Text>
-                          </TouchableOpacity>
-                          <Switch
-                            value={preferences.notifications.daveningAddOnsMashivVtenTal}
-                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsMashivVtenTal', value)}
-                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                            thumbColor={preferences.notifications.daveningAddOnsMashivVtenTal ? theme.colors.primary.main : theme.colors.neutral[400]}
-                          />
-                        </View>
-                      </View>
-                      <View style={styles.daveningAddOnsRow}>
-                        <Text style={styles.daveningAddOnsRowLabel}>Aneinu</Text>
-                        <View style={styles.daveningAddOnsRowControls}>
-                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningAneinu')}>
-                            <Text style={styles.timeButtonText}>
-                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsAneinuTime ?? '08:00')}
-                            </Text>
-                          </TouchableOpacity>
-                          <Switch
-                            value={preferences.notifications.daveningAddOnsAneinu}
-                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsAneinu', value)}
-                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                            thumbColor={preferences.notifications.daveningAddOnsAneinu ? theme.colors.primary.main : theme.colors.neutral[400]}
-                          />
-                        </View>
-                      </View>
-                      <View style={styles.daveningAddOnsRow}>
-                        <Text style={styles.daveningAddOnsRowLabel}>Nachem</Text>
-                        <View style={styles.daveningAddOnsRowControls}>
-                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningNachem')}>
-                            <Text style={styles.timeButtonText}>
-                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsNachemTime ?? '08:00')}
-                            </Text>
-                          </TouchableOpacity>
-                          <Switch
-                            value={preferences.notifications.daveningAddOnsNachem}
-                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsNachem', value)}
-                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                            thumbColor={preferences.notifications.daveningAddOnsNachem ? theme.colors.primary.main : theme.colors.neutral[400]}
-                          />
-                        </View>
-                      </View>
-                      <View style={styles.daveningAddOnsRow}>
-                        <Text style={styles.daveningAddOnsRowLabel}>Avinu Malkeinu</Text>
-                        <View style={styles.daveningAddOnsRowControls}>
-                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningAvinuMalkeinu')}>
-                            <Text style={styles.timeButtonText}>
-                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsAvinuMalkeinuTime ?? '08:00')}
-                            </Text>
-                          </TouchableOpacity>
-                          <Switch
-                            value={preferences.notifications.daveningAddOnsAvinuMalkeinu}
-                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsAvinuMalkeinu', value)}
-                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                            thumbColor={preferences.notifications.daveningAddOnsAvinuMalkeinu ? theme.colors.primary.main : theme.colors.neutral[400]}
-                          />
-                        </View>
-                      </View>
-                      <View style={[styles.daveningAddOnsRow, styles.daveningAddOnsRowLast]}>
-                        <Text style={styles.daveningAddOnsRowLabel}>Selichos</Text>
-                        <View style={styles.daveningAddOnsRowControls}>
-                          <TouchableOpacity style={styles.timeButton} onPress={() => openTimePicker('daveningSelichos')}>
-                            <Text style={styles.timeButtonText}>
-                              {formatTehillimTimeForDisplay(preferences.notifications.daveningAddOnsSelichosTime ?? '08:00')}
-                            </Text>
-                          </TouchableOpacity>
-                          <Switch
-                            value={preferences.notifications.daveningAddOnsSelichos}
-                            onValueChange={(value) => updateNotificationPreference('daveningAddOnsSelichos', value)}
-                            trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                            thumbColor={preferences.notifications.daveningAddOnsSelichos ? theme.colors.primary.main : theme.colors.neutral[400]}
-                          />
-                        </View>
-                      </View>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              <View style={styles.divider} />
-              <View style={styles.notifGroupHeader}>
-                <View style={[styles.sectionTitleRow, { flex: 1, width: '100%' }]}>
-                  <Text style={styles.sectionIcon}>⏰</Text>
-                  <Text style={[styles.notifGroupTitle, { flex: 1 }]}>Custom Reminders</Text>
-                  <TouchableOpacity
-                    style={styles.addReminderButton}
-                    onPress={() => navigation.navigate('AddCustomReminder' as never)}
+                    }
                   >
-                    <Text style={styles.addReminderButtonText}>+ Add</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-                {(preferences.customReminders || []).length > 0 ? (
-                  (preferences.customReminders || []).map((reminder) => (
-                    <View key={reminder.id} style={styles.customReminderItem}>
-                      <View style={styles.customReminderLeft}>
-                        <Text style={styles.customReminderTitle}>{reminder.title}</Text>
-                        <Text style={styles.customReminderTime}>{reminder.time}</Text>
-                      </View>
-                      <View style={styles.customReminderRight}>
-                        <Switch
+                    {daveningAddOnsExpanded ? (
+                      <>
+                        {DAVENING_ADDONS.map((a, i) => (
+                          <React.Fragment key={a.kind}>
+                            {i > 0 ? <Hairline /> : null}
+                            <ToggleRow
+                              title={a.label}
+                              value={Boolean(n[a.enabledKey])}
+                              onValueChange={(value) => updateNotificationPreference(a.enabledKey, value)}
+                              trailingExtra={
+                                <TimePill
+                                  label={`${a.label} time`}
+                                  text={formatTehillimTimeForDisplay((n[a.timeKey] as string | undefined) ?? '08:00')}
+                                  onPress={() => openTimePicker(a.kind)}
+                                />
+                              }
+                            />
+                          </React.Fragment>
+                        ))}
+                      </>
+                    ) : null}
+                  </ToggleRow>
+                </Section>
+
+                <Section title="Custom reminders">
+                  {customReminders.length > 0
+                    ? customReminders.map((reminder) => (
+                        <ToggleRow
+                          key={reminder.id}
+                          title={reminder.title}
+                          subtitle={reminder.time}
                           value={reminder.enabled}
                           onValueChange={async (value) => {
                             await UserPreferencesService.updateCustomReminder(reminder.id, { enabled: value });
@@ -1217,1379 +890,325 @@ export const SettingsScreen: React.FC = () => {
                             await NotificationService.reschedule(prefs ?? undefined);
                             loadPreferences();
                           }}
-                          trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                          thumbColor={reminder.enabled ? theme.colors.primary.main : theme.colors.neutral[400]}
+                          trailingExtra={
+                            <IconButton
+                              name="ellipsis-horizontal"
+                              label={`More options for ${reminder.title}`}
+                              tone="muted"
+                              onPress={() => openReminderMenu(reminder)}
+                            />
+                          }
                         />
-                        <TouchableOpacity
-                          style={styles.reminderMenuButton}
-                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                          onPress={() => setReminderMenuId(reminder.id)}
-                        >
-                          <Text style={styles.reminderMenuButtonText}>⋮</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))
-                ) : (
-                  <View style={styles.noRemindersMessage}>
-                    <Text style={styles.noRemindersText}>No custom reminders yet</Text>
-                    <Text style={styles.noRemindersSubtext}>Tap + Add to create one</Text>
-                  </View>
-                )}
+                      ))
+                    : emptyHint('No custom reminders yet')}
+                  <ListRow
+                    title="Add reminder"
+                    leading={<Ionicons name="add" size={type.fontSize.xl} color={theme.colors.primary.dark} />}
+                    onPress={() => navigation.navigate('AddCustomReminder' as never)}
+                  />
+                </Section>
               </>
-              )}
-            </View>
-          </GlassCard>
-        </FadeIn>
-
-          {/* Custom reminder edit/delete modal */}
-          <Modal visible={reminderMenuId != null} transparent animationType="fade">
-            <Pressable style={styles.reminderMenuBackdrop} onPress={() => setReminderMenuId(null)}>
-              <Pressable style={styles.reminderMenuBox} onPress={() => {}}>
-                {(() => {
-                  const reminder = (preferences?.customReminders || []).find(r => r.id === reminderMenuId);
-                  if (!reminder) return null;
-                  return (
-                    <>
-                      <TouchableOpacity
-                        style={styles.reminderMenuItem}
-                        onPress={() => {
-                          setReminderMenuId(null);
-                          (navigation as any).navigate('AddCustomReminder', { reminder });
-                        }}
-                      >
-                        <Text style={styles.reminderMenuItemTitle}>Edit</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.reminderMenuItem, styles.reminderMenuItemLast]}
-                        onPress={() => {
-                          setReminderMenuId(null);
-                          Alert.alert(
-                            'Delete Reminder',
-                            `Delete "${reminder.title}"?`,
-                            [
-                              { text: 'Cancel', style: 'cancel' },
-                              {
-                                text: 'Delete',
-                                style: 'destructive',
-                                onPress: async () => {
-                                  try {
-                                    await UserPreferencesService.deleteCustomReminder(reminder.id);
-                                    const prefs = await UserPreferencesService.getPreferences();
-                                    await NotificationService.reschedule(prefs ?? undefined);
-                                  } catch (e) {
-                                    console.error('Delete reminder failed:', e);
-                                  }
-                                  loadPreferences();
-                                },
-                              },
-                            ]
-                          );
-                        }}
-                      >
-                        <Text style={[styles.reminderMenuItemTitle, styles.reminderMenuItemDestructive]}>Delete</Text>
-                      </TouchableOpacity>
-                    </>
-                  );
-                })()}
-              </Pressable>
-            </Pressable>
-          </Modal>
-        </>
+            )}
+          </>
         )}
 
         {/* ============ GENERAL TAB ============ */}
         {activeTab === 'general' && (
-        <>
-        {/* ============ NUSACH SECTION ============ */}
-        <FadeIn delay={50}>
-          <View style={styles.nusachContainer}>
-            <TouchableOpacity
-              style={[
-                styles.nusachOption,
-                preferences.nusach === 'ashkenaz' && styles.nusachOptionActive,
-              ]}
-              onPress={() => UserPreferencesService.setNusach('ashkenaz').then(loadPreferences)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: preferences.nusach === 'ashkenaz' }}
-              accessibilityLabel="Ashkenaz"
-            >
-              <Text style={[
-                styles.nusachText,
-                preferences.nusach === 'ashkenaz' && styles.nusachTextActive,
-              ]}>
-                אשכנז
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.nusachOption,
-                preferences.nusach === 'sfard' && styles.nusachOptionActive,
-              ]}
-              onPress={() => UserPreferencesService.setNusach('sfard').then(loadPreferences)}
-              accessibilityRole="button"
-              accessibilityState={{ selected: preferences.nusach === 'sfard' }}
-              accessibilityLabel="Sfard"
-            >
-              <Text style={[
-                styles.nusachText,
-                preferences.nusach === 'sfard' && styles.nusachTextActive,
-              ]}>
-                ספרד
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </FadeIn>
+          <>
+            <Section title="Nusach">
+              <CheckRow
+                title="אשכנז"
+                subtitle="Ashkenaz"
+                titleStyle={hebrewBody}
+                selected={preferences.nusach === 'ashkenaz'}
+                onPress={() => UserPreferencesService.setNusach('ashkenaz').then(loadPreferences)}
+              />
+              <CheckRow
+                title="ספרד"
+                subtitle="Sfard"
+                titleStyle={hebrewBody}
+                selected={preferences.nusach === 'sfard'}
+                onPress={() => UserPreferencesService.setNusach('sfard').then(loadPreferences)}
+              />
+            </Section>
 
-        {/* ============ REFUAH NAMES (רפאנו) ============ */}
-        <FadeIn delay={100}>
-          <GlassCard style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Text style={styles.sectionIcon}>💙</Text>
-                <Text style={styles.sectionTitle}>Refuah names</Text>
-              </View>
-              <Text style={styles.sectionSubtitle}>Optional in רְפָאֵנוּ</Text>
-            </View>
-            <View style={styles.sectionContent}>
-              <Text style={styles.optionDescription}>
-                After &quot;רְפוּאָה שְׁלֵמָה לְכָל מַכּוֹתֵינוּ&quot; in the Amidah, a short paragraph is added
-                for each person you list (Hebrew names only). Choose male (בן) or female (בת), then enter the
-                choleh&apos;s name and the mother&apos;s name.
-              </Text>
-              {(preferences.refuahPersonalNames ?? []).map((entry) => (
-                <View key={entry.id} style={styles.refuahNameRow}>
-                  <View style={styles.refuahNameRowText}>
-                    <Text style={styles.refuahNamePreview}>
+            <Section
+              title="Refuah names"
+              footer={'Optional in רְפָאֵנוּ. After "רְפוּאָה שְׁלֵמָה לְכָל מַכּוֹתֵינוּ" in the Amidah, a short paragraph is added for each person you list (Hebrew names only). Choose male (בן) or female (בת), then enter the choleh\'s name and the mother\'s name.'}
+            >
+              {refuahNames.map((entry) => (
+                <View key={entry.id} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <PressableScale
+                    onPress={() => openRefuahNameModal(entry)}
+                    pressedScale={0.99}
+                    accessibilityLabel={`Edit ${entry.nameHebrew}`}
+                    style={{ flex: 1, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, minHeight: 44 }}
+                  >
+                    <Text style={[hebrewBody, { color: theme.colors.text.primary, alignSelf: 'flex-start' }]}>
                       {entry.gender === 'female'
                         ? `${entry.nameHebrew} בת ${entry.motherNameHebrew}`
                         : `${entry.nameHebrew} בן ${entry.motherNameHebrew}`}
                     </Text>
-                    <Text style={styles.refuahNameSub}>
+                    <Text
+                      style={[
+                        type.textStyles.caption,
+                        { color: theme.colors.text.secondary, marginTop: spacing['2xs'] },
+                      ]}
+                    >
                       {entry.gender === 'female' ? 'Female (בת)' : 'Male (בן)'}
                     </Text>
-                  </View>
-                  <TouchableOpacity onPress={() => openRefuahNameModal(entry)} style={styles.refuahNameEditBtn}>
-                    <Text style={styles.refuahNameEditTxt}>Edit</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => deleteRefuahName(entry.id)} style={styles.refuahNameDeleteBtn}>
-                    <Ionicons name="trash-outline" size={20} color={theme.colors.semantic.error} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-              <TouchableOpacity
-                style={styles.addRefuahButton}
-                onPress={() => openRefuahNameModal()}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.addRefuahButtonText}>+ Add name</Text>
-              </TouchableOpacity>
-            </View>
-          </GlassCard>
-        </FadeIn>
-
-        {/* ============ DISPLAY SECTION ============ */}
-        <FadeIn delay={200}>
-          <GlassCard style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Text style={styles.sectionIcon}>🎨</Text>
-                <Text style={styles.sectionTitle}>Display</Text>
-              </View>
-            </View>
-
-            <View style={styles.sectionContent}>
-                {/* Theme / Appearance – dark mode hidden for now; app stays light */}
-                {/* Text Size */}
-                <View style={styles.displayOption}>
-                  <Text style={styles.optionLabel}>Text Size</Text>
-                  <View style={styles.textSizeSelector}>
-                    {(['xsmall', 'small', 'medium', 'large'] as const).map((size) => (
-                      <TouchableOpacity
-                        key={size}
-                        style={[
-                          styles.textSizeOption,
-                          preferences.display?.textSize === size && styles.textSizeOptionActive,
-                        ]}
-                        onPress={() => updateDisplayPreference('textSize', size)}
-                      >
-                        <Text style={[
-                          styles.textSizeText,
-                          { fontSize: size === 'xsmall' ? 12 : size === 'small' ? 14 : size === 'medium' ? 16 : 18 },
-                          preferences.display?.textSize === size && styles.textSizeTextActive,
-                        ]}>
-                          A
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
-
-                {/* Show Transliteration */}
-                <View style={styles.simpleToggle}>
-                  <Text style={styles.optionLabel}>Show Transliteration</Text>
-                  <Switch
-                    value={false}
-                    onValueChange={() => Alert.alert('Coming Soon', 'English translations will be available in a future update.')}
-                    trackColor={{ false: theme.colors.neutral[300], true: theme.colors.primary.light }}
-                    thumbColor={theme.colors.neutral[400]}
+                  </PressableScale>
+                  <IconButton
+                    name="trash-outline"
+                    label={`Delete ${entry.nameHebrew}`}
+                    tone="danger"
+                    onPress={() => deleteRefuahName(entry.id)}
                   />
                 </View>
-            </View>
-          </GlassCard>
-        </FadeIn>
-        </>
+              ))}
+              <ListRow
+                title="Add name"
+                leading={<Ionicons name="add" size={type.fontSize.xl} color={theme.colors.primary.dark} />}
+                onPress={() => openRefuahNameModal()}
+              />
+            </Section>
+
+            <Section title="Display">
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingVertical: spacing.sm,
+                  paddingHorizontal: spacing.md,
+                  minHeight: 44 + spacing.sm,
+                }}
+              >
+                <Text style={[type.textStyles.body, { color: theme.colors.text.primary }]}>Text size</Text>
+                <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+                  {TEXT_SIZES.map((size, i) => {
+                    const selected = preferences.display?.textSize === size;
+                    const sizes = [type.fontSize.xs, type.fontSize.sm, type.fontSize.base, type.fontSize.lg];
+                    return (
+                      <PressableScale
+                        key={size}
+                        onPress={() => updateDisplayPreference('textSize', size)}
+                        accessibilityRole="radio"
+                        accessibilityLabel={`Text size ${size}`}
+                        accessibilityState={{ selected }}
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: radii.md,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: selected ? theme.colors.primary.main : theme.colors.background.secondary,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontFamily: type.fonts.body.semibold,
+                            fontSize: sizes[i],
+                            color: selected ? theme.colors.text.inverse : theme.colors.text.primary,
+                          }}
+                        >
+                          A
+                        </Text>
+                      </PressableScale>
+                    );
+                  })}
+                </View>
+              </View>
+              <ToggleRow
+                title="Show transliteration"
+                subtitle="English translations are coming in a future update"
+                value={false}
+                disabled
+                onValueChange={() => {}}
+              />
+            </Section>
+          </>
         )}
 
         {/* ============ ABOUT TAB ============ */}
         {activeTab === 'about' && (
-        <>
-        {/* Support & credit */}
-        <FadeIn delay={25}>
-          <GlassCard style={styles.card}>
-            <View style={styles.supportSection}>
-              <Text style={styles.supportTitle}>Support</Text>
-              <Text style={styles.supportText}>
-                Visit{' '}
-                <Text
-                  style={styles.link}
-                  onPress={() => Linking.openURL(LEGAL.supportUrl)}
-                >
-                  siddur24seven.com/support
-                </Text>
-                {', call '}
-                <Text
-                  style={styles.link}
-                  onPress={() => Linking.openURL(LEGAL.supportPhoneTel)}
-                >
-                  {LEGAL.supportPhoneDisplay}
-                </Text>
-                {', or email '}
-                <Text
-                  style={styles.link}
-                  onPress={() => Linking.openURL(mailtoSupport())}
-                >
-                  {LEGAL.supportEmail}
-                </Text>
-              </Text>
-              <Text style={styles.supportCredit}>Project by Avi Taub at Sheva Studios</Text>
-              <Text style={[styles.supportText, { marginTop: 12, marginBottom: 0 }]}>
-                <Text
-                  style={styles.link}
-                  onPress={() => Linking.openURL(LEGAL.privacyUrl)}
-                >
-                  Privacy Policy
-                </Text>
-                {'  ·  '}
-                <Text
-                  style={styles.link}
-                  onPress={() => Linking.openURL(LEGAL.termsUrl)}
-                >
-                  Terms of Use
-                </Text>
-              </Text>
-            </View>
-          </GlassCard>
-        </FadeIn>
+          <>
+            <Section title="Support" footer="Project by Avi Taub at Sheva Studios">
+              <ListRow
+                title="Visit support site"
+                subtitle="siddur24seven.com/support"
+                showChevron
+                onPress={() => Linking.openURL(LEGAL.supportUrl)}
+              />
+              <ListRow
+                title="Call"
+                subtitle={LEGAL.supportPhoneDisplay}
+                showChevron
+                onPress={() => Linking.openURL(LEGAL.supportPhoneTel)}
+              />
+              <ListRow
+                title="Email"
+                subtitle={LEGAL.supportEmail}
+                showChevron
+                onPress={() => Linking.openURL(mailtoSupport())}
+              />
+              <ListRow title="Privacy Policy" showChevron onPress={() => Linking.openURL(LEGAL.privacyUrl)} />
+              <ListRow title="Terms of Use" showChevron onPress={() => Linking.openURL(LEGAL.termsUrl)} />
+            </Section>
 
-        {/* ============ ABOUT SECTION ============ */}
-        <FadeIn delay={50}>
-          <GlassCard style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <Text style={styles.sectionIcon}>ℹ️</Text>
-                <Text style={styles.sectionTitle}>About</Text>
+            <Section
+              title="About"
+              footer="Prayer texts and Tehillim are provided by Sefaria under Creative Commons license (CC-BY-SA)."
+            >
+              <ValueRow
+                label="Version"
+                value={Constants.expoConfig?.version ?? (Constants.manifest as any)?.version ?? '1.0.0'}
+              />
+              <ValueRow
+                label="Text source"
+                value="Sefaria.org"
+                onPress={() => Linking.openURL('https://www.sefaria.org')}
+              />
+            </Section>
+
+            <Section>
+              <View style={{ paddingHorizontal: spacing.xs }}>
+                <TextAction label="Reset app" tone="danger" onPress={handleResetOnboarding} />
               </View>
+            </Section>
+
+            <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
+              <Text style={[type.textStyles.h3, { color: theme.colors.text.primary }]}>24/7</Text>
+              <Text style={[type.textStyles.caption, { color: theme.colors.text.tertiary, marginTop: spacing.xs }]}>
+                With you, when you choose.
+              </Text>
             </View>
-
-            <View style={styles.sectionContent}>
-                <View style={styles.aboutRow}>
-                  <Text style={styles.aboutLabel}>Version</Text>
-                  <Text style={styles.aboutValue}>
-                    {Constants.expoConfig?.version ?? Constants.manifest?.version ?? '1.0.0'}
-                  </Text>
-                </View>
-                
-                <View style={styles.aboutRow}>
-                  <Text style={styles.aboutLabel}>Text Source</Text>
-                  <TouchableOpacity onPress={() => Linking.openURL('https://www.sefaria.org')}>
-                    <Text style={[styles.aboutValue, styles.link]}>Sefaria.org</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <Text style={styles.attribution}>
-                  Prayer texts and Tehillim are provided by Sefaria under Creative Commons license (CC-BY-SA).
-                </Text>
-
-                <View style={styles.resetSection}>
-                  <TouchableOpacity
-                    style={styles.resetButton}
-                    onPress={handleResetOnboarding}
-                  >
-                    <Text style={styles.resetButtonText}>Reset App</Text>
-                  </TouchableOpacity>
-                </View>
-            </View>
-          </GlassCard>
-        </FadeIn>
-
-        {/* App Logo/Branding */}
-        <FadeIn delay={75}>
-          <View style={styles.brandingSection}>
-            <Text style={styles.appName}>24/7</Text>
-            <Text style={styles.tagline}>With you, when you choose.</Text>
-          </View>
-        </FadeIn>
-        </>
+          </>
         )}
-
-        <View style={{ height: 40 }} />
       </ScrollView>
 
-      <Modal
-        visible={refuahNameModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setRefuahNameModalVisible(false)}
+      {/* Reminder menu (Android / web; iOS uses the native action sheet) */}
+      <SheetModal
+        visible={menuReminder != null}
+        title={menuReminder?.title ?? ''}
+        onClose={() => setReminderMenuId(null)}
       >
-        <Pressable style={styles.timePickerOverlay} onPress={() => setRefuahNameModalVisible(false)}>
-          <Pressable style={styles.refuahModalBox} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.timePickerTitle}>{refuahEditingId ? 'Edit name' : 'Add name'}</Text>
-            <Text style={[styles.optionDescription, { marginBottom: spacing.sm }]}>Gender (בן / בת)</Text>
-            <View style={styles.refuahGenderRow}>
-              <TouchableOpacity
-                style={[styles.refuahGenderChip, refuahDraftGender === 'male' && styles.refuahGenderChipActive]}
-                onPress={() => setRefuahDraftGender('male')}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.refuahGenderChipText}>Male · בן</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.refuahGenderChip, refuahDraftGender === 'female' && styles.refuahGenderChipActive]}
-                onPress={() => setRefuahDraftGender('female')}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.refuahGenderChipText}>Female · בת</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={[styles.optionDescription, { marginBottom: spacing.xs }]}>Choleh&apos;s Hebrew name</Text>
-            <TextInput
-              value={refuahDraftName}
-              onChangeText={setRefuahDraftName}
-              placeholder="e.g. שְׁמוּאֵל"
-              style={[styles.refuahTextInput, { color: theme.colors.text.primary }]}
-              placeholderTextColor={theme.colors.neutral[500]}
-              textAlign="right"
-              writingDirection="rtl"
-            />
-            <Text style={[styles.optionDescription, { marginBottom: spacing.xs }]}>Mother&apos;s Hebrew name</Text>
-            <TextInput
-              value={refuahDraftMother}
-              onChangeText={setRefuahDraftMother}
-              placeholder="e.g. שָׂרָה"
-              style={[styles.refuahTextInput, { color: theme.colors.text.primary }]}
-              placeholderTextColor={theme.colors.neutral[500]}
-              textAlign="right"
-              writingDirection="rtl"
-            />
-            <View style={styles.timePickerActions}>
-              <TouchableOpacity
-                style={styles.timePickerCancel}
-                onPress={() => setRefuahNameModalVisible(false)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.timePickerCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.timePickerSave} onPress={saveRefuahNameModal} activeOpacity={0.8}>
-                <Text style={styles.timePickerSaveText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        <Section>
+          <ListRow
+            title="Edit"
+            onPress={() => {
+              const r = menuReminder;
+              setReminderMenuId(null);
+              if (r) editReminder(r);
+            }}
+          />
+          <ListRow
+            title="Delete"
+            onPress={() => {
+              const r = menuReminder;
+              setReminderMenuId(null);
+              if (r) confirmDeleteReminder(r);
+            }}
+            trailing={<Ionicons name="trash-outline" size={type.fontSize.lg} color={theme.colors.semantic.error} />}
+          />
+        </Section>
+      </SheetModal>
+
+      {/* Refuah name add / edit */}
+      <SheetModal
+        visible={refuahNameModalVisible}
+        title={refuahEditingId ? 'Edit name' : 'Add name'}
+        onClose={() => setRefuahNameModalVisible(false)}
+        actionLabel="Save"
+        onAction={saveRefuahNameModal}
+      >
+        {refuahError ? <InlineError message={refuahError} /> : null}
+        <View style={{ flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg }}>
+          <Chip
+            label="Male · בן"
+            selected={refuahDraftGender === 'male'}
+            onPress={() => setRefuahDraftGender('male')}
+          />
+          <Chip
+            label="Female · בת"
+            selected={refuahDraftGender === 'female'}
+            onPress={() => setRefuahDraftGender('female')}
+          />
+        </View>
+        <PracticeField
+          label="Choleh's Hebrew name"
+          value={refuahDraftName}
+          onChangeText={setRefuahDraftName}
+          placeholder="e.g. שְׁמוּאֵל"
+          style={{ ...hebrewBody, textAlign: 'right' }}
+        />
+        <PracticeField
+          label="Mother's Hebrew name"
+          value={refuahDraftMother}
+          onChangeText={setRefuahDraftMother}
+          placeholder="e.g. שָׂרָה"
+          style={{ ...hebrewBody, textAlign: 'right' }}
+        />
+      </SheetModal>
 
       {/* Time picker for notification reminders */}
-      <Modal
+      <SheetModal
         visible={timePickerFor !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setTimePickerFor(null)}
+        title={timePickerFor ? TIME_PICKER_TITLES[timePickerFor] : ''}
+        onClose={() => setTimePickerFor(null)}
+        actionLabel="Save"
+        onAction={saveTimePicker}
       >
-        <Pressable style={styles.timePickerOverlay} onPress={() => setTimePickerFor(null)}>
-          <Pressable style={styles.timePickerBox} onPress={e => e.stopPropagation()}>
-            <View style={styles.timePickerHeader}>
-              <Text style={styles.timePickerTitle}>
-                {timePickerFor === 'shabbosClock' ? 'Shabbos alarm' : timePickerFor === 'tehillim' ? 'Tehillim' : timePickerFor === 'hallelAnenu' ? 'Hallel' : timePickerFor === 'roshChodesh' ? 'Rosh Chodesh' : timePickerFor === 'fastDays' ? 'Fast Days' : timePickerFor === 'dailyGratitude' ? 'Daily Gratitude' : timePickerFor === 'daveningYaalehVyavo' ? 'Yaaleh V\'Yavo' : timePickerFor === 'daveningAlHanissim' ? 'Al HaNisim' : timePickerFor === 'daveningMashivVtenTal' ? 'Mashiv HaRuach & V\'ten Tal' : timePickerFor === 'daveningAneinu' ? 'Aneinu' : timePickerFor === 'daveningNachem' ? 'Nachem' : timePickerFor === 'daveningAvinuMalkeinu' ? 'Avinu Malkeinu' : timePickerFor === 'daveningSelichos' ? 'Selichos' : timePickerFor === 'shacharis' ? 'Shacharis' : timePickerFor === 'mincha' ? 'Mincha' : 'Maariv'}
-              </Text>
-              {timePickerFor !== 'shabbosClock' && (
-                <Text style={styles.timePickerSubtitle}>Set reminder time</Text>
-              )}
-            </View>
-            <View style={styles.timePickerWheelWrap}>
-              <DateTimePicker
-                value={pickerDate}
-                mode="time"
-                display={Platform.OS === 'android' ? 'spinner' : 'spinner'}
-                onChange={(_, date) => date != null && setPickerDate(date)}
-                textColor={theme.colors.text.primary}
-                themeVariant={theme.isDark ? 'dark' : 'light'}
-              />
-            </View>
-            <View style={styles.timePickerActions}>
-              <TouchableOpacity style={styles.timePickerCancel} onPress={() => setTimePickerFor(null)} activeOpacity={0.7}>
-                <Text style={styles.timePickerCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.timePickerSave} onPress={saveTimePicker} activeOpacity={0.8}>
-                <Text style={styles.timePickerSaveText}>Save</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        {timePickerFor !== 'shabbosClock' ? (
+          <Text
+            style={[
+              type.textStyles.bodySmall,
+              { color: theme.colors.text.secondary, textAlign: 'center', marginBottom: spacing.xs },
+            ]}
+          >
+            Set reminder time
+          </Text>
+        ) : null}
+        <View style={{ alignItems: 'center' }}>
+          <DateTimePicker
+            value={pickerDate}
+            mode="time"
+            display="spinner"
+            onChange={(_, date) => date != null && setPickerDate(date)}
+            textColor={theme.colors.text.primary}
+            themeVariant={theme.isDark ? 'dark' : 'light'}
+          />
+        </View>
+      </SheetModal>
 
-      {/* Shekiya: minutes before sunset picker */}
-      <Modal
+      {/* Shekiya: minutes before sunset */}
+      <SheetModal
         visible={shekiyaMinutesPickerOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShekiyaMinutesPickerOpen(false)}
+        title="Shekiya reminder"
+        onClose={() => setShekiyaMinutesPickerOpen(false)}
       >
-        <Pressable style={styles.timePickerOverlay} onPress={() => setShekiyaMinutesPickerOpen(false)}>
-          <Pressable style={styles.timePickerBox} onPress={e => e.stopPropagation()}>
-            <View style={styles.timePickerHeader}>
-              <Text style={styles.timePickerTitle}>Shekiya Reminder</Text>
-              <Text style={styles.timePickerSubtitle}>Minutes before sunset</Text>
-            </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.sm }}>
-              {[5, 10, 15, 20, 25, 30, 45, 60].map((mins) => (
-                <TouchableOpacity
-                  key={mins}
-                  style={[
-                    styles.shekiyaMinuteChip,
-                    preferences?.notifications.shekiyaMinutesBefore === mins && styles.shekiyaMinuteChipSelected,
-                  ]}
-                  onPress={async () => {
-                    await updateNotificationPreference('shekiyaMinutesBefore', mins);
-                    setShekiyaMinutesPickerOpen(false);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[
-                    styles.shekiyaMinuteChipText,
-                    preferences?.notifications.shekiyaMinutesBefore === mins && styles.shekiyaMinuteChipTextSelected,
-                  ]}>
-                    {mins} min
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.timePickerActions}>
-              <TouchableOpacity style={styles.timePickerCancel} onPress={() => setShekiyaMinutesPickerOpen(false)} activeOpacity={0.7}>
-                <Text style={styles.timePickerCancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </View>
+        <Text
+          style={[
+            type.textStyles.bodySmall,
+            { color: theme.colors.text.secondary, textAlign: 'center', marginBottom: spacing.md },
+          ]}
+        >
+          Minutes before sunset
+        </Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center' }}>
+          {SHEKIYA_MINUTES.map((mins) => (
+            <Chip
+              key={mins}
+              label={`${mins} min`}
+              selected={preferences.notifications.shekiyaMinutesBefore === mins}
+              onPress={async () => {
+                await updateNotificationPreference('shekiyaMinutesBefore', mins);
+                setShekiyaMinutesPickerOpen(false);
+              }}
+            />
+          ))}
+        </View>
+      </SheetModal>
+    </Screen>
   );
 };
-
-function createSettingsStyles(theme: AppTheme) {
-  return StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingTop: spacing.xl + spacing.safeTopInset,
-    paddingBottom: 140,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pageTitle: {
-    fontFamily: fonts.heading.bold,
-    fontSize: 32,
-    color: theme.colors.text.primary,
-    marginBottom: spacing.md,
-  },
-
-  card: {},
-
-  supportSection: {
-    padding: spacing.lg,
-  },
-  supportTitle: {
-    fontFamily: fonts.heading.semibold,
-    fontSize: 17,
-    color: theme.colors.text.primary,
-    marginBottom: spacing.sm,
-  },
-  supportText: {
-    fontFamily: fonts.body.regular,
-    fontSize: 15,
-    color: theme.colors.text.secondary,
-    marginBottom: spacing.xs,
-  },
-  supportCredit: {
-    fontFamily: fonts.body.regular,
-    fontSize: 13,
-    color: theme.colors.text.tertiary,
-    marginTop: spacing.xs,
-  },
-
-  // Section Header (flat – no expand/collapse)
-  sectionHeader: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    padding: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  sectionTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sectionIcon: {
-    fontSize: 20,
-    marginRight: spacing.sm,
-  },
-  sectionTitle: {
-    fontFamily: fonts.heading.semiBold,
-    fontSize: 17,
-    color: theme.colors.text.primary,
-  },
-  sectionSubtitle: {
-    fontFamily: fonts.body.medium,
-    fontSize: 14,
-    color: theme.colors.text.secondary,
-    marginTop: 2,
-    marginLeft: 28, // align with title after icon
-  },
-
-  // Section Content
-  sectionContent: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
-    paddingTop: spacing.md,
-  },
-
-  // Options
-  optionLabel: {
-    fontFamily: fonts.body.medium,
-    fontSize: 15,
-    color: theme.colors.text.primary,
-  },
-  optionDescription: {
-    fontFamily: fonts.body.regular,
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-    marginBottom: spacing.md,
-  },
-  optionDescriptionSmall: {
-    fontFamily: fonts.body.regular,
-    fontSize: 11,
-    color: theme.colors.text.tertiary,
-    marginTop: 1,
-  },
-  subOptionLabel: {
-    fontFamily: fonts.body.regular,
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-  },
-  
-  // Prayer Reminder Styles
-  prayerLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  prayerIcon: {
-    fontSize: 22,
-  },
-  subSectionTitle: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 13,
-    color: theme.colors.text.tertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.md,
-    marginTop: spacing.sm,
-  },
-
-  // Notification Options
-  masterToggle: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minHeight: 50,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-    marginVertical: spacing.md,
-  },
-  notifGroupHeader: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    paddingBottom: spacing.sm,
-  },
-  notifGroupTitle: {
-    fontFamily: fonts.heading.semiBold,
-    fontSize: 15,
-    color: theme.colors.text.primary,
-  },
-  notifGroupSubtitle: {
-    fontFamily: fonts.body.medium,
-    fontSize: 12,
-    color: theme.colors.text.secondary,
-    marginTop: 2,
-    marginLeft: 28,
-  },
-  shabbosClockCardOuter: {
-    marginBottom: spacing.lg,
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: theme.isDark
-      ? 'rgba(199, 181, 255, 0.2)'
-      : colorWithAlpha(theme.colors.accent.lavender, 0.4),
-    shadowColor: theme.isDark ? theme.colors.shadow.medium : colorWithAlpha(theme.colors.primary.main, 0.35),
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: theme.isDark ? 0.2 : 0.12,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  shabbosClockGradient: {
-    padding: spacing.lg,
-    borderRadius: borderRadius.xl,
-  },
-  shabbosClockHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  shabbosClockIconBubble: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shabbosClockTitleBlock: {
-    flex: 1,
-    minWidth: 0,
-  },
-  shabbosClockTitle: {
-    fontFamily: fonts.heading.semibold,
-    fontSize: 17,
-    color: theme.colors.text.primary,
-  },
-  shabbosClockSubtitle: {
-    fontFamily: fonts.body.regular,
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-    marginTop: 2,
-  },
-  shabbosClockDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-    marginBottom: spacing.md,
-  },
-  shabbosClockTimeRowSolo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: theme.isDark
-      ? 'rgba(255,255,255,0.1)'
-      : colorWithAlpha(theme.colors.accent.lavender, 0.2),
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.md,
-  },
-  shabbosClockTimeButtonTextSolo: {
-    fontFamily: fonts.heading.semibold,
-    fontSize: 20,
-    color: theme.colors.primary.main,
-  },
-  shabbosClockTimeLabel: {
-    fontFamily: fonts.body.medium,
-    fontSize: 12,
-    color: theme.colors.text.secondary,
-    marginBottom: 2,
-  },
-  shabbosDurationSectionLabelPad: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-    marginTop: spacing.lg,
-    marginBottom: spacing.xs,
-  },
-  shabbosDurationSliderBlock: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  shabbosDurationSliderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  shabbosDurationMeta: {
-    fontFamily: fonts.body.medium,
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
-  },
-  shabbosDurationValue: {
-    fontFamily: fonts.heading.semibold,
-    fontSize: 16,
-    color: theme.colors.text.primary,
-  },
-  shabbosDurationSlider: {
-    width: '100%' as any,
-    height: 40,
-  },
-  shabbosClockHintBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-    paddingTop: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-  },
-  shabbosClockHint: {
-    flex: 1,
-    fontFamily: fonts.body.regular,
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
-    lineHeight: 17,
-  },
-  notifOption: {
-    marginBottom: spacing.md,
-    paddingBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  notifOptionLast: {
-    borderBottomWidth: 0,
-    marginBottom: 0,
-    paddingBottom: 0,
-  },
-  notifOptionMain: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minHeight: 44,
-  },
-  notifSubOption: {
-    marginTop: spacing.sm,
-    paddingLeft: spacing.md,
-    paddingTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-  },
-  notifSubOptionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  // Davening add-ons dropdown
-  daveningAddOnsTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    flex: 1,
-  },
-  daveningAddOnsChevron: {
-    marginRight: 2,
-  },
-  daveningAddOnsDropdown: {
-    marginTop: spacing.sm,
-    paddingTop: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-    paddingLeft: spacing.xs,
-  },
-  daveningAddOnsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minHeight: 52,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.sm,
-  },
-  daveningAddOnsRowLast: {
-    marginBottom: 0,
-  },
-  daveningAddOnsRowLabel: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 14,
-    color: theme.colors.text.primary,
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  daveningAddOnsRowControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  simpleToggle: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    minHeight: 44,
-  },
-  timeButton: {
-    backgroundColor: 'rgba(212, 165, 184, 0.25)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.lg,
-    minWidth: 90,
-    minHeight: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: theme.isDark ? 'rgba(212, 165, 184, 0.35)' : 'rgba(212, 165, 184, 0.3)',
-  },
-  timeButtonText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 14,
-    color: theme.colors.primary.dark,
-  },
-  timePickerOverlay: {
-    flex: 1,
-    backgroundColor: theme.isDark ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0.45)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  timePickerBox: {
-    backgroundColor: theme.colors.background.primary,
-    borderRadius: borderRadius['2xl'],
-    padding: spacing.xl,
-    width: '100%',
-    maxWidth: 340,
-    ...shadows.lg,
-    borderWidth: 1,
-    borderColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-    overflow: 'hidden',
-  },
-  timePickerHeader: {
-    marginBottom: spacing.xs,
-  },
-  timePickerTitle: {
-    ...textStyles.h3,
-    color: theme.colors.text.primary,
-    marginBottom: 2,
-  },
-  timePickerSubtitle: {
-    fontFamily: fonts.body.regular,
-    fontSize: 14,
-    color: theme.colors.text.secondary,
-  },
-  timePickerWheelWrap: {
-    alignItems: 'center',
-    marginVertical: spacing.sm,
-  },
-  timePickerActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.md,
-  },
-  timePickerCancel: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.lg,
-  },
-  timePickerCancelText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 16,
-    color: theme.colors.text.secondary,
-  },
-  timePickerSave: {
-    backgroundColor: theme.colors.primary.main,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    borderRadius: borderRadius.lg,
-  },
-  timePickerSaveText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 16,
-    color: theme.colors.primary.contrast,
-  },
-  shekiyaMinuteChip: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    margin: spacing.xs,
-    borderRadius: borderRadius.lg,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)',
-  },
-  shekiyaMinuteChipSelected: {
-    backgroundColor: theme.colors.primary.main,
-  },
-  shekiyaMinuteChipText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 15,
-    color: theme.colors.text.primary,
-  },
-  shekiyaMinuteChipTextSelected: {
-    color: theme.colors.primary.contrast,
-  },
-  minuteSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  minuteOption: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(0,0,0,0.03)',
-    minWidth: 40,
-    alignItems: 'center',
-  },
-  minuteOptionActive: {
-    backgroundColor: theme.colors.primary.main,
-  },
-  minuteOptionText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-  },
-  minuteOptionTextActive: {
-    color: '#fff',
-  },
-
-  // Custom Reminders
-  customRemindersHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    minHeight: 40,
-  },
-  addReminderButton: {
-    backgroundColor: theme.colors.primary.main,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    minHeight: 36,
-    justifyContent: 'center',
-    shadowColor: theme.colors.primary.dark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  addReminderButtonText: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 13,
-    color: '#fff',
-  },
-  customReminderItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
-    marginBottom: spacing.sm,
-    minHeight: 60,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
-  customReminderLeft: {
-    flex: 1,
-  },
-  customReminderTitle: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 15,
-    color: theme.colors.text.primary,
-  },
-  customReminderTime: {
-    fontFamily: fonts.body.regular,
-    fontSize: 12,
-    color: theme.colors.text.secondary,
-    marginTop: 2,
-  },
-  customReminderRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  reminderMenuButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  reminderMenuButtonText: {
-    fontSize: 18,
-    color: theme.colors.text.secondary,
-    fontWeight: '700',
-  },
-  reminderMenuBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  reminderMenuBox: {
-    minWidth: 160,
-    backgroundColor: theme.isDark ? '#1C1B24' : '#FFFFFF',
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  reminderMenuItem: {
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)',
-  },
-  reminderMenuItemLast: {
-    borderBottomWidth: 0,
-  },
-  reminderMenuItemTitle: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 16,
-    color: theme.colors.text.primary,
-  },
-  reminderMenuItemDestructive: {
-    color: theme.colors.semantic.error,
-  },
-  noRemindersMessage: {
-    alignItems: 'center',
-    paddingVertical: spacing.lg,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-    borderRadius: borderRadius.md,
-  },
-  noRemindersText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 14,
-    color: theme.colors.text.secondary,
-  },
-  noRemindersSubtext: {
-    fontFamily: fonts.body.regular,
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
-    marginTop: 4,
-  },
-
-  // Additional Reminders section
-  additionalRemindersSectionTitle: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 13,
-    color: theme.colors.text.tertiary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: spacing.md,
-    marginTop: spacing.lg,
-  },
-  additionalRemindersContainer: {},
-  additionalReminderItem: {
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    paddingVertical: spacing.md + spacing.xs,
-    borderWidth: 1,
-    borderColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-    marginBottom: spacing.md,
-  },
-  additionalReminderItemLast: {
-    marginBottom: spacing.sm,
-  },
-  toggleGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  toggleGridItem: {
-    width: '48%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.02)',
-    padding: spacing.sm,
-    borderRadius: borderRadius.md,
-    minHeight: 44,
-  },
-  toggleGridLabel: {
-    fontFamily: fonts.body.medium,
-    fontSize: 13,
-    color: theme.colors.text.primary,
-    flex: 1,
-    marginRight: spacing.xs,
-  },
-
-  // Nusach
-  nusachContainer: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  nusachOption: {
-    flex: 1,
-    paddingVertical: spacing.xl,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.xl,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.72)',
-    alignItems: 'center',
-    minHeight: 112,
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.8)',
-  },
-  nusachOptionActive: {
-    backgroundColor: theme.colors.primary.main,
-    borderColor: theme.colors.primary.dark,
-    shadowColor: theme.colors.primary.dark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  nusachText: {
-    fontFamily: fonts.hebrew.semiBold,
-    fontSize: 28,
-    color: theme.colors.text.primary,
-  },
-  nusachTextActive: {
-    color: '#fff',
-  },
-
-  // Display
-  appearanceSection: {
-    flexDirection: 'column',
-    marginBottom: spacing.md,
-  },
-  themeRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-    flexWrap: 'wrap',
-  },
-  themeOption: {
-    flex: 1,
-    minWidth: 0,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xs,
-    borderRadius: borderRadius.lg,
-    backgroundColor: 'rgba(0,0,0,0.03)',
-    alignItems: 'center',
-  },
-  themeOptionActive: {
-    backgroundColor: theme.colors.primary.main,
-  },
-  themeOptionText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 13,
-    color: theme.colors.text.secondary,
-  },
-  themeOptionTextActive: {
-    color: '#fff',
-  },
-  displayOption: {
-    marginBottom: spacing.md,
-  },
-  textSizeSelector: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  textSizeOption: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.md,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  textSizeOptionActive: {
-    backgroundColor: theme.colors.primary.main,
-  },
-  textSizeText: {
-    fontFamily: fonts.body.semiBold,
-    color: theme.colors.text.secondary,
-  },
-  textSizeTextActive: {
-    color: '#fff',
-  },
-
-  // About
-  aboutRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  aboutLabel: {
-    fontFamily: fonts.body.regular,
-    fontSize: 14,
-    color: theme.colors.text.secondary,
-  },
-  aboutValue: {
-    fontFamily: fonts.body.medium,
-    fontSize: 14,
-    color: theme.colors.text.primary,
-  },
-  link: {
-    color: theme.colors.primary.main,
-    textDecorationLine: 'underline',
-  },
-  attribution: {
-    fontFamily: fonts.body.regular,
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
-    textAlign: 'center',
-    marginTop: spacing.md,
-    lineHeight: 18,
-  },
-  resetSection: {
-    marginTop: spacing.lg,
-    alignItems: 'center',
-  },
-  resetButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-  },
-  resetButtonText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 14,
-    color: '#D45555',
-  },
-
-  refuahModalBox: {
-    marginHorizontal: spacing.lg,
-    maxWidth: 420,
-    width: '100%' as const,
-    alignSelf: 'center',
-    backgroundColor: theme.isDark ? 'rgba(28,26,40,0.98)' : '#fff',
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-  },
-  refuahNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-  },
-  refuahNameRowText: {
-    flex: 1,
-  },
-  refuahNamePreview: {
-    fontFamily: fonts.body.medium,
-    fontSize: 17,
-    color: theme.colors.text.primary,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  refuahNameSub: {
-    fontFamily: fonts.body.regular,
-    fontSize: 12,
-    color: theme.colors.text.tertiary,
-    marginTop: 2,
-  },
-  refuahNameEditBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  refuahNameEditTxt: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 14,
-    color: theme.colors.primary.main,
-  },
-  refuahNameDeleteBtn: {
-    padding: spacing.sm,
-  },
-  addRefuahButton: {
-    marginTop: spacing.md,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-    alignItems: 'center',
-  },
-  addRefuahButtonText: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 15,
-    color: theme.colors.primary.main,
-  },
-  refuahGenderRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  refuahGenderChip: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    alignItems: 'center',
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-    borderWidth: 1.5,
-    borderColor: 'transparent',
-  },
-  refuahGenderChipActive: {
-    borderColor: theme.colors.primary.main,
-    backgroundColor: theme.isDark ? 'rgba(124,92,255,0.12)' : 'rgba(124,92,255,0.08)',
-  },
-  refuahGenderChipText: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 14,
-    color: theme.colors.text.primary,
-  },
-  refuahTextInput: {
-    fontFamily: fonts.body.regular,
-    fontSize: 18,
-    borderWidth: 1,
-    borderColor: theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)',
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
-  },
-
-  // Branding
-  brandingSection: {
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-  appName: {
-    fontFamily: fonts.heading.bold,
-    fontSize: 28,
-    color: theme.colors.primary.main,
-  },
-  tagline: {
-    fontFamily: fonts.body.regular,
-    fontSize: 14,
-    color: theme.colors.text.tertiary,
-    fontStyle: 'italic',
-    marginTop: spacing.xs,
-  },
-  });
-}

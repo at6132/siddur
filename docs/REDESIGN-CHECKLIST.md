@@ -55,7 +55,7 @@ Stack note: App uses **React Navigation** (`src/navigation/AppNavigator.tsx`), n
 | Welcome | `app/onboarding/WelcomeScreen.tsx` | Notifications permission + schedule | done — Ionicons heart replaces emoji, Reanimated spring entrances (reduced-motion aware), em-dash removed from copy; `onStart` unchanged |
 | SpiritualGoals | `app/onboarding/SpiritualGoals.tsx` | Built, unwired | done — token `Chip` goal picker (max 2 + custom input), shared step dots, tokenized count line, em-dash removed; selection logic unchanged, still unwired |
 | NotificationPreferences | `app/onboarding/NotificationPreferences.tsx` | Built, unwired | done — grouped `Section` of `ListRow` + native `Switch` (selection haptic), emoji removed, enabled-count footer; preferences logic unchanged, still unwired |
-| AnimatedSplash | `app/splash/AnimatedSplash.tsx` | Unmounted splash component | todo — polish; do not mount unless requested |
+| AnimatedSplash | `app/splash/AnimatedSplash.tsx` | Unmounted splash component | done — theme tokens + Reanimated; still unmounted |
 
 ## Library + Tehillim
 
@@ -63,11 +63,11 @@ Stack note: App uses **React Navigation** (`src/navigation/AppNavigator.tsx`), n
 |------------|-------------|-------------------|--------|
 | LibraryHome | `app/library/LibraryScreen.tsx` | Daily tefillos, More Texts, quick Tehillim, search shortcuts | done — `Screen` + virtualized `FlatList`, grouped `Section`/`ListRow` (Tefillos, More Texts, Quick Access), `Chip` quick links, pageSheet customize modal, no emoji or hex; navigation targets, search, and AsyncStorage unchanged |
 | ComingSoon | `app/library/ComingSoonScreen.tsx` | Gated feature placeholder | done — `Screen` + `BackButton` + `EmptyState`, no hex or emoji |
-| TehillimList | `app/tehillim/TehillimListScreen.tsx` | 150 perakim, progress, campaigns | todo |
-| TehillimReader | `app/tehillim/TehillimReaderScreen.tsx` | Chapter reader | todo |
-| TehillimSettings | `app/tehillim/TehillimSettingsScreen.tsx` | Daily goal type | todo |
-| CreateSharedTehillim | `app/tehillim/CreateSharedTehillimScreen.tsx` | Shared campaign + share | todo |
-| SharedTehillimView | `app/tehillim/SharedTehillimViewScreen.tsx` | Claim / read campaign | todo |
+| TehillimList | `app/tehillim/TehillimListScreen.tsx` | 150 perakim, progress, campaigns | done — TehillimKit grid, progress, sections |
+| TehillimReader | `app/tehillim/TehillimReaderScreen.tsx` | Chapter reader | done — ReaderChrome + Hebrew tokens |
+| TehillimSettings | `app/tehillim/TehillimSettingsScreen.tsx` | Daily goal type | done — CheckRows + steppers |
+| CreateSharedTehillim | `app/tehillim/CreateSharedTehillimScreen.tsx` | Shared campaign + share | done — sheets + inline errors |
+| SharedTehillimView | `app/tehillim/SharedTehillimViewScreen.tsx` | Claim / read campaign | done — claim sheet + grid |
 
 ## Hub / practice
 
@@ -93,8 +93,8 @@ Stack note: App uses **React Navigation** (`src/navigation/AppNavigator.tsx`), n
 
 | Route / id | Owning file | FEATURES coverage | Status |
 |------------|-------------|-------------------|--------|
-| Settings | `app/settings/SettingsScreen.tsx` | Notifications, Shabbos alarm, reminders, nusach, Refuah, display, About | todo |
-| AddCustomReminder | `app/settings/AddCustomReminderScreen.tsx` | Create / edit reminder | todo |
+| Settings | `app/settings/SettingsScreen.tsx` | Notifications, Shabbos alarm, reminders, nusach, Refuah, display, About | done — SettingsKit ToggleRows, sheets, segmented tabs; logic preserved |
+| AddCustomReminder | `app/settings/AddCustomReminderScreen.tsx` | Create / edit reminder | done — PracticeField form, day toggles, inline errors |
 
 ## Learning (gated → Coming Soon from Library; screens exist)
 

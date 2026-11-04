@@ -1,18 +1,18 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, StyleSheet, Dimensions, ScrollView, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, ScrollView, Platform, StyleSheet } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWindowDimensions } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { LinearGradient } from 'expo-linear-gradient';
-import { FadeIn } from '../../components/animations/FadeIn';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../components/reader/ReaderChrome';
 import { ReaderToolbar, HEBREW_FONT_SIZES, HEBREW_LINE_HEIGHTS } from '../../components/reader/ReaderToolbar';
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
 import { useAutoscroll } from '../../components/reader/useAutoscroll';
-import { colors } from '../../src/design/colors';
-import { spacing, borderRadius } from '../../src/design/spacing';
-import { textStyles, fonts } from '../../src/design/typography';
+import { Screen, GlassButton } from '../../components/ui';
+import { PracticeHeader } from '../../components/hub/PracticeKit';
+import { PressableScale } from '../../components/settings/SettingsKit';
 import { useTheme } from '../../src/design/theme';
 import { TehillimService } from '../../src/content/tehillim/TehillimService';
 import { TehillimChapter, TehillimVerse, TehillimGoalType } from '../../src/content/tehillim/types';
@@ -24,8 +24,6 @@ import { getAnonymousId } from '../../src/analytics/IdentityService';
 import { completeTehillimPereks, sendPrivatePerekCompleted } from '../../src/api/tehillimApi';
 import { analytics } from '../../src/analytics';
 import { TEHILLIM_EVENTS } from '../../src/analytics/types';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 /** Strip HTML entities and Sefaria end markers (e.g. {פ}) so they don't show as literal text. */
 function cleanVerseText(text: string | undefined): string {
@@ -42,9 +40,10 @@ export const TehillimReaderScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { theme } = useTheme();
+  const { spacing, type, hebrew } = theme.tokens;
   const psalm = (route.params as any)?.psalm || 1;
   const campaignId = (route.params as any)?.campaignId as string | undefined;
-  
+
   const insets = useSafeAreaInsets();
   const { height: viewportHeight } = useWindowDimensions();
   const [chapter, setChapter] = useState<TehillimChapter | null>(null);
@@ -120,6 +119,7 @@ export const TehillimReaderScreen: React.FC = () => {
       });
       const anonymousId = await getAnonymousId();
       await sendPrivatePerekCompleted(psalm, anonymousId);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setIsMarkedComplete(true);
       if (progress.goalType === 'whenever' || progress.totalChapters.includes(psalm)) {
         setIsDailyChapter(true);
@@ -134,9 +134,11 @@ export const TehillimReaderScreen: React.FC = () => {
       const participantId = await getAnonymousId();
       await completeTehillimPereks(campaignId, [psalm], participantId);
       analytics.track(TEHILLIM_EVENTS.PEREK_COMPLETED, { perek_number: psalm, source: 'shared', campaign_id: campaignId });
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       navigation.goBack();
     } catch (e) {
       console.warn('Campaign complete failed:', e);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setCampaignMarking(false);
     }
@@ -147,7 +149,7 @@ export const TehillimReaderScreen: React.FC = () => {
     try {
       const chapterData = await TehillimService.getChapter(num);
       setChapter(chapterData);
-      
+
       navigation.setOptions({
         title: `תהלים ${chapterData?.hebrewNumber || num}`,
       });
@@ -158,428 +160,240 @@ export const TehillimReaderScreen: React.FC = () => {
     }
   };
 
+  const goToPsalm = (next: number) => {
+    navigation.setParams({ psalm: next } as any);
+    loadChapter(next);
+  };
+
   const renderVerse = (verse: TehillimVerse, index: number) => {
     const size = HEBREW_FONT_SIZES[textSize];
     const lineHeight = HEBREW_LINE_HEIGHTS[textSize] * 1.15; // slightly more breathable
     const isLast = index === chapter!.verses.length - 1;
     return (
-      <View key={verse.number} style={[styles.verseBlock, !isLast && styles.verseBlockBorder]}>
-        <Text style={[styles.hebrewVerse, { fontSize: size, lineHeight }]} selectable>
+      <View
+        key={verse.number}
+        style={{
+          paddingVertical: spacing.md,
+          borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
+          borderBottomColor: theme.colors.neutral[300],
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: hebrew.fonts.regular,
+            fontSize: size,
+            lineHeight,
+            color: theme.colors.text.primary,
+            textAlign: 'right',
+            writingDirection: 'rtl',
+          }}
+          selectable
+        >
           {cleanVerseText(verse.hebrew)}
         </Text>
-        {showEnglish && verse.english && (
-          <Text style={[styles.englishVerse, { fontSize: size * 0.88, lineHeight: lineHeight * 0.9 }]} selectable>
+        {showEnglish && verse.english ? (
+          <Text
+            style={[
+              type.textStyles.body,
+              {
+                fontSize: size * 0.88,
+                lineHeight: lineHeight * 0.9,
+                color: theme.colors.text.secondary,
+                marginTop: spacing.sm,
+              },
+            ]}
+            selectable
+          >
             {cleanVerseText(verse.english)}
           </Text>
-        )}
-        <View style={styles.verseLabelRow}>
-          <Text style={styles.verseLabel}>{verse.number}</Text>
-        </View>
+        ) : null}
+        <Text
+          style={[
+            type.textStyles.caption,
+            { color: theme.colors.text.tertiary, textAlign: 'right', marginTop: spacing.xs },
+          ]}
+        >
+          {verse.number}
+        </Text>
       </View>
     );
   };
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={theme.backgroundGradient}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary.main} />
-          <Text style={styles.loadingText}>Loading Tehillim...</Text>
-        </View>
-      </View>
+      <Screen
+        state="loading"
+        header={<PracticeHeader onBack={() => navigation.goBack()} />}
+      />
     );
   }
 
   if (!chapter) {
     return (
-      <View style={styles.container}>
-        <LinearGradient
-          colors={theme.backgroundGradient}
-          style={StyleSheet.absoluteFill}
-        />
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Chapter not found</Text>
-        </View>
-      </View>
+      <Screen
+        state="error"
+        errorMessage="Chapter not found"
+        onRetry={() => loadChapter(psalm)}
+        header={<PracticeHeader onBack={() => navigation.goBack()} />}
+      />
     );
   }
 
   const showFlexibleCompletion = goalType === 'weekly' || goalType === 'monthly';
   const showPersonalCompletion = isDailyChapter || isMarkedComplete || showFlexibleCompletion;
 
+  const completionStatus = isMarkedComplete
+    ? (isWheneverMode ? 'Perek complete' : 'Completed today')
+    : isWheneverMode
+      ? 'Say this perek whenever you can'
+      : isDailyChapter
+        ? "Today's Tehillim"
+        : "Outside today's cycle";
+
   return (
-    <GestureHandlerRootView style={styles.container}>
-      <LinearGradient
-        colors={theme.backgroundGradient}
-        style={StyleSheet.absoluteFill}
-      />
-      <ReaderChrome
-        title={chapter ? `Psalm ${chapter.number}` : `Psalm ${psalm}`}
-        onBack={() => navigation.goBack()}
-        topInset={insets.top}
-      >
-        <ReaderToolbar
-          textSize={textSize}
-          onTextSizeChange={setTextSize}
-          showEnglish={showEnglish}
-          onShowEnglishChange={setShowEnglish}
-          showEnglishToggle={true}
-        />
-      </ReaderChrome>
-      <ScrollView
-        ref={scrollRef}
-        style={[styles.scrollView, Platform.OS === 'web' && styles.scrollViewWeb]}
-        contentContainerStyle={[styles.content, { paddingTop: insets.top + READER_CHROME_HEADER_HEIGHT_APPROX + spacing.lg, paddingBottom: 160 + 88 }]}
-        showsVerticalScrollIndicator={true}
-        onScroll={(e) => {
-          scrollYRef.current = e.nativeEvent.contentOffset.y;
-        }}
-        onContentSizeChange={(_, h) => { contentHeightRef.current = h; }}
-        scrollEventThrottle={16}
-        bounces={true}
-        nestedScrollEnabled={true}
-      >
-        {/* Verses */}
-        <View style={styles.readingCard}>
-          <View style={styles.readingCardHeader}>
-            <Text style={styles.readingCardTitle}>Psalm {chapter.number}</Text>
-            {chapter.title && (
-              <Text style={styles.readingCardSubtitle} numberOfLines={2}>{chapter.title}</Text>
-            )}
-          </View>
-          {chapter.verses.map((verse, index) => renderVerse(verse, index))}
-        </View>
-
-        {/* Attribution */}
-        <View style={styles.attributionContainer}>
-          <Text style={styles.attributionText}>
-            Texts provided by{' '}
-            <Text style={styles.attributionLink}>Sefaria.org</Text>
-          </Text>
-        </View>
-
-        {/* Completion — only for the context you opened from: shared page OR personal daily */}
-        {campaignId ? (
-          <FadeIn delay={0}>
-            <View style={styles.dailyBadge}>
-              <Text style={styles.dailyBadgeText}>Shared Tehillim page</Text>
-              <TouchableOpacity
-                style={styles.markCompleteButton}
-                onPress={markCampaignComplete}
-                disabled={campaignMarking}
-                activeOpacity={0.7}
+    <Screen
+      contentStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}
+    >
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ReaderChrome
+          title={chapter ? `Psalm ${chapter.number}` : `Psalm ${psalm}`}
+          onBack={() => navigation.goBack()}
+          topInset={insets.top}
+        >
+          <ReaderToolbar
+            textSize={textSize}
+            onTextSizeChange={setTextSize}
+            showEnglish={showEnglish}
+            onShowEnglishChange={setShowEnglish}
+            showEnglishToggle={true}
+          />
+        </ReaderChrome>
+        <ScrollView
+          ref={scrollRef}
+          style={[{ flex: 1 }, Platform.OS === 'web' ? ({ overflow: 'auto', minHeight: 0 } as any) : null]}
+          contentContainerStyle={{
+            paddingHorizontal: spacing.gutter,
+            paddingTop: insets.top + READER_CHROME_HEADER_HEIGHT_APPROX + spacing.lg,
+            paddingBottom: insets.bottom + spacing['4xl'] * 2,
+            flexGrow: 1,
+            maxWidth: spacing['4xl'] * 7,
+            alignSelf: 'center',
+            width: '100%',
+          }}
+          showsVerticalScrollIndicator
+          onScroll={(e) => {
+            scrollYRef.current = e.nativeEvent.contentOffset.y;
+          }}
+          onContentSizeChange={(_, h) => { contentHeightRef.current = h; }}
+          scrollEventThrottle={16}
+          bounces
+          nestedScrollEnabled
+        >
+          {/* Chapter heading */}
+          <View
+            style={{
+              paddingBottom: spacing.md,
+              borderBottomWidth: StyleSheet.hairlineWidth,
+              borderBottomColor: theme.colors.neutral[300],
+            }}
+          >
+            <Text style={[type.textStyles.h3, { color: theme.colors.text.primary }]}>
+              Psalm {chapter.number}
+            </Text>
+            {chapter.title ? (
+              <Text
+                style={[type.textStyles.bodySmall, { color: theme.colors.text.secondary, marginTop: spacing.xs }]}
+                numberOfLines={2}
               >
-                {campaignMarking ? (
-                  <ActivityIndicator size="small" color={colors.text.inverse} />
-                ) : (
-                  <Text style={styles.markCompleteButtonText}>Mark complete & return</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </FadeIn>
-        ) : showPersonalCompletion ? (
-          <FadeIn delay={0}>
-            <View style={[styles.dailyBadge, isMarkedComplete && styles.dailyBadgeComplete]}>
-              <Text style={[styles.dailyBadgeText, isMarkedComplete && styles.dailyBadgeCompleteText]}>
-                {isMarkedComplete
-                  ? (isWheneverMode ? '✓ Perek complete' : '✓ Completed Today')
-                  : isWheneverMode
-                    ? 'Say this perek whenever you can'
-                    : isDailyChapter
-                      ? 'Today\'s Tehillim'
-                      : 'Outside today\'s cycle'}
+                {chapter.title}
               </Text>
-              {!isMarkedComplete && (
-                <TouchableOpacity
-                  style={styles.markCompleteButton}
-                  onPress={markChapterComplete}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.markCompleteButtonText}>
-                    {isWheneverMode ? 'Complete perek' : 'Mark complete'}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </FadeIn>
-        ) : null}
+            ) : null}
+          </View>
 
-        {/* Navigation */}
-        <View style={styles.navigationContainer}>
-          {psalm > 1 && (
-            <TouchableOpacity
-              style={styles.navButton}
-              onPress={() => {
-                navigation.setParams({ psalm: psalm - 1 } as any);
-                loadChapter(psalm - 1);
-              }}
-            >
-              <Text style={styles.navButtonText}>← Previous</Text>
-            </TouchableOpacity>
-          )}
-          <View style={styles.navSpacer} />
-          {psalm < 150 && (
-            <TouchableOpacity
-              style={styles.navButton}
-              onPress={() => {
-                navigation.setParams({ psalm: psalm + 1 } as any);
-                loadChapter(psalm + 1);
-              }}
-            >
-              <Text style={styles.navButtonText}>Next →</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </ScrollView>
-      <ReaderAutoscrollBar
-        playing={autoscrollPlaying}
-        onPlayingChange={setAutoscrollPlaying}
-        speed={autoscrollSpeed}
-        onSpeedChange={setAutoscrollSpeed}
-        bottomInset={insets.bottom}
-      />
-    </GestureHandlerRootView>
+          {chapter.verses.map((verse, index) => renderVerse(verse, index))}
+
+          <Text
+            style={[
+              type.textStyles.caption,
+              { color: theme.colors.text.tertiary, textAlign: 'center', marginVertical: spacing.lg },
+            ]}
+          >
+            Texts provided by Sefaria.org
+          </Text>
+
+          {/* Completion: only for the context you opened from (shared page or personal daily) */}
+          {campaignId ? (
+            <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
+              <Text style={[type.textStyles.bodyBold, { color: theme.colors.text.primary }]}>
+                Shared Tehillim page
+              </Text>
+              <GlassButton
+                title="Mark complete and return"
+                onPress={markCampaignComplete}
+                loading={campaignMarking}
+                disabled={campaignMarking}
+              />
+            </View>
+          ) : showPersonalCompletion ? (
+            <View style={{ gap: spacing.sm, marginBottom: spacing.lg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                {isMarkedComplete ? (
+                  <Ionicons name="checkmark-circle" size={type.fontSize.xl} color={theme.colors.semantic.success} />
+                ) : null}
+                <Text
+                  style={[
+                    type.textStyles.bodyBold,
+                    { color: isMarkedComplete ? theme.colors.text.secondary : theme.colors.text.primary },
+                  ]}
+                >
+                  {completionStatus}
+                </Text>
+              </View>
+              {!isMarkedComplete ? (
+                <GlassButton
+                  title={isWheneverMode ? 'Complete perek' : 'Mark complete'}
+                  onPress={markChapterComplete}
+                />
+              ) : null}
+            </View>
+          ) : null}
+
+          {/* Previous / next */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: spacing.sm }}>
+            {psalm > 1 ? (
+              <PressableScale
+                onPress={() => goToPsalm(psalm - 1)}
+                accessibilityLabel="Previous psalm"
+                style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, gap: spacing.xs }}
+              >
+                <Ionicons name="chevron-back" size={type.fontSize.lg} color={theme.colors.primary.dark} />
+                <Text style={[type.textStyles.label, { color: theme.colors.primary.dark, fontSize: type.fontSize.base }]}>
+                  Previous
+                </Text>
+              </PressableScale>
+            ) : <View />}
+            {psalm < 150 ? (
+              <PressableScale
+                onPress={() => goToPsalm(psalm + 1)}
+                accessibilityLabel="Next psalm"
+                style={{ flexDirection: 'row', alignItems: 'center', minHeight: 44, gap: spacing.xs }}
+              >
+                <Text style={[type.textStyles.label, { color: theme.colors.primary.dark, fontSize: type.fontSize.base }]}>
+                  Next
+                </Text>
+                <Ionicons name="chevron-forward" size={type.fontSize.lg} color={theme.colors.primary.dark} />
+              </PressableScale>
+            ) : <View />}
+          </View>
+        </ScrollView>
+        <ReaderAutoscrollBar
+          playing={autoscrollPlaying}
+          onPlayingChange={setAutoscrollPlaying}
+          speed={autoscrollSpeed}
+          onSpeedChange={setAutoscrollSpeed}
+          bottomInset={insets.bottom}
+        />
+      </GestureHandlerRootView>
+    </Screen>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background.secondary,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollViewWeb: {
-    overflow: 'auto',
-    minHeight: 0,
-  },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: 160,
-    flexGrow: 1,
-    maxWidth: 640,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  loadingText: {
-    ...textStyles.body,
-    color: colors.text.secondary,
-  },
-  controlsContainer: {
-    backgroundColor: colors.glass.light,
-    borderRadius: borderRadius.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-    padding: spacing.lg,
-    marginBottom: spacing.xl,
-    shadowColor: colors.shadow.light,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  controlRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-  },
-  controlLabel: {
-    fontFamily: fonts.body.medium,
-    fontSize: 15,
-    color: colors.text.primary,
-    letterSpacing: 0.2,
-  },
-  sizeButtons: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  sizeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: borderRadius.md,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sizeButtonActive: {
-    backgroundColor: colors.primary.main,
-  },
-  sizeButtonText: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 14,
-    color: colors.text.secondary,
-  },
-  sizeButtonTextActive: {
-    color: '#fff',
-  },
-  readingCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.72)',
-    borderRadius: borderRadius.xl,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.xl,
-    marginBottom: spacing.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.04)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  readingCardHeader: {
-    paddingBottom: spacing.lg,
-    marginBottom: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
-  },
-  readingCardTitle: {
-    fontFamily: fonts.heading.semiBold,
-    fontSize: 15,
-    color: colors.text.tertiary,
-    letterSpacing: 0.5,
-  },
-  readingCardSubtitle: {
-    fontFamily: fonts.body.regular,
-    fontSize: 14,
-    color: colors.text.secondary,
-    marginTop: spacing.xs,
-    lineHeight: 20,
-    fontStyle: 'italic',
-  },
-  verseBlock: {
-    paddingVertical: spacing.md + 4,
-    paddingHorizontal: spacing.sm,
-  },
-  verseBlockBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.06)',
-  },
-  hebrewVerse: {
-    fontFamily: fonts.hebrew.regular,
-    color: colors.text.primary,
-    textAlign: 'right',
-    writingDirection: 'rtl',
-    letterSpacing: 0,
-    marginBottom: spacing.xs,
-  },
-  englishVerse: {
-    fontFamily: fonts.body.regular,
-    color: colors.text.secondary,
-    textAlign: 'left',
-    marginTop: spacing.sm,
-    lineHeight: 24,
-    opacity: 0.92,
-  },
-  verseLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: spacing.xs,
-  },
-  verseLabel: {
-    fontFamily: fonts.body.medium,
-    fontSize: 12,
-    color: colors.text.tertiary,
-    opacity: 0.85,
-  },
-  englishText: {
-    fontFamily: fonts.body.regular,
-    color: colors.text.secondary,
-    opacity: 0.9,
-    letterSpacing: 0.2,
-  },
-  attributionContainer: {
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  attributionText: {
-    ...textStyles.caption,
-    color: colors.text.tertiary,
-  },
-  attributionLink: {
-    color: colors.primary.main,
-    textDecorationLine: 'underline',
-  },
-  navigationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: spacing.xl,
-    gap: spacing.md,
-  },
-  navSpacer: {
-    flex: 1,
-  },
-  dailyBadge: {
-    backgroundColor: 'rgba(212, 165, 184, 0.22)',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    alignSelf: 'stretch',
-    marginTop: spacing.lg,
-    marginBottom: spacing.xl,
-    borderWidth: 1,
-    borderColor: 'rgba(212, 165, 184, 0.35)',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  dailyBadgeComplete: {
-    backgroundColor: 'rgba(0, 0, 0, 0.06)',
-    borderColor: 'rgba(0, 0, 0, 0.08)',
-    opacity: 0.92,
-  },
-  dailyBadgeCompleteText: {
-    color: colors.text.tertiary,
-    fontFamily: fonts.body.medium,
-  },
-  dailyBadgeText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 13,
-    color: colors.text.secondary,
-    letterSpacing: 0.2,
-    textAlign: 'center',
-  },
-  markCompleteButton: {
-    backgroundColor: 'rgba(80, 180, 120, 0.85)',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    alignSelf: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(60, 160, 100, 0.5)',
-  },
-  markCompleteButtonText: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 13,
-    color: '#fff',
-  },
-  navButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: spacing.xl,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 0, 0, 0.06)',
-    minWidth: 120,
-    alignItems: 'center',
-  },
-  navButtonText: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 14,
-    color: colors.primary.dark,
-    letterSpacing: 0.2,
-  },
-});

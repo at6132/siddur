@@ -1,54 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Platform,
-  Alert,
-} from 'react-native';
+import { View, Text, TextInput, Platform, StyleSheet } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import { FadeIn } from '../../components/animations/FadeIn';
-import { BackButton } from '../../components/ui/BackButton';
-import { colors } from '../../src/design/colors';
-import { DEFAULT_SCREEN_BACKGROUND } from '../../src/design/screenGradient';
-import { spacing, borderRadius } from '../../src/design/spacing';
-import { fonts } from '../../src/design/typography';
+import * as Haptics from 'expo-haptics';
+import { Screen, Chip, GlassButton } from '../../components/ui';
+import { PracticeHeader, PracticeField, GroupLabel, InlineError } from '../../components/hub/PracticeKit';
+import { RoundToggle, TextAction } from '../../components/settings/SettingsKit';
+import { useTheme } from '../../src/design/theme';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { NotificationService } from '../../src/notifications/NotificationService';
 import { CustomReminder, CustomReminderOpenToScreen } from '../../src/types/preferences';
 import { track, RELIABILITY_EVENTS } from '../../src/analytics';
-
-// Glass Card Component
-const GlassCard: React.FC<{
-  children: React.ReactNode;
-  style?: any;
-}> = ({ children, style }) => (
-  <View style={[styles.glassCard, style]}>
-    {Platform.OS !== 'web' ? (
-      <>
-        <BlurView
-          intensity={80}
-          tint="light"
-          style={StyleSheet.absoluteFillObject}
-          pointerEvents="none"
-        />
-        <View style={styles.glassInner} collapsable={false}>{children}</View>
-      </>
-    ) : (
-      <LinearGradient
-        colors={['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.85)']}
-        style={styles.glassBlur}
-      >
-        <View style={styles.glassInner}>{children}</View>
-      </LinearGradient>
-    )}
-  </View>
-);
 
 function parseTime(timeStr: string): { hour: number; minute: number; ampm: 'AM' | 'PM' } {
   const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
@@ -70,7 +31,9 @@ function formatTime(hour: number, minute: number, ampm: 'AM' | 'PM'): string {
   return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
 }
 
-const DAYS = [
+type DayId = 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat';
+
+const DAYS: { id: DayId; label: string }[] = [
   { id: 'sun', label: 'Sun' },
   { id: 'mon', label: 'Mon' },
   { id: 'tue', label: 'Tue' },
@@ -97,6 +60,8 @@ type AddCustomReminderParams = { reminder?: CustomReminder };
 
 export const AddCustomReminderScreen: React.FC = () => {
   const navigation = useNavigation();
+  const { theme } = useTheme();
+  const { spacing, radii, type } = theme.tokens;
   const route = useRoute<RouteProp<{ params: AddCustomReminderParams }, 'params'>>();
   const editingReminder = route.params?.reminder ?? null;
   const isEdit = !!editingReminder;
@@ -104,8 +69,11 @@ export const AddCustomReminderScreen: React.FC = () => {
   const [title, setTitle] = useState(editingReminder?.title ?? '');
   const [message, setMessage] = useState(editingReminder?.message ?? '');
   const [selectedTime, setSelectedTime] = useState(editingReminder?.time ?? '9:00 AM');
-  const [selectedDays, setSelectedDays] = useState<string[]>(editingReminder?.days ?? ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']);
+  const [selectedDays, setSelectedDays] = useState<string[]>(
+    editingReminder?.days ?? ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+  );
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   // Local strings for hour/minute so typing isn't overwritten by derived state
   const [hourStr, setHourStr] = useState(() => editingReminder ? String(parseTime(editingReminder.time).hour) : '9');
   const [minuteStr, setMinuteStr] = useState(() => editingReminder ? parseTime(editingReminder.time).minute.toString().padStart(2, '0') : '00');
@@ -159,20 +127,23 @@ export const AddCustomReminderScreen: React.FC = () => {
     }
   };
 
+  const fail = (message: string) => {
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    setError(message);
+  };
+
   const handleSave = async () => {
+    setError(null);
     if (!title.trim()) {
       track(RELIABILITY_EVENTS.VALIDATION_ERROR, { field: 'title', reason_code: 'missing' });
-      Alert.alert('Missing Title', 'Please enter a title for your reminder.');
+      fail('Please enter a title for your reminder.');
       return;
     }
 
     const timeToSave = getValidTimeOnSubmit();
     if (timeToSave === null) {
       track(RELIABILITY_EVENTS.VALIDATION_ERROR, { field: 'time', reason_code: 'invalid_range' });
-      Alert.alert(
-        'Invalid time',
-        'Please enter a valid time: hour 1–12, minute 00–59.'
-      );
+      fail('Please enter a valid time: hour 1 to 12, minute 00 to 59.');
       return;
     }
 
@@ -183,13 +154,10 @@ export const AddCustomReminderScreen: React.FC = () => {
           title: title.trim(),
           message: message.trim() || title.trim(),
           time: timeToSave,
-          days: selectedDays as ('sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')[],
+          days: selectedDays as DayId[],
           openToScreen,
         });
         await NotificationService.requestPermissionsAndSchedule();
-        Alert.alert('Reminder Updated', `"${title}" will remind you daily at ${timeToSave}.`, [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
       } else {
         const reminder: CustomReminder = {
           id: `reminder-${Date.now()}`,
@@ -197,458 +165,152 @@ export const AddCustomReminderScreen: React.FC = () => {
           message: message.trim() || title.trim(),
           time: timeToSave,
           enabled: true,
-          days: selectedDays as ('sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')[],
+          days: selectedDays as DayId[],
           openToScreen,
         };
         await UserPreferencesService.addCustomReminder(reminder);
         await NotificationService.requestPermissionsAndSchedule();
-        Alert.alert('Reminder Added', `"${title}" will remind you daily at ${timeToSave}.`, [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
       }
-    } catch (error) {
-      console.error('Error saving reminder:', error);
-      Alert.alert('Error', 'Failed to save reminder. Please try again.');
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      navigation.goBack();
+    } catch (e) {
+      console.error('Error saving reminder:', e);
+      fail('Failed to save reminder. Please try again.');
     } finally {
       setSaving(false);
     }
   };
 
+  const timeInputStyle = {
+    backgroundColor: theme.colors.background.primary,
+    borderColor: theme.colors.neutral[300],
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.lg,
+    color: theme.colors.text.primary,
+    fontFamily: type.fonts.body.medium,
+    fontSize: type.fontSize.xl,
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+    textAlign: 'center' as const,
+  };
+  const iosDone = Platform.OS === 'ios' ? 'globalDone' : undefined;
+
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={[...DEFAULT_SCREEN_BACKGROUND]}
-        style={StyleSheet.absoluteFill}
+    <Screen
+      scroll
+      bottomExtra={spacing['2xl']}
+      header={
+        <PracticeHeader
+          title={isEdit ? 'Edit reminder' : 'New reminder'}
+          subtitle={isEdit ? 'Update your custom daily reminder' : 'Set a custom daily reminder'}
+          onBack={() => navigation.goBack()}
+          backLabel="Cancel"
+        />
+      }
+    >
+      <PracticeField
+        label="Title"
+        placeholder="e.g., Say Modeh Ani"
+        value={title}
+        onChangeText={setTitle}
+        maxLength={50}
+        inputAccessoryViewID={iosDone}
       />
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps={Platform.OS === 'ios' ? 'never' : 'handled'}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <FadeIn delay={0}>
-          <View style={styles.header}>
-            <BackButton onPress={() => navigation.goBack()} label="Cancel" style={styles.backButton} />
-            <Text style={styles.title}>{isEdit ? 'Edit Reminder' : 'New Reminder'}</Text>
-            <Text style={styles.subtitle}>{isEdit ? 'Update your custom daily reminder' : 'Set a custom daily reminder'}</Text>
+      <PracticeField
+        label="Message (optional)"
+        placeholder="Custom notification message"
+        value={message}
+        onChangeText={setMessage}
+        maxLength={150}
+        multiline
+        inputAccessoryViewID={iosDone}
+      />
+
+      <View style={{ marginBottom: spacing.lg }}>
+        <GroupLabel>Time</GroupLabel>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <TextInput
+            accessibilityLabel="Hour"
+            style={[timeInputStyle, { width: spacing['3xl'] }]}
+            value={hourStr}
+            onChangeText={(t) => setHourStr(t.replace(/\D/g, '').slice(0, 2))}
+            onFocus={() => setHourFocused(true)}
+            onBlur={() => { setHourFocused(false); commitHour(); }}
+            keyboardType="number-pad"
+            placeholder="9"
+            placeholderTextColor={theme.colors.text.tertiary}
+            inputAccessoryViewID={iosDone}
+          />
+          <Text style={[type.textStyles.h4, { color: theme.colors.text.secondary }]}>:</Text>
+          <TextInput
+            accessibilityLabel="Minute"
+            style={[timeInputStyle, { width: spacing['3xl'] }]}
+            value={minuteStr}
+            onChangeText={(t) => setMinuteStr(t.replace(/\D/g, '').slice(0, 2))}
+            onFocus={() => setMinuteFocused(true)}
+            onBlur={() => { setMinuteFocused(false); commitMinute(); }}
+            keyboardType="number-pad"
+            placeholder="00"
+            placeholderTextColor={theme.colors.text.tertiary}
+            inputAccessoryViewID={iosDone}
+          />
+          <View style={{ flexDirection: 'row', gap: spacing.xs, marginLeft: spacing.xs }}>
+            <Chip label="AM" selected={ampm === 'AM'} onPress={() => setAmpm('AM')} />
+            <Chip label="PM" selected={ampm === 'PM'} onPress={() => setAmpm('PM')} />
           </View>
-        </FadeIn>
+        </View>
+        <Text
+          style={[
+            type.textStyles.caption,
+            { color: theme.colors.text.tertiary, marginTop: spacing.sm, marginHorizontal: spacing.sm },
+          ]}
+        >
+          Hour 1 to 12, minute 00 to 59
+        </Text>
+      </View>
 
-        {/* Title Input */}
-        <FadeIn delay={50}>
-          <GlassCard>
-            <Text style={styles.inputLabel}>Title</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="e.g., Say Modeh Ani"
-              placeholderTextColor={colors.text.tertiary}
-              value={title}
-              onChangeText={setTitle}
-              maxLength={50}
-              inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
+      <View style={{ marginBottom: spacing.lg }}>
+        <GroupLabel>Repeat on</GroupLabel>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          {DAYS.map((day) => (
+            <RoundToggle
+              key={day.id}
+              label={day.label}
+              selected={selectedDays.includes(day.id)}
+              onPress={() => toggleDay(day.id)}
+              size={44}
             />
-          </GlassCard>
-        </FadeIn>
+          ))}
+        </View>
+        <TextAction
+          label="Select all days"
+          onPress={() => setSelectedDays(DAYS.map((d) => d.id))}
+        />
+      </View>
 
-        {/* Message Input */}
-        <FadeIn delay={100}>
-          <GlassCard>
-            <Text style={styles.inputLabel}>Message (optional)</Text>
-            <TextInput
-              style={[styles.textInput, styles.textInputMultiline]}
-              placeholder="Custom notification message..."
-              placeholderTextColor={colors.text.tertiary}
-              value={message}
-              onChangeText={setMessage}
-              maxLength={150}
-              multiline
-              numberOfLines={3}
-              inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
+      <View style={{ marginBottom: spacing.lg }}>
+        <GroupLabel>When I tap this reminder, open</GroupLabel>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          {OPEN_TO_OPTIONS.map((opt) => (
+            <Chip
+              key={opt.value}
+              label={opt.label}
+              selected={openToScreen === opt.value}
+              onPress={() => setOpenToScreen(opt.value)}
             />
-          </GlassCard>
-        </FadeIn>
+          ))}
+        </View>
+      </View>
 
-        {/* Time Selection – any hour, any minute */}
-        <FadeIn delay={150}>
-          <GlassCard>
-            <Text style={styles.inputLabel}>Time</Text>
-            <View style={styles.timeRow}>
-              <View style={styles.timeInputWrap}>
-                <Text style={styles.timeInputLabel}>Hour</Text>
-                <TextInput
-                  style={styles.timeInput}
-                  value={hourStr}
-                  onChangeText={(t) => setHourStr(t.replace(/\D/g, '').slice(0, 2))}
-                  onFocus={() => setHourFocused(true)}
-                  onBlur={() => { setHourFocused(false); commitHour(); }}
-                  keyboardType="number-pad"
-                  placeholder="9"
-                  placeholderTextColor={colors.text.tertiary}
-                  inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
-                />
-              </View>
-              <Text style={styles.timeColon}>:</Text>
-              <View style={styles.timeInputWrap}>
-                <Text style={styles.timeInputLabel}>Minute</Text>
-                <TextInput
-                  style={styles.timeInput}
-                  value={minuteStr}
-                  onChangeText={(t) => setMinuteStr(t.replace(/\D/g, '').slice(0, 2))}
-                  onFocus={() => setMinuteFocused(true)}
-                  onBlur={() => { setMinuteFocused(false); commitMinute(); }}
-                  keyboardType="number-pad"
-                  placeholder="00"
-                  placeholderTextColor={colors.text.tertiary}
-                  inputAccessoryViewID={Platform.OS === 'ios' ? 'globalDone' : undefined}
-                />
-              </View>
-              <View style={styles.ampmWrap}>
-                <Text style={styles.timeInputLabel}>AM/PM</Text>
-                <View style={styles.ampmRow}>
-                  <TouchableOpacity
-                    style={[styles.ampmButton, ampm === 'AM' && styles.ampmButtonSelected]}
-                    onPress={() => setAmpm('AM')}
-                  >
-                    <Text style={[styles.ampmText, ampm === 'AM' && styles.ampmTextSelected]}>AM</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.ampmButton, ampm === 'PM' && styles.ampmButtonSelected]}
-                    onPress={() => setAmpm('PM')}
-                  >
-                    <Text style={[styles.ampmText, ampm === 'PM' && styles.ampmTextSelected]}>PM</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-            <Text style={styles.timeHint}>Hour 1–12, minute 00–59</Text>
-          </GlassCard>
-        </FadeIn>
+      {error ? <InlineError message={error} /> : null}
 
-        {/* Days Selection */}
-        <FadeIn delay={200}>
-          <GlassCard>
-            <Text style={styles.inputLabel}>Repeat on</Text>
-            <View style={styles.daysContainer}>
-              {DAYS.map((day) => (
-                <TouchableOpacity
-                  key={day.id}
-                  style={[
-                    styles.dayOption,
-                    selectedDays.includes(day.id) && styles.dayOptionSelected,
-                  ]}
-                  onPress={() => toggleDay(day.id)}
-                >
-                  <Text style={[
-                    styles.dayOptionText,
-                    selectedDays.includes(day.id) && styles.dayOptionTextSelected,
-                  ]}>
-                    {day.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity
-              style={styles.selectAllButton}
-              onPress={() => setSelectedDays(['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'])}
-            >
-              <Text style={styles.selectAllText}>Select All Days</Text>
-            </TouchableOpacity>
-          </GlassCard>
-        </FadeIn>
-
-        {/* Open to screen */}
-        <FadeIn delay={225}>
-          <GlassCard>
-            <Text style={styles.inputLabel}>When I tap this reminder, open</Text>
-            <View style={styles.openToRow}>
-              {OPEN_TO_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[
-                    styles.openToChip,
-                    openToScreen === opt.value && styles.openToChipSelected,
-                  ]}
-                  onPress={() => setOpenToScreen(opt.value)}
-                >
-                  <Text
-                    style={[
-                      styles.openToChipText,
-                      openToScreen === opt.value && styles.openToChipTextSelected,
-                    ]}
-                  >
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </GlassCard>
-        </FadeIn>
-
-        {/* Save Button */}
-        <FadeIn delay={250}>
-          <TouchableOpacity
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            <Text style={styles.saveButtonText}>
-              {saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Reminder'}
-            </Text>
-          </TouchableOpacity>
-        </FadeIn>
-
-        <View style={{ height: 100 }} />
-      </ScrollView>
-    </View>
+      <GlassButton
+        title={isEdit ? 'Save changes' : 'Create reminder'}
+        onPress={handleSave}
+        loading={saving}
+        disabled={saving}
+      />
+    </Screen>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingTop: spacing.xl + spacing.safeTopInset,
-  },
-
-  // Header
-  header: {
-    marginBottom: spacing.lg,
-  },
-  backButton: {
-    marginBottom: spacing.md,
-  },
-  backText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 16,
-    color: colors.primary.dark,
-  },
-  title: {
-    fontFamily: fonts.heading.bold,
-    fontSize: 28,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  subtitle: {
-    fontFamily: fonts.body.regular,
-    fontSize: 16,
-    color: colors.text.secondary,
-  },
-
-  // Glass Card
-  glassCard: {
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.8)',
-    marginBottom: spacing.lg,
-    shadowColor: colors.shadow.medium,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 1,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  glassBlur: {
-    overflow: 'hidden',
-  },
-  glassInner: {
-    padding: spacing.lg,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-  },
-
-  // Input
-  inputLabel: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 15,
-    color: colors.text.secondary,
-    marginBottom: spacing.sm,
-    letterSpacing: 0.2,
-  },
-  textInput: {
-    fontFamily: fonts.body.regular,
-    fontSize: 16,
-    color: colors.text.primary,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.08)',
-    minHeight: 50,
-  },
-  textInputMultiline: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-
-  // Time Selection (any hour, any minute)
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-  },
-  timeInputWrap: {
-    flex: 1,
-    minWidth: 64,
-  },
-  timeInputLabel: {
-    fontFamily: fonts.body.medium,
-    fontSize: 12,
-    color: colors.text.tertiary,
-    marginBottom: 4,
-  },
-  timeInput: {
-    fontFamily: fonts.body.medium,
-    fontSize: 18,
-    color: colors.text.primary,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: borderRadius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.08)',
-    minHeight: 48,
-  },
-  timeColon: {
-    fontFamily: fonts.body.bold,
-    fontSize: 22,
-    color: colors.text.secondary,
-    paddingBottom: spacing.sm,
-  },
-  ampmWrap: {
-    minWidth: 88,
-  },
-  ampmRow: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  ampmButton: {
-    flex: 1,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.lg,
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.08)',
-  },
-  ampmButtonSelected: {
-    backgroundColor: colors.primary.main,
-    borderColor: colors.primary.dark,
-  },
-  ampmText: {
-    fontFamily: fonts.body.semiBold,
-    fontSize: 14,
-    color: colors.text.secondary,
-  },
-  ampmTextSelected: {
-    color: '#fff',
-  },
-  timeHint: {
-    fontFamily: fonts.body.regular,
-    fontSize: 12,
-    color: colors.text.tertiary,
-    marginTop: spacing.sm,
-  },
-
-  // Days Selection
-  daysContainer: {
-    flexDirection: 'row',
-    marginBottom: spacing.md,
-    gap: 4,
-  },
-  dayOption: {
-    flex: 1,
-    minWidth: 36,
-    maxWidth: 48,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
-  },
-  dayOptionSelected: {
-    backgroundColor: colors.primary.main,
-    borderColor: colors.primary.dark,
-    shadowColor: colors.primary.dark,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  dayOptionText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 12,
-    color: colors.text.secondary,
-  },
-  dayOptionTextSelected: {
-    color: '#fff',
-  },
-  selectAllButton: {
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-  },
-  selectAllText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 13,
-    color: colors.primary.main,
-    textDecorationLine: 'underline',
-  },
-
-  openToRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-  },
-  openToChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.full,
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.08)',
-  },
-  openToChipSelected: {
-    backgroundColor: colors.primary.main,
-    borderColor: colors.primary.dark,
-  },
-  openToChipText: {
-    fontFamily: fonts.body.medium,
-    fontSize: 13,
-    color: colors.text.secondary,
-  },
-  openToChipTextSelected: {
-    color: '#fff',
-  },
-
-  // Save Button
-  saveButton: {
-    backgroundColor: colors.primary.main,
-    borderRadius: borderRadius.full,
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-    marginTop: spacing.lg,
-    minHeight: 56,
-    justifyContent: 'center',
-    shadowColor: colors.primary.dark,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    fontFamily: fonts.body.bold,
-    fontSize: 16,
-    color: '#fff',
-  },
-});
