@@ -11,7 +11,13 @@ const root = join(__dirname, '..');
 const inputPath = join(root, 'assets', 'icon.png');
 const tempPath = join(root, 'assets', 'icon-square-temp.png');
 
-const sharp = (await import('sharp')).default;
+let sharp;
+try {
+  sharp = (await import('sharp')).default;
+} catch {
+  console.error('Install sharp first: npm i -D sharp');
+  process.exit(1);
+}
 const image = sharp(inputPath);
 const metadata = await image.metadata();
 const { width = 0, height = 0 } = metadata;

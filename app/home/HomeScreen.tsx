@@ -856,41 +856,40 @@ export const HomeScreen: React.FC = () => {
                   <Text style={styles.emptyStateSubtext}>Open the menu to edit and add a panel</Text>
                 </View>
               )}
-              {!isEditing && (
-                <TouchableOpacity
-                  style={styles.kosherAiBannerWrap}
-                  activeOpacity={0.88}
-                  onPress={() => Linking.openURL(KOSHER_AI_APP_STORE_URL)}
-                  accessibilityRole="link"
-                  accessibilityLabel="Download KosherChat, our kosher chat app, on the App Store"
+              <TouchableOpacity
+                style={styles.kosherAiBannerWrap}
+                activeOpacity={0.88}
+                onPress={() => Linking.openURL(KOSHER_AI_APP_STORE_URL)}
+                accessibilityRole="link"
+                accessibilityLabel="Download KosherChat, a kosher AI chatbot, on the App Store"
+                disabled={isEditing}
+              >
+                <LinearGradient
+                  colors={[
+                    colorWithAlpha(theme.colors.primary.main, 0.34),
+                    colorWithAlpha(theme.colors.accent.lavender, 0.2),
+                    colorWithAlpha(theme.colors.secondary.main, 0.18),
+                  ]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.kosherAiBanner}
                 >
-                  <LinearGradient
-                    colors={[
-                      colorWithAlpha(theme.colors.primary.main, 0.34),
-                      colorWithAlpha(theme.colors.accent.lavender, 0.2),
-                      colorWithAlpha(theme.colors.secondary.main, 0.18),
-                    ]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.kosherAiBanner}
-                  >
-                    <View style={styles.kosherAiBannerIconWrap}>
-                      <Ionicons name="sparkles" size={18} color={theme.colors.primary.main} />
-                    </View>
-                    <View style={styles.kosherAiBannerTextCol}>
-                      <Text style={styles.kosherAiBannerEyebrow}>From our family</Text>
-                      <Text style={styles.kosherAiBannerTitle}>Try KosherChat</Text>
-                      <Text style={styles.kosherAiBannerSub}>
-                        A kosher chat companion, free on the App Store
-                      </Text>
-                    </View>
-                    <View style={styles.kosherAiBannerCta}>
-                      <Ionicons name="logo-apple" size={14} color={theme.colors.primary.dark} />
-                      <Text style={styles.kosherAiBannerCtaText}>Get</Text>
-                    </View>
-                  </LinearGradient>
-                </TouchableOpacity>
-              )}
+                  <View style={styles.kosherAiBannerIconWrap}>
+                    <Ionicons name="sparkles" size={18} color={theme.colors.primary.main} />
+                  </View>
+                  <View style={styles.kosherAiBannerTextCol}>
+                    <Text style={styles.kosherAiBannerEyebrow}>From our family</Text>
+                    <Text style={styles.kosherAiBannerTitle}>Try KosherChat</Text>
+                    <Text style={styles.kosherAiBannerSub}>
+                      A kosher AI chatbot, free on the App Store
+                    </Text>
+                  </View>
+                  <View style={styles.kosherAiBannerCta}>
+                    <Ionicons name="logo-apple" size={14} color={theme.colors.primary.dark} />
+                    <Text style={styles.kosherAiBannerCtaText}>Get</Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
               <View style={{ height: 24 }} />
             </>
           }
