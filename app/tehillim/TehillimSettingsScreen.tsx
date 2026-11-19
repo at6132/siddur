@@ -8,6 +8,7 @@ import { CheckRow, IconButton, TextAction } from '../../components/settings/Sett
 import { useTheme } from '../../src/design/theme';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { TehillimSettings, TehillimGoalType, WEEKLY_TEHILLIM, HEBREW_DAY_NAMES } from '../../src/content/tehillim/types';
+import { PRODUCT_EVENTS, trackProduct } from '../../src/analytics';
 
 export const TehillimSettingsScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -32,9 +33,15 @@ export const TehillimSettingsScreen: React.FC = () => {
   };
 
   const handleGoalTypeChange = async (goalType: TehillimGoalType) => {
+    const previous = settings.goalType;
     const newSettings = { ...settings, goalType };
     setSettings(newSettings);
     await DailyTehillimTracker.saveSettings(newSettings);
+    trackProduct(PRODUCT_EVENTS.TEHILLIM_GOAL_CHANGED, 'tehillim', {
+      previous,
+      next: goalType,
+      setting: 'goalType',
+    });
   };
 
   const handleCustomChaptersChange = async (value: string) => {
@@ -44,6 +51,10 @@ export const TehillimSettingsScreen: React.FC = () => {
       const newSettings = { ...settings, customChaptersPerDay: num };
       setSettings(newSettings);
       await DailyTehillimTracker.saveSettings(newSettings);
+      trackProduct(PRODUCT_EVENTS.TEHILLIM_GOAL_CHANGED, 'tehillim', {
+        setting: 'customChaptersPerDay',
+        next: num,
+      });
     }
   };
 

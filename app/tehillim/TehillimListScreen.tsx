@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,16 @@ import {
   Alert,
   RefreshControl,
   StyleSheet,
+  Pressable,
   useWindowDimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useFocusEffect } from '@react-navigation/core';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import Swipeable, {
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { Screen, Section, ListRow, GlassButton, EmptyState } from '../../components/ui';
 import { PracticeHeader, GroupLabel } from '../../components/hub/PracticeKit';
 import { IconButton, TextAction } from '../../components/settings/SettingsKit';
@@ -30,7 +34,6 @@ import { getAnonymousId } from '../../src/analytics/IdentityService';
 import {
   listMyTehillimCampaigns,
   leaveTehillimCampaign,
-  deleteTehillimCampaign,
   type TehillimCampaign,
 } from '../../src/api/tehillimApi';
 
@@ -67,11 +70,16 @@ export const TehillimListScreen: React.FC = () => {
   const [completedPerakim, setCompletedPerakim] = useState<number[]>([]);
   const [fullBookCompletionsCount, setFullBookCompletionsCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [myCampaigns, setMyCampaigns] = useState<TehillimCampaign[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [myCampaigns, setMyCampaigns] = useState<TehillimCampaign[]>([]);
+  const swipeableRefs = useRef(new Map<string, SwipeableMethods>());
 
   const gap = spacing.sm;
   const itemWidth = (windowWidth - spacing.gutter * 2 - gap * (COLS - 1)) / COLS;
+  const visibleCampaigns = useMemo(
+    () => myCampaigns.filter((c) => !c.is_hidden),
+    [myCampaigns],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -103,6 +111,22 @@ export const TehillimListScreen: React.FC = () => {
       setMyCampaigns(campaigns || []);
     } catch {
       setMyCampaigns([]);
+    }
+  };
+
+  const handleRemoveFromList = async (c: TehillimCampaign) => {
+    try {
+      const pid = await getAnonymousId();
+      await leaveTehillimCampaign(c.id, pid);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setMyCampaigns((prev) =>
+        prev
+          .map((item) => (item.id === c.id ? { ...item, is_hidden: true } : item))
+          .filter((item) => !(item.id === c.id && !item.is_creator)),
+      );
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Could not remove from your list');
+      await loadProgress();
     }
   };
 
@@ -161,52 +185,6 @@ export const TehillimListScreen: React.FC = () => {
           onPress: async () => {
             await DailyTehillimTracker.resetCurrentBookProgress();
             await loadProgress();
-          },
-        },
-      ]
-    );
-  };
-
-  const handleLeaveCampaign = async (c: TehillimCampaign) => {
-    Alert.alert(
-      'Leave Tehillim page?',
-      `Leave "${c.title || 'Shared Tehillim'}"? You can rejoin with the link.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Leave',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const pid = await getAnonymousId();
-              await leaveTehillimCampaign(c.id, pid);
-              await loadProgress();
-            } catch (e: any) {
-              Alert.alert('Error', e?.message || 'Could not leave');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleDeleteCampaign = async (c: TehillimCampaign) => {
-    Alert.alert(
-      'Delete Tehillim page?',
-      `Permanently delete "${c.title || 'Shared Tehillim'}"? Everyone will lose access.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const pid = await getAnonymousId();
-              await deleteTehillimCampaign(c.id, pid);
-              await loadProgress();
-            } catch (e: any) {
-              Alert.alert('Error', e?.message || 'Could not delete');
-            }
           },
         },
       ]
@@ -320,35 +298,17 @@ export const TehillimListScreen: React.FC = () => {
   };
 
   const renderSharedPages = () => (
-    <Section title="Shared pages" footer="Separate from your personal Tehillim above.">
-      {myCampaigns.map((c) => {
-        const deadlineStr = c.deadline
-          ? new Date(c.deadline).toLocaleDateString(undefined, { dateStyle: 'short' })
-          : null;
-        const subtitle = [
-          c.type === 'split' ? 'Split and claim' : 'Shared completion',
-          c.reason,
-          deadlineStr ? `By ${deadlineStr}` : null,
-        ]
-          .filter(Boolean)
-          .join(' · ');
-        return (
-          <ListRow
-            key={c.id}
-            title={c.title || 'Shared Tehillim'}
-            subtitle={subtitle}
-            onPress={() => (navigation as any).navigate('SharedTehillimView' as never, { campaignId: c.id } as never)}
-            trailing={
-              <IconButton
-                name={c.is_creator ? 'trash-outline' : 'exit-outline'}
-                label={c.is_creator ? `Delete ${c.title || 'Shared Tehillim'}` : `Leave ${c.title || 'Shared Tehillim'}`}
-                tone="danger"
-                onPress={() => (c.is_creator ? handleDeleteCampaign(c) : handleLeaveCampaign(c))}
-              />
-            }
-          />
-        );
-      })}
+    <Section
+      title="Shared pages"
+      footer="Swipe a page left to remove it from your list. Your completed perakim stay on that page."
+    >
+      <ListRow
+        title="Manage my links"
+        subtitle="Open, share, leave, or delete shared pages"
+        leading={<Ionicons name="link-outline" size={type.fontSize.xl} color={theme.colors.primary.dark} />}
+        showChevron
+        onPress={() => (navigation as any).navigate('ManageTehillimLinks' as never)}
+      />
       <ListRow
         title="Make your Tehillim page"
         subtitle="Share a link. Others join and complete."
@@ -356,6 +316,74 @@ export const TehillimListScreen: React.FC = () => {
         showChevron
         onPress={() => (navigation as any).navigate('CreateSharedTehillim' as never)}
       />
+      {visibleCampaigns.map((c) => {
+        const deadlineStr = c.deadline
+          ? new Date(c.deadline).toLocaleDateString(undefined, { dateStyle: 'short' })
+          : null;
+        const subtitle = [
+          c.is_creator ? 'Created by you' : 'Joined',
+          c.type === 'split' ? 'Split and claim' : 'Shared completion',
+          c.reason,
+          deadlineStr ? `By ${deadlineStr}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ');
+        return (
+          <Swipeable
+            key={c.id}
+            friction={2}
+            rightThreshold={40}
+            overshootRight={false}
+            onSwipeableWillOpen={() => {
+              swipeableRefs.current.forEach((methods, id) => {
+                if (id !== c.id) methods.close();
+              });
+            }}
+            renderRightActions={(_progress, _translation, methods) => {
+              swipeableRefs.current.set(c.id, methods);
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${c.title || 'Shared Tehillim'} from your list`}
+                  onPress={() => {
+                    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    methods.close();
+                    void handleRemoveFromList(c);
+                  }}
+                  style={{
+                    backgroundColor: theme.colors.semantic.error,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minWidth: 88,
+                    paddingHorizontal: spacing.md,
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={type.fontSize.xl} color={theme.colors.text.inverse} />
+                  <Text
+                    style={[
+                      type.textStyles.caption,
+                      { color: theme.colors.text.inverse, marginTop: spacing['2xs'] },
+                    ]}
+                  >
+                    Remove
+                  </Text>
+                </Pressable>
+              );
+            }}
+          >
+            <View style={{ backgroundColor: theme.colors.background.primary }}>
+              <ListRow
+                title={c.title || 'Shared Tehillim'}
+                subtitle={subtitle}
+                showChevron
+                onPress={() =>
+                  (navigation as any).navigate('SharedTehillimView' as never, { campaignId: c.id } as never)
+                }
+              />
+            </View>
+          </Swipeable>
+        );
+      })}
     </Section>
   );
 

@@ -1,12 +1,30 @@
 /**
- * Tehillim Service — bundled Psalms 1–150 (Sefaria CC-BY-SA).
+ * Tehillim Service — fully offline Psalms 1–150 (bundled local pack).
+ * Source attribution: Sefaria CC-BY-SA (static pack; no network).
  */
 
-import { SefariaService } from '../../services/SefariaService';
 import { TehillimChapter, DAILY_TEHILLIM, DAY_OF_WEEK_TEHILLIM, TEHILLIM_BOOKS } from './types';
 import { TEHILLIM_CHAPTERS } from './chapters';
-import { TEHILLIM_OFFLINE_CHAPTERS } from './offline/raw';
+import { TEHILLIM_OFFLINE_CHAPTERS, TEHILLIM_OFFLINE_META } from './offline/raw';
 import { JewishCalendarService } from '../../core/calendar/JewishCalendar';
+
+/** Strip cantillation (ta'amei mikra) — same as davening reader; keep nikkud. */
+function stripCantillation(text: string): string {
+  if (!text) return text;
+  return text.replace(/[\u0591-\u05AF]/g, '');
+}
+
+function tidyVerseText(text: string): string {
+  if (!text) return '';
+  return stripCantillation(text)
+    .replace(/&thinsp;/g, ' ')
+    .replace(/&#x2009;/g, ' ')
+    .replace(/\u2009/g, ' ')
+    .replace(/\s*[{\[\(]\s*[פס][\u0591-\u05C7]*\s*[}\]\)]\s*/g, '')
+    .replace(/\s*[{\[\(]\s*[PSps]\s*[}\]\)]\s*/g, '')
+    .replace(/[ \t]+/g, ' ')
+    .trim();
+}
 
 export class TehillimService {
   private static cachedChapters: Map<number, TehillimChapter> = new Map();
@@ -25,14 +43,22 @@ export class TehillimService {
         occasions: this.getChapterOccasions(n),
         verses: raw.verses.map((v) => ({
           number: v.number,
-          hebrew: v.hebrew,
-          english: v.english,
+          hebrew: tidyVerseText(v.hebrew),
+          english: tidyVerseText(v.english ?? ''),
         })),
       });
     }
+    // Tiny legacy fallbacks only if a chapter were somehow missing from the offline pack
     for (const [num, chapter] of Object.entries(TEHILLIM_CHAPTERS)) {
       if (!this.cachedChapters.has(Number(num))) {
-        this.cachedChapters.set(Number(num), chapter);
+        this.cachedChapters.set(Number(num), {
+          ...chapter,
+          verses: chapter.verses.map((v) => ({
+            ...v,
+            hebrew: tidyVerseText(v.hebrew),
+            english: tidyVerseText(v.english ?? ''),
+          })),
+        });
       }
     }
   }
@@ -288,10 +314,11 @@ export class TehillimService {
     return result;
   }
 
-  /**
-   * Get Sefaria attribution (required by license)
-   */
+  /** Attribution for the bundled offline pack (CC-BY-SA). */
   static getAttribution(): { text: string; url: string } {
-    return SefariaService.getAttribution();
+    return {
+      text: TEHILLIM_OFFLINE_META.attribution,
+      url: 'https://www.sefaria.org',
+    };
   }
 }

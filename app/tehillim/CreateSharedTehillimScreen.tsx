@@ -13,6 +13,7 @@ import { CheckRow, SheetModal, TextAction } from '../../components/settings/Sett
 import { useTheme } from '../../src/design/theme';
 import { createTehillimCampaign, parseCampaignIdFromLink } from '../../src/api/tehillimApi';
 import { getAnonymousId } from '../../src/analytics/IdentityService';
+import { TEHILLIM_EVENTS, trackProduct } from '../../src/analytics';
 
 type CampaignType = 'split' | 'shared';
 
@@ -47,6 +48,11 @@ export const CreateSharedTehillimScreen: React.FC = () => {
         created_by: createdBy,
       });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      trackProduct(TEHILLIM_EVENTS.CAMPAIGN_CREATED, 'shared_tehillim', {
+        campaign_id: res.campaign.id,
+        campaign_type: campaignType,
+        has_deadline: Boolean(deadline.trim()),
+      });
       setCreatedLink(res.campaign.link || null);
     } catch (e: any) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -63,10 +69,12 @@ export const CreateSharedTehillimScreen: React.FC = () => {
       if (Platform.OS === 'web') {
         await navigator.clipboard.writeText(createdLink);
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        trackProduct(TEHILLIM_EVENTS.CAMPAIGN_SHARED, 'shared_tehillim', { method: 'copy' });
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } else {
         await Share.share({ message: createdLink, title: 'Shared Tehillim link' });
+        trackProduct(TEHILLIM_EVENTS.CAMPAIGN_SHARED, 'shared_tehillim', { method: 'share_sheet' });
       }
     } catch (_) {
       setError('Could not copy the link.');
@@ -180,6 +188,11 @@ export const CreateSharedTehillimScreen: React.FC = () => {
       {error ? <InlineError message={error} /> : null}
 
       <GlassButton title="Create and get link" onPress={handleCreate} loading={loading} disabled={loading} />
+      <TextAction
+        label="Manage my links"
+        align="center"
+        onPress={() => (navigation as any).navigate('ManageTehillimLinks' as never)}
+      />
 
       <SheetModal
         visible={joinModalVisible}

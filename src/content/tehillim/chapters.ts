@@ -1,15 +1,10 @@
 /**
- * Tehillim Chapters - Fallback Content
- * 
- * Primary content is fetched from Sefaria API.
- * This file contains minimal fallback data for key chapters
- * in case the API is unavailable.
+ * Tehillim Chapters — tiny emergency fallback only.
+ * Full Psalms 1–150 live in `offline/raw.ts` (local pack).
  */
 
 import { TehillimChapter } from './types';
 
-// Minimal fallback - most popular chapters only
-// Full content loaded from Sefaria API
 export const TEHILLIM_CHAPTERS: { [key: number]: TehillimChapter } = {
   // Chapter 23 - The Lord is My Shepherd (most popular)
   23: {

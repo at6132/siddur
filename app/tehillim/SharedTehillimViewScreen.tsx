@@ -26,6 +26,7 @@ import { IconButton, SheetModal, TextAction } from '../../components/settings/Se
 import { PerekCell, ProgressBar, type PerekCellState } from '../../components/tehillim/TehillimKit';
 import { useTheme } from '../../src/design/theme';
 import { getAnonymousId } from '../../src/analytics/IdentityService';
+import { TEHILLIM_EVENTS, trackProduct } from '../../src/analytics';
 import {
   getTehillimCampaign,
   claimTehillimRange,
@@ -65,6 +66,7 @@ export const SharedTehillimViewScreen: React.FC = () => {
   const [rangeEnd, setRangeEnd] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const didAutoOpenClaimRef = useRef(false);
+  const didTrackJoinRef = useRef(false);
 
   const gap = spacing.sm;
   const gridWidth = windowWidth - spacing.gutter * 2;
@@ -85,6 +87,13 @@ export const SharedTehillimViewScreen: React.FC = () => {
       setError(null);
       try {
         await joinTehillimCampaign(campaignId, pid);
+        if (!didTrackJoinRef.current) {
+          didTrackJoinRef.current = true;
+          trackProduct(TEHILLIM_EVENTS.CAMPAIGN_JOINED, 'shared_tehillim', {
+            campaign_id: campaignId,
+            campaign_type: res.campaign?.type,
+          });
+        }
       } catch (_) {}
     } catch (e: any) {
       setError(e?.message || 'Failed to load');
@@ -188,6 +197,11 @@ export const SharedTehillimViewScreen: React.FC = () => {
       for (const [start, end] of ranges) {
         await claimTehillimRange(campaignId!, start, end, participantId);
       }
+      trackProduct(TEHILLIM_EVENTS.CAMPAIGN_CLAIMED, 'shared_tehillim', {
+        campaign_id: campaignId,
+        perek_count: selectedPereks.size,
+        range_count: ranges.length,
+      });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setClaimModalOpen(false);
       setSelectedPereks(new Set());

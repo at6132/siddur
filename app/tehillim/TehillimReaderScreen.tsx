@@ -14,9 +14,9 @@ import { Screen, GlassButton } from '../../components/ui';
 import { PracticeHeader } from '../../components/hub/PracticeKit';
 import { PressableScale } from '../../components/settings/SettingsKit';
 import { useTheme } from '../../src/design/theme';
+import { fonts } from '../../src/design/typography';
 import { TehillimService } from '../../src/content/tehillim/TehillimService';
 import { TehillimChapter, TehillimVerse, TehillimGoalType } from '../../src/content/tehillim/types';
-import { SefariaService } from '../../src/services/SefariaService';
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import type { DisplayPreferences } from '../../src/types/preferences';
@@ -25,22 +25,23 @@ import { completeTehillimPereks, sendPrivatePerekCompleted } from '../../src/api
 import { analytics } from '../../src/analytics';
 import { TEHILLIM_EVENTS } from '../../src/analytics/types';
 
-/** Strip HTML entities and Sefaria end markers (e.g. {פ}) so they don't show as literal text. */
+/** Display cleanup (pack is already tidy; safety for any leftover entities/markers). */
 function cleanVerseText(text: string | undefined): string {
   if (!text) return '';
-  return SefariaService.stripSefariaEndMarkers(
-    text
-      .replace(/&thinsp;/g, ' ')
-      .replace(/&#x2009;/g, ' ')
-      .replace(/\u2009/g, ' ')
-  );
+  return text
+    .replace(/&thinsp;/g, ' ')
+    .replace(/&#x2009;/g, ' ')
+    .replace(/\u2009/g, ' ')
+    .replace(/\s*[{\[\(]\s*[פס][\u0591-\u05C7]*\s*[}\]\)]\s*/g, '')
+    .replace(/\s*[{\[\(]\s*[PSps]\s*[}\]\)]\s*/g, '')
+    .trim();
 }
 
 export const TehillimReaderScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation();
   const { theme } = useTheme();
-  const { spacing, type, hebrew } = theme.tokens;
+  const { spacing, type } = theme.tokens;
   const psalm = (route.params as any)?.psalm || 1;
   const campaignId = (route.params as any)?.campaignId as string | undefined;
 
@@ -72,13 +73,27 @@ export const TehillimReaderScreen: React.FC = () => {
     })();
   }, []);
 
-  useAutoscroll(scrollRef, scrollYRef, contentHeightRef, viewportHeight, autoscrollPlaying, autoscrollSpeed);
+  const autoscrollHandlers = useAutoscroll(
+    scrollRef,
+    scrollYRef,
+    contentHeightRef,
+    viewportHeight,
+    autoscrollPlaying,
+    autoscrollSpeed,
+    () => setAutoscrollPlaying(false)
+  );
 
   useEffect(() => {
     readingStartTime.current = Date.now();
     loadChapter(psalm);
     checkIfDailyChapter(psalm);
-  }, [psalm]);
+    analytics.track(TEHILLIM_EVENTS.PEREK_OPENED, {
+      feature: 'tehillim',
+      perek_number: psalm,
+      source: campaignId ? 'shared' : 'private',
+      campaign_id: campaignId ?? undefined,
+    });
+  }, [psalm, campaignId]);
 
   const checkIfDailyChapter = async (chapterNum: number) => {
     const progress = await DailyTehillimTracker.getTodaysProgress();
@@ -119,6 +134,12 @@ export const TehillimReaderScreen: React.FC = () => {
       });
       const anonymousId = await getAnonymousId();
       await sendPrivatePerekCompleted(psalm, anonymousId);
+      analytics.track(TEHILLIM_EVENTS.PEREK_COMPLETED, {
+        feature: 'tehillim',
+        perek_number: psalm,
+        source: 'private',
+        duration_ms: durationMs,
+      });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setIsMarkedComplete(true);
       if (progress.goalType === 'whenever' || progress.totalChapters.includes(psalm)) {
@@ -133,7 +154,12 @@ export const TehillimReaderScreen: React.FC = () => {
     try {
       const participantId = await getAnonymousId();
       await completeTehillimPereks(campaignId, [psalm], participantId);
-      analytics.track(TEHILLIM_EVENTS.PEREK_COMPLETED, { perek_number: psalm, source: 'shared', campaign_id: campaignId });
+      analytics.track(TEHILLIM_EVENTS.PEREK_COMPLETED, {
+        feature: 'tehillim',
+        perek_number: psalm,
+        source: 'shared',
+        campaign_id: campaignId,
+      });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       navigation.goBack();
     } catch (e) {
@@ -166,8 +192,9 @@ export const TehillimReaderScreen: React.FC = () => {
   };
 
   const renderVerse = (verse: TehillimVerse, index: number) => {
+    // Same Frank Ruhl Medium + size/line-height scale as SiddurReader davening
     const size = HEBREW_FONT_SIZES[textSize];
-    const lineHeight = HEBREW_LINE_HEIGHTS[textSize] * 1.15; // slightly more breathable
+    const lineHeight = HEBREW_LINE_HEIGHTS[textSize];
     const isLast = index === chapter!.verses.length - 1;
     return (
       <View
@@ -179,13 +206,16 @@ export const TehillimReaderScreen: React.FC = () => {
         }}
       >
         <Text
+          allowFontScaling={false}
           style={{
-            fontFamily: hebrew.fonts.regular,
+            fontFamily: fonts.hebrew.medium,
             fontSize: size,
             lineHeight,
             color: theme.colors.text.primary,
             textAlign: 'right',
             writingDirection: 'rtl',
+            letterSpacing: 0,
+            ...(Platform.OS === 'android' ? { includeFontPadding: false } : null),
           }}
           selectable
         >
@@ -196,8 +226,8 @@ export const TehillimReaderScreen: React.FC = () => {
             style={[
               type.textStyles.body,
               {
-                fontSize: size * 0.88,
-                lineHeight: lineHeight * 0.9,
+                fontSize: size * 0.85,
+                lineHeight: lineHeight * 0.85,
                 color: theme.colors.text.secondary,
                 marginTop: spacing.sm,
               },
@@ -284,6 +314,9 @@ export const TehillimReaderScreen: React.FC = () => {
           onScroll={(e) => {
             scrollYRef.current = e.nativeEvent.contentOffset.y;
           }}
+          onScrollBeginDrag={autoscrollHandlers.onScrollBeginDrag}
+          onScrollEndDrag={autoscrollHandlers.onScrollEndDrag}
+          onMomentumScrollEnd={autoscrollHandlers.onMomentumScrollEnd}
           onContentSizeChange={(_, h) => { contentHeightRef.current = h; }}
           scrollEventThrottle={16}
           bounces
@@ -318,7 +351,7 @@ export const TehillimReaderScreen: React.FC = () => {
               { color: theme.colors.text.tertiary, textAlign: 'center', marginVertical: spacing.lg },
             ]}
           >
-            Texts provided by Sefaria.org
+            {TehillimService.getAttribution().text}
           </Text>
 
           {/* Completion: only for the context you opened from (shared page or personal daily) */}

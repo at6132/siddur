@@ -57,6 +57,8 @@ export interface TehillimCampaign {
   created_by?: string | null;
   link?: string;
   is_creator?: boolean;
+  /** Soft-hidden from the user's shared list; contributions remain. */
+  is_hidden?: boolean;
 }
 
 export interface CampaignDetailResponse {
