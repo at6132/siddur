@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Siddur Content Editor</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <aside class="sidebar">
+      <header class="sidebar-head">
+        <h1>Siddur packs</h1>
+        <p class="muted">Local edit · saves to disk</p>
+      </header>
+      <div class="filters">
+        <select id="filterPrayer">
+          <option value="">All prayers</option>
+        </select>
+        <select id="filterNusach">
+          <option value="">All nusach</option>
+          <option value="ashkenaz">Ashkenaz</option>
+          <option value="sefard">Sefard</option>
+        </select>
+      </div>
+      <nav id="packList" class="pack-list"></nav>
+    </aside>
+
+    <main class="main">
+      <header class="toolbar">
+        <div class="crumb">
+          <span id="crumbPack">Pick a pack</span>
+          <span class="sep">/</span>
+          <select id="sectionSelect" disabled></select>
+        </div>
+        <div class="toolbar-actions">
+          <div class="view-toggle" role="group" aria-label="View mode">
+            <button type="button" id="viewRaw" class="view-btn active">Raw</button>
+            <button type="button" id="viewAccordion" class="view-btn">Accordion</button>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="showSeasonal" checked />
+            Seasonals
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="showBreaks" checked />
+            Line breaks
+          </label>
+          <button type="button" id="btnReload" class="ghost" title="Reload from disk">Reload</button>
+          <button type="button" id="btnSave" class="primary" disabled>Save</button>
+        </div>
+      </header>
+
+      <div class="tools" id="toolsBar">
+        <button type="button" data-tool="join" title="Join selected lines (remove breaks between)">Join lines</button>
+        <button type="button" data-tool="split" title="Insert line break at caret">Split here</button>
+        <button type="button" data-tool="collapse-ws" title="Collapse multiple blank lines">Collapse blanks</button>
+        <button type="button" data-tool="trim-lines" title="Trim trailing spaces per line">Trim lines</button>
+        <button type="button" data-tool="delete-breaks" title="Remove all line breaks in selection (or whole text)">Flatten selection</button>
+        <button type="button" data-tool="accordion-block" title="Wrap selection (or current line) as its own accordion block — inserts blank-line separators">→ Accordion block</button>
+        <button type="button" data-tool="accordion-break" title="Insert an accordion break (blank line) at caret">Accordion break</button>
+        <span class="spacer"></span>
+        <button type="button" data-tool="gate-wrap" title="Wrap selection in {{gate:id}}…{{/gate}} (calendar show/hide + highlight)">Gate wrap</button>
+        <button type="button" data-tool="fold-wrap" title="Wrap selection in {{fold:id}}…{{/fold}} (foldout)">Fold wrap</button>
+        <span class="spacer"></span>
+        <button type="button" id="btnExpandAll" class="ghost" title="Expand all accordion items">Expand all</button>
+        <button type="button" id="btnCollapseAll" class="ghost" title="Collapse all accordion items">Collapse all</button>
+        <span id="status" class="status"></span>
+      </div>
+
+      <div class="legend" id="seasonalLegend"></div>
+
+      <div class="editors" id="rawEditors">
+        <section class="pane">
+          <div class="pane-head">
+            <h2>Hebrew</h2>
+            <span id="hebStats" class="muted"></span>
+          </div>
+          <div class="editor-wrap" dir="rtl">
+            <pre id="hebHighlight" class="highlight" aria-hidden="true"></pre>
+            <textarea id="hebrew" spellcheck="false" dir="rtl" placeholder="Hebrew…"></textarea>
+          </div>
+        </section>
+        <section class="pane">
+          <div class="pane-head">
+            <h2>English</h2>
+            <span id="engStats" class="muted"></span>
+          </div>
+          <div class="editor-wrap" dir="ltr">
+            <pre id="engHighlight" class="highlight" aria-hidden="true"></pre>
+            <textarea id="english" spellcheck="true" dir="ltr" placeholder="English…"></textarea>
+          </div>
+        </section>
+      </div>
+
+      <div class="editors accordion-editors hidden" id="accordionEditors">
+        <section class="pane">
+          <div class="pane-head">
+            <h2>Hebrew blocks</h2>
+            <span id="hebBlockStats" class="muted"></span>
+          </div>
+          <div id="hebAccordion" class="accordion" dir="rtl"></div>
+        </section>
+        <section class="pane">
+          <div class="pane-head">
+            <h2>English blocks</h2>
+            <span id="engBlockStats" class="muted"></span>
+          </div>
+          <div id="engAccordion" class="accordion" dir="ltr"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>
