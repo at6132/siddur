@@ -122,12 +122,20 @@ export class NotificationScheduler {
       return;
     }
 
-    // Erev Shabbos clock — runs even if master notifications are off
+    // Standalone reminders — always scheduled when on, even if master "Enable notifications" is off
     if (preferences.notifications.shabbosClockEnabled) {
       await this.scheduleShabbosClock(preferences, context);
     }
+    if (preferences.notifications.tefillinReminder) {
+      await this.scheduleTefillinReminder(preferences, context);
+    }
+    if (preferences.notifications.dailyTehillim) {
+      await this.scheduleDailyTehillim(preferences);
+    }
+    if (preferences.notifications.dailyGratitude) {
+      await this.scheduleDailyGratitude(preferences);
+    }
 
-    // If master switch is off, only Shabbos clock (above) was scheduled
     if (!preferences.notifications.enabled) {
       return;
     }
@@ -135,11 +143,6 @@ export class NotificationScheduler {
     // Schedule custom reminders FIRST so they are not dropped by iOS 64-notification limit
     if (preferences.customReminders?.length) {
       await this.scheduleCustomReminders(preferences);
-    }
-
-    // Daily Tehillim (use user's time)
-    if (preferences.notifications.dailyTehillim) {
-      await this.scheduleDailyTehillim(preferences);
     }
 
     // Daily prayer reminders at user-chosen times (Shacharis, Mincha, Maariv)
@@ -169,11 +172,6 @@ export class NotificationScheduler {
       await this.scheduleDaveningAddOns(preferences, context);
     }
 
-    // Daily Gratitude
-    if (preferences.notifications.dailyGratitude) {
-      await this.scheduleDailyGratitude(preferences);
-    }
-
     // Shekiya (sunset) reminder — N minutes before sunset each day
     if (preferences.notifications.shekiyaReminder) {
       await this.scheduleShekiyaReminder(preferences, context);
@@ -197,6 +195,68 @@ export class NotificationScheduler {
       minute,
     };
     await scheduleSafe({ content, trigger });
+  }
+
+  /**
+   * Schedule Tefillin reminders for upcoming weekdays (skip Shabbos and Yom Tov).
+   * Mode: fixed clock time, or N minutes before shekiya (sunset).
+   */
+  private static async scheduleTefillinReminder(
+    preferences: UserPreferences,
+    context: CalendarContext
+  ): Promise<void> {
+    const content = NotificationContentService.getTefillinReminderContent();
+    const mode = preferences.notifications.tefillinReminderMode ?? 'fixed';
+
+    if (mode === 'beforeShekiya') {
+      const minsBefore = Math.max(
+        1,
+        Math.min(120, preferences.notifications.tefillinReminderMinutesBeforeShekiya ?? 30)
+      );
+      // Zman-based: shorter window (location/zmanim lookups), same as shekiya reminder
+      for (let dayOffset = 0; dayOffset <= 14; dayOffset++) {
+        const day = new Date();
+        day.setDate(day.getDate() + dayOffset);
+        if (JewishCalendarService.isShabbos(day) || JewishCalendarService.isYomTov(day)) {
+          continue;
+        }
+        const dayInfo = await CalendarEngine.getDayInfo(day, context);
+        const sunset = dayInfo?.extendedZmanim?.sunset;
+        if (!sunset || !(sunset instanceof Date)) continue;
+        const triggerAt = new Date(sunset.getTime() - minsBefore * 60000);
+        if (!isFutureDate(triggerAt)) continue;
+        await scheduleSafe({
+          content,
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: triggerAt,
+          },
+        });
+      }
+      return;
+    }
+
+    const { hour, minute } = parseTime24h(
+      preferences.notifications.tefillinReminderTime || '07:00'
+    );
+
+    for (let dayOffset = 0; dayOffset < 60; dayOffset++) {
+      const day = new Date();
+      day.setDate(day.getDate() + dayOffset);
+      if (JewishCalendarService.isShabbos(day) || JewishCalendarService.isYomTov(day)) {
+        continue;
+      }
+      const triggerDate = new Date(day);
+      triggerDate.setHours(hour, minute, 0, 0);
+      if (!isFutureDate(triggerDate)) continue;
+      await scheduleSafe({
+        content,
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: new Date(triggerDate.getTime()),
+        },
+      });
+    }
   }
 
   /**

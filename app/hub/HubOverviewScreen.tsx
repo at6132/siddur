@@ -27,6 +27,7 @@ import {
 import { DailyTehillimTracker } from '../../src/storage/DailyTehillimTracker';
 import { TzedakahTracker } from '../../src/storage/TzedakahTracker';
 import { DailyGoalsService } from '../../src/storage/DailyGoalsService';
+import { PRODUCT_EVENTS, trackProduct } from '../../src/analytics';
 
 type TimeFrame = 'day' | 'week' | 'month';
 
@@ -129,6 +130,7 @@ export const HubOverviewScreen: React.FC = () => {
   const handleBrachosAdd = async (amount: number) => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const next = await addBrachos(amount);
+    trackProduct(PRODUCT_EVENTS.BRACHOS_ADDED, 'hub', { amount, total: next });
     setBrachosCount(next);
     if (timeFrame === 'day') setBrachosTotal(next);
     else {
@@ -390,6 +392,13 @@ export const HubOverviewScreen: React.FC = () => {
           icon="alarm-outline"
           tint="rose"
           onPress={() => (navigation as any).navigate('Settings', { scrollTo: 'shabbosAlarm' })}
+        />
+        <BrandGlassTile
+          title="Tefillin reminder"
+          subtitle="Weekday morning reminder"
+          icon="time-outline"
+          tint="sky"
+          onPress={() => (navigation as any).navigate('Settings', { scrollTo: 'tefillinReminder' })}
         />
       </View>
 

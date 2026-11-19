@@ -21,6 +21,7 @@ import {
 import * as Notifications from 'expo-notifications';
 import { StorageService } from './src/storage/StorageService';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { initialWindowMetrics, SafeAreaProvider } from 'react-native-safe-area-context';
 import * as SplashScreen from 'expo-splash-screen';
 import {
   useFonts,
@@ -53,7 +54,15 @@ import { parseCampaignIdFromLink } from './src/api/tehillimApi';
 // Keep splash screen visible while loading fonts
 SplashScreen.preventAutoHideAsync();
 
+/** Used when the native module has not reported insets yet (web, first frame). */
+const SAFE_AREA_FALLBACK = {
+  frame: { x: 0, y: 0, width: 0, height: 0 },
+  insets: { top: 0, right: 0, bottom: 0, left: 0 },
+};
+
 const ROUTE_TO_FEATURE: Record<string, string> = {
+  Intro: 'intro',
+  Onboarding: 'onboarding',
   Home: 'home',
   Hub: 'hub',
   HubOverview: 'hub',
@@ -63,11 +72,16 @@ const ROUTE_TO_FEATURE: Record<string, string> = {
   GoalsHistory: 'goals_history',
   Calendar: 'calendar',
   Library: 'library',
+  LibraryHome: 'library',
+  Search: 'search',
   Parsha: 'parsha',
   PirkeiAvos: 'pirkei_avos',
   TehillimList: 'tehillim',
   TehillimReader: 'tehillim',
   TehillimSettings: 'tehillim',
+  CreateSharedTehillim: 'shared_tehillim',
+  SharedTehillimView: 'shared_tehillim',
+  ManageTehillimLinks: 'shared_tehillim',
   SiddurReader: 'siddur',
   Omer: 'omer',
   Habits: 'habits',
@@ -75,6 +89,7 @@ const ROUTE_TO_FEATURE: Record<string, string> = {
   AddTzedakah: 'tzedakah',
   Settings: 'settings',
   AddCustomReminder: 'custom_reminder',
+  ComingSoon: 'coming_soon',
   Gemara: 'gemara',
   GemaraTractate: 'gemara',
   GemaraReader: 'gemara',
@@ -184,6 +199,8 @@ function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
         screen?: string;
         omerDay?: number;
         action?: string;
+        service?: string;
+        sectionKey?: string;
       };
       const screenName = data?.screen;
       const doNav = () => {
@@ -212,6 +229,13 @@ function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
             StorageService.markOmerDay(data.omerDay, true).catch(() => {});
           }
           navigationRef.navigate('Omer' as never);
+          return;
+        }
+        if (screenName === 'SiddurReader') {
+          navigationRef.navigate('SiddurReader' as never, {
+            service: data.service ?? 'shacharis',
+            ...(data.sectionKey ? { sectionKey: data.sectionKey } : {}),
+          } as never);
           return;
         }
         if (screenName && ['TehillimList', 'Habits', 'Tzedakah', 'AddCustomReminder'].includes(screenName)) {
@@ -264,7 +288,13 @@ function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
       time_on_previous_screen_ms,
     });
     const featureName = ROUTE_TO_FEATURE[route];
-    if (featureName) track(events.feature.entry(featureName), { context: 'screen', screen_name: route });
+    if (featureName) {
+      track(events.feature.entry(featureName), {
+        feature: featureName,
+        context: 'screen',
+        screen_name: route,
+      });
+    }
   }, []);
 
   // Deep link: siddur://tehillim/<id> or https://siddur24seven.com/tehillim/<id> → open SharedTehillimView
@@ -398,11 +428,13 @@ export default function App() {
   }
 
   return (
-    <ThemeProvider>
-      <AnalyticsErrorBoundary>
-        <AppContent onLayoutRootView={onLayoutRootView} />
-      </AnalyticsErrorBoundary>
-    </ThemeProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics ?? SAFE_AREA_FALLBACK}>
+      <ThemeProvider>
+        <AnalyticsErrorBoundary>
+          <AppContent onLayoutRootView={onLayoutRootView} />
+        </AnalyticsErrorBoundary>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 

@@ -173,6 +173,17 @@ export class NotificationContentService {
   }
 
   /**
+   * Generate content for weekday Tefillin reminder
+   */
+  static getTefillinReminderContent(): NotificationContent {
+    return {
+      title: 'Tefillin',
+      body: 'Time to put on tefillin',
+      data: { screen: 'SiddurReader', service: 'shacharis', sectionKey: 'tefillin' },
+    };
+  }
+
+  /**
    * Yaaleh V'Yavo days (Rosh Chodesh, Chol Hamoed, Yom Tov) — morning reminder
    */
   static getYaalehVyavoContent(): NotificationContent {

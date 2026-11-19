@@ -65,6 +65,13 @@ export interface NotificationPreferences {
   // Daily Gratitude
   dailyGratitude: boolean;
   dailyGratitudeTime: string; // HH:MM
+
+  // Tefillin — weekdays only (skipped on Shabbos and Yom Tov when scheduling)
+  tefillinReminder: boolean;
+  /** fixed = clock time; beforeShekiya = N minutes before sunset */
+  tefillinReminderMode: 'fixed' | 'beforeShekiya';
+  tefillinReminderTime: string; // HH:MM (when mode is fixed)
+  tefillinReminderMinutesBeforeShekiya: number; // when mode is beforeShekiya
   
   // Shekiya (sunset) reminder — every day, N minutes before sunset
   shekiyaReminder: boolean;
@@ -188,6 +195,10 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   sefirasHaomerTime: '22:00',
   dailyGratitude: true,
   dailyGratitudeTime: '20:00',
+  tefillinReminder: false,
+  tefillinReminderMode: 'fixed',
+  tefillinReminderTime: '07:00',
+  tefillinReminderMinutesBeforeShekiya: 30,
   shekiyaReminder: true,
   shekiyaMinutesBefore: 15,
   customCountdowns: true,

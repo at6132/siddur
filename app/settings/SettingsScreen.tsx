@@ -39,9 +39,16 @@ import {
   RefuahPersonalNameGender,
 } from '../../src/types/preferences';
 import { useTheme } from '../../src/design/theme';
+import {
+  PRODUCT_EVENTS,
+  getAnonymousId,
+  setUserProfile,
+  syncProfileToBackend,
+  trackProduct,
+} from '../../src/analytics';
 
 type SettingsRouteParams = {
-  scrollTo?: 'dailyGratitude' | 'shabbosAlarm';
+  scrollTo?: 'dailyGratitude' | 'shabbosAlarm' | 'tefillinReminder';
 };
 
 type TimePickerKind =
@@ -53,6 +60,7 @@ type TimePickerKind =
     | 'roshChodesh'
     | 'fastDays'
     | 'dailyGratitude'
+    | 'tefillinReminder'
     | 'daveningYaalehVyavo'
     | 'daveningAlHanissim'
     | 'daveningMashivVtenTal'
@@ -73,7 +81,8 @@ const TIME_PICKER_TITLES: Record<TimePickerKind, string> = {
   hallelAnenu: 'Hallel',
   roshChodesh: 'Rosh Chodesh',
   fastDays: 'Fast days',
-  dailyGratitude: 'Daily gratitude',
+  dailyGratitude: 'Gratitude',
+  tefillinReminder: 'Tefillin',
   daveningYaalehVyavo: "Yaaleh V'Yavo",
   daveningAlHanissim: 'Al HaNisim',
   daveningMashivVtenTal: "Mashiv HaRuach & V'ten Tal",
@@ -109,6 +118,7 @@ const DAVENING_ADDONS: {
 
 const TEXT_SIZES = ['xsmall', 'small', 'medium', 'large'] as const;
 const SHEKIYA_MINUTES = [5, 10, 15, 20, 25, 30, 45, 60];
+const TEFILLIN_SHEKIYA_MINUTES = [15, 30, 45, 60, 90, 120];
 
 /** Small value button shown before a switch (reminder time). */
 const TimePill: React.FC<{ text: string; onPress: () => void; label: string }> = ({ text, onPress, label }) => {
@@ -176,6 +186,7 @@ export const SettingsScreen: React.FC = () => {
   const scrollViewRef = useRef<ScrollView>(null);
   const shabbosAlarmBlockRef = useRef<View>(null);
   const gratitudeBlockRef = useRef<View>(null);
+  const tefillinReminderBlockRef = useRef<View>(null);
   const [reminderMenuId, setReminderMenuId] = useState<string | null>(null);
   const [timePickerFor, setTimePickerFor] = useState<TimePickerKind | null>(null);
   const [daveningAddOnsExpanded, setDaveningAddOnsExpanded] = useState(false);
@@ -188,6 +199,8 @@ export const SettingsScreen: React.FC = () => {
   const [timePickerValue, setTimePickerValue] = useState('');
   const [pickerDate, setPickerDate] = useState(() => new Date());
   const [shekiyaMinutesPickerOpen, setShekiyaMinutesPickerOpen] = useState(false);
+  const [tefillinTimingPickerOpen, setTefillinTimingPickerOpen] = useState(false);
+  const [tefillinShekiyaMinutesPickerOpen, setTefillinShekiyaMinutesPickerOpen] = useState(false);
   /** Shabbos alarm ring duration (sliders) — local until saved onSlidingComplete */
   const [shabbosRingMin, setShabbosRingMin] = useState(1);
   const [shabbosRingSec, setShabbosRingSec] = useState(0);
@@ -252,6 +265,7 @@ export const SettingsScreen: React.FC = () => {
     else if (which === 'roshChodesh') initial = formatTehillimTimeForDisplay(n.roshChodeshTime || '08:00');
     else if (which === 'fastDays') initial = formatTehillimTimeForDisplay(n.fastDaysTime || '08:00');
     else if (which === 'dailyGratitude') initial = formatTehillimTimeForDisplay(n.dailyGratitudeTime || '20:00');
+    else if (which === 'tefillinReminder') initial = formatTehillimTimeForDisplay(n.tefillinReminderTime || '07:00');
     else if (which === 'daveningYaalehVyavo') initial = formatTehillimTimeForDisplay(n.daveningAddOnsYaalehVyavoTime ?? '08:00');
     else if (which === 'daveningAlHanissim') initial = formatTehillimTimeForDisplay(n.daveningAddOnsAlHanissimTime ?? '08:00');
     else if (which === 'daveningMashivVtenTal') initial = formatTehillimTimeForDisplay(n.daveningAddOnsMashivVtenTalTime ?? '08:00');
@@ -273,6 +287,7 @@ export const SettingsScreen: React.FC = () => {
       roshChodesh: 'roshChodeshTime',
       fastDays: 'fastDaysTime',
       dailyGratitude: 'dailyGratitudeTime',
+      tefillinReminder: 'tefillinReminderTime',
       daveningYaalehVyavo: 'daveningAddOnsYaalehVyavoTime',
       daveningAlHanissim: 'daveningAddOnsAlHanissimTime',
       daveningMashivVtenTal: 'daveningAddOnsMashivVtenTalTime',
@@ -351,6 +366,11 @@ export const SettingsScreen: React.FC = () => {
       return () => clearTimeout(t);
     }
 
+    if (st === 'tefillinReminder') {
+      const t = setTimeout(() => scrollToBlock(tefillinReminderBlockRef.current, 420), 400);
+      return () => clearTimeout(t);
+    }
+
     if (st === 'shabbosAlarm') {
       const t = setTimeout(() => scrollToBlock(shabbosAlarmBlockRef.current, 960), 500);
       return () => clearTimeout(t);
@@ -414,6 +434,21 @@ export const SettingsScreen: React.FC = () => {
     await updateNotificationPreference('enabled', value);
   };
 
+  /** Standalone reminders (Shabbos, Tefillin, Tehillim, Gratitude) work even when master is off. */
+  const onStandaloneReminderChange = async (
+    key: keyof NotificationPreferences,
+    value: boolean
+  ) => {
+    if (value) {
+      const granted = await NotificationService.requestPermissions();
+      if (!granted) {
+        promptNotificationsDenied();
+        return;
+      }
+    }
+    await updateNotificationPreference(key, value);
+  };
+
   const updateNotificationPreference = async (
     key: keyof NotificationPreferences,
     value: boolean | string | number
@@ -455,14 +490,7 @@ export const SettingsScreen: React.FC = () => {
   };
 
   const onShabbosClockEnabledChange = async (value: boolean) => {
-    if (value) {
-      const granted = await NotificationService.requestPermissions();
-      if (!granted) {
-        promptNotificationsDenied();
-        return;
-      }
-    }
-    await updateNotificationPreference('shabbosClockEnabled', value);
+    await onStandaloneReminderChange('shabbosClockEnabled', value);
   };
 
   const updateDisplayPreference = async (
@@ -607,6 +635,7 @@ export const SettingsScreen: React.FC = () => {
     fallback: string,
     kind: TimePickerKind,
     title: string,
+    options?: { standalone?: boolean },
   ) => {
     const n = preferences!.notifications;
     const enabled = Boolean(n[enabledKey]);
@@ -614,7 +643,11 @@ export const SettingsScreen: React.FC = () => {
       <ToggleRow
         title={title}
         value={enabled}
-        onValueChange={(v) => updateNotificationPreference(enabledKey, v)}
+        onValueChange={(v) =>
+          options?.standalone
+            ? onStandaloneReminderChange(enabledKey, v)
+            : updateNotificationPreference(enabledKey, v)
+        }
       >
         {enabled ? (
           <ValueRow
@@ -691,6 +724,15 @@ export const SettingsScreen: React.FC = () => {
         {/* ============ NOTIFICATIONS TAB ============ */}
         {activeTab === 'notifications' && (
         <>
+            <Section title="Reminders">
+              <ToggleRow
+                title="Enable notifications"
+                subtitle="Prayer and calendar reminders. Does not control Shabbos alarm, Tefillin, Tehillim or Gratitude."
+                value={n.enabled}
+                  onValueChange={(value) => onNotificationsEnabledChange(value)}
+              />
+            </Section>
+
             <View ref={shabbosAlarmBlockRef} collapsable={false}>
               <Section
                 title="Shabbos alarm"
@@ -753,14 +795,56 @@ export const SettingsScreen: React.FC = () => {
               </Section>
             </View>
 
-            <Section title="Reminders">
-              <ToggleRow
-                title="Enable notifications"
-                subtitle="Turn all reminders on or off"
-                value={n.enabled}
-                  onValueChange={(value) => onNotificationsEnabledChange(value)}
-              />
+            <View ref={tefillinReminderBlockRef} collapsable={false}>
+              <Section title="Tefillin">
+                <ToggleRow
+                  title="Tefillin reminder"
+                  subtitle="Morning weekday reminder"
+                  value={Boolean(n.tefillinReminder)}
+                  onValueChange={(value) => onStandaloneReminderChange('tefillinReminder', value)}
+                >
+                  {n.tefillinReminder ? (
+                    <>
+                      <ValueRow
+                        nested
+                        label="Timing"
+                        value={
+                          (n.tefillinReminderMode ?? 'fixed') === 'beforeShekiya'
+                            ? 'Before shekiya'
+                            : 'At a set time'
+                        }
+                        onPress={() => setTefillinTimingPickerOpen(true)}
+                      />
+                      {(n.tefillinReminderMode ?? 'fixed') === 'beforeShekiya' ? (
+                        <ValueRow
+                          nested
+                          label="Remind me"
+                          value={`${n.tefillinReminderMinutesBeforeShekiya ?? 30} min before shekiya`}
+                          onPress={() => setTefillinShekiyaMinutesPickerOpen(true)}
+                        />
+                      ) : (
+                        <ValueRow
+                          nested
+                          label="Remind me at"
+                          value={formatTehillimTimeForDisplay(n.tefillinReminderTime || '07:00')}
+                          onPress={() => openTimePicker('tefillinReminder')}
+                        />
+                      )}
+                    </>
+                  ) : null}
+                </ToggleRow>
+              </Section>
+            </View>
+
+            <Section title="Tehillim">
+              {timedToggle('dailyTehillim', 'dailyTehillimTime', '09:00', 'tehillim', 'Tehillim', { standalone: true })}
             </Section>
+
+            <View ref={gratitudeBlockRef} collapsable={false}>
+              <Section title="Gratitude">
+                {timedToggle('dailyGratitude', 'dailyGratitudeTime', '20:00', 'dailyGratitude', 'Gratitude', { standalone: true })}
+              </Section>
+            </View>
 
             {n.enabled && (
               <>
@@ -786,13 +870,6 @@ export const SettingsScreen: React.FC = () => {
                       </ToggleRow>
                     );
                   })}
-                </Section>
-
-                <Section title="Daily reminders" footer="Tehillim and gratitude">
-                  {timedToggle('dailyTehillim', 'dailyTehillimTime', '09:00', 'tehillim', 'Daily Tehillim')}
-                  <View ref={gratitudeBlockRef} collapsable={false}>
-                    {timedToggle('dailyGratitude', 'dailyGratitudeTime', '20:00', 'dailyGratitude', 'Daily gratitude')}
-                      </View>
                 </Section>
 
                 <Section title="Shabbos and zmanim" footer="Candle lighting, sunset and Shabbos prep">
@@ -921,14 +998,38 @@ export const SettingsScreen: React.FC = () => {
                 subtitle="Ashkenaz"
                 titleStyle={hebrewBody}
                 selected={preferences.nusach === 'ashkenaz'}
-              onPress={() => UserPreferencesService.setNusach('ashkenaz').then(loadPreferences)}
+              onPress={() => {
+                void (async () => {
+                  await UserPreferencesService.setNusach('ashkenaz');
+                  trackProduct(PRODUCT_EVENTS.NUSACH_CHANGED, 'settings', {
+                    nusach: 'ashkenaz',
+                    source: 'settings',
+                  });
+                  await setUserProfile({ nusach: 'ashkenaz' });
+                  const anonymousId = await getAnonymousId();
+                  await syncProfileToBackend(anonymousId, { nusach: 'ashkenaz' });
+                  await loadPreferences();
+                })();
+              }}
               />
               <CheckRow
                 title="ספרד"
                 subtitle="Sfard"
                 titleStyle={hebrewBody}
                 selected={preferences.nusach === 'sfard'}
-              onPress={() => UserPreferencesService.setNusach('sfard').then(loadPreferences)}
+              onPress={() => {
+                void (async () => {
+                  await UserPreferencesService.setNusach('sfard');
+                  trackProduct(PRODUCT_EVENTS.NUSACH_CHANGED, 'settings', {
+                    nusach: 'sfard',
+                    source: 'settings',
+                  });
+                  await setUserProfile({ nusach: 'sfard' });
+                  const anonymousId = await getAnonymousId();
+                  await syncProfileToBackend(anonymousId, { nusach: 'sfard' });
+                  await loadPreferences();
+                })();
+              }}
               />
             </Section>
 
@@ -1208,6 +1309,62 @@ export const SettingsScreen: React.FC = () => {
             />
               ))}
             </View>
+      </SheetModal>
+
+      {/* Tefillin: timing mode */}
+      <SheetModal
+        visible={tefillinTimingPickerOpen}
+        title="Tefillin timing"
+        onClose={() => setTefillinTimingPickerOpen(false)}
+      >
+        <CheckRow
+          title="At a set time"
+          subtitle="Same clock time each weekday"
+          selected={(preferences.notifications.tefillinReminderMode ?? 'fixed') === 'fixed'}
+          onPress={async () => {
+            await updateNotificationPreference('tefillinReminderMode', 'fixed');
+            setTefillinTimingPickerOpen(false);
+          }}
+        />
+        <Hairline />
+        <CheckRow
+          title="Before shekiya"
+          subtitle="Based on sunset for your location"
+          selected={preferences.notifications.tefillinReminderMode === 'beforeShekiya'}
+          onPress={async () => {
+            await updateNotificationPreference('tefillinReminderMode', 'beforeShekiya');
+            setTefillinTimingPickerOpen(false);
+          }}
+        />
+      </SheetModal>
+
+      {/* Tefillin: minutes before shekiya */}
+      <SheetModal
+        visible={tefillinShekiyaMinutesPickerOpen}
+        title="Before shekiya"
+        onClose={() => setTefillinShekiyaMinutesPickerOpen(false)}
+      >
+        <Text
+          style={[
+            type.textStyles.bodySmall,
+            { color: theme.colors.text.secondary, textAlign: 'center', marginBottom: spacing.md },
+          ]}
+        >
+          Minutes before sunset
+        </Text>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center' }}>
+          {TEFILLIN_SHEKIYA_MINUTES.map((mins) => (
+            <Chip
+              key={mins}
+              label={`${mins} min`}
+              selected={(preferences.notifications.tefillinReminderMinutesBeforeShekiya ?? 30) === mins}
+              onPress={async () => {
+                await updateNotificationPreference('tefillinReminderMinutesBeforeShekiya', mins);
+                setTefillinShekiyaMinutesPickerOpen(false);
+              }}
+            />
+          ))}
+        </View>
       </SheetModal>
     </Screen>
   );
