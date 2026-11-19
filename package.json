@@ -1,6 +1,6 @@
 {
   "name": "siddur",
-  "version": "1.8.3",
+  "version": "2.0.1",
   "main": "expo/AppEntry.js",
   "scripts": {
     "start": "expo start --tunnel",
@@ -14,7 +14,8 @@
     "build:maariv-offline": "node scripts/build-maariv-offline.mjs --nusach=both",
     "build:standalone-offline": "node scripts/build-standalone-offline.mjs --nusach=both",
     "build:tehillim-offline": "node scripts/build-tehillim-offline.mjs",
-    "test:sefaria": "node scripts/test-sefaria-api.mjs"
+    "test:sefaria": "node scripts/test-sefaria-api.mjs",
+    "content-editor": "node tools/content-editor/server.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/cormorant-garamond": "^0.4.1",
@@ -42,6 +43,7 @@
     "expo-status-bar": "~58.0.4",
     "expo-symbols": "~58.0.4",
     "expo-updates": "~58.0.21",
+    "magvar": "^2.2.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.1",
@@ -58,7 +60,6 @@
     "@babel/core": "^7.29.7",
     "@types/react": "~19.3.0",
     "babel-preset-expo": "~58.0.0",
-    "sharp": "^0.34.5",
     "typescript": "~6.0.3"
   },
   "private": true

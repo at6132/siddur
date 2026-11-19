@@ -3,9 +3,10 @@
  * variant="apple" = large Apple Compass–style dial for modal
  * variant="compact" = small arrow (legacy)
  *
- * Uses GPS to compute the great-circle bearing to the Kotel / Temple Mount,
- * expo-location watchHeadingAsync (prefer trueHeading) when available,
- * Heading uses Location.watchHeadingAsync when When-In-Use location is already granted.
+ * GPS → great-circle bearing to the Kotel / Temple Mount (true/geographic).
+ * Device heading is converted to true north (magHeading + WMM declination) so
+ * the dial matches Apple Compass with “Use True North”. Dial tracks 1:1 on the
+ * short arc (no full spin when crossing north).
  */
 
 import React, { useEffect, useState, useRef, useCallback, useId } from 'react';
@@ -34,6 +35,10 @@ import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { LOCATION_REQUIRED_MESSAGE, LOCATION_TIME_PLACEHOLDER, requestLocationFromUser } from '../../src/services/LocationAccess';
+import {
+  getMagneticDeclination,
+  magneticToTrueHeading,
+} from '../../src/services/magneticDeclination';
 
 const COMPACT_SIZE = 100;
 const APPLE_SIZE = 300;
@@ -88,6 +93,44 @@ function getTurnToJerusalem(heading: number, jerusalemBearing: number): number {
   return ((jerusalemBearing - heading + 540) % 360) - 180;
 }
 
+/** Normalize to [0, 360) */
+function normalizeDeg(deg: number): number {
+  return ((deg % 360) + 360) % 360;
+}
+
+/**
+ * Advance a continuous rotation so it takes the short arc to `targetDeg`
+ * (matches Apple Compass — no full spin when crossing north).
+ */
+function shortestRotationToward(current: number, targetDeg: number): number {
+  const delta =
+    ((normalizeDeg(targetDeg) - normalizeDeg(current) + 540) % 360) - 180;
+  return current + delta;
+}
+
+/**
+ * True-north heading to match Apple Compass with “Use True North”.
+ *
+ * 1) Core Location trueHeading when valid (same source as Apple)
+ * 2) Else magHeading + WMM declination (Expo often leaves trueHeading at -1)
+ * 3) Else raw magnetic (last resort)
+ */
+function pickTrueHeading(
+  trueHeading: number,
+  magHeading: number,
+  declination: number | null
+): number | null {
+  const trueOk = typeof trueHeading === 'number' && trueHeading >= 0;
+  if (trueOk) return normalizeDeg(trueHeading);
+
+  const magOk = typeof magHeading === 'number' && Number.isFinite(magHeading);
+  if (magOk && declination != null) {
+    return normalizeDeg(magneticToTrueHeading(magHeading, declination));
+  }
+  if (magOk) return normalizeDeg(magHeading);
+  return null;
+}
+
 // ---- Apple-style compass (large modal) ----
 const APPLE_R = APPLE_SIZE / 2;
 const TICK_R = APPLE_R - 18;
@@ -108,10 +151,12 @@ function AppleCompassFace({
   theme: ReturnType<typeof useTheme>['theme'];
 }) {
   const gradId = useId().replace(/:/g, '');
+  // Continuous unwrapped degrees so updates never take the long way past 0°/360°
   const rotation = useSharedValue(-heading);
   useEffect(() => {
-    rotation.value = withSpring(-heading, { damping: 22, stiffness: 120 });
-  }, [heading]);
+    // Near 1:1 with device motion (Apple Compass feel) — short arc only
+    rotation.value = shortestRotationToward(rotation.value, -normalizeDeg(heading));
+  }, [heading, rotation]);
 
   const rotateStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
@@ -159,9 +204,11 @@ function AppleCompassFace({
 
   return (
     <View
+      // Compass geometry is LTR even inside Hebrew screens
       style={[
         appleStyles.sheet,
         {
+          direction: 'ltr',
           borderColor: theme.isDark ? 'rgba(255,255,255,0.12)' : 'rgba(212,165,184,0.35)',
           shadowColor: theme.colors.shadow.dark,
           ...(Platform.OS === 'android'
@@ -331,11 +378,11 @@ function AppleCompassFace({
               ? 'Turn right'
               : 'Turn left'}
         </Text>
-        {bearingReady && (
-          <Text style={[appleStyles.readoutMeta, { color: theme.colors.text.tertiary }]}>
-            Yerushalayim at {Math.round(jerusalemBearing)}° from north
-          </Text>
-        )}
+        <Text style={[appleStyles.readoutMeta, { color: theme.colors.text.tertiary }]}>
+          {bearingReady
+            ? `True north ${Math.round(heading)}° · Yerushalayim ${Math.round(jerusalemBearing)}°`
+            : `True north ${Math.round(heading)}°`}
+        </Text>
       </View>
       {onClose && (
         <TouchableOpacity
@@ -487,6 +534,13 @@ export const MizrachCompass: React.FC<{
   const entranceScale = useSharedValue(0.85);
   const entranceOpacity = useSharedValue(0);
   const jerusalemBearingRef = useRef(DEFAULT_JERUSALEM_BEARING);
+  const declinationRef = useRef<number | null>(null);
+  const lastAccuracyRef = useRef(0);
+
+  const updateDeclination = useCallback((latitude: number, longitude: number) => {
+    const decl = getMagneticDeclination(latitude, longitude);
+    if (decl != null) declinationRef.current = decl;
+  }, []);
 
   useEffect(() => {
     if (available && variant === 'compact') {
@@ -496,30 +550,22 @@ export const MizrachCompass: React.FC<{
   }, [available, variant]);
 
   const applyHeading = useCallback((degrees: number) => {
-    const h = (degrees + 360) % 360;
+    const h = normalizeDeg(degrees);
     setHeading(h);
-    const rot = getMizrachRotation(h, jerusalemBearingRef.current);
-    arrowRotation.value = withSpring(rot, {
-      damping: 15,
-      stiffness: 100,
-      mass: 0.5,
-    });
-  }, []);
+    const rotTarget = getMizrachRotation(h, jerusalemBearingRef.current);
+    arrowRotation.value = shortestRotationToward(arrowRotation.value, rotTarget);
+  }, [arrowRotation]);
 
   const setTargetBearing = useCallback(
     (bearing: number) => {
-      const b = (bearing + 360) % 360;
+      const b = normalizeDeg(bearing);
       jerusalemBearingRef.current = b;
       setJerusalemBearing(b);
       setBearingReady(true);
       // Refresh arrow for compact variant with new target
       setHeading((h) => {
-        const rot = getMizrachRotation(h, b);
-        arrowRotation.value = withSpring(rot, {
-          damping: 15,
-          stiffness: 100,
-          mass: 0.5,
-        });
+        const rotTarget = getMizrachRotation(h, b);
+        arrowRotation.value = shortestRotationToward(arrowRotation.value, rotTarget);
         return h;
       });
     },
@@ -527,24 +573,12 @@ export const MizrachCompass: React.FC<{
   );
 
   const resolveJerusalemBearing = useCallback(async (): Promise<void> => {
-    // Prefer live GPS, then stored prefs location
-    try {
-      if (Platform.OS !== 'web') {
-        const { status } = await Location.getForegroundPermissionsAsync();
-        if (status === 'granted') {
-          const pos = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
-          setTargetBearing(
-            getBearingToJerusalem(pos.coords.latitude, pos.coords.longitude)
-          );
-          return;
-        }
-      }
-    } catch {
-      // fall through to prefs
-    }
+    const applyCoords = (latitude: number, longitude: number) => {
+      updateDeclination(latitude, longitude);
+      setTargetBearing(getBearingToJerusalem(latitude, longitude));
+    };
 
+    // Prefs first so declination is ready before the first heading frame
     try {
       const prefs = await UserPreferencesService.getPreferences();
       const loc = prefs?.location;
@@ -553,12 +587,32 @@ export const MizrachCompass: React.FC<{
         typeof loc.latitude === 'number' &&
         typeof loc.longitude === 'number'
       ) {
-        setTargetBearing(getBearingToJerusalem(loc.latitude, loc.longitude));
+        applyCoords(loc.latitude, loc.longitude);
       }
     } catch {
-      // keep default east
+      // continue to GPS
     }
-  }, [setTargetBearing]);
+
+    try {
+      if (Platform.OS !== 'web') {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const last = await Location.getLastKnownPositionAsync({
+            maxAge: 1000 * 60 * 30,
+          });
+          if (last) {
+            applyCoords(last.coords.latitude, last.coords.longitude);
+          }
+          const pos = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          applyCoords(pos.coords.latitude, pos.coords.longitude);
+        }
+      }
+    } catch {
+      // keep prefs / default
+    }
+  }, [setTargetBearing, updateDeclination]);
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -569,7 +623,10 @@ export const MizrachCompass: React.FC<{
     }
 
     let mounted = true;
-    let locationSub: { remove: () => void } | null = null;
+    let headingSub: { remove: () => void } | null = null;
+    let positionSub: { remove: () => void } | null = null;
+    lastAccuracyRef.current = 0;
+    declinationRef.current = null;
 
     (async () => {
       try {
@@ -584,18 +641,45 @@ export const MizrachCompass: React.FC<{
         setLocationBlocked(false);
         setAvailable(true);
 
-        // GPS for Jerusalem bearing (once is enough; direction changes negligibly while standing)
+        // Jerusalem bearing + WMM declination before first heading tick
         await resolveJerusalemBearing();
         if (!mounted) return;
 
-        locationSub = await Location.watchHeadingAsync(({ trueHeading, magHeading }) => {
+        try {
+          positionSub = await Location.watchPositionAsync(
+            {
+              accuracy: Location.Accuracy.Balanced,
+              distanceInterval: 50,
+              timeInterval: 15_000,
+            },
+            (pos) => {
+              if (!mounted) return;
+              updateDeclination(pos.coords.latitude, pos.coords.longitude);
+            }
+          );
+        } catch {
+          // Heading still works via mag + last declination / trueHeading
+        }
+        if (!mounted) {
+          positionSub?.remove();
+          return;
+        }
+
+        headingSub = await Location.watchHeadingAsync(({ trueHeading, magHeading, accuracy }) => {
           if (!mounted) return;
-          // Prefer true heading (matches geographic bearing); fall back to magnetic
-          const h =
-            typeof trueHeading === 'number' && trueHeading >= 0
-              ? trueHeading
-              : magHeading;
-          applyHeading(h);
+
+          if (typeof accuracy === 'number') {
+            if (accuracy <= 0 && lastAccuracyRef.current > 0) return;
+            if (accuracy > 0) lastAccuracyRef.current = accuracy;
+          }
+
+          const picked = pickTrueHeading(
+            trueHeading,
+            magHeading,
+            declinationRef.current
+          );
+          if (picked == null) return;
+          applyHeading(picked);
         });
       } catch {
         if (!mounted) return;
@@ -606,9 +690,10 @@ export const MizrachCompass: React.FC<{
 
     return () => {
       mounted = false;
-      locationSub?.remove();
+      headingSub?.remove();
+      positionSub?.remove();
     };
-  }, [variant, applyHeading, resolveJerusalemBearing, watchNonce]);
+  }, [variant, applyHeading, resolveJerusalemBearing, updateDeclination, watchNonce]);
 
   const handleAllowLocation = async () => {
     const granted = await requestLocationFromUser();
