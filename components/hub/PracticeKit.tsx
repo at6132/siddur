@@ -36,22 +36,34 @@ export function PracticeHeader({ title, subtitle, onBack, backLabel, action }: P
 
   return (
     <View style={{ paddingBottom: spacing.md }}>
-      {onBack || action ? (
-        <View style={[styles.topRow, { minHeight: MIN_TARGET }]}>
-          {onBack ? <BackButton onPress={onBack} label={backLabel} /> : <View />}
-          {action}
+      {onBack ? (
+        <View style={{ minHeight: MIN_TARGET, justifyContent: 'center' }}>
+          <BackButton onPress={onBack} label={backLabel} />
         </View>
       ) : null}
-      {title ? (
-        <Text
-          accessibilityRole="header"
+      {title || action ? (
+        <View
           style={[
-            type.textStyles.h2,
-            { color: theme.colors.text.primary, marginTop: onBack || action ? spacing.xs : 0 },
+            styles.titleRow,
+            { marginTop: onBack ? spacing.xs : 0, gap: spacing.sm },
           ]}
         >
-          {title}
-        </Text>
+          {title ? (
+            <Text
+              accessibilityRole="header"
+              numberOfLines={2}
+              style={[
+                type.textStyles.h2,
+                { color: theme.colors.text.primary, flex: 1, flexShrink: 1 },
+              ]}
+            >
+              {title}
+            </Text>
+          ) : (
+            <View style={{ flex: 1 }} />
+          )}
+          {action}
+        </View>
       ) : null}
       {subtitle ? (
         <Text
@@ -150,7 +162,7 @@ export function InlineError({ message }: { message: string }) {
 }
 
 const styles = StyleSheet.create({
-  topRow: {
+  titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

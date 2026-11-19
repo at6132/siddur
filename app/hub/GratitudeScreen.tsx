@@ -2,11 +2,17 @@
  * Daily Gratitude – journal entries by date. Add is the single primary action.
  */
 
-import React, { useState, useCallback } from 'react';
-import { View, Text } from 'react-native';
+import React, { useState, useCallback, useRef } from 'react';
+import { View, Text, Pressable } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { Screen, Section, ListRow, GlassButton, EmptyState } from '../../components/ui';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import Swipeable, {
+  type SwipeableMethods,
+} from 'react-native-gesture-handler/ReanimatedSwipeable';
+import { Screen, Section, ListRow, GlassButton } from '../../components/ui';
 import { PracticeHeader } from '../../components/hub/PracticeKit';
+import { IconButton } from '../../components/settings/SettingsKit';
 import { useTheme } from '../../src/design/theme';
 import { GratitudeTracker, type GratitudeEntry } from '../../src/storage/GratitudeTracker';
 
@@ -22,6 +28,7 @@ export const GratitudeScreen: React.FC = () => {
   const [entries, setEntries] = useState<GratitudeEntry[]>([]);
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
+  const swipeableRefs = useRef(new Map<string, SwipeableMethods>());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -37,6 +44,23 @@ export const GratitudeScreen: React.FC = () => {
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   const goAdd = () => (navigation as any).navigate('AddGratitude');
+
+  const handleDelete = useCallback(async (id: string) => {
+    try {
+      await GratitudeTracker.deleteEntry(id);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const [all, streakCount] = await Promise.all([
+        GratitudeTracker.getAllEntries(),
+        GratitudeTracker.getStreak(),
+      ]);
+      setEntries(all);
+      setStreak(streakCount);
+      swipeableRefs.current.delete(id);
+    } catch (e) {
+      console.warn('Gratitude delete error:', e);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    }
+  }, []);
 
   return (
     <Screen
@@ -62,34 +86,101 @@ export const GratitudeScreen: React.FC = () => {
         />
       </Section>
 
-      {entries.length === 0 ? (
-        <EmptyState
-          title="No entries yet"
-          message="Write one thing you are thankful for today."
-          action={<GlassButton title="Add entry" onPress={goAdd} />}
-        />
-      ) : (
-        <Section title="Entries">
-          {entries.map((entry) => (
-            <View
-              key={entry.id}
-              style={{ paddingVertical: spacing.md, paddingHorizontal: spacing.md }}
+      <Section
+        title="Entries"
+        titleRight={
+          <IconButton
+            name="add"
+            label="Add gratitude entry"
+            tone="primary"
+            size={type.fontSize.xl}
+            onPress={goAdd}
+            style={{ marginVertical: -spacing.sm, marginRight: -spacing.xs }}
+          />
+        }
+        footer={entries.length > 0 ? 'Swipe an entry left to delete it.' : undefined}
+      >
+        {entries.length === 0 ? (
+          <View style={{ paddingVertical: spacing.lg, paddingHorizontal: spacing.md }}>
+            <Text style={[type.textStyles.body, { color: theme.colors.text.primary }]}>
+              No entries yet
+            </Text>
+            <Text
+              style={[
+                type.textStyles.caption,
+                { color: theme.colors.text.secondary, marginTop: spacing['2xs'] },
+              ]}
             >
-              <Text style={[type.textStyles.caption, { color: theme.colors.text.secondary }]}>
-                {formatDate(entry.date)}
-              </Text>
-              <Text
-                style={[
-                  type.textStyles.body,
-                  { color: theme.colors.text.primary, marginTop: spacing['2xs'] },
-                ]}
+              Write one thing you are thankful for today.
+            </Text>
+          </View>
+        ) : (
+          entries.map((entry) => (
+            <Swipeable
+              key={entry.id}
+              friction={2}
+              rightThreshold={40}
+              overshootRight={false}
+              onSwipeableWillOpen={() => {
+                swipeableRefs.current.forEach((methods, id) => {
+                  if (id !== entry.id) methods.close();
+                });
+              }}
+              renderRightActions={(_progress, _translation, methods) => {
+                swipeableRefs.current.set(entry.id, methods);
+                return (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete gratitude entry"
+                    onPress={() => {
+                      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                      methods.close();
+                      void handleDelete(entry.id);
+                    }}
+                    style={{
+                      backgroundColor: theme.colors.semantic.error,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      minWidth: 88,
+                      paddingHorizontal: spacing.md,
+                    }}
+                  >
+                    <Ionicons name="trash-outline" size={type.fontSize.xl} color={theme.colors.text.inverse} />
+                    <Text
+                      style={[
+                        type.textStyles.caption,
+                        { color: theme.colors.text.inverse, marginTop: spacing['2xs'] },
+                      ]}
+                    >
+                      Delete
+                    </Text>
+                  </Pressable>
+                );
+              }}
+            >
+              <View
+                style={{
+                  backgroundColor: theme.colors.background.primary,
+                  paddingVertical: spacing.md,
+                  paddingHorizontal: spacing.md,
+                }}
               >
-                {entry.text}
-              </Text>
-            </View>
-          ))}
-        </Section>
-      )}
+                <Text style={[type.textStyles.caption, { color: theme.colors.text.secondary }]}>
+                  {formatDate(entry.date)}
+                </Text>
+                <Text
+                  style={[
+                    type.textStyles.body,
+                    { color: theme.colors.text.primary, marginTop: spacing['2xs'] },
+                  ]}
+                >
+                  {entry.text}
+                </Text>
+              </View>
+            </Swipeable>
+          ))
+        )}
+      </Section>
     </Screen>
   );
 };

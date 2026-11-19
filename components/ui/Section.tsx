@@ -4,6 +4,8 @@ import { useTheme } from '../../src/design/theme';
 
 export interface SectionProps {
   title?: string;
+  /** Trailing control on the title row (for example a small plus). */
+  titleRight?: ReactNode;
   footer?: string;
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -15,28 +17,44 @@ export interface SectionProps {
  * Grouped inset section — title + rows with hairlines.
  * Prefer this over stacked white shadowed cards.
  */
-export function Section({ title, footer, children, style, separators = true }: SectionProps) {
+export function Section({ title, titleRight, footer, children, style, separators = true }: SectionProps) {
   const { theme } = useTheme();
   const { spacing, radii, type } = theme.tokens;
   const items = Children.toArray(children).filter(Boolean);
 
   return (
     <View style={[{ marginBottom: spacing.lg }, style]}>
-      {title ? (
-        <Text
-          style={[
-            type.textStyles.caption,
-            {
-              color: theme.colors.text.secondary,
-              textTransform: 'uppercase',
-              letterSpacing: type.letterSpacing.wider,
-              marginBottom: spacing.sm,
-              marginHorizontal: spacing.sm,
-            },
-          ]}
+      {title || titleRight ? (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: spacing.sm,
+            marginHorizontal: spacing.sm,
+            minHeight: titleRight ? 44 : undefined,
+          }}
         >
-          {title}
-        </Text>
+          {title ? (
+            <Text
+              style={[
+                type.textStyles.caption,
+                {
+                  color: theme.colors.text.secondary,
+                  textTransform: 'uppercase',
+                  letterSpacing: type.letterSpacing.wider,
+                  flex: 1,
+                  flexShrink: 1,
+                },
+              ]}
+            >
+              {title}
+            </Text>
+          ) : (
+            <View style={{ flex: 1 }} />
+          )}
+          {titleRight}
+        </View>
       ) : null}
 
       <View

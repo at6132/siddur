@@ -1,99 +1,132 @@
 /**
- * Satisfying progress: ring-style bar that fills with spring + "ping" at 100%.
- * Feels way better than Notes.
+ * Full-width daily goals progress track. Fill is always relative to the bar,
+ * not the goal count layout — so 1 goal or 20 goals looks the same width.
  */
 
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, type LayoutChangeEvent } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
-  withSequence,
-  withDelay,
-  Easing,
   withTiming,
+  Easing,
+  useReducedMotion,
 } from 'react-native-reanimated';
-import { colors } from '../../src/design/colors';
-import { fonts } from '../../src/design/typography';
-
-const springConfig = { damping: 18, stiffness: 90 };
-const SIZE = 56;
-const TRACK_WIDTH = SIZE * 2.2;
+import { useTheme } from '../../src/design/theme';
 
 export const GoalProgressRing: React.FC<{
   completed: number;
   total: number;
-  size?: number;
-}> = ({ completed, total, size = SIZE }) => {
-  const fillWidth = useSharedValue(0);
-  const scale = useSharedValue(1);
-  const labelScale = useSharedValue(1);
+}> = ({ completed, total }) => {
+  const { theme } = useTheme();
+  const { colors, tokens } = theme;
+  const { spacing, type, radii } = tokens;
+  const reduceMotion = useReducedMotion();
+
+  const [trackWidth, setTrackWidth] = useState(0);
+  const progress = useSharedValue(0);
+  const trackW = useSharedValue(0);
+
+  const ratio = total > 0 ? Math.min(1, Math.max(0, completed / total)) : 0;
 
   useEffect(() => {
-    const p = total ? Math.min(1, completed / total) : 0;
-    fillWidth.value = withSpring(p, springConfig);
-    if (total > 0 && completed === total) {
-      scale.value = withSequence(
-        withSpring(1.06, { damping: 10, stiffness: 200 }),
-        withSpring(1, springConfig)
-      );
-      labelScale.value = withSequence(
-        withDelay(60, withTiming(1.12, { duration: 120, easing: Easing.out(Easing.ease) })),
-        withSpring(1, springConfig)
-      );
+    trackW.value = trackWidth;
+  }, [trackWidth, trackW]);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      progress.value = ratio;
+      return;
     }
-  }, [completed, total]);
+    progress.value = withTiming(ratio, {
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+    });
+  }, [ratio, reduceMotion, progress]);
 
-  const fillStyle = useAnimatedStyle(() => ({
-    width: fillWidth.value * TRACK_WIDTH,
-  }));
+  const onTrackLayout = (e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    if (w > 0 && Math.abs(w - trackWidth) > 0.5) {
+      setTrackWidth(w);
+    }
+  };
 
-  const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
+  const fillStyle = useAnimatedStyle(() => {
+    const w = trackW.value;
+    const width = w > 0 ? progress.value * w : 0;
+    return { width };
+  });
 
-  const labelStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: labelScale.value }],
-  }));
+  const barHeight = spacing.sm + spacing['2xs'];
 
   return (
     <View style={styles.wrap}>
-      <Animated.View style={[styles.trackWrap, ringStyle, { width: TRACK_WIDTH, height: size / 2.5, borderRadius: size / 5 }]}>
-        <View style={[styles.track, { height: size / 2.5, borderRadius: size / 5 }]}>
-          <Animated.View
-            style={[
-              styles.fill,
-              fillStyle,
-              { height: size / 2.5, borderRadius: size / 5 },
-            ]}
-          />
-        </View>
-      </Animated.View>
-      <Animated.View style={[styles.labels, labelStyle]}>
-        <Text style={styles.num}>{total ? completed : 0}</Text>
-        <Text style={styles.slash}>/</Text>
-        <Text style={styles.total}>{total}</Text>
-        <Text style={styles.done}> done</Text>
-      </Animated.View>
+      <View style={[styles.labelRow, { marginBottom: spacing.sm }]}>
+        <Text style={[type.textStyles.h3, { color: colors.primary.dark }]}>
+          {completed}
+        </Text>
+        <Text
+          style={[
+            type.textStyles.bodySmall,
+            { color: colors.text.tertiary, marginHorizontal: spacing.xs },
+          ]}
+        >
+          /
+        </Text>
+        <Text style={[type.textStyles.body, { color: colors.text.secondary }]}>
+          {total}
+        </Text>
+        <Text
+          style={[
+            type.textStyles.bodySmall,
+            { color: colors.text.tertiary, marginLeft: spacing.xs },
+          ]}
+        >
+          done
+        </Text>
+      </View>
+
+      <View
+        onLayout={onTrackLayout}
+        style={[
+          styles.track,
+          {
+            height: barHeight,
+            borderRadius: radii.full,
+            backgroundColor: colors.primary.light,
+          },
+        ]}
+      >
+        <Animated.View
+          style={[
+            styles.fill,
+            fillStyle,
+            {
+              height: barHeight,
+              borderRadius: radii.full,
+              backgroundColor: colors.primary.main,
+            },
+          ]}
+        />
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  wrap: { alignItems: 'center' },
-  trackWrap: { overflow: 'hidden', marginBottom: 8 },
+  wrap: {
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+  },
   track: {
-    width: TRACK_WIDTH,
-    backgroundColor: colors.primary.light,
+    width: '100%',
     overflow: 'hidden',
   },
   fill: {
-    backgroundColor: colors.primary.main,
+    alignSelf: 'flex-start',
   },
-  labels: { flexDirection: 'row', alignItems: 'baseline' },
-  num: { fontFamily: fonts.heading.bold, fontSize: 22, color: colors.primary.dark },
-  slash: { fontFamily: fonts.body.regular, fontSize: 14, color: colors.text.tertiary, marginHorizontal: 2 },
-  total: { fontFamily: fonts.body.semibold, fontSize: 14, color: colors.text.secondary },
-  done: { fontFamily: fonts.body.regular, fontSize: 13, color: colors.text.tertiary, marginLeft: 2 },
 });
