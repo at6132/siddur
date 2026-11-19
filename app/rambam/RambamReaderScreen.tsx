@@ -8,7 +8,7 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  ScrollView,
   Linking,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -70,7 +70,15 @@ export const RambamReaderScreen: React.FC = () => {
     })();
   }, []);
 
-  useAutoscroll(scrollRef, scrollYRef, contentHeightRef, viewportHeight, autoscrollPlaying, autoscrollSpeed);
+  const autoscrollHandlers = useAutoscroll(
+    scrollRef,
+    scrollYRef,
+    contentHeightRef,
+    viewportHeight,
+    autoscrollPlaying,
+    autoscrollSpeed,
+    () => setAutoscrollPlaying(false)
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -139,6 +147,10 @@ export const RambamReaderScreen: React.FC = () => {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + READER_CHROME_HEADER_HEIGHT_APPROX + spacing.md, paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
         onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+        onScrollBeginDrag={autoscrollHandlers.onScrollBeginDrag}
+        onScrollEndDrag={autoscrollHandlers.onScrollEndDrag}
+        onMomentumScrollEnd={autoscrollHandlers.onMomentumScrollEnd}
+        scrollEventThrottle={16}
         onContentSizeChange={(_, h) => { contentHeightRef.current = h; }}
       >
         {loading ? (

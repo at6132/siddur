@@ -140,11 +140,12 @@ export const HEBREW_FONT_SIZES: Record<DisplayPreferences['textSize'], number> =
   medium: 22,
   large: 26,
 };
+/** Match SiddurReader davening line heights. */
 export const HEBREW_LINE_HEIGHTS: Record<DisplayPreferences['textSize'], number> = {
-  xsmall: 26,
-  small: 32,
-  medium: 40,
-  large: 48,
+  xsmall: 28,
+  small: 34,
+  medium: 42,
+  large: 50,
 };
 
 const styles = StyleSheet.create({

@@ -8,7 +8,7 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  ScrollView,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -73,7 +73,15 @@ export const ChumashReaderScreen: React.FC = () => {
     })();
   }, []);
 
-  useAutoscroll(scrollRef, scrollYRef, contentHeightRef, viewportHeight, autoscrollPlaying, autoscrollSpeed);
+  const autoscrollHandlers = useAutoscroll(
+    scrollRef,
+    scrollYRef,
+    contentHeightRef,
+    viewportHeight,
+    autoscrollPlaying,
+    autoscrollSpeed,
+    () => setAutoscrollPlaying(false)
+  );
 
   const ref = params.ref;
   const parsha = params.parsha;
@@ -164,6 +172,10 @@ export const ChumashReaderScreen: React.FC = () => {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + READER_CHROME_HEADER_HEIGHT_APPROX + spacing.md, paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
         onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+        onScrollBeginDrag={autoscrollHandlers.onScrollBeginDrag}
+        onScrollEndDrag={autoscrollHandlers.onScrollEndDrag}
+        onMomentumScrollEnd={autoscrollHandlers.onMomentumScrollEnd}
+        scrollEventThrottle={16}
         onContentSizeChange={(_, h) => { contentHeightRef.current = h; }}
       >
         {parsha && aliyah && smProgress != null && (

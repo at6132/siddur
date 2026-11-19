@@ -41,11 +41,12 @@ const hebrewReaderFontSize: Record<HebrewReaderSize, number> = {
   large: 26,
 };
 
+/** Match SiddurReader davening line heights (nikkud-friendly with Medium). */
 const hebrewReaderLineHeight: Record<HebrewReaderSize, number> = {
-  xsmall: 26,
-  small: 32,
-  medium: 40,
-  large: 48,
+  xsmall: 28,
+  small: 34,
+  medium: 42,
+  large: 50,
 };
 
 /** RTL defaults for Hebrew liturgical blocks — never fall back to system fonts. */
