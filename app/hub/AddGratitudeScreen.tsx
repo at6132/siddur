@@ -10,6 +10,7 @@ import { Screen, GlassButton } from '../../components/ui';
 import { PracticeHeader, PracticeField, InlineError } from '../../components/hub/PracticeKit';
 import { useTheme } from '../../src/design/theme';
 import { GratitudeTracker } from '../../src/storage/GratitudeTracker';
+import { PRODUCT_EVENTS, trackProduct } from '../../src/analytics';
 
 export const AddGratitudeScreen: React.FC = () => {
   const { theme } = useTheme();
@@ -29,6 +30,9 @@ export const AddGratitudeScreen: React.FC = () => {
     setSaving(true);
     try {
       await GratitudeTracker.addEntry(text.trim());
+      trackProduct(PRODUCT_EVENTS.GRATITUDE_ADDED, 'gratitude', {
+        text_length: text.trim().length,
+      });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       (navigation as any).goBack();
     } catch (e) {

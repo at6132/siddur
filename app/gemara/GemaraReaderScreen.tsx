@@ -98,7 +98,15 @@ export const GemaraReaderScreen: React.FC = () => {
     })();
   }, []);
 
-  useAutoscroll(scrollRef, scrollYRef, contentHeightRef, viewportHeight, autoscrollPlaying, autoscrollSpeed);
+  const autoscrollHandlers = useAutoscroll(
+    scrollRef,
+    scrollYRef,
+    contentHeightRef,
+    viewportHeight,
+    autoscrollPlaying,
+    autoscrollSpeed,
+    () => setAutoscrollPlaying(false)
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -243,6 +251,10 @@ export const GemaraReaderScreen: React.FC = () => {
         contentContainerStyle={[styles.content, { paddingTop: insets.top + READER_CHROME_HEADER_HEIGHT_APPROX + spacing.md, paddingBottom: 120 }]}
         showsVerticalScrollIndicator={false}
         onScroll={(e) => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+        onScrollBeginDrag={autoscrollHandlers.onScrollBeginDrag}
+        onScrollEndDrag={autoscrollHandlers.onScrollEndDrag}
+        onMomentumScrollEnd={autoscrollHandlers.onMomentumScrollEnd}
+        scrollEventThrottle={16}
         onContentSizeChange={(_, h) => { contentHeightRef.current = h; }}
       >
         <ReaderNavRow onNext={goNextAmud} onPrev={goPrevAmud} hasNext={!!hasNextAmud} hasPrev={!!hasPrevAmud} />

@@ -29,6 +29,7 @@ import type { AppTheme } from '../../src/design/theme';
 import { colorWithAlpha } from '../../src/design/colorAlpha';
 import * as Haptics from 'expo-haptics';
 import { BrandGlassTile } from '../../components/ui/BrandGlassTile';
+import { PRODUCT_EVENTS, trackProduct } from '../../src/analytics';
 
 const { width } = Dimensions.get('window');
 const CELL_GAP = spacing.sm; // spacing between days
@@ -227,6 +228,11 @@ export const CalendarScreen: React.FC = () => {
       setSelectedDay(day);
       setSelectedDayZmanim(null);
       loadZmanimForDay(day);
+      trackProduct(PRODUCT_EVENTS.CALENDAR_DAY_OPENED, 'calendar', {
+        day_of_month: day.dayOfMonth,
+        is_today: Boolean(day.isToday),
+        hebrew_date: day.hebrewDate || null,
+      });
     }
   };
 

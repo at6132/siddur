@@ -26,6 +26,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GlassButton } from '../../components/ui/GlassButton';
 import { useTheme } from '../../src/design/theme';
 import { colorWithAlpha } from '../../src/design/colorAlpha';
+import { PRODUCT_EVENTS, trackProduct } from '../../src/analytics';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -430,7 +431,10 @@ export const IntroScreen: React.FC<IntroScreenProps> = ({ onBegin }) => {
           >
             <GlassButton
               title="Begin Your Journey"
-              onPress={onBegin}
+              onPress={() => {
+                trackProduct(PRODUCT_EVENTS.INTRO_BEGAN, 'intro', {});
+                onBegin();
+              }}
               variant="primary"
               size="lg"
             />

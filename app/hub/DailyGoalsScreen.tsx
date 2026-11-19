@@ -29,6 +29,7 @@ import { useTheme } from '../../src/design/theme';
 import { DailyGoalsService, type DailyGoalItem } from '../../src/storage/DailyGoalsService';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { SPIRITUAL_GOAL_OPTIONS } from '../../src/types/preferences';
+import { PRODUCT_EVENTS, trackProduct } from '../../src/analytics';
 
 const MIN_TARGET = 44;
 
@@ -175,6 +176,7 @@ export const DailyGoalsScreen: React.FC = () => {
     const next = await DailyGoalsService.addGoal(new Date(), t);
     setGoals(next);
     setQuickAddText('');
+    trackProduct(PRODUCT_EVENTS.GOAL_ADDED, 'daily_goals', { goal_count: next.length });
   };
 
   const handleToggle = async (goalId: string) => {
@@ -184,6 +186,12 @@ export const DailyGoalsScreen: React.FC = () => {
     const next = await DailyGoalsService.toggleGoal(new Date(), goalId);
     setGoals(next);
     const newCompleted = next.filter((g) => g.completed).length;
+    trackProduct(PRODUCT_EVENTS.GOAL_TOGGLED, 'daily_goals', {
+      completed: !wasCompleted,
+      completed_count: newCompleted,
+      total_count: next.length,
+      all_complete: next.length > 0 && newCompleted === next.length,
+    });
     if (!wasCompleted && newCompleted === next.length && next.length > 0) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setShowCelebration(true);
@@ -223,7 +231,7 @@ export const DailyGoalsScreen: React.FC = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <View style={{ alignItems: 'flex-start', marginBottom: spacing.lg, marginHorizontal: spacing.sm }}>
+          <View style={{ width: '100%', marginBottom: spacing.lg }}>
             <GoalProgressRing completed={completedCount} total={goals.length} />
           </View>
 

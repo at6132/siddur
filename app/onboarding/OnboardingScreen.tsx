@@ -5,7 +5,15 @@ import { WelcomeScreen } from './WelcomeScreen';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { useTheme } from '../../src/design/theme';
 import { Nusach } from '../../src/types/nusach';
-import { track, ONBOARDING_EVENTS } from '../../src/analytics';
+import {
+  track,
+  ONBOARDING_EVENTS,
+  PRODUCT_EVENTS,
+  getAnonymousId,
+  setUserProfile,
+  syncProfileToBackend,
+  trackProduct,
+} from '../../src/analytics';
 import { NotificationService } from '../../src/notifications/NotificationService';
 
 type OnboardingStep = 'nusach' | 'welcome';
@@ -48,8 +56,10 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
   const handleNusachSelect = async (selectedNusach: Nusach) => {
     const completionTimeMs = Date.now() - stepStartedAt.current;
     track(ONBOARDING_EVENTS.ONBOARDING_STEP_COMPLETED, { step_id: 'nusach', completion_time_ms: completionTimeMs });
+    trackProduct(PRODUCT_EVENTS.NUSACH_CHANGED, 'onboarding', { nusach: selectedNusach, source: 'onboarding' });
     await UserPreferencesService.setNusach(selectedNusach);
     await UserPreferencesService.setSpiritualGoals([]);
+    await setUserProfile({ nusach: selectedNusach });
     setStep('welcome');
   };
 
@@ -62,6 +72,15 @@ export const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }
     track(ONBOARDING_EVENTS.PERMISSION_RESPONSE, {
       permission_type: 'notifications',
       result: granted ? 'granted' : 'denied',
+    });
+    await setUserProfile({
+      push_opt_in: granted,
+      onboarding_completed: true,
+    });
+    const anonymousId = await getAnonymousId();
+    await syncProfileToBackend(anonymousId, {
+      push_opt_in: granted,
+      onboarding_completed: true,
     });
     onComplete();
   };

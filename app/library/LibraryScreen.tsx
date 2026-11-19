@@ -26,6 +26,7 @@ import { MISHNA_TRACTATES } from '../../src/services/MishnaYomiService';
 import { NACH_BOOKS } from '../../src/services/NachYomiService';
 import { RAMBAM_BOOKS } from '../../src/services/RambamStructure';
 import { navigateOrComingSoon, LIBRARY_GRID_COMING_SOON_IDS } from '../../src/feature/LibraryFeatureAccess';
+import { trackLibraryItemOpened } from '../../src/analytics/preferenceTracking';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -63,6 +64,7 @@ const PRAYER_VISUAL: Record<
 };
 
 const LIBRARY_VISUAL: Record<string, { icon: IconName; tint: BrandGlassTint }> = {
+  modeh_ani: { icon: 'sunny-outline', tint: 'gold' },
   asher_yatzar: { icon: 'water-outline', tint: 'sky' },
   bedtime: { icon: 'moon-outline', tint: 'lavender' },
   tehillim: { icon: 'book-outline', tint: 'rose' },
@@ -124,6 +126,12 @@ const PRAYER_ITEMS: PrayerItem[] = [
 ];
 
 const LIBRARY_ITEMS: LibraryItem[] = [
+  {
+    id: 'modeh_ani',
+    title: 'Modeh Ani',
+    screen: 'SiddurReader',
+    searchKeywords: 'modeh ani waking morning thank you מודה אני',
+  },
   {
     id: 'asher_yatzar',
     title: 'Asher Yatzar',
@@ -219,7 +227,7 @@ function buildSearchableItems(
     ...LIBRARY_ITEMS.map((i) => ({
       id: i.id,
       title: i.title,
-      keywords: `${i.title} ${i.searchKeywords} gemara talmud nach mishna rambam chumash torah parsha pirkei avos tehillim brachos bentching bedtime tefilas haderech`,
+      keywords: `${i.title} ${i.searchKeywords} gemara talmud nach mishna rambam chumash torah parsha pirkei avos tehillim brachos bentching bedtime modeh ani tefilas haderech`,
       onPress: () => handleItemPress(i),
     })),
     ...MESECHTAS.map((m) => ({
@@ -274,11 +282,13 @@ export const LibraryScreen: React.FC = () => {
   const { spacing, radii, type } = theme.tokens;
 
   const handlePrayerPress = useCallback((item: PrayerItem) => {
+    trackLibraryItemOpened(item.service, 'prayer', { service: item.service });
     navigation.navigate('SiddurReader' as never, { service: item.service } as never);
   }, [navigation]);
 
   const handleItemPress = useCallback(
     (item: LibraryItem) => {
+      trackLibraryItemOpened(item.id, 'library_item');
       const nav = navigation as any;
       if (item.id === 'tehillim' || item.id === 'tehillim_more') {
         nav.navigate('TehillimList');

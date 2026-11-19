@@ -10,6 +10,7 @@ import { Screen, GlassButton } from '../../components/ui';
 import { PracticeHeader, PracticeField, InlineError } from '../../components/hub/PracticeKit';
 import { useTheme } from '../../src/design/theme';
 import { TzedakahTracker } from '../../src/storage/TzedakahTracker';
+import { PRODUCT_EVENTS, trackProduct } from '../../src/analytics';
 
 export const AddTzedakahScreen: React.FC = () => {
   const { theme } = useTheme();
@@ -31,6 +32,9 @@ export const AddTzedakahScreen: React.FC = () => {
     setSaving(true);
     try {
       await TzedakahTracker.addEntry(amt, organization || 'Other');
+      trackProduct(PRODUCT_EVENTS.TZEDAKAH_LOGGED, 'tzedakah', {
+        has_organization: Boolean(organization.trim()),
+      });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       (navigation as any).goBack();
     } catch (e) {

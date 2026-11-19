@@ -9,6 +9,7 @@ import { toLocalDateString } from '../../src/utils/dateUtils';
 import { HabitTracker } from '../../src/storage/HabitTracker';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { SpiritualGoal } from '../../src/types/preferences';
+import { PRODUCT_EVENTS, trackProduct } from '../../src/analytics';
 
 export const HabitsScreen: React.FC = () => {
   const { theme } = useTheme();
@@ -42,6 +43,7 @@ export const HabitsScreen: React.FC = () => {
       void Haptics.selectionAsync();
     }
     await HabitTracker.markToday(newMarked);
+    trackProduct(PRODUCT_EVENTS.HABIT_TOGGLED, 'habits', { marked: newMarked });
     setTodayMarked(newMarked);
     loadHabits();
   };

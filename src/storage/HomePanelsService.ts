@@ -183,6 +183,10 @@ export class HomePanelsService {
 
       panels.push(newPanel);
       await this.savePanels(panels);
+      try {
+        const { trackHomePanelChanged } = await import('../analytics/preferenceTracking');
+        trackHomePanelChanged('add', type);
+      } catch {}
     });
   }
 
@@ -207,6 +211,10 @@ export class HomePanelsService {
       filtered.forEach((p, i) => p.order = i);
       await this.savePanels(filtered);
       log('removePanel', 'savePanels done');
+      try {
+        const { trackHomePanelChanged } = await import('../analytics/preferenceTracking');
+        trackHomePanelChanged('remove', panel?.type);
+      } catch {}
     });
   }
 
@@ -248,6 +256,10 @@ export class HomePanelsService {
       if (panel) {
         panel.visible = !panel.visible;
         await this.savePanels(panels);
+        try {
+          const { trackHomePanelChanged } = await import('../analytics/preferenceTracking');
+          trackHomePanelChanged('toggle_visibility', panel.type);
+        } catch {}
       }
     });
   }
@@ -272,6 +284,10 @@ export class HomePanelsService {
   static async resetToDefault(): Promise<void> {
     await withWriteLock(async () => {
       await this.savePanels(DEFAULT_PANELS);
+      try {
+        const { trackHomePanelChanged } = await import('../analytics/preferenceTracking');
+        trackHomePanelChanged('reset');
+      } catch {}
     });
   }
 

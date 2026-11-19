@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { BackButton } from '../../components/ui/BackButton';
 import { Screen } from '../../components/ui/Screen';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { useTheme } from '../../src/design/theme';
+import { PRODUCT_EVENTS, trackProduct } from '../../src/analytics';
 
 export const ComingSoonScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -12,6 +13,12 @@ export const ComingSoonScreen: React.FC = () => {
   const { theme } = useTheme();
   const { spacing, type } = theme.tokens;
   const title = (route.params as { featureTitle?: string } | undefined)?.featureTitle;
+
+  useEffect(() => {
+    trackProduct(PRODUCT_EVENTS.COMING_SOON_VIEWED, 'coming_soon', {
+      requested_feature: title ?? 'unknown',
+    });
+  }, [title]);
 
   return (
     <Screen

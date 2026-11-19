@@ -26,6 +26,7 @@ import {
   OMER_HARACHAMAN_HEBREW,
   getOmerRibonoShelOlamParagraph,
 } from '../../src/content/omer/postOmerLiturgy';
+import { PRODUCT_EVENTS, trackProduct } from '../../src/analytics';
 
 function formatTimeUntilAt(now: Date, until: Date): string | null {
   const ms = until.getTime() - now.getTime();
@@ -188,6 +189,10 @@ export const OmerScreen: React.FC = () => {
     }
     await StorageService.markOmerDay(nightKeyForMark, newCounted);
     await StorageService.setOmerWidgetCountdownAfterNight(newCounted ? nightKeyForMark : null);
+    trackProduct(PRODUCT_EVENTS.OMER_COUNTED, 'omer', {
+      night: nightKeyForMark,
+      counted: newCounted,
+    });
     setTodayCounted(newCounted);
   };
 

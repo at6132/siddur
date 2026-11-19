@@ -14,6 +14,7 @@ import { ListRow } from '../../components/ui/ListRow';
 import { Section } from '../../components/ui/Section';
 import { Screen } from '../../components/ui/Screen';
 import { navigateOrComingSoon } from '../../src/feature/LibraryFeatureAccess';
+import { PRODUCT_EVENTS, trackProduct } from '../../src/analytics';
 
 type SearchAction =
   | { kind: 'root'; name: string; params?: Record<string, unknown> }
@@ -35,6 +36,7 @@ const SEARCH_INDEX: SearchItem[] = [
   { id: 'shacharis', label: 'Shacharis', subtitle: 'Morning prayers', group: 'Pray', keywords: 'shacharit shacharis morning', action: { kind: 'siddur', service: 'shacharis' } },
   { id: 'mincha', label: 'Mincha', subtitle: 'Afternoon prayers', group: 'Pray', keywords: 'mincha afternoon', action: { kind: 'siddur', service: 'mincha' } },
   { id: 'maariv', label: 'Maariv', subtitle: 'Evening prayers', group: 'Pray', keywords: 'maariv evening', action: { kind: 'siddur', service: 'maariv' } },
+  { id: 'modeh_ani', label: 'Modeh Ani', subtitle: 'Upon waking', group: 'Pray', keywords: 'modeh ani waking morning מודה', action: { kind: 'siddur', service: 'modeh_ani' } },
   { id: 'asher_yatzar', label: 'Asher Yatzar', subtitle: 'After using the restroom', group: 'Pray', keywords: 'asher yatzar', action: { kind: 'siddur', service: 'asher_yatzar' } },
   { id: 'bentching', label: 'Bentching', subtitle: 'Birkas Hamazon', group: 'Pray', keywords: 'bentching birkat hamazon', action: { kind: 'siddur', service: 'bentching' } },
   { id: 'bedtime', label: 'Bedtime Shema', subtitle: 'Kriyas Shema al hamita', group: 'Pray', keywords: 'bedtime shema', action: { kind: 'siddur', service: 'bedtime' } },
@@ -43,6 +45,7 @@ const SEARCH_INDEX: SearchItem[] = [
   { id: 'tehillim_list', label: 'Tehillim', subtitle: '150 perakim', group: 'Tehillim', keywords: 'tehillim psalms', action: { kind: 'root', name: 'TehillimList' } },
   { id: 'tehillim_settings', label: 'Tehillim settings', subtitle: 'Daily goal type', group: 'Tehillim', keywords: 'tehillim goal', action: { kind: 'root', name: 'TehillimSettings' } },
   { id: 'tehillim_shared', label: 'Create shared Tehillim', subtitle: 'Split campaign + share link', group: 'Tehillim', keywords: 'shared campaign', action: { kind: 'root', name: 'CreateSharedTehillim' } },
+  { id: 'tehillim_manage_links', label: 'Manage my links', subtitle: 'Shared Tehillim pages you created or joined', group: 'Tehillim', keywords: 'shared campaign links manage', action: { kind: 'root', name: 'ManageTehillimLinks' } },
   // Practice / Hub
   { id: 'hub', label: 'Hub overview', subtitle: 'Day, week, month stats', group: 'Practice', keywords: 'hub practice', action: { kind: 'tab', tab: 'Hub', screen: 'HubOverview' } },
   { id: 'daily_goals', label: 'Daily goals', subtitle: 'Morning–night check-off', group: 'Practice', keywords: 'goals', action: { kind: 'tab', tab: 'Hub', screen: 'DailyGoals' } },
@@ -69,6 +72,7 @@ const SEARCH_INDEX: SearchItem[] = [
   // Settings
   { id: 'settings', label: 'Settings', subtitle: 'Notifications, General, About', group: 'Settings', keywords: 'settings preferences', action: { kind: 'root', name: 'Settings' } },
   { id: 'settings_notifications', label: 'Notifications', subtitle: 'Prayer times and reminders', group: 'Settings', keywords: 'notifications alerts', action: { kind: 'root', name: 'Settings', params: { scrollTo: 'notifications' } } },
+  { id: 'settings_tefillin_reminder', label: 'Tefillin reminder', subtitle: 'Weekday morning reminder', group: 'Settings', keywords: 'tefillin tefilin reminder notifications', action: { kind: 'root', name: 'Settings', params: { scrollTo: 'tefillinReminder' } } },
   { id: 'settings_general', label: 'General', subtitle: 'Nusach, display, Refuah names', group: 'Settings', keywords: 'nusach general refuah', action: { kind: 'root', name: 'Settings', params: { scrollTo: 'general' } } },
   { id: 'settings_about', label: 'About', subtitle: 'Version and legal', group: 'Settings', keywords: 'about privacy terms', action: { kind: 'root', name: 'Settings', params: { scrollTo: 'about' } } },
   { id: 'add_reminder', label: 'Add custom reminder', subtitle: 'Create or edit a reminder', group: 'Settings', keywords: 'reminder custom', action: { kind: 'root', name: 'AddCustomReminder' } },
@@ -101,8 +105,15 @@ export function SearchScreen() {
   }, [filtered]);
 
   const runAction = useCallback(
-    (action: SearchAction) => {
+    (action: SearchAction, item?: SearchItem) => {
       Keyboard.dismiss();
+      trackProduct(PRODUCT_EVENTS.SEARCH_RESULT_TAPPED, 'search', {
+        result_id: item?.id,
+        result_label: item?.label,
+        result_group: item?.group,
+        action_kind: action.kind,
+        had_query: query.trim().length > 0,
+      });
       switch (action.kind) {
         case 'root':
           navigation.navigate(action.name, action.params ?? {});
@@ -129,7 +140,7 @@ export function SearchScreen() {
           break;
       }
     },
-    [navigation],
+    [navigation, query],
   );
 
   const hasQuery = query.trim().length > 0;
@@ -196,7 +207,7 @@ export function SearchScreen() {
                 title={row.label}
                 subtitle={row.subtitle}
                 showChevron
-                onPress={() => runAction(row.action)}
+                onPress={() => runAction(row.action, row)}
               />
             ))}
           </Section>

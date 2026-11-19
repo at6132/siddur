@@ -100,31 +100,53 @@ export class UserPreferencesService {
   }
 
   static async setSpiritualGoals(goals: string[]): Promise<boolean> {
-    return this.savePreferences({ spiritualGoals: goals as any[] });
+    const ok = await this.savePreferences({ spiritualGoals: goals as any[] });
+    try {
+      const { track } = await import('../analytics/AnalyticsClient');
+      const { PRODUCT_EVENTS } = await import('../analytics/types');
+      track(PRODUCT_EVENTS.SPIRITUAL_GOALS_CHANGED, {
+        feature: 'habits',
+        goal_count: goals.length,
+        goals: goals.slice(0, 12),
+      });
+    } catch {}
+    return ok;
   }
 
   static async setNotificationPreferences(
     notifications: Partial<UserPreferences['notifications']>
   ): Promise<boolean> {
     const existing = await this.getPreferences();
-    return this.savePreferences({
-      notifications: {
-        ...existing?.notifications,
-        ...notifications,
-      } as UserPreferences['notifications'],
-    });
+    const previous = existing?.notifications;
+    const next = {
+      ...existing?.notifications,
+      ...notifications,
+    } as UserPreferences['notifications'];
+    const ok = await this.savePreferences({ notifications: next });
+    try {
+      const { trackAndSyncNotificationChange } = await import('../analytics/preferenceTracking');
+      await trackAndSyncNotificationChange(previous, next, existing ? { ...existing, notifications: next } : null);
+    } catch {}
+    return ok;
   }
 
   static async setDisplayPreferences(
     display: Partial<DisplayPreferences>
   ): Promise<boolean> {
     const existing = await this.getPreferences();
-    return this.savePreferences({
+    const ok = await this.savePreferences({
       display: {
         ...existing?.display,
         ...display,
       } as DisplayPreferences,
     });
+    try {
+      const { trackDisplaySettingChanged } = await import('../analytics/preferenceTracking');
+      for (const [key, value] of Object.entries(display)) {
+        trackDisplaySettingChanged(key, value);
+      }
+    } catch {}
+    return ok;
   }
 
   static async setHebrewBirthday(birthday: { day: number; month: number } | null): Promise<boolean> {
@@ -168,7 +190,17 @@ export class UserPreferencesService {
     const existing = await this.getPreferences();
     const reminders = existing?.customReminders || [];
     reminders.push(reminder);
-    return this.savePreferences({ customReminders: reminders });
+    const ok = await this.savePreferences({ customReminders: reminders });
+    try {
+      const { trackCustomReminderChanged, syncReminderProfile } = await import('../analytics/preferenceTracking');
+      trackCustomReminderChanged('add', {
+        open_to_screen: reminder.openToScreen ?? null,
+        day_count: reminder.days?.length ?? 0,
+        enabled: reminder.enabled,
+      });
+      if (existing) await syncReminderProfile({ ...existing, customReminders: reminders });
+    } catch {}
+    return ok;
   }
 
   static async updateCustomReminder(id: string, updates: Partial<CustomReminder>): Promise<boolean> {
@@ -177,7 +209,16 @@ export class UserPreferencesService {
     const index = reminders.findIndex(r => r.id === id);
     if (index >= 0) {
       reminders[index] = { ...reminders[index], ...updates };
-      return this.savePreferences({ customReminders: reminders });
+      const ok = await this.savePreferences({ customReminders: reminders });
+      try {
+        const { trackCustomReminderChanged, syncReminderProfile } = await import('../analytics/preferenceTracking');
+        trackCustomReminderChanged('update', {
+          fields: Object.keys(updates),
+          enabled: reminders[index].enabled,
+        });
+        await syncReminderProfile({ ...existing!, customReminders: reminders });
+      } catch {}
+      return ok;
     }
     return false;
   }
@@ -185,7 +226,13 @@ export class UserPreferencesService {
   static async deleteCustomReminder(id: string): Promise<boolean> {
     const existing = await this.getPreferences();
     const reminders = (existing?.customReminders || []).filter(r => r.id !== id);
-    return this.savePreferences({ customReminders: reminders });
+    const ok = await this.savePreferences({ customReminders: reminders });
+    try {
+      const { trackCustomReminderChanged, syncReminderProfile } = await import('../analytics/preferenceTracking');
+      trackCustomReminderChanged('delete', {});
+      if (existing) await syncReminderProfile({ ...existing, customReminders: reminders });
+    } catch {}
+    return ok;
   }
 
   static async getCustomReminders(): Promise<CustomReminder[]> {

@@ -9,7 +9,7 @@ import { useTheme } from '../../src/design/theme';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { NotificationService } from '../../src/notifications/NotificationService';
 import { CustomReminder, CustomReminderOpenToScreen } from '../../src/types/preferences';
-import { track, RELIABILITY_EVENTS } from '../../src/analytics';
+import { track, RELIABILITY_EVENTS, PRODUCT_EVENTS, trackProduct } from '../../src/analytics';
 
 function parseTime(timeStr: string): { hour: number; minute: number; ampm: 'AM' | 'PM' } {
   const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
@@ -171,6 +171,11 @@ export const AddCustomReminderScreen: React.FC = () => {
         await UserPreferencesService.addCustomReminder(reminder);
         await NotificationService.requestPermissionsAndSchedule();
       }
+      trackProduct(PRODUCT_EVENTS.CUSTOM_REMINDER_SAVED, 'custom_reminder', {
+        is_edit: isEdit,
+        day_count: selectedDays.length,
+        open_to_screen: openToScreen ?? null,
+      });
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       navigation.goBack();
     } catch (e) {
