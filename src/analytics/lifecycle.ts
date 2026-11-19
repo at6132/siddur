@@ -68,11 +68,25 @@ export async function bootstrapLifecycle(coldStartMs?: number): Promise<void> {
     const anonymousId = await getAnonymousId();
     const profile = await getUserProfile();
     const timezone = getTimezone();
+    let nusach: string | undefined = profile?.nusach;
+    let reminderSnapshot: Record<string, unknown> = {};
+    try {
+      const { UserPreferencesService } = await import('../storage/UserPreferences');
+      const { buildReminderProfileSnapshot } = await import('./preferenceTracking');
+      const prefs = await UserPreferencesService.getPreferences();
+      if (prefs?.nusach) nusach = prefs.nusach;
+      reminderSnapshot = buildReminderProfileSnapshot(
+        prefs?.notifications,
+        prefs?.customReminders?.length ?? 0
+      );
+    } catch {}
     await syncProfileToBackend(anonymousId, {
       last_seen_at: now,
       first_open_at: firstOpen || now,
       timezone,
       ...profile,
+      ...reminderSnapshot,
+      ...(nusach ? { nusach } : {}),
     });
   } catch (e) {
     console.warn('[Analytics] lifecycle bootstrap failed:', e);

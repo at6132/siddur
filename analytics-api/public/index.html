@@ -422,6 +422,8 @@
 
       <div class="tabs">
         <button type="button" class="tab active" data-tab="overview">Overview</button>
+        <button type="button" class="tab" data-tab="features">Features</button>
+        <button type="button" class="tab" data-tab="reminders">Reminders</button>
         <button type="button" class="tab" data-tab="usage">App usage</button>
         <button type="button" class="tab" data-tab="tehillim">Tehillim</button>
         <button type="button" class="tab" data-tab="support">Support <span class="tab-count" id="supportTabCount">0</span></button>
@@ -463,6 +465,113 @@
             <div class="hint">Created all time</div>
           </div>
         </div>
+        <h2 class="section-title">Top features right now</h2>
+        <p class="section-desc">Quick peek from the Features tab. Open <strong>Features</strong> for full detail.</p>
+        <div class="glass-panel"><div id="overviewFeatures" class="loading">Loading…</div></div>
+      </div>
+
+      <!-- Tab: Features (who uses what) -->
+      <div id="panel-features" class="tab-panel">
+        <div class="cards-row" id="featureSummaryCards">
+          <div class="stat-card"><div class="value" id="featCount">–</div><div class="label">Features used</div><div class="hint">In date range</div></div>
+          <div class="stat-card"><div class="value" id="featPeople">–</div><div class="label">People in top feature</div><div class="hint" id="featPeopleHint">–</div></div>
+          <div class="stat-card"><div class="value" id="featActions">–</div><div class="label">Product actions</div><div class="hint">Meaningful events</div></div>
+          <div class="stat-card"><div class="value" id="featScreens">–</div><div class="label">Screens viewed</div><div class="hint">Distinct screens</div></div>
+        </div>
+
+        <h2 class="section-title">Who uses what</h2>
+        <p class="section-desc">Unique people and actions per feature. Click a row to drill into that feature’s actions and users.</p>
+        <div class="glass-panel">
+          <div class="chart-wrap"><canvas id="chartFeatures"></canvas></div>
+          <div id="featureUsage" class="loading">Loading…</div>
+        </div>
+
+        <h2 class="section-title">Feature users over time</h2>
+        <p class="section-desc">Daily unique people for the top 5 features in this range.</p>
+        <div class="glass-panel">
+          <div class="chart-wrap"><canvas id="chartFeatureSeries"></canvas></div>
+        </div>
+
+        <h2 class="section-title">Meaningful actions</h2>
+        <p class="section-desc">Product events (prayers opened, Tehillim completed, goals, search taps, etc.), not just screen opens.</p>
+        <div class="glass-panel">
+          <div class="chart-wrap"><canvas id="chartProductActions"></canvas></div>
+          <div id="productActions" class="loading">Loading…</div>
+        </div>
+
+        <div class="cards-row" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <h2 class="section-title">Prayers by service</h2>
+            <p class="section-desc">From <code>prayer_opened</code> (needs newer app build for full data).</p>
+            <div class="glass-panel"><div id="prayerServices" class="loading">Loading…</div></div>
+          </div>
+          <div>
+            <h2 class="section-title">Tehillim completions</h2>
+            <p class="section-desc">Private vs shared chapter completions.</p>
+            <div class="glass-panel"><div id="tehillimSources" class="loading">Loading…</div></div>
+          </div>
+        </div>
+
+        <div class="cards-row" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <h2 class="section-title">Search destinations</h2>
+            <p class="section-desc">What people jump to from Search.</p>
+            <div class="glass-panel"><div id="searchDestinations" class="loading">Loading…</div></div>
+          </div>
+          <div>
+            <h2 class="section-title">Coming soon interest</h2>
+            <p class="section-desc">Gated features people tried to open.</p>
+            <div class="glass-panel"><div id="comingSoonInterest" class="loading">Loading…</div></div>
+          </div>
+        </div>
+
+        <div class="cards-row" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div>
+            <h2 class="section-title">Library opens</h2>
+            <p class="section-desc">What people tap in Library.</p>
+            <div class="glass-panel"><div id="libraryItems" class="loading">Loading…</div></div>
+          </div>
+          <div>
+            <h2 class="section-title">Home panel edits</h2>
+            <p class="section-desc">Add / remove / hide panels.</p>
+            <div class="glass-panel"><div id="homePanelActions" class="loading">Loading…</div></div>
+          </div>
+        </div>
+
+        <h2 class="section-title">Top screens</h2>
+        <p class="section-desc">Most viewed screens and how many unique people saw each.</p>
+        <div class="glass-panel">
+          <div class="chart-wrap"><canvas id="chartScreens"></canvas></div>
+          <div id="screenStats" class="loading">Loading…</div>
+        </div>
+
+        <h2 class="section-title">Audience</h2>
+        <p class="section-desc">Platform, release channel, and nusach profile mix.</p>
+        <div class="glass-panel"><div id="audienceStats" class="loading">Loading…</div></div>
+
+        <h2 class="section-title">Drill-down: <span id="featureUsersLabel">all features</span></h2>
+        <p class="section-desc">Event mix for the selected feature, then its heaviest users. Click Timeline to open their full history.</p>
+        <div class="glass-panel">
+          <div id="featureActionMix" class="loading" style="margin-bottom:16px">Select a feature above.</div>
+          <div id="featureUsers" class="loading">Select a feature above, or wait for the default list.</div>
+        </div>
+      </div>
+
+      <!-- Tab: Reminders -->
+      <div id="panel-reminders" class="tab-panel">
+        <h2 class="section-title">Who has which reminders on</h2>
+        <p class="section-desc">Live opt-in counts from user profiles (updated when people change Settings or open the app). Shows Tefillin, Shabbos, prayer times, and more.</p>
+        <div class="stat-card" style="margin-bottom:16px;max-width:280px">
+          <div class="value" id="reminderProfiles">–</div>
+          <div class="label">Profiles with reminder data</div>
+        </div>
+        <div class="glass-panel">
+          <div class="chart-wrap"><canvas id="chartReminders"></canvas></div>
+          <div id="reminderOptIns" class="loading">Loading…</div>
+        </div>
+        <h2 class="section-title">Reminder settings changed recently</h2>
+        <p class="section-desc">Which settings people flipped or edited in the selected date range (needs the updated app build).</p>
+        <div class="glass-panel"><div id="reminderChanges" class="loading">Loading…</div></div>
       </div>
 
       <!-- Tab: App usage -->
@@ -567,6 +676,13 @@
     const base = window.location.origin;
     let chartDaily = null;
     let chartEvents = null;
+    let chartFeatures = null;
+    let chartFeatureSeries = null;
+    let chartProductActions = null;
+    let chartScreens = null;
+    let chartReminders = null;
+    let selectedFeature = null;
+    let lastDetailed = null;
 
     var EVENT_LABELS = {
       app_open: 'Opened app',
@@ -578,9 +694,89 @@
       screen_view: 'Viewed screen',
       onboarding_started: 'Started onboarding',
       onboarding_completed: 'Finished onboarding',
-      tehillim_perek_completed: 'Completed a Tehillim chapter'
+      tehillim_perek_completed: 'Completed a Tehillim chapter',
+      tehillim_perek_opened: 'Opened a Tehillim chapter',
+      tehillim_campaign_created: 'Created shared Tehillim',
+      tehillim_campaign_joined: 'Joined shared Tehillim',
+      tehillim_campaign_claimed: 'Claimed Tehillim perakim',
+      tehillim_campaign_shared: 'Shared Tehillim link',
+      prayer_opened: 'Opened a prayer',
+      prayer_english_toggled: 'Toggled English in prayer',
+      goal_added: 'Added a daily goal',
+      goal_toggled: 'Checked a daily goal',
+      gratitude_added: 'Added gratitude',
+      habit_toggled: 'Toggled habit',
+      tzedakah_logged: 'Logged tzedakah',
+      omer_counted: 'Counted the Omer',
+      brachos_added: 'Added brachos',
+      search_result_tapped: 'Tapped a search result',
+      coming_soon_viewed: 'Viewed Coming Soon',
+      nusach_changed: 'Changed nusach',
+      custom_reminder_saved: 'Saved custom reminder',
+      custom_reminder_changed: 'Changed custom reminder',
+      reminder_setting_changed: 'Changed a reminder setting',
+      reminders_configured: 'Configured reminders',
+      display_setting_changed: 'Changed display setting',
+      home_panel_changed: 'Changed home panel',
+      library_item_opened: 'Opened library item',
+      tehillim_goal_changed: 'Changed Tehillim goal',
+      calendar_day_opened: 'Opened calendar day',
+      spiritual_goals_changed: 'Changed spiritual goals',
+      intro_began: 'Began intro'
+    };
+    var REMINDER_SETTING_LABELS = {
+      enabled: 'Notifications master',
+      tefillinReminder: 'Tefillin reminder',
+      tefillinReminderTime: 'Tefillin time',
+      tefillinReminderMode: 'Tefillin mode',
+      shabbosReminders: 'Shabbos reminders',
+      shabbosMinutesBefore: 'Shabbos minutes before',
+      shabbosComingTime: 'Shabbos coming time',
+      shabbosClockEnabled: 'Shabbos alarm',
+      shabbosClockTime: 'Shabbos alarm time',
+      dailyTehillim: 'Daily Tehillim',
+      dailyTehillimTime: 'Daily Tehillim time',
+      dailyGratitude: 'Daily gratitude',
+      sefirasHaomer: 'Omer reminder',
+      shekiyaReminder: 'Shekiya reminder',
+      minchaTime: 'Mincha before sunset',
+      daveningAddOns: 'Davening add-ons',
+      'prayerReminders.shacharis.enabled': 'Shacharis reminder',
+      'prayerReminders.mincha.enabled': 'Mincha reminder',
+      'prayerReminders.maariv.enabled': 'Maariv reminder'
+    };
+    var FEATURE_LABELS = {
+      home: 'Home',
+      hub: 'Hub',
+      daily_goals: 'Daily goals',
+      gratitude: 'Gratitude',
+      goals_history: 'Goals history',
+      calendar: 'Calendar',
+      library: 'Library',
+      search: 'Search',
+      tehillim: 'Tehillim',
+      shared_tehillim: 'Shared Tehillim',
+      siddur: 'Siddur / prayers',
+      omer: 'Sefiras HaOmer',
+      habits: 'Habits',
+      tzedakah: 'Tzedakah',
+      settings: 'Settings',
+      custom_reminder: 'Custom reminders',
+      customize_home: 'Customize home',
+      panels_marketplace: 'Panel marketplace',
+      coming_soon: 'Coming soon',
+      onboarding: 'Onboarding',
+      intro: 'Intro',
+      gemara: 'Gemara',
+      mishna: 'Mishna',
+      rambam: 'Rambam',
+      chumash: 'Chumash',
+      nach: 'Nach',
+      parsha: 'Parsha',
+      pirkei_avos: 'Pirkei Avos'
     };
     function eventLabel(name) { return EVENT_LABELS[name] || name.replace(/_/g, ' '); }
+    function featureLabel(name) { return FEATURE_LABELS[name] || (name || '').replace(/_/g, ' '); }
 
     function qs(id) { return document.getElementById(id); }
     function dateIso(d) { return d ? d.toISOString().slice(0, 10) : ''; }
@@ -617,6 +813,9 @@
         this.classList.add('active');
         qs('panel-' + tab).classList.add('active');
         if (tab === 'support') loadSupport();
+        if (tab === 'reminders' && lastDetailed) {
+          renderReminders(lastDetailed.reminder_opt_ins || {}, lastDetailed.reminder_changes || []);
+        }
       });
     });
     document.querySelectorAll('.support-filters .chip').forEach(function(chip) {
@@ -734,6 +933,289 @@
       }
     }
 
+    function renderKVTable(el, rows, valueKey, cols) {
+      if (!rows || rows.length === 0) {
+        el.className = '';
+        el.innerHTML = '<p class="muted">No data yet for this range (newer app builds fill this in).</p>';
+        return;
+      }
+      el.className = '';
+      var head = cols.map(function(c) { return '<th>' + escapeHtml(c.label) + '</th>'; }).join('');
+      var body = rows.map(function(r) {
+        return '<tr>' + cols.map(function(c) {
+          var v = typeof c.get === 'function' ? c.get(r) : r[c.key];
+          return '<td>' + escapeHtml(v == null ? '–' : String(v)) + '</td>';
+        }).join('') + '</tr>';
+      }).join('');
+      el.innerHTML = '<table><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table>';
+    }
+
+    function updateBarChart(chart, labels, values) {
+      if (!chart) return;
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = values;
+      chart.update();
+    }
+
+    async function loadFeatureUsage() {
+      var el = qs('featureUsage');
+      try {
+        var p = getParams();
+        var data = await fetchJson('/api/stats/detailed', { start_date: p.start_date, end_date: p.end_date });
+        lastDetailed = data;
+        var features = data.features || [];
+        var actions = data.product_actions || [];
+        var screens = data.screens || [];
+
+        qs('featCount').textContent = features.length;
+        if (features[0]) {
+          qs('featPeople').textContent = features[0].unique_users;
+          qs('featPeopleHint').textContent = featureLabel(features[0].feature);
+        } else {
+          qs('featPeople').textContent = '0';
+          qs('featPeopleHint').textContent = '–';
+        }
+        qs('featActions').textContent = actions.reduce(function(s, a) { return s + (a.events || 0); }, 0);
+        qs('featScreens').textContent = screens.length;
+
+        if (features.length === 0) {
+          el.innerHTML = '<p class="muted">No feature usage in this date range yet.</p>';
+          updateBarChart(chartFeatures, [], []);
+        } else {
+          var rows = features.map(function(f) {
+            var avg = f.unique_users ? (f.events / f.unique_users).toFixed(1) : '–';
+            return '<tr data-feature="' + escapeHtml(f.feature) + '" style="cursor:pointer">' +
+              '<td><strong>' + escapeHtml(featureLabel(f.feature)) + '</strong></td>' +
+              '<td>' + f.unique_users + '</td>' +
+              '<td>' + f.events + '</td>' +
+              '<td>' + avg + '</td>' +
+              '<td>' + escapeHtml((f.last_used || '').slice(0, 19).replace('T', ' ')) + '</td>' +
+              '</tr>';
+          }).join('');
+          el.innerHTML = '<table><thead><tr><th>Feature</th><th>Unique people</th><th>Events</th><th>Avg / person</th><th>Last used (UTC)</th></tr></thead><tbody>' + rows + '</tbody></table>';
+          el.querySelectorAll('tr[data-feature]').forEach(function(tr) {
+            tr.addEventListener('click', function() {
+              selectedFeature = this.getAttribute('data-feature');
+              el.querySelectorAll('tr[data-feature]').forEach(function(r) { r.style.background = ''; });
+              this.style.background = 'rgba(212,165,184,0.2)';
+              loadFeatureDrilldown(selectedFeature);
+            });
+          });
+          var top = features.slice(0, 12);
+          updateBarChart(chartFeatures, top.map(function(f) { return featureLabel(f.feature); }), top.map(function(f) { return f.unique_users; }));
+        }
+
+        // Feature series chart
+        renderFeatureSeries(data.feature_series);
+
+        // Product actions
+        renderKVTable(qs('productActions'), actions, 'event_name', [
+          { label: 'Action', get: function(r) { return eventLabel(r.event_name); } },
+          { label: 'Events', key: 'events' },
+          { label: 'Unique people', key: 'unique_users' }
+        ]);
+        updateBarChart(
+          chartProductActions,
+          actions.slice(0, 12).map(function(a) { return eventLabel(a.event_name); }),
+          actions.slice(0, 12).map(function(a) { return a.unique_users; })
+        );
+
+        renderKVTable(qs('prayerServices'), data.prayer_services || [], 'value', [
+          { label: 'Service', key: 'value' },
+          { label: 'Opens', key: 'events' },
+          { label: 'People', key: 'unique_users' }
+        ]);
+        renderKVTable(qs('tehillimSources'), data.tehillim_sources || [], 'value', [
+          { label: 'Source', key: 'value' },
+          { label: 'Completions', key: 'events' },
+          { label: 'People', key: 'unique_users' }
+        ]);
+        renderKVTable(qs('searchDestinations'), data.search_destinations || [], 'value', [
+          { label: 'Destination', key: 'value' },
+          { label: 'Taps', key: 'events' },
+          { label: 'People', key: 'unique_users' }
+        ]);
+        renderKVTable(qs('comingSoonInterest'), data.coming_soon || [], 'value', [
+          { label: 'Requested feature', key: 'value' },
+          { label: 'Views', key: 'events' },
+          { label: 'People', key: 'unique_users' }
+        ]);
+        renderKVTable(qs('libraryItems'), data.library_items || [], 'value', [
+          { label: 'Item', key: 'value' },
+          { label: 'Opens', key: 'events' },
+          { label: 'People', key: 'unique_users' }
+        ]);
+        renderKVTable(qs('homePanelActions'), data.home_panel_actions || [], 'value', [
+          { label: 'Action', key: 'value' },
+          { label: 'Count', key: 'events' },
+          { label: 'People', key: 'unique_users' }
+        ]);
+
+        renderReminders(data.reminder_opt_ins || {}, data.reminder_changes || []);
+
+        renderKVTable(qs('screenStats'), screens, 'screen_name', [
+          { label: 'Screen', key: 'screen_name' },
+          { label: 'Views', key: 'views' },
+          { label: 'People', key: 'unique_users' }
+        ]);
+        updateBarChart(
+          chartScreens,
+          screens.slice(0, 12).map(function(s) { return s.screen_name; }),
+          screens.slice(0, 12).map(function(s) { return s.unique_users; })
+        );
+
+        renderAudience(data.audience || {});
+        loadFeatureDrilldown(selectedFeature || (features[0] && features[0].feature) || null);
+      } catch (e) {
+        el.innerHTML = '<p class="error">Could not load detailed feature usage.</p>';
+        console.error(e);
+      }
+    }
+
+    function renderFeatureSeries(payload) {
+      if (!chartFeatureSeries || !payload || !payload.features || !payload.series) {
+        if (chartFeatureSeries) {
+          chartFeatureSeries.data.labels = [];
+          chartFeatureSeries.data.datasets = [];
+          chartFeatureSeries.update();
+        }
+        return;
+      }
+      var dates = [];
+      var dateSet = {};
+      payload.series.forEach(function(row) {
+        if (!dateSet[row.date]) { dateSet[row.date] = true; dates.push(row.date); }
+      });
+      dates.sort();
+      var palette = ['#D4A5B8', '#A5C4D4', '#A5D4B8', '#B88FA3', '#8FA3B8'];
+      chartFeatureSeries.data.labels = dates;
+      chartFeatureSeries.data.datasets = payload.features.map(function(feat, idx) {
+        var map = {};
+        payload.series.forEach(function(row) {
+          if (row.feature === feat) map[row.date] = row.unique_users;
+        });
+        return {
+          label: featureLabel(feat),
+          data: dates.map(function(d) { return map[d] || 0; }),
+          borderColor: palette[idx % palette.length],
+          backgroundColor: 'transparent',
+          tension: 0.3,
+          fill: false
+        };
+      });
+      chartFeatureSeries.update();
+    }
+
+    function renderReminders(optIns, changes) {
+      var el = qs('reminderOptIns');
+      var changesEl = qs('reminderChanges');
+      if (qs('reminderProfiles')) qs('reminderProfiles').textContent = optIns.total_profiles || 0;
+      var rows = optIns.reminders || [];
+      if (!rows.length) {
+        if (el) {
+          el.className = '';
+          el.innerHTML = '<p class="muted">No reminder profile data yet. It fills in as people open the updated app or change Settings.</p>';
+        }
+      } else if (el) {
+        el.className = '';
+        el.innerHTML = '<table><thead><tr><th>Reminder</th><th>People with it on</th><th>% of profiles</th></tr></thead><tbody>' +
+          rows.map(function(r) {
+            return '<tr><td>' + escapeHtml(r.label) + '</td><td>' + r.enabled_users + '</td><td>' + r.pct + '%</td></tr>';
+          }).join('') + '</tbody></table>';
+        updateBarChart(
+          chartReminders,
+          rows.slice(0, 12).map(function(r) { return r.label; }),
+          rows.slice(0, 12).map(function(r) { return r.enabled_users; })
+        );
+      }
+      if (changesEl) {
+        renderKVTable(changesEl, changes, 'value', [
+          { label: 'Setting', get: function(r) { return REMINDER_SETTING_LABELS[r.value] || r.value; } },
+          { label: 'Changes', key: 'events' },
+          { label: 'People', key: 'unique_users' }
+        ]);
+      }
+    }
+
+    function renderAudience(audience) {
+      var el = qs('audienceStats');
+      var platforms = audience.platforms || [];
+      var channels = audience.channels || [];
+      var nusach = audience.nusach || [];
+      function mini(title, rows, valueLabel) {
+        if (!rows.length) return '<p class="muted">' + title + ': no data</p>';
+        return '<h3 style="margin:0 0 8px;font-size:0.95rem">' + escapeHtml(title) + '</h3><table><thead><tr><th>Value</th><th>' + escapeHtml(valueLabel) + '</th><th>People</th></tr></thead><tbody>' +
+          rows.map(function(r) {
+            return '<tr><td>' + escapeHtml(r.value) + '</td><td>' + (r.events != null ? r.events : '–') + '</td><td>' + r.unique_users + '</td></tr>';
+          }).join('') + '</tbody></table>';
+      }
+      el.className = '';
+      el.innerHTML =
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">' +
+        '<div>' + mini('Platform', platforms, 'Events') + '</div>' +
+        '<div>' + mini('Release channel', channels, 'Events') + '</div>' +
+        '<div>' + mini('Nusach (profiles)', nusach, '–') + '</div>' +
+        '</div>';
+    }
+
+    async function loadFeatureDrilldown(feature) {
+      selectedFeature = feature;
+      var label = qs('featureUsersLabel');
+      label.textContent = feature ? featureLabel(feature) : 'all features';
+      var mixEl = qs('featureActionMix');
+      var usersEl = qs('featureUsers');
+      mixEl.className = 'loading';
+      mixEl.textContent = 'Loading event mix…';
+      usersEl.className = 'loading';
+      usersEl.textContent = 'Loading users…';
+      try {
+        var p = getParams();
+        var q = { start_date: p.start_date, end_date: p.end_date };
+        if (feature) q.feature = feature;
+        var [actionsData, usersData] = await Promise.all([
+          fetchJson('/api/stats/feature-actions', q),
+          fetchJson('/api/stats/feature-users', Object.assign({}, q, { limit: 40 }))
+        ]);
+        renderKVTable(mixEl, actionsData.actions || [], 'event_name', [
+          { label: 'Event', get: function(r) { return eventLabel(r.event_name); } },
+          { label: 'Count', key: 'events' },
+          { label: 'People', key: 'unique_users' }
+        ]);
+        var users = usersData.users || [];
+        if (users.length === 0) {
+          usersEl.className = '';
+          usersEl.innerHTML = '<p class="muted">No users for this feature in the selected range.</p>';
+          return;
+        }
+        usersEl.className = '';
+        usersEl.innerHTML = '<table><thead><tr><th>anonymous_id</th><th>Events</th><th>Last seen (UTC)</th><th></th></tr></thead><tbody>' +
+          users.map(function(u) {
+            var id = u.anonymous_id || '';
+            return '<tr><td style="font-family:ui-monospace,monospace;font-size:0.8rem">' + escapeHtml(id) + '</td>' +
+              '<td>' + u.events + '</td>' +
+              '<td>' + escapeHtml((u.last_seen || '').slice(0, 19).replace('T', ' ')) + '</td>' +
+              '<td><button type="button" class="chip" data-id="' + escapeHtml(id) + '">Timeline</button></td></tr>';
+          }).join('') + '</tbody></table>';
+        usersEl.querySelectorAll('button[data-id]').forEach(function(b) {
+          b.addEventListener('click', function() {
+            qs('explorerAnonymousId').value = this.getAttribute('data-id');
+            document.querySelector('.tab[data-tab="users"]').click();
+            loadUserExplorer();
+          });
+        });
+      } catch (e) {
+        mixEl.className = 'error';
+        mixEl.textContent = 'Could not load drill-down.';
+        usersEl.className = 'error';
+        usersEl.textContent = 'Could not load users.';
+        console.error(e);
+      }
+    }
+
+    async function loadFeatureUsers(feature) {
+      return loadFeatureDrilldown(feature);
+    }
+
     async function loadRetention() {
       var el = qs('retention');
       try {
@@ -795,7 +1277,15 @@
         }
         el.innerHTML = '<table><thead><tr><th>Time (UTC)</th><th>What happened</th><th>Screen</th></tr></thead><tbody>' +
           events.map(function(ev) {
-            return '<tr><td>' + escapeHtml((ev.event_time_utc || '').slice(0, 19)) + '</td><td>' + escapeHtml(eventLabel(ev.event_name || '')) + '</td><td>' + escapeHtml(ev.screen_name || '–') + '</td></tr>';
+            var detail = [];
+            if (ev.feature) detail.push('feature=' + ev.feature);
+            if (ev.service) detail.push('service=' + ev.service);
+            if (ev.source) detail.push('source=' + ev.source);
+            if (ev.perek_number != null) detail.push('perek=' + ev.perek_number);
+            if (ev.result_label) detail.push(ev.result_label);
+            if (ev.requested_feature) detail.push(ev.requested_feature);
+            var extra = detail.length ? ' <span class="muted">(' + escapeHtml(detail.join(', ')) + ')</span>' : '';
+            return '<tr><td>' + escapeHtml((ev.event_time_utc || '').slice(0, 19)) + '</td><td>' + escapeHtml(eventLabel(ev.event_name || '')) + extra + '</td><td>' + escapeHtml(ev.screen_name || '–') + '</td></tr>';
           }).join('') + '</tbody></table>';
       } catch (e) {
         el.innerHTML = '<p class="error">Could not load.</p>';
@@ -864,6 +1354,49 @@
           }
         }
       });
+      function makeHBar(canvasId, color) {
+        var canvas = document.getElementById(canvasId);
+        if (!canvas) return null;
+        return new Chart(canvas, {
+          type: 'bar',
+          data: { labels: [], datasets: [{ label: 'Unique people', data: [], backgroundColor: color, borderRadius: 6 }] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            indexAxis: 'y',
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+              y: { grid: { display: false } }
+            }
+          }
+        });
+      }
+      if (chartFeatures) chartFeatures.destroy();
+      if (chartProductActions) chartProductActions.destroy();
+      if (chartScreens) chartScreens.destroy();
+      if (chartFeatureSeries) chartFeatureSeries.destroy();
+      chartFeatures = makeHBar('chartFeatures', rose);
+      chartProductActions = makeHBar('chartProductActions', blue);
+      chartScreens = makeHBar('chartScreens', 'rgba(165, 212, 184, 0.85)');
+      if (chartReminders) chartReminders.destroy();
+      chartReminders = makeHBar('chartReminders', rose);
+      var seriesCanvas = document.getElementById('chartFeatureSeries');
+      if (seriesCanvas) {
+        chartFeatureSeries = new Chart(seriesCanvas, {
+          type: 'line',
+          data: { labels: [], datasets: [] },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+            scales: {
+              x: { grid: { display: false }, ticks: { maxRotation: 45 } },
+              y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }
+            }
+          }
+        });
+      }
     }
 
     function exportCsv() {
@@ -960,9 +1493,32 @@
       }
     }
 
+    async function loadOverviewFeatures() {
+      var el = qs('overviewFeatures');
+      if (!el) return;
+      try {
+        var p = getParams();
+        var data = lastDetailed || await fetchJson('/api/stats/feature-usage', { start_date: p.start_date, end_date: p.end_date });
+        var features = (data.features || []).slice(0, 8);
+        if (!features.length) {
+          el.className = '';
+          el.innerHTML = '<p class="muted">No feature data yet.</p>';
+          return;
+        }
+        el.className = '';
+        el.innerHTML = '<table><thead><tr><th>Feature</th><th>People</th><th>Events</th></tr></thead><tbody>' +
+          features.map(function(f) {
+            return '<tr><td>' + escapeHtml(featureLabel(f.feature)) + '</td><td>' + f.unique_users + '</td><td>' + f.events + '</td></tr>';
+          }).join('') + '</tbody></table>';
+      } catch (e) {
+        el.innerHTML = '<p class="error">Could not load.</p>';
+      }
+    }
+
     function apply() {
       loadActiveUsers();
       loadTehillimStats();
+      loadFeatureUsage().then(function() { loadOverviewFeatures(); });
       loadEventCounts();
       loadEventSeries();
       loadRetention();

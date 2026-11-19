@@ -33,6 +33,16 @@ import {
   deleteTehillimCampaign,
   joinTehillimCampaign,
   getTehillimStats,
+  getFeatureUsage,
+  getFeatureUsers,
+  getDetailedUsage,
+  getFeatureActionBreakdown,
+  getProductActionStats,
+  getScreenStats,
+  getEventPropertyBreakdown,
+  getFeatureSeries,
+  getAudienceBreakdown,
+  getReminderOptIns,
   createSupportRequest,
   listSupportRequests,
   updateSupportRequest,
@@ -207,6 +217,140 @@ app.get('/api/stats/tehillim', async (req, res) => {
   } catch (e) {
     console.error('[analytics-api] GET /api/stats/tehillim', e);
     res.status(500).json({ error: 'Failed to get Tehillim stats' });
+  }
+});
+
+// Feature usage: unique users + event counts per feature (who uses what)
+app.get('/api/stats/feature-usage', async (req, res) => {
+  try {
+    const start_date = req.query.start_date || undefined;
+    const end_date = req.query.end_date || undefined;
+    const features = await getFeatureUsage(start_date, end_date);
+    res.json({ features });
+  } catch (e) {
+    console.error('[analytics-api] GET /api/stats/feature-usage', e);
+    res.status(500).json({ error: 'Failed to get feature usage' });
+  }
+});
+
+// Top users for a feature (paste id into Users explorer)
+app.get('/api/stats/feature-users', async (req, res) => {
+  try {
+    const start_date = req.query.start_date || undefined;
+    const end_date = req.query.end_date || undefined;
+    const feature = req.query.feature || undefined;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+    const users = await getFeatureUsers(feature, start_date, end_date, limit);
+    res.json({ feature: feature || null, users });
+  } catch (e) {
+    console.error('[analytics-api] GET /api/stats/feature-users', e);
+    res.status(500).json({ error: 'Failed to get feature users' });
+  }
+});
+
+// Detailed product analytics for Features dashboard
+app.get('/api/stats/detailed', async (req, res) => {
+  try {
+    const start_date = req.query.start_date || undefined;
+    const end_date = req.query.end_date || undefined;
+    const data = await getDetailedUsage(start_date, end_date);
+    res.json(data);
+  } catch (e) {
+    console.error('[analytics-api] GET /api/stats/detailed', e);
+    res.status(500).json({ error: 'Failed to get detailed usage' });
+  }
+});
+
+// Event mix inside a feature
+app.get('/api/stats/feature-actions', async (req, res) => {
+  try {
+    const start_date = req.query.start_date || undefined;
+    const end_date = req.query.end_date || undefined;
+    const feature = req.query.feature || undefined;
+    const actions = await getFeatureActionBreakdown(feature, start_date, end_date);
+    res.json({ feature: feature || null, actions });
+  } catch (e) {
+    console.error('[analytics-api] GET /api/stats/feature-actions', e);
+    res.status(500).json({ error: 'Failed to get feature actions' });
+  }
+});
+
+app.get('/api/stats/product-actions', async (req, res) => {
+  try {
+    const actions = await getProductActionStats(req.query.start_date || undefined, req.query.end_date || undefined);
+    res.json({ actions });
+  } catch (e) {
+    console.error('[analytics-api] GET /api/stats/product-actions', e);
+    res.status(500).json({ error: 'Failed to get product actions' });
+  }
+});
+
+app.get('/api/stats/screens', async (req, res) => {
+  try {
+    const screens = await getScreenStats(
+      req.query.start_date || undefined,
+      req.query.end_date || undefined,
+      Math.min(parseInt(req.query.limit, 10) || 30, 100)
+    );
+    res.json({ screens });
+  } catch (e) {
+    console.error('[analytics-api] GET /api/stats/screens', e);
+    res.status(500).json({ error: 'Failed to get screen stats' });
+  }
+});
+
+app.get('/api/stats/breakdown', async (req, res) => {
+  try {
+    const event_name = req.query.event_name;
+    const property = req.query.property;
+    if (!event_name || !property) {
+      return res.status(400).json({ error: 'event_name and property required' });
+    }
+    const rows = await getEventPropertyBreakdown(
+      event_name,
+      property,
+      req.query.start_date || undefined,
+      req.query.end_date || undefined,
+      Math.min(parseInt(req.query.limit, 10) || 25, 100)
+    );
+    res.json({ event_name, property, rows });
+  } catch (e) {
+    console.error('[analytics-api] GET /api/stats/breakdown', e);
+    res.status(500).json({ error: 'Failed to get breakdown' });
+  }
+});
+
+app.get('/api/stats/feature-series', async (req, res) => {
+  try {
+    const data = await getFeatureSeries(
+      req.query.start_date || undefined,
+      req.query.end_date || undefined,
+      Math.min(parseInt(req.query.top, 10) || 5, 10)
+    );
+    res.json(data);
+  } catch (e) {
+    console.error('[analytics-api] GET /api/stats/feature-series', e);
+    res.status(500).json({ error: 'Failed to get feature series' });
+  }
+});
+
+app.get('/api/stats/audience', async (req, res) => {
+  try {
+    const data = await getAudienceBreakdown(req.query.start_date || undefined, req.query.end_date || undefined);
+    res.json(data);
+  } catch (e) {
+    console.error('[analytics-api] GET /api/stats/audience', e);
+    res.status(500).json({ error: 'Failed to get audience breakdown' });
+  }
+});
+
+app.get('/api/stats/reminders', async (req, res) => {
+  try {
+    const data = await getReminderOptIns();
+    res.json(data);
+  } catch (e) {
+    console.error('[analytics-api] GET /api/stats/reminders', e);
+    res.status(500).json({ error: 'Failed to get reminder opt-ins' });
   }
 });
 

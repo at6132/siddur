@@ -120,6 +120,13 @@ export async function initTehillimTables() {
       PRIMARY KEY (campaign_id, participant_id)
     );
     CREATE INDEX IF NOT EXISTS idx_tehillim_participants_campaign ON tehillim_participants(campaign_id);
+    CREATE TABLE IF NOT EXISTS tehillim_hidden (
+      campaign_id TEXT NOT NULL REFERENCES tehillim_campaigns(id) ON DELETE CASCADE,
+      participant_id TEXT NOT NULL,
+      hidden_at TIMESTAMPTZ DEFAULT NOW(),
+      PRIMARY KEY (campaign_id, participant_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_tehillim_hidden_participant ON tehillim_hidden(participant_id);
   `);
   console.log('[analytics-api] Tehillim tables initialized.');
 }
@@ -478,6 +485,13 @@ export async function createTehillimCampaign({ type, title, reason, deadline, cr
      VALUES ($1, $2, $3, $4, $5, $6)`,
     [id, type, title || '', reason || '', deadline || null, createdBy || null]
   );
+  if (createdBy) {
+    await p.query(
+      `INSERT INTO tehillim_participants (campaign_id, participant_id) VALUES ($1, $2)
+       ON CONFLICT (campaign_id, participant_id) DO NOTHING`,
+      [id, createdBy]
+    );
+  }
   return { id, type, title: title || '', reason: reason || '', deadline: deadline || null };
 }
 
@@ -616,7 +630,7 @@ export async function cleanupExpiredTehillimCampaigns() {
   return r.rowCount ?? 0;
 }
 
-/** Join a campaign so it appears in "Your Tehillim pages". Idempotent. */
+/** Join a campaign so it appears in "Your Tehillim pages". Idempotent. Clears soft-hide. */
 export async function joinTehillimCampaign(campaignId, participantId) {
   const p = getPool();
   if (!p) throw new Error('Database not available');
@@ -626,22 +640,37 @@ export async function joinTehillimCampaign(campaignId, participantId) {
     `INSERT INTO tehillim_participants (campaign_id, participant_id) VALUES ($1, $2) ON CONFLICT (campaign_id, participant_id) DO NOTHING`,
     [campaignId, participantId]
   );
+  await p.query(
+    `DELETE FROM tehillim_hidden WHERE campaign_id = $1 AND participant_id = $2`,
+    [campaignId, participantId]
+  );
   return { joined: true };
 }
 
-/** List campaigns for a participant: created by them or they have commitments/completions or joined. Excludes expired+grace. */
+/** List campaigns for a participant: created by them or they have commitments/completions or joined. Excludes soft-hidden and expired+grace. */
 export async function listTehillimCampaignsForParticipant(participantId) {
   const p = getPool();
   if (!p) return [];
   await cleanupExpiredTehillimCampaigns();
   const r = await p.query(
-    `SELECT c.id, c.type, c.title, c.reason, c.deadline, c.created_at, c.created_by
+    `SELECT c.id, c.type, c.title, c.reason, c.deadline, c.created_at, c.created_by,
+            EXISTS (
+              SELECT 1 FROM tehillim_hidden h
+              WHERE h.campaign_id = c.id AND h.participant_id = $1
+            ) AS is_hidden
      FROM tehillim_campaigns c
      LEFT JOIN tehillim_commitments cm ON cm.campaign_id = c.id AND cm.participant_id = $1
      LEFT JOIN tehillim_completions cp ON cp.campaign_id = c.id AND cp.participant_id = $1
      LEFT JOIN tehillim_participants tp ON tp.campaign_id = c.id AND tp.participant_id = $1
      WHERE (c.created_by = $1 OR cm.campaign_id IS NOT NULL OR cp.campaign_id IS NOT NULL OR tp.campaign_id IS NOT NULL)
        AND (c.deadline IS NULL OR c.deadline >= NOW() - INTERVAL '${EXPIRED_GRACE_DAYS} days')
+       AND (
+         c.created_by = $1
+         OR NOT EXISTS (
+           SELECT 1 FROM tehillim_hidden h
+           WHERE h.campaign_id = c.id AND h.participant_id = $1
+         )
+       )
      GROUP BY c.id
      ORDER BY c.created_at DESC`,
     [participantId]
@@ -655,15 +684,22 @@ export async function listTehillimCampaignsForParticipant(participantId) {
     created_at: row.created_at?.toISOString(),
     created_by: row.created_by,
     is_creator: row.created_by === participantId,
+    is_hidden: Boolean(row.is_hidden),
   }));
 }
 
-/** Remove this participant from the campaign (their commitments, completions, and participant record). */
+/**
+ * Soft-leave: hide from this participant's list and remove membership.
+ * Keeps commitments/completions so contributions stay on the shared page.
+ */
 export async function leaveTehillimCampaign(campaignId, participantId) {
   const p = getPool();
   if (!p) throw new Error('Database not available');
-  await p.query(`DELETE FROM tehillim_commitments WHERE campaign_id = $1 AND participant_id = $2`, [campaignId, participantId]);
-  await p.query(`DELETE FROM tehillim_completions WHERE campaign_id = $1 AND participant_id = $2`, [campaignId, participantId]);
+  await p.query(
+    `INSERT INTO tehillim_hidden (campaign_id, participant_id) VALUES ($1, $2)
+     ON CONFLICT (campaign_id, participant_id) DO NOTHING`,
+    [campaignId, participantId]
+  );
   await p.query(`DELETE FROM tehillim_participants WHERE campaign_id = $1 AND participant_id = $2`, [campaignId, participantId]);
   return { left: true };
 }
@@ -702,6 +738,670 @@ export async function getPrivateTehillimPerekCount(startDate, endDate) {
     params
   );
   return Number(res.rows[0]?.count ?? 0);
+}
+
+/**
+ * Feature usage rollup: unique users + event counts per feature.
+ * Prefers payload.feature; falls back to parsing feature_*_entry/action/success/error names.
+ */
+export async function getFeatureUsage(startDate, endDate) {
+  const p = getPool();
+  if (!p) {
+    let list = [...memoryStore.events];
+    if (startDate) list = list.filter((e) => e.event_time_utc >= startDate);
+    if (endDate) list = list.filter((e) => e.event_time_utc <= endDate);
+    const byFeature = {};
+    for (const e of list) {
+      let feature = e.feature || null;
+      if (!feature && typeof e.event_name === 'string') {
+        const m = e.event_name.match(/^feature_([a-z0-9_]+)_(entry|action|success|error)$/);
+        if (m) feature = m[1];
+      }
+      if (!feature) continue;
+      if (!byFeature[feature]) {
+        byFeature[feature] = { feature, events: 0, users: new Set(), last_used: e.event_time_utc };
+      }
+      byFeature[feature].events += 1;
+      byFeature[feature].users.add(e.user_id || e.anonymous_id);
+      if (e.event_time_utc > byFeature[feature].last_used) {
+        byFeature[feature].last_used = e.event_time_utc;
+      }
+    }
+    return Object.values(byFeature)
+      .map((r) => ({
+        feature: r.feature,
+        events: r.events,
+        unique_users: r.users.size,
+        last_used: r.last_used,
+      }))
+      .sort((a, b) => b.unique_users - a.unique_users || b.events - a.events);
+  }
+
+  const conditions = [];
+  const params = [];
+  let i = 1;
+  if (startDate) {
+    conditions.push(`event_time_utc >= $${i}`);
+    params.push(startDate);
+    i++;
+  }
+  if (endDate) {
+    conditions.push(`event_time_utc <= $${i}`);
+    params.push(endDate);
+    i++;
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const res = await p.query(
+    `WITH tagged AS (
+       SELECT
+         COALESCE(
+           NULLIF(payload->>'feature', ''),
+           CASE
+             WHEN event_name ~ '^feature_[a-z0-9_]+_(entry|action|success|error)$'
+             THEN regexp_replace(event_name, '^feature_|_(entry|action|success|error)$', '', 'g')
+             ELSE NULL
+           END
+         ) AS feature,
+         COALESCE(user_id, anonymous_id) AS uid,
+         event_time_utc
+       FROM events
+       ${where}
+     )
+     SELECT
+       feature,
+       COUNT(*)::int AS events,
+       COUNT(DISTINCT uid)::int AS unique_users,
+       MAX(event_time_utc) AS last_used
+     FROM tagged
+     WHERE feature IS NOT NULL AND feature <> ''
+     GROUP BY feature
+     ORDER BY unique_users DESC, events DESC`,
+    params
+  );
+  return res.rows.map((r) => ({
+    feature: r.feature,
+    events: Number(r.events),
+    unique_users: Number(r.unique_users),
+    last_used: r.last_used instanceof Date ? r.last_used.toISOString() : r.last_used,
+  }));
+}
+
+/** Top users for a feature (or overall if feature omitted), with event counts. */
+export async function getFeatureUsers(feature, startDate, endDate, limit = 50) {
+  const p = getPool();
+  const lim = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
+  if (!p) {
+    let list = [...memoryStore.events];
+    if (startDate) list = list.filter((e) => e.event_time_utc >= startDate);
+    if (endDate) list = list.filter((e) => e.event_time_utc <= endDate);
+    if (feature) {
+      list = list.filter((e) => {
+        if (e.feature === feature) return true;
+        const m = typeof e.event_name === 'string' && e.event_name.match(/^feature_([a-z0-9_]+)_(entry|action|success|error)$/);
+        return m && m[1] === feature;
+      });
+    }
+    const byUser = {};
+    for (const e of list) {
+      const uid = e.user_id || e.anonymous_id;
+      if (!uid) continue;
+      if (!byUser[uid]) {
+        byUser[uid] = { anonymous_id: e.anonymous_id, user_id: e.user_id || null, events: 0, last_seen: e.event_time_utc };
+      }
+      byUser[uid].events += 1;
+      if (e.event_time_utc > byUser[uid].last_seen) byUser[uid].last_seen = e.event_time_utc;
+    }
+    return Object.values(byUser)
+      .sort((a, b) => b.events - a.events)
+      .slice(0, lim);
+  }
+
+  const conditions = [];
+  const params = [];
+  let i = 1;
+  if (startDate) {
+    conditions.push(`event_time_utc >= $${i}`);
+    params.push(startDate);
+    i++;
+  }
+  if (endDate) {
+    conditions.push(`event_time_utc <= $${i}`);
+    params.push(endDate);
+    i++;
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  params.push(feature || null);
+  const featureParam = `$${i}`;
+  i++;
+  params.push(lim);
+  const limitParam = `$${i}`;
+
+  const res = await p.query(
+    `WITH tagged AS (
+       SELECT
+         anonymous_id,
+         user_id,
+         COALESCE(user_id, anonymous_id) AS uid,
+         COALESCE(
+           NULLIF(payload->>'feature', ''),
+           CASE
+             WHEN event_name ~ '^feature_[a-z0-9_]+_(entry|action|success|error)$'
+             THEN regexp_replace(event_name, '^feature_|_(entry|action|success|error)$', '', 'g')
+             ELSE NULL
+           END
+         ) AS feature,
+         event_time_utc
+       FROM events
+       ${where}
+     )
+     SELECT
+       MAX(anonymous_id) AS anonymous_id,
+       MAX(user_id) AS user_id,
+       COUNT(*)::int AS events,
+       MAX(event_time_utc) AS last_seen
+     FROM tagged
+     WHERE feature IS NOT NULL AND feature <> ''
+       AND (${featureParam}::text IS NULL OR feature = ${featureParam})
+     GROUP BY uid
+     ORDER BY events DESC
+     LIMIT ${limitParam}`,
+    params
+  );
+  return res.rows.map((r) => ({
+    anonymous_id: r.anonymous_id,
+    user_id: r.user_id || null,
+    events: Number(r.events),
+    last_seen: r.last_seen instanceof Date ? r.last_seen.toISOString() : r.last_seen,
+  }));
+}
+
+function dateRangeConditions(startDate, endDate, startIndex = 1) {
+  const conditions = [];
+  const params = [];
+  let i = startIndex;
+  if (startDate) {
+    conditions.push(`event_time_utc >= $${i}`);
+    params.push(startDate);
+    i++;
+  }
+  if (endDate) {
+    conditions.push(`event_time_utc <= $${i}`);
+    params.push(endDate);
+    i++;
+  }
+  return { conditions, params, nextIndex: i, where: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '' };
+}
+
+/** Product action rollup: meaningful events with unique users. */
+export async function getProductActionStats(startDate, endDate) {
+  const PRODUCT_NAMES = [
+    'prayer_opened',
+    'prayer_english_toggled',
+    'tehillim_perek_opened',
+    'tehillim_perek_completed',
+    'tehillim_campaign_created',
+    'tehillim_campaign_joined',
+    'tehillim_campaign_claimed',
+    'tehillim_campaign_shared',
+    'tehillim_goal_changed',
+    'goal_added',
+    'goal_toggled',
+    'gratitude_added',
+    'habit_toggled',
+    'tzedakah_logged',
+    'omer_counted',
+    'brachos_added',
+    'search_result_tapped',
+    'coming_soon_viewed',
+    'nusach_changed',
+    'custom_reminder_saved',
+    'custom_reminder_changed',
+    'reminder_setting_changed',
+    'reminders_configured',
+    'display_setting_changed',
+    'home_panel_changed',
+    'library_item_opened',
+    'calendar_day_opened',
+    'spiritual_goals_changed',
+    'intro_began',
+    'onboarding_started',
+    'onboarding_completed',
+    'onboarding_skipped',
+    'permission_response',
+  ];
+  const p = getPool();
+  if (!p) {
+    let list = memoryStore.events;
+    if (startDate) list = list.filter((e) => e.event_time_utc >= startDate);
+    if (endDate) list = list.filter((e) => e.event_time_utc <= endDate);
+    const by = {};
+    for (const e of list) {
+      if (!PRODUCT_NAMES.includes(e.event_name)) continue;
+      if (!by[e.event_name]) by[e.event_name] = { event_name: e.event_name, events: 0, users: new Set() };
+      by[e.event_name].events += 1;
+      by[e.event_name].users.add(e.user_id || e.anonymous_id);
+    }
+    return Object.values(by)
+      .map((r) => ({ event_name: r.event_name, events: r.events, unique_users: r.users.size }))
+      .sort((a, b) => b.events - a.events);
+  }
+  const { conditions, params, nextIndex, where } = dateRangeConditions(startDate, endDate);
+  params.push(PRODUCT_NAMES);
+  const nameParam = `$${nextIndex}`;
+  const nameFilter = where
+    ? `${where} AND event_name = ANY(${nameParam})`
+    : `WHERE event_name = ANY(${nameParam})`;
+  const res = await p.query(
+    `SELECT event_name,
+            COUNT(*)::int AS events,
+            COUNT(DISTINCT COALESCE(user_id, anonymous_id))::int AS unique_users
+     FROM events
+     ${nameFilter}
+     GROUP BY event_name
+     ORDER BY events DESC`,
+    params
+  );
+  return res.rows.map((r) => ({
+    event_name: r.event_name,
+    events: Number(r.events),
+    unique_users: Number(r.unique_users),
+  }));
+}
+
+/** Top screens from screen_view. */
+export async function getScreenStats(startDate, endDate, limit = 30) {
+  const lim = Math.min(Math.max(parseInt(limit, 10) || 30, 1), 100);
+  const p = getPool();
+  if (!p) {
+    let list = memoryStore.events.filter((e) => e.event_name === 'screen_view');
+    if (startDate) list = list.filter((e) => e.event_time_utc >= startDate);
+    if (endDate) list = list.filter((e) => e.event_time_utc <= endDate);
+    const by = {};
+    for (const e of list) {
+      const name = e.screen_name || 'unknown';
+      if (!by[name]) by[name] = { screen_name: name, views: 0, users: new Set() };
+      by[name].views += 1;
+      by[name].users.add(e.user_id || e.anonymous_id);
+    }
+    return Object.values(by)
+      .map((r) => ({ screen_name: r.screen_name, views: r.views, unique_users: r.users.size }))
+      .sort((a, b) => b.views - a.views)
+      .slice(0, lim);
+  }
+  const { conditions, params, nextIndex, where } = dateRangeConditions(startDate, endDate);
+  const baseWhere = where
+    ? `${where} AND event_name = 'screen_view'`
+    : `WHERE event_name = 'screen_view'`;
+  params.push(lim);
+  const res = await p.query(
+    `SELECT COALESCE(NULLIF(payload->>'screen_name', ''), 'unknown') AS screen_name,
+            COUNT(*)::int AS views,
+            COUNT(DISTINCT COALESCE(user_id, anonymous_id))::int AS unique_users
+     FROM events
+     ${baseWhere}
+     GROUP BY 1
+     ORDER BY views DESC
+     LIMIT $${nextIndex}`,
+    params
+  );
+  return res.rows.map((r) => ({
+    screen_name: r.screen_name,
+    views: Number(r.views),
+    unique_users: Number(r.unique_users),
+  }));
+}
+
+/** Breakdown of event_name within a feature (or overall product/feature events). */
+export async function getFeatureActionBreakdown(feature, startDate, endDate) {
+  const p = getPool();
+  if (!p) {
+    let list = [...memoryStore.events];
+    if (startDate) list = list.filter((e) => e.event_time_utc >= startDate);
+    if (endDate) list = list.filter((e) => e.event_time_utc <= endDate);
+    if (feature) {
+      list = list.filter((e) => {
+        if (e.feature === feature) return true;
+        const m = typeof e.event_name === 'string' && e.event_name.match(/^feature_([a-z0-9_]+)_(entry|action|success|error)$/);
+        return m && m[1] === feature;
+      });
+    }
+    const by = {};
+    for (const e of list) {
+      if (!by[e.event_name]) by[e.event_name] = { event_name: e.event_name, events: 0, users: new Set() };
+      by[e.event_name].events += 1;
+      by[e.event_name].users.add(e.user_id || e.anonymous_id);
+    }
+    return Object.values(by)
+      .map((r) => ({ event_name: r.event_name, events: r.events, unique_users: r.users.size }))
+      .sort((a, b) => b.events - a.events);
+  }
+  const { conditions, params, nextIndex, where } = dateRangeConditions(startDate, endDate);
+  params.push(feature || null);
+  const featureParam = `$${nextIndex}`;
+  const res = await p.query(
+    `WITH tagged AS (
+       SELECT
+         event_name,
+         COALESCE(user_id, anonymous_id) AS uid,
+         COALESCE(
+           NULLIF(payload->>'feature', ''),
+           CASE
+             WHEN event_name ~ '^feature_[a-z0-9_]+_(entry|action|success|error)$'
+             THEN regexp_replace(event_name, '^feature_|_(entry|action|success|error)$', '', 'g')
+             ELSE NULL
+           END
+         ) AS feature
+       FROM events
+       ${where}
+     )
+     SELECT event_name,
+            COUNT(*)::int AS events,
+            COUNT(DISTINCT uid)::int AS unique_users
+     FROM tagged
+     WHERE (${featureParam}::text IS NULL OR feature = ${featureParam})
+       AND (feature IS NOT NULL OR event_name NOT LIKE 'feature_%')
+     GROUP BY event_name
+     ORDER BY events DESC
+     LIMIT 40`,
+    params
+  );
+  return res.rows.map((r) => ({
+    event_name: r.event_name,
+    events: Number(r.events),
+    unique_users: Number(r.unique_users),
+  }));
+}
+
+const ALLOWED_BREAKDOWN_PROPS = new Set([
+  'service',
+  'source',
+  'result_label',
+  'result_id',
+  'result_group',
+  'requested_feature',
+  'nusach',
+  'campaign_type',
+  'platform',
+  'action',
+  'permission_type',
+  'result',
+  'setting',
+  'item_id',
+  'item_kind',
+  'panel_type',
+  'prayer',
+]);
+
+/** Property breakdown for a given event (e.g. prayer_opened → service). */
+export async function getEventPropertyBreakdown(eventName, property, startDate, endDate, limit = 25) {
+  if (!eventName || !property || !ALLOWED_BREAKDOWN_PROPS.has(property)) return [];
+  const lim = Math.min(Math.max(parseInt(limit, 10) || 25, 1), 100);
+  const p = getPool();
+  if (!p) {
+    let list = memoryStore.events.filter((e) => e.event_name === eventName);
+    if (startDate) list = list.filter((e) => e.event_time_utc >= startDate);
+    if (endDate) list = list.filter((e) => e.event_time_utc <= endDate);
+    const by = {};
+    for (const e of list) {
+      const val = String(e[property] ?? 'unknown');
+      if (!by[val]) by[val] = { value: val, events: 0, users: new Set() };
+      by[val].events += 1;
+      by[val].users.add(e.user_id || e.anonymous_id);
+    }
+    return Object.values(by)
+      .map((r) => ({ value: r.value, events: r.events, unique_users: r.users.size }))
+      .sort((a, b) => b.events - a.events)
+      .slice(0, lim);
+  }
+  const { conditions, params, nextIndex } = dateRangeConditions(startDate, endDate);
+  const filters = [...conditions, `event_name = $${nextIndex}`];
+  params.push(eventName);
+  const limIndex = nextIndex + 1;
+  params.push(lim);
+  const res = await p.query(
+    `SELECT COALESCE(NULLIF(payload->>$prop$, ''), 'unknown') AS value,
+            COUNT(*)::int AS events,
+            COUNT(DISTINCT COALESCE(user_id, anonymous_id))::int AS unique_users
+     FROM events
+     WHERE ${filters.join(' AND ')}
+     GROUP BY 1
+     ORDER BY events DESC
+     LIMIT $${limIndex}`.replace('$prop$', `'${property}'`),
+    params
+  );
+  return res.rows.map((r) => ({
+    value: r.value,
+    events: Number(r.events),
+    unique_users: Number(r.unique_users),
+  }));
+}
+
+/** Daily unique users for top features (for time-series chart). */
+export async function getFeatureSeries(startDate, endDate, topN = 5) {
+  const n = Math.min(Math.max(parseInt(topN, 10) || 5, 1), 10);
+  const p = getPool();
+  if (!p) return { features: [], series: [] };
+  const { where, params, nextIndex } = dateRangeConditions(startDate, endDate);
+  params.push(n);
+  const topParam = `$${nextIndex}`;
+  const topRes = await p.query(
+    `WITH tagged AS (
+       SELECT
+         COALESCE(user_id, anonymous_id) AS uid,
+         COALESCE(
+           NULLIF(payload->>'feature', ''),
+           CASE
+             WHEN event_name ~ '^feature_[a-z0-9_]+_(entry|action|success|error)$'
+             THEN regexp_replace(event_name, '^feature_|_(entry|action|success|error)$', '', 'g')
+             ELSE NULL
+           END
+         ) AS feature
+       FROM events
+       ${where}
+     )
+     SELECT feature, COUNT(DISTINCT uid)::int AS unique_users
+     FROM tagged
+     WHERE feature IS NOT NULL AND feature <> ''
+     GROUP BY feature
+     ORDER BY unique_users DESC
+     LIMIT ${topParam}`,
+    params
+  );
+  const features = topRes.rows.map((r) => r.feature);
+  if (features.length === 0) return { features: [], series: [] };
+
+  const seriesParams = [...(startDate ? [startDate] : []), ...(endDate ? [endDate] : []), features];
+  let si = 1;
+  const seriesConds = [];
+  if (startDate) {
+    seriesConds.push(`event_time_utc >= $${si++}`);
+  }
+  if (endDate) {
+    seriesConds.push(`event_time_utc <= $${si++}`);
+  }
+  const featuresParam = `$${si}`;
+  const seriesWhere = seriesConds.length ? `WHERE ${seriesConds.join(' AND ')}` : '';
+  const seriesRes = await p.query(
+    `WITH tagged AS (
+       SELECT
+         (event_time_utc AT TIME ZONE 'UTC')::date AS day,
+         COALESCE(user_id, anonymous_id) AS uid,
+         COALESCE(
+           NULLIF(payload->>'feature', ''),
+           CASE
+             WHEN event_name ~ '^feature_[a-z0-9_]+_(entry|action|success|error)$'
+             THEN regexp_replace(event_name, '^feature_|_(entry|action|success|error)$', '', 'g')
+             ELSE NULL
+           END
+         ) AS feature
+       FROM events
+       ${seriesWhere}
+     )
+     SELECT day::text AS date, feature, COUNT(DISTINCT uid)::int AS unique_users
+     FROM tagged
+     WHERE feature = ANY(${featuresParam})
+     GROUP BY 1, 2
+     ORDER BY 1, 2`,
+    seriesParams
+  );
+  return {
+    features,
+    series: seriesRes.rows.map((r) => ({
+      date: typeof r.date === 'string' ? r.date.slice(0, 10) : r.date,
+      feature: r.feature,
+      unique_users: Number(r.unique_users),
+    })),
+  };
+}
+
+/** Platform + release channel mix. */
+export async function getAudienceBreakdown(startDate, endDate) {
+  const p = getPool();
+  if (!p) {
+    return { platforms: [], channels: [], nusach: [] };
+  }
+  const { where, params } = dateRangeConditions(startDate, endDate);
+  const [platforms, channels, nusach] = await Promise.all([
+    p.query(
+      `SELECT COALESCE(NULLIF(payload->>'platform', ''), 'unknown') AS value,
+              COUNT(*)::int AS events,
+              COUNT(DISTINCT COALESCE(user_id, anonymous_id))::int AS unique_users
+       FROM events ${where}
+       GROUP BY 1 ORDER BY unique_users DESC`,
+      params
+    ),
+    p.query(
+      `SELECT COALESCE(NULLIF(payload->>'release_channel', ''), 'unknown') AS value,
+              COUNT(*)::int AS events,
+              COUNT(DISTINCT COALESCE(user_id, anonymous_id))::int AS unique_users
+       FROM events ${where}
+       GROUP BY 1 ORDER BY unique_users DESC`,
+      params
+    ),
+    p.query(
+      `SELECT COALESCE(NULLIF(profile->>'nusach', ''), 'unknown') AS value,
+              COUNT(*)::int AS unique_users
+       FROM identities
+       GROUP BY 1 ORDER BY unique_users DESC`
+    ),
+  ]);
+  return {
+    platforms: platforms.rows.map((r) => ({
+      value: r.value,
+      events: Number(r.events),
+      unique_users: Number(r.unique_users),
+    })),
+    channels: channels.rows.map((r) => ({
+      value: r.value,
+      events: Number(r.events),
+      unique_users: Number(r.unique_users),
+    })),
+    nusach: nusach.rows.map((r) => ({
+      value: r.value,
+      unique_users: Number(r.unique_users),
+    })),
+  };
+}
+
+const REMINDER_OPT_IN_KEYS = [
+  ['reminder_tefillin', 'Tefillin reminder'],
+  ['reminder_shabbos', 'Shabbos reminders'],
+  ['reminder_shabbos_clock', 'Shabbos alarm'],
+  ['reminder_shacharis', 'Shacharis reminder'],
+  ['reminder_mincha_prayer', 'Mincha reminder'],
+  ['reminder_maariv', 'Maariv reminder'],
+  ['reminder_daily_tehillim', 'Daily Tehillim'],
+  ['reminder_mincha_before_sunset', 'Mincha before sunset'],
+  ['reminder_gratitude', 'Daily gratitude'],
+  ['reminder_omer', 'Sefiras HaOmer'],
+  ['reminder_shekiya', 'Shekiya reminder'],
+  ['reminder_rosh_chodesh', 'Rosh Chodesh'],
+  ['reminder_fast_days', 'Fast days'],
+  ['reminder_hallel_anenu', 'Hallel / Aneinu'],
+  ['reminder_davening_addons', 'Davening add-ons'],
+  ['reminder_yaaleh_vyavo', "Yaaleh V'Yavo"],
+  ['reminder_al_hanissim', 'Al HaNisim'],
+  ['reminder_master_enabled', 'Notifications master'],
+];
+
+/** How many people currently have each reminder type enabled (from identity profiles). */
+export async function getReminderOptIns() {
+  const p = getPool();
+  if (!p) return { total_profiles: 0, reminders: [] };
+  const totalRes = await p.query(`SELECT COUNT(*)::int AS count FROM identities`);
+  const total = Number(totalRes.rows[0]?.count ?? 0);
+  const reminders = [];
+  for (const [key, label] of REMINDER_OPT_IN_KEYS) {
+    const res = await p.query(
+      `SELECT COUNT(*)::int AS count
+       FROM identities
+       WHERE profile->>$1 IN ('true', 't', '1')
+          OR (jsonb_typeof(profile->$1) = 'boolean' AND (profile->$1)::boolean = true)`,
+      [key]
+    );
+    reminders.push({
+      key,
+      label,
+      enabled_users: Number(res.rows[0]?.count ?? 0),
+      total_profiles: total,
+      pct: total ? Math.round((Number(res.rows[0]?.count ?? 0) / total) * 1000) / 10 : 0,
+    });
+  }
+  reminders.sort((a, b) => b.enabled_users - a.enabled_users);
+  return { total_profiles: total, reminders };
+}
+
+/** Recent reminder setting changes from events. */
+export async function getReminderSettingChanges(startDate, endDate, limit = 40) {
+  return getEventPropertyBreakdown('reminder_setting_changed', 'setting', startDate, endDate, limit);
+}
+
+/** One-shot detailed payload for the Features dashboard. */
+export async function getDetailedUsage(startDate, endDate) {
+  const [
+    features,
+    product_actions,
+    screens,
+    prayer_services,
+    tehillim_sources,
+    search_destinations,
+    coming_soon,
+    feature_series,
+    audience,
+    reminder_opt_ins,
+    reminder_changes,
+    library_items,
+    home_panel_actions,
+  ] = await Promise.all([
+    getFeatureUsage(startDate, endDate),
+    getProductActionStats(startDate, endDate),
+    getScreenStats(startDate, endDate, 25),
+    getEventPropertyBreakdown('prayer_opened', 'service', startDate, endDate),
+    getEventPropertyBreakdown('tehillim_perek_completed', 'source', startDate, endDate),
+    getEventPropertyBreakdown('search_result_tapped', 'result_label', startDate, endDate, 20),
+    getEventPropertyBreakdown('coming_soon_viewed', 'requested_feature', startDate, endDate, 20),
+    getFeatureSeries(startDate, endDate, 5),
+    getAudienceBreakdown(startDate, endDate),
+    getReminderOptIns(),
+    getReminderSettingChanges(startDate, endDate, 30),
+    getEventPropertyBreakdown('library_item_opened', 'item_id', startDate, endDate, 20),
+    getEventPropertyBreakdown('home_panel_changed', 'action', startDate, endDate, 15),
+  ]);
+  return {
+    features,
+    product_actions,
+    screens,
+    prayer_services,
+    tehillim_sources,
+    search_destinations,
+    coming_soon,
+    feature_series,
+    audience,
+    reminder_opt_ins,
+    reminder_changes,
+    library_items,
+    home_panel_actions,
+  };
 }
 
 /** Admin Tehillim stats: shared pages created, shared perakim completed (from DB), private perakim completed (from events). */
