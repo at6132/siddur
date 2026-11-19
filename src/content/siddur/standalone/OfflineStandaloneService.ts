@@ -5,12 +5,12 @@
 
 import { markSefataiParagraphSmall } from '../../../services/MinchaTextRules';
 import { stripMaarivKaddishBlock } from '../../../services/MaarivTextRules';
-import { stripSefariaInstructionLines } from '../../../services/ShacharitTextRules';
 import { applyTefilasHaderechPipeline } from '../../../services/StandaloneTextRules';
-import type { PrayerTextData, PrayerTextSegment } from '../../../services/SefariaService';
+import type { PrayerTextData, PrayerTextSegment } from '../prayerTextTypes';
 import { UserPreferencesService } from '../../../storage/UserPreferences';
 import type { StandaloneNusachId, StandaloneOfflinePack, StandaloneSectionKey } from './packTypes';
 import { getStandaloneOfflinePack } from './resolvePack';
+import { prepareLibrarySeasonalText } from '../librarySeasonal';
 
 export type { StandaloneSectionKey };
 
@@ -18,14 +18,23 @@ function segs(text: string): PrayerTextSegment[] {
   return [{ text, italic: false }];
 }
 
-function withSegments(hebrew: string, english: string): PrayerTextData {
-  const h = hebrew.replace(/\n{3,}/g, '\n\n').trim();
-  const e = (english || '').replace(/\n{3,}/g, '\n\n').trim();
+function withSegments(hebrew: string, english: string, date?: Date): PrayerTextData {
+  if (date == null) {
+    const h = hebrew.replace(/\n{3,}/g, '\n\n').trim();
+    const e = (english || '').replace(/\n{3,}/g, '\n\n').trim();
+    return {
+      hebrew: h,
+      english: e,
+      hebrewSegments: markSefataiParagraphSmall(segs(h)),
+      englishSegments: markSefataiParagraphSmall(segs(e)),
+    };
+  }
+  const prepared = prepareLibrarySeasonalText(hebrew, english, date);
   return {
-    hebrew: h,
-    english: e,
-    hebrewSegments: markSefataiParagraphSmall(segs(h)),
-    englishSegments: markSefataiParagraphSmall(segs(e)),
+    hebrew: prepared.hebrew,
+    english: prepared.english,
+    hebrewSegments: markSefataiParagraphSmall(prepared.hebrewSegments),
+    englishSegments: markSefataiParagraphSmall(segs(prepared.english)),
   };
 }
 
@@ -43,6 +52,7 @@ export class OfflineStandaloneService {
     sectionKey: string,
     options?: { date?: Date; nusach?: StandaloneNusachId }
   ): Promise<PrayerTextData | null> {
+    const date = options?.date ?? new Date();
     let nusach: StandaloneNusachId = options?.nusach ?? 'ashkenaz';
     if (options?.nusach == null) {
       try {
@@ -62,9 +72,6 @@ export class OfflineStandaloneService {
 
     let hebrew = raw.hebrew;
     let english = raw.english ?? '';
-    const stripped = stripSefariaInstructionLines(hebrew, english);
-    hebrew = stripped.hebrew;
-    english = stripped.english;
 
     if (sectionKey === 'krias_shema_al_hamita') {
       const noKaddish = stripMaarivKaddishBlock(hebrew, english);
@@ -72,7 +79,7 @@ export class OfflineStandaloneService {
       english = noKaddish.english;
     }
 
-    return withSegments(hebrew, english);
+    return withSegments(hebrew, english, date);
   }
 
   private static getTefilasHaderech(
@@ -81,8 +88,7 @@ export class OfflineStandaloneService {
   ): PrayerTextData | null {
     const raw = pack.sections.tefilas_haderech;
     if (!raw?.hebrew?.trim()) return null;
-    const stripped = stripSefariaInstructionLines(raw.hebrew, raw.english ?? '');
-    const piped = applyTefilasHaderechPipeline(stripped.hebrew, stripped.english, nusach);
+    const piped = applyTefilasHaderechPipeline(raw.hebrew, raw.english ?? '', nusach);
     return {
       hebrew: piped.hebrew,
       english: piped.english,

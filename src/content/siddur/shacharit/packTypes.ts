@@ -10,7 +10,6 @@ export type ShacharitNusachId = MinchaNusachId;
 export type ShacharitSectionKey =
   | 'tallit'
   | 'tefillin'
-  | 'preparatory'
   | 'birchot_hashachar'
   | 'korbanot'
   | 'pesukei_dzimra'

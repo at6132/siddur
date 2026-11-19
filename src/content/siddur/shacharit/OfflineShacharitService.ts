@@ -16,21 +16,21 @@ import {
   trimAlHanissimInsertionByCalendar,
 } from '../../../services/MinchaTextRules';
 import { applyShacharitSiddurSectionPipeline } from '../../../services/ShacharitSectionPipelines';
-import {
-  applyShacharitSectionCalendarGates,
-  splitBirchotHashacharCoreAndExpansion,
-  stripSefariaInstructionLines,
-} from '../../../services/ShacharitTextRules';
-import type { PrayerTextData, PrayerTextSegment } from '../../../services/SefariaService';
+import { splitBirchotHashacharCoreAndExpansion } from '../../../services/ShacharitTextRules';
+import type { PrayerTextData, PrayerTextSegment } from '../prayerTextTypes';
 import { JewishCalendarService } from '../../../core/calendar/JewishCalendar';
 import { UserPreferencesService } from '../../../storage/UserPreferences';
 import type { ShacharitNusachId, ShacharitOfflinePack, ShacharitSectionKey } from './packTypes';
 import { getShacharitOfflinePack } from './resolvePack';
 import {
+  applyShacharitContentSets,
+  buildShacharitGateCtx,
+} from './shacharitContentSets';
+import {
   getActiveAmidahDayOnlyInserts,
-  segmentHebrewWithSeasonalHighlights,
   trimYaalehVeyavoToTodaysPhrase,
 } from '../amidahSeasonal';
+import { prepareLibrarySeasonalText } from '../librarySeasonal';
 
 export type { ShacharitSectionKey };
 
@@ -48,23 +48,18 @@ function splitYotzerOrAndShemaIfNeeded(
 
   const stripNik = (s: string) => s.replace(/[\u0591-\u05C7]/g, '');
   const flat = stripNik(yot.hebrew);
-  const markers = ['יחיד אומר', 'אל מלך נאמן', 'שמע ישראל'];
+  // Prefer real Shema start — earliest "שמע ישראל" can be an instructional "ואומר שמע ישראל"
+  const preferred = ['יחיד אומר', 'אל מלך נאמן'];
   let cutFlat = -1;
-  for (const m of markers) {
+  for (const m of preferred) {
     const i = flat.indexOf(m);
     if (i !== -1 && (cutFlat === -1 || i < cutFlat)) cutFlat = i;
   }
-  if (cutFlat < 0) return null;
-
-  // Prefer cutting after Habocher chatima when it precedes Shema
-  const habocher = flat.lastIndexOf('הבוחר בעמו ישראל באהבה', cutFlat);
-  if (habocher !== -1) {
-    const afterChatima = habocher + 'הבוחר בעמו ישראל באהבה'.length;
-    // skip trailing colon / spaces on flat
-    let end = afterChatima;
-    while (end < cutFlat && /[:\s]/.test(flat[end] || '')) end++;
-    cutFlat = end;
+  if (cutFlat < 0) {
+    const i = flat.indexOf('שמע ישראל');
+    if (i !== -1) cutFlat = i;
   }
+  if (cutFlat < 0) return null;
 
   const toOrig: number[] = [];
   for (let i = 0; i < yot.hebrew.length; i++) {
@@ -72,13 +67,20 @@ function splitYotzerOrAndShemaIfNeeded(
   }
   const cutOrig = toOrig[Math.min(cutFlat, toOrig.length - 1)] ?? cutFlat;
 
-  const yHeb = yot.hebrew.slice(0, cutOrig).replace(/\n{3,}/g, '\n\n').trim();
+  let yHeb = yot.hebrew.slice(0, cutOrig).replace(/\n{3,}/g, '\n\n').trim();
   const sHeb = yot.hebrew.slice(cutOrig).replace(/\n{3,}/g, '\n\n').trim();
   if (yHeb.length < 80 || sHeb.length < 80) return null;
 
+  // Drop trailing "ואומר שמע ישראל…" instruction after Habocher chatima
+  const vaomer = yHeb.search(/ו[ְ]?א[וֹֹ]?מ[ֵ]?ר[\s\S]{0,12}ש[ׁ]?מ[ַ]?ע[\s\S]{0,8}י[ִ]?ש[ׂ]?ר[ָ]?א[ֵ]?ל/);
+  if (vaomer > 80) {
+    yHeb = yHeb.slice(0, vaomer).replace(/\n{3,}/g, '\n\n').trim();
+  }
+
   let yEng = yot.english ?? '';
   let sEng = '';
-  const engCut = yEng.search(/Hear,?\s+Israel|Hear\s+O\s+Israel/i);
+  let engCut = yEng.search(/\n\(?Almighty, faithful King\)?/i);
+  if (engCut < 80) engCut = yEng.search(/Hear,?\s+Israel|Hear\s+O\s+Israel/i);
   if (engCut > 80) {
     sEng = yEng.slice(engCut).trim();
     yEng = yEng.slice(0, engCut).trim();
@@ -93,7 +95,6 @@ function splitYotzerOrAndShemaIfNeeded(
 const CORE_SECTIONS: { key: ShacharitSectionKey; title: string; hebrewTitle: string }[] = [
   { key: 'tallit', title: 'Tallit', hebrewTitle: 'טלית' },
   { key: 'tefillin', title: 'Tefillin', hebrewTitle: 'תפילין' },
-  { key: 'preparatory', title: 'Preparatory Prayers', hebrewTitle: 'הכנות' },
   { key: 'birchot_hashachar', title: 'Morning Blessings', hebrewTitle: 'ברכות השחר' },
   { key: 'korbanot', title: 'Korbanot', hebrewTitle: 'קרבנות' },
   { key: 'pesukei_dzimra', title: "Pesukei D'Zimra", hebrewTitle: 'פסוקי דזמרה' },
@@ -116,30 +117,48 @@ function segs(text: string): PrayerTextSegment[] {
   return [{ text, italic: false }];
 }
 
-function withSegments(hebrew: string, english: string, date?: Date): PrayerTextData {
-  const h = hebrew.replace(/\n{3,}/g, '\n\n').trim();
-  const e = (english || '').replace(/\n{3,}/g, '\n\n').trim();
-  const hebrewSegments = markSefataiParagraphSmall(
-    date != null
-      ? segmentHebrewWithSeasonalHighlights(h, date, { amidahSlot: 'shacharit' })
-      : segs(h)
-  );
+function withSegments(
+  hebrew: string,
+  english: string,
+  date?: Date,
+  isIsrael?: boolean
+): PrayerTextData & { folds?: Record<string, { hebrew: string; english: string }> } {
+  if (date == null) {
+    const h = hebrew.replace(/\n{3,}/g, '\n\n').trim();
+    const e = (english || '').replace(/\n{3,}/g, '\n\n').trim();
+    return {
+      hebrew: h,
+      english: e,
+      hebrewSegments: markSefataiParagraphSmall(segs(h)),
+      englishSegments: markSefataiParagraphSmall(segs(e)),
+      folds: {},
+    };
+  }
+  const prepared = prepareLibrarySeasonalText(hebrew, english, date, {
+    amidahSlot: 'shacharit',
+    isIsrael,
+  });
   return {
-    hebrew: h,
-    english: e,
-    hebrewSegments,
-    englishSegments: markSefataiParagraphSmall(segs(e)),
+    hebrew: prepared.hebrew,
+    english: prepared.english,
+    hebrewSegments: markSefataiParagraphSmall(prepared.hebrewSegments),
+    englishSegments: markSefataiParagraphSmall(segs(prepared.english)),
+    folds: prepared.folds,
   };
 }
 
-function markPiece(hebrew: string | undefined, date?: Date): PrayerTextSegment[] | undefined {
+function markPiece(
+  hebrew: string | undefined,
+  date?: Date,
+  isIsrael?: boolean
+): PrayerTextSegment[] | undefined {
   if (!hebrew?.trim()) return undefined;
-  if (date != null) {
-    return markSefataiParagraphSmall(
-      segmentHebrewWithSeasonalHighlights(hebrew, date, { amidahSlot: 'shacharit' })
-    );
-  }
-  return markSefataiParagraphSmall(segs(hebrew));
+  if (date == null) return markSefataiParagraphSmall(segs(hebrew));
+  const prepared = prepareLibrarySeasonalText(hebrew, '', date, {
+    amidahSlot: 'shacharit',
+    isIsrael,
+  });
+  return markSefataiParagraphSmall(prepared.hebrewSegments);
 }
 
 export class OfflineShacharitService {
@@ -160,6 +179,8 @@ export class OfflineShacharitService {
     const monThu = date.getDay() === 1 || date.getDay() === 4;
     const shemaSplit = splitYotzerOrAndShemaIfNeeded(pack);
     return CORE_SECTIONS.filter((s) => {
+      // Korbanot lives as a foldout on ברכות השחר (not a main scroll section).
+      if (s.key === 'korbanot') return false;
       const hasRaw = Boolean(pack.sections[s.key]?.hebrew?.trim());
       const hasSplitShema = s.key === 'shema' && Boolean(shemaSplit?.shema.hebrew?.trim());
       const hasSplitYotzer = s.key === 'yotzer_or' && Boolean(shemaSplit?.yotzer.hebrew?.trim());
@@ -199,52 +220,66 @@ export class OfflineShacharitService {
 
     let hebrew = raw.hebrew;
     let english = raw.english ?? '';
-    const strippedNotes = stripSefariaInstructionLines(hebrew, english);
-    hebrew = strippedNotes.hebrew;
-    english = strippedNotes.english;
     const piped = applyShacharitSiddurSectionPipeline(sectionKey, hebrew, english, { date, nusach });
     hebrew = piped.hebrew;
     english = piped.english;
 
-    const cal = applyShacharitSectionCalendarGates(sectionKey, hebrew, english, date, {
-      tachanun: JewishCalendarService.isTachanunSaid(date),
-      aseret: JewishCalendarService.isAseretYemeiTeshuva(date),
-      roshChodesh: JewishCalendarService.isRoshChodesh(date),
-      ledavidSeason: JewishCalendarService.isLedavidAfterTefillahSeason(date),
-      fastOrAseret:
-        JewishCalendarService.isFastDay(date) || JewishCalendarService.isAseretYemeiTeshuva(date),
-      mondayThursday: date.getDay() === 1 || date.getDay() === 4,
-    });
-    hebrew = cal.hebrew;
-    english = cal.english;
+    const gateCtx = buildShacharitGateCtx(date);
+    const gated = applyShacharitContentSets(sectionKey, hebrew, english, gateCtx);
+    hebrew = gated.hebrew;
+    english = gated.english;
 
     // Sfard continuous blobs: restore paragraph gaps before each ברוך אתה
     const spaced = ensureBaruchAtahParagraphBreaks(hebrew, english);
     hebrew = spaced.hebrew;
     english = spaced.english;
 
-    const content = withSegments(hebrew, english);
+    const content = withSegments(hebrew, english, date);
 
     if (sectionKey === 'birchot_hashachar') {
+      const korbanotFoldout = this.buildKorbanotFoldout(pack, date, nusach);
+
+      const markerFold = content.folds?.birchot_expansion;
+      if (markerFold?.hebrew?.trim() && content.hebrew.trim()) {
+        const beforeH = content.hebrew.trim();
+        const beforeE = content.english.trim();
+        const { folds: _folds, ...rest } = content;
+        return {
+          ...rest,
+          hebrew: '',
+          english: '',
+          hebrewSegments: [],
+          hebrewBeforeBirchosHashacharExpansionFoldout: beforeH,
+          englishBeforeBirchosHashacharExpansionFoldout: beforeE || undefined,
+          hebrewBeforeBirchosHashacharExpansionFoldoutSegments: markSefataiParagraphSmall(segs(beforeH)),
+          birchosHashacharExpansionFoldout: {
+            hebrew: markerFold.hebrew.trim(),
+            english: markerFold.english?.trim() ?? '',
+          },
+          ...(korbanotFoldout ? { korbanotFoldout } : {}),
+        };
+      }
+
+      // Prefer mid-string locator (אלהינו…זכרנו); paragraph split when \n\n-separated
+      const loc = extractBirchosHashacharExpansionFoldout(hebrew, english);
       const paraSplit = splitBirchotHashacharCoreAndExpansion(hebrew, english);
       const bhSplit =
-        paraSplit ??
-        (() => {
-          const loc = extractBirchosHashacharExpansionFoldout(hebrew, english);
-          if (!loc?.beforeHebrew?.trim() || !loc.foldoutHebrew?.trim()) return null;
-          if (loc.beforeHebrew.trim().length < 80) return null;
-          return {
-            beforeHebrew: loc.beforeHebrew,
-            beforeEnglish: loc.beforeEnglish,
-            foldoutHebrew: loc.foldoutHebrew,
-            foldoutEnglish: loc.foldoutEnglish,
-          };
-        })();
+        loc?.beforeHebrew?.trim() &&
+        loc.foldoutHebrew?.trim() &&
+        loc.beforeHebrew.trim().length >= 80
+          ? {
+              beforeHebrew: loc.beforeHebrew,
+              beforeEnglish: loc.beforeEnglish,
+              foldoutHebrew: loc.foldoutHebrew,
+              foldoutEnglish: loc.foldoutEnglish,
+            }
+          : paraSplit;
       if (bhSplit?.foldoutHebrew?.trim() && bhSplit.beforeHebrew.trim()) {
         const beforeH = bhSplit.beforeHebrew.trim();
         const beforeE = bhSplit.beforeEnglish.trim();
+        const { folds: _fBh, ...restBh } = content;
         return {
-          ...content,
+          ...restBh,
           hebrew: '',
           english: '',
           hebrewSegments: [],
@@ -255,11 +290,39 @@ export class OfflineShacharitService {
             hebrew: bhSplit.foldoutHebrew.trim(),
             english: bhSplit.foldoutEnglish?.trim() ?? '',
           },
+          ...(korbanotFoldout ? { korbanotFoldout } : {}),
         };
       }
+
+      const { folds: _f2, ...rest2 } = content;
+      return {
+        ...rest2,
+        ...(korbanotFoldout ? { korbanotFoldout } : {}),
+      };
     }
 
-    return content;
+    const { folds: _f3, ...rest3 } = content;
+    return rest3;
+  }
+
+  /** Korbanot foldout on ברכות השחר (see SHACHARIT_CONTENT_SETS foldout_korbanot). */
+  private static buildKorbanotFoldout(
+    pack: ShacharitOfflinePack,
+    date: Date,
+    nusach: ShacharitNusachId
+  ): PrayerTextData | undefined {
+    const raw = pack.sections.korbanot;
+    if (!raw?.hebrew?.trim()) return undefined;
+    let hebrew = raw.hebrew;
+    let english = raw.english ?? '';
+    const piped = applyShacharitSiddurSectionPipeline('korbanot', hebrew, english, { date, nusach });
+    hebrew = piped.hebrew;
+    english = piped.english;
+    const gated = applyShacharitContentSets('korbanot', hebrew, english, buildShacharitGateCtx(date));
+    const spaced = ensureBaruchAtahParagraphBreaks(gated.hebrew, gated.english);
+    const out = withSegments(spaced.hebrew, spaced.english, date);
+    const { folds: _f, ...rest } = out;
+    return rest.hebrew.trim() ? rest : undefined;
   }
 
   private static async getAmidah(date: Date, pack: ShacharitOfflinePack): Promise<PrayerTextData> {
@@ -271,8 +334,7 @@ export class OfflineShacharitService {
       /* diaspora */
     }
     const raw = pack.sections.amidah!;
-    const notes = stripSefariaInstructionLines(raw.hebrew, raw.english ?? '');
-    const titles = removeParagraphTitles(notes.hebrew, notes.english, AMIDAH_BRACHA_TITLES);
+    const titles = removeParagraphTitles(raw.hebrew, raw.english ?? '', AMIDAH_BRACHA_TITLES);
     const piped = applyWeekdayAmidahTextPipeline(titles.hebrew, titles.english, {
       date,
       israelForRainInsertion: israelForRain,
@@ -321,14 +383,18 @@ export class OfflineShacharitService {
     }
 
     hebrew = trimYaalehVeyavoToTodaysPhrase(hebrew, date);
-    const content = withSegments(hebrew, english, date);
+    const content = withSegments(hebrew, english, date, israelForRain);
     return {
       ...content,
       hebrewBeforeKedushaFoldout,
       englishBeforeKedushaFoldout: kedushaSplitKeepsAvos
         ? kedushaSplit.mainEnglishBeforeFoldout?.trim() || undefined
         : undefined,
-      hebrewBeforeKedushaFoldoutSegments: markPiece(hebrewBeforeKedushaFoldout, date),
+      hebrewBeforeKedushaFoldoutSegments: markPiece(
+        hebrewBeforeKedushaFoldout,
+        date,
+        israelForRain
+      ),
       kedushaFoldout:
         kedushaSplitKeepsAvos && kedushaSplit.kedushaHebrew?.trim()
           ? {
@@ -338,7 +404,11 @@ export class OfflineShacharitService {
           : undefined,
       hebrewBeforeModimDerabananFoldout,
       englishBeforeModimDerabananFoldout,
-      hebrewBeforeModimDerabananFoldoutSegments: markPiece(hebrewBeforeModimDerabananFoldout, date),
+      hebrewBeforeModimDerabananFoldoutSegments: markPiece(
+        hebrewBeforeModimDerabananFoldout,
+        date,
+        israelForRain
+      ),
       modimDerabananFoldout,
     };
   }

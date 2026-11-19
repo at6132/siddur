@@ -25,6 +25,7 @@ import {
   removeMashivHaruachInstructionParagraph,
   removeHaElHaKadoshTayaInstructionParagraph,
   removeMelechHamishpatAseretInstructionParagraph,
+  deleteAmidahSeasonalInstructionsFully,
   collapseLmaanShmoToMelechOzerBreak,
   collapseKiElMelechKadoshAtahToBarchuHaElHaKadoshBreak,
   collapseUmatzmichYesuahToNeemanLehachayotMetimBreak,
@@ -168,6 +169,12 @@ export const WEEKDAY_AMIDAH_PIPELINE_STEPS: readonly WeekdayAmidahPipelineStep[]
     description:
       'Always remove המלך המשפט vs מלך אוהב צדקה ומשפט (בכל השנה / בעשי"ת) mistake halacha paragraph',
     apply: (h, e) => removeMelechHamishpatAseretInstructionParagraph(h, e),
+  },
+  {
+    id: 'delete_all_seasonal_instructions',
+    description:
+      'Fully delete remaining seasonal / forgetfulness instructions (glued single-\\n packs): chatima mistakes, בעשי"ת מסיים samples, mashiv/yaaleh/al-hanissim/tal notes, modim bowing, פלוני techinah, etc.',
+    apply: (h, e) => deleteAmidahSeasonalInstructionsFully(h, e),
   },
   {
     id: 'collapse_lmaan_melech',

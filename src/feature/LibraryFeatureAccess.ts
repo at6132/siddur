@@ -10,6 +10,7 @@ export const AVAILABLE_SIDDUR_SERVICES = new Set([
   'asher_yatzar',
   'tefilas_haderech',
   'bedtime',
+  'modeh_ani',
 ]);
 
 /** More Texts grid items that navigate (not Tehillim list / not phase-1 siddur). */

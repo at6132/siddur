@@ -17,15 +17,15 @@ import {
   stripFullKaddishShalemBeforeAleinu,
   trimAlHanissimInsertionByCalendar,
 } from '../../../services/MinchaTextRules';
-import type { PrayerTextData, PrayerTextSegment } from '../../../services/SefariaService';
+import type { PrayerTextData, PrayerTextSegment } from '../prayerTextTypes';
 import { UserPreferencesService } from '../../../storage/UserPreferences';
 import type { MinchaNusachId, MinchaOfflinePack } from './packTypes';
 import { getMinchaOfflinePack } from './resolvePack';
 import {
   getActiveAmidahDayOnlyInserts,
-  segmentHebrewWithSeasonalHighlights,
   trimYaalehVeyavoToTodaysPhrase,
 } from '../amidahSeasonal';
+import { prepareLibrarySeasonalText } from '../librarySeasonal';
 
 export type MinchaOfflineSectionKey =
   | 'mincha_korbanot'
@@ -55,27 +55,45 @@ function segs(text: string): PrayerTextSegment[] {
   return [{ text, italic: false }];
 }
 
-function withSegments(hebrew: string, english: string, date?: Date): PrayerTextData {
-  const h = hebrew.replace(/\n{3,}/g, '\n\n').trim();
-  const e = (english || '').replace(/\n{3,}/g, '\n\n').trim();
-  const hebrewSegments = markSefataiParagraphSmall(
-    date != null
-      ? segmentHebrewWithSeasonalHighlights(h, date, { amidahSlot: 'mincha' })
-      : segs(h)
-  );
+function withSegments(
+  hebrew: string,
+  english: string,
+  date?: Date,
+  isIsrael?: boolean
+): PrayerTextData {
+  if (date == null) {
+    const h = hebrew.replace(/\n{3,}/g, '\n\n').trim();
+    const e = (english || '').replace(/\n{3,}/g, '\n\n').trim();
+    return {
+      hebrew: h,
+      english: e,
+      hebrewSegments: markSefataiParagraphSmall(segs(h)),
+      englishSegments: markSefataiParagraphSmall(segs(e)),
+    };
+  }
+  const prepared = prepareLibrarySeasonalText(hebrew, english, date, {
+    amidahSlot: 'mincha',
+    isIsrael,
+  });
   return {
-    hebrew: h,
-    english: e,
-    hebrewSegments,
-    englishSegments: markSefataiParagraphSmall(segs(e)),
+    hebrew: prepared.hebrew,
+    english: prepared.english,
+    hebrewSegments: markSefataiParagraphSmall(prepared.hebrewSegments),
+    englishSegments: markSefataiParagraphSmall(segs(prepared.english)),
   };
 }
 
-function markPiece(hebrew: string | undefined, date: Date): PrayerTextSegment[] | undefined {
+function markPiece(
+  hebrew: string | undefined,
+  date: Date,
+  isIsrael?: boolean
+): PrayerTextSegment[] | undefined {
   if (!hebrew?.trim()) return undefined;
-  return markSefataiParagraphSmall(
-    segmentHebrewWithSeasonalHighlights(hebrew, date, { amidahSlot: 'mincha' })
-  );
+  const prepared = prepareLibrarySeasonalText(hebrew, '', date, {
+    amidahSlot: 'mincha',
+    isIsrael,
+  });
+  return markSefataiParagraphSmall(prepared.hebrewSegments);
 }
 
 function stripChatziKaddish(hebrew: string, english: string): { hebrew: string; english: string } {
@@ -205,7 +223,7 @@ export class OfflineMinchaService {
     if (sectionKey === 'mincha_ashrei') {
       const cleaned = stripChatziKaddish(pack.sections.ashrei.hebrew, pack.sections.ashrei.english);
       const spaced = ensureBaruchAtahParagraphBreaks(cleaned.hebrew, cleaned.english);
-      return withSegments(spaced.hebrew, spaced.english);
+      return withSegments(spaced.hebrew, spaced.english, date);
     }
 
     if (sectionKey === 'mincha_aleinu') {
@@ -214,7 +232,7 @@ export class OfflineMinchaService {
         pack.sections.aleinu.english
       );
       const spaced = ensureBaruchAtahParagraphBreaks(stripped.hebrew, stripped.english);
-      return withSegments(spaced.hebrew, spaced.english);
+      return withSegments(spaced.hebrew, spaced.english, date);
     }
 
     if (sectionKey === 'mincha_amidah') {
@@ -223,9 +241,9 @@ export class OfflineMinchaService {
 
     if (sectionKey === 'mincha_korbanot') {
       const raw = pack.sections.korbanot;
-      if (!raw?.hebrew?.trim()) return withSegments('', '');
+      if (!raw?.hebrew?.trim()) return withSegments('', '', date);
       const spaced = ensureBaruchAtahParagraphBreaks(raw.hebrew, raw.english ?? '');
-      return withSegments(spaced.hebrew, spaced.english);
+      return withSegments(spaced.hebrew, spaced.english, date);
     }
 
     return null;
@@ -300,20 +318,28 @@ export class OfflineMinchaService {
     hebrew = trimYaalehVeyavoToTodaysPhrase(hebrew, date);
     const noAleinu = splitMinchaAmidahBeforeStandaloneAleinu(hebrew, english);
     const cleaned = stripChatziKaddish(noAleinu.hebrew, noAleinu.english);
-    const content = withSegments(cleaned.hebrew, cleaned.english, date);
+    const content = withSegments(cleaned.hebrew, cleaned.english, date, israelForRain);
 
     return {
       ...content,
       hebrewBeforeKedushaFoldout,
       englishBeforeKedushaFoldout,
-      hebrewBeforeKedushaFoldoutSegments: markPiece(hebrewBeforeKedushaFoldout, date),
+      hebrewBeforeKedushaFoldoutSegments: markPiece(
+        hebrewBeforeKedushaFoldout,
+        date,
+        israelForRain
+      ),
       englishBeforeKedushaFoldoutSegments: englishBeforeKedushaFoldout
         ? markSefataiParagraphSmall(segs(englishBeforeKedushaFoldout))
         : undefined,
       kedushaFoldout,
       hebrewBeforeModimDerabananFoldout,
       englishBeforeModimDerabananFoldout,
-      hebrewBeforeModimDerabananFoldoutSegments: markPiece(hebrewBeforeModimDerabananFoldout, date),
+      hebrewBeforeModimDerabananFoldoutSegments: markPiece(
+        hebrewBeforeModimDerabananFoldout,
+        date,
+        israelForRain
+      ),
       englishBeforeModimDerabananFoldoutSegments: englishBeforeModimDerabananFoldout
         ? markSefataiParagraphSmall(segs(englishBeforeModimDerabananFoldout))
         : undefined,

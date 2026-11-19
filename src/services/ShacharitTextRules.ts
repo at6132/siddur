@@ -1,7 +1,14 @@
 /**
  * String transforms used only by Shacharit siddur section pipelines (`ShacharitSectionPipelines.ts`).
  * Mincha / Maariv paths do not import this module.
+ *
+ * Day omit / foldout behavior lives in `src/content/siddur/shacharit/shacharitContentSets.ts`.
  */
+
+import {
+  applyShacharitContentSets,
+  buildShacharitGateCtx,
+} from '../content/siddur/shacharit/shacharitContentSets';
 
 const stripHtml = (s: string) => s.replace(/<[^>]*>/g, '');
 const stripHtmlKeepLineBreaks = (s: string) => stripHtml(s.replace(/<br\s*\/?>/gi, '\n'));
@@ -41,7 +48,7 @@ export function removeShacharitPreparatoryPreTefillahZoharBundle(
   const me = tail.match(endRe);
   if (!me) return { hebrew, english };
 
-  const iEnd = i0 + me.index + me[0].length;
+  const iEnd = i0 + (me.index ?? 0) + me[0].length;
   const out = (h.slice(0, i0) + h.slice(iEnd)).replace(/\n{3,}/g, '\n\n').trim();
   // Safety: never apply this broad cut if it would remove core opening items users expect to keep.
   const hasModehBefore = /מודה\s+אני/.test(stripHtmlKeepLineBreaks(hebrew));
@@ -354,38 +361,8 @@ function dropLeadingUnvocalizedNote(line: string): string {
 }
 
 /**
- * Drop Sefaria Hebrew commentary / ikkar headings that sit on their own lines
- * (no nikkud). Keeps ritual cues, seasonal labels, and vocalized liturgy.
- *
- * Blank lines are preserved so `\n\n` paragraph gaps survive into the reader
- * (filtering empty lines used to glue every bracha into one wall of text).
- */
-export function stripSefariaInstructionLines(
-  hebrew: string,
-  english: string
-): { hebrew: string; english: string } {
-  const lines = hebrew.split('\n');
-  const kept: string[] = [];
-  for (const line of lines) {
-    if (line.trim().length === 0) {
-      kept.push('');
-      continue;
-    }
-    const cleaned = dropLeadingUnvocalizedNote(line);
-    if (cleaned.trim().length === 0) continue;
-    kept.push(cleaned);
-  }
-  const out = kept
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-  return { hebrew: out, english };
-}
-
-/**
- * Morning berachot stay in the reader; Akedah / Ribbon / Sovereignty go in the foldout.
- * Prefers a paragraph split after הנותן לשכוי (Ashkenaz leaves). Falls back to the
- * אלהינו…זכרנו locator used for Sfard’s continuous Morning Prayer blob.
+ * Morning berachot stay in the reader; optional הרחבות start at
+ * אלהינו ואלהי אבותינו זכרנו בזכרון טוב… (not after הנותן לשכוי).
  */
 export function splitBirchotHashacharCoreAndExpansion(
   hebrew: string,
@@ -398,16 +375,18 @@ export function splitBirchotHashacharCoreAndExpansion(
 } | null {
   const hp = splitParas(hebrew);
   const ep = splitParas(english);
-  const coreIdx = hp.findIndex((p) => /הנותן\s+לשכוי|שלא\s+עשני|המעביר\s+שנה/.test(stripNik(p)));
-  if (coreIdx >= 0 && coreIdx < hp.length - 1) {
-    const beforeHebrew = hp.slice(0, coreIdx + 1).join('\n\n').trim();
-    const foldoutHebrew = hp.slice(coreIdx + 1).join('\n\n').trim();
+  const foldIdx = hp.findIndex((p) =>
+    /(?:אלהינו|אלוקינו|אלוהינו)\s+(?:ואלקי|ואלהי)\s+אבותינו\s+זכרנו/.test(stripNik(p))
+  );
+  if (foldIdx > 0) {
+    const beforeHebrew = hp.slice(0, foldIdx).join('\n\n').trim();
+    const foldoutHebrew = hp.slice(foldIdx).join('\n\n').trim();
     if (beforeHebrew.length > 80 && foldoutHebrew.length > 80) {
       return {
         beforeHebrew,
         foldoutHebrew,
-        beforeEnglish: ep.slice(0, Math.min(coreIdx + 1, ep.length)).join('\n\n').trim(),
-        foldoutEnglish: ep.slice(Math.min(coreIdx + 1, ep.length)).join('\n\n').trim(),
+        beforeEnglish: ep.slice(0, Math.min(foldIdx, ep.length)).join('\n\n').trim(),
+        foldoutEnglish: ep.slice(Math.min(foldIdx, ep.length)).join('\n\n').trim(),
       };
     }
   }
@@ -468,25 +447,54 @@ export function pickSongOfTheDay(hebrew: string, date: Date): string {
   const startHit = hits.find((h) => want.includes(h.label));
   if (!startHit) return hebrew;
   const next = hits.find((h) => h.index > startHit.index);
-  const end = next ? next.index : st.length;
   // Map stripped span back approximately via original (nikkud) by slicing from first matching label in original.
   const origLabel = hebrew.search(new RegExp(startHit.label.replace(/ /g, '[\\s\\u05BE]+')));
-  if (origLabel === -1) return hebrew.slice(startHit.index, end);
+  if (origLabel === -1) return hebrew;
   const nextOrig =
     next != null ? hebrew.search(new RegExp(next.label.replace(/ /g, '[\\s\\u05BE]+'))) : -1;
   const slice = hebrew.slice(origLabel, nextOrig !== -1 && nextOrig > origLabel ? nextOrig : hebrew.length);
   return slice.trim() || hebrew;
 }
 
+const ENG_WEEKDAY_SONG_LABELS = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+] as const;
+
+/** English parallel to `pickSongOfTheDay` when the translation lists weekday song blocks. */
+export function pickSongOfTheDayEnglish(english: string, date: Date): string {
+  if (!english?.trim()) return english;
+  const day = date.getDay();
+  if (day === 6) return english;
+  const today = ENG_WEEKDAY_SONG_LABELS[day];
+  const hits: { label: string; index: number }[] = [];
+  for (const label of ENG_WEEKDAY_SONG_LABELS) {
+    const re = new RegExp(`\\b(?:On\\s+)?${label}\\b|\\b${label}\\s*(?:'s)?\\s*(?:Psalm|Song)`, 'i');
+    const m = english.match(re);
+    if (m?.index != null) hits.push({ label, index: m.index });
+  }
+  hits.sort((a, b) => a.index - b.index);
+  if (hits.length < 2) return english;
+  const startHit = hits.find((h) => h.label === today);
+  if (!startHit) return english;
+  const next = hits.find((h) => h.index > startHit.index);
+  return english.slice(startHit.index, next ? next.index : english.length).trim() || english;
+}
+
 /**
- * Calendar-shape weekday Shacharit extras (paragraphs = Sefaria leaves joined by \\n\\n).
+ * @deprecated Prefer `applyShacharitContentSets` in `shacharitContentSets.ts`.
+ * Kept as a thin wrapper so older call sites keep working.
  */
 export function applyShacharitSectionCalendarGates(
   sectionKey: string,
   hebrew: string,
   english: string,
   date: Date,
-  opts: {
+  _opts: {
     tachanun: boolean;
     aseret: boolean;
     roshChodesh: boolean;
@@ -495,80 +503,5 @@ export function applyShacharitSectionCalendarGates(
     mondayThursday: boolean;
   }
 ): { hebrew: string; english: string } {
-  if (sectionKey === 'pesukei_dzimra' && !opts.aseret) {
-    const hp = splitParas(hebrew);
-    const last = hp[hp.length - 1] ? stripNik(hp[hp.length - 1]) : '';
-    if (/ממעמקים/.test(last) && hp.length > 3) {
-      const keep = hp.map((_, i) => i !== hp.length - 1);
-      return keepParas(hebrew, english, keep);
-    }
-  }
-
-  if (sectionKey === 'tachanun') {
-    const hp = splitParas(hebrew);
-    if (hp.length >= 4) {
-      // Ashkenaz leaf order: vidui, avinu, mon/thu, nefilat, …
-      const keep = hp.map((_, i) => {
-        if (i === 1 && !opts.fastOrAseret) return false;
-        if (i === 2 && !opts.mondayThursday) return false;
-        return true;
-      });
-      return keepParas(hebrew, english, keep);
-    }
-    // Sfard: 2–3 blobs (tachanun, avinu, mon/thu)
-    if (hp.length >= 2) {
-      const keep = hp.map((p, i) => {
-        const st = stripNik(p);
-        if (/אבינו\s+מלכנו/.test(st) && !opts.fastOrAseret) return false;
-        if ((/והוא\s+רחום/.test(st) || /ליום\s+שני/.test(st) || /יום\s+שני\s+וחמישי/.test(st)) && !opts.mondayThursday && i > 0) {
-          return false;
-        }
-        return true;
-      });
-      return keepParas(hebrew, english, keep);
-    }
-  }
-
-  if (sectionKey === 'ashrei') {
-    const hp = splitParas(hebrew);
-    if (hp.length >= 3) {
-      const keep = hp.map((p, i) => {
-        const st = stripNik(p);
-        if ((i === 1 || /למנצח/.test(st)) && !opts.tachanun) return i === 1 ? false : !/למנצח\s+מזמור/.test(st);
-        return true;
-      });
-      return keepParas(hebrew, english, keep);
-    }
-  }
-
-  if (sectionKey === 'korbanot' && !opts.roshChodesh) {
-    const hp = splitParas(hebrew);
-    const keep = hp.map((p) => !/בראש\s+חודש\s+מוסיפים|ובראשי\s+חדשיכם/.test(stripNik(p)));
-    if (keep.some((k) => k === false)) return keepParas(hebrew, english, keep);
-  }
-
-  if (sectionKey === 'concluding') {
-    const hp = splitParas(hebrew);
-    const ep = splitParas(english);
-    const hOut: string[] = [];
-    const eOut: string[] = [];
-    for (let i = 0; i < hp.length; i++) {
-      const st = stripNik(hp[i]);
-      const isSong = /שיר\s+של\s+יום|יום\s+ראשון/.test(st) && /יום\s+שני/.test(st);
-      const isBarchi = /ברכי\s+נפשי/.test(st) && (i > 0 || /ראש\s+חדש|ראש\s+חודש/.test(st));
-      const isLedavid = /לדוד\s+יהוה\s+אורי|מזמור\s+לדוד/.test(st) && /אורי\s+וישעי/.test(st);
-      if (isSong) {
-        hOut.push(pickSongOfTheDay(hp[i], date));
-        if (ep[i]) eOut.push(ep[i]);
-        continue;
-      }
-      if (isBarchi && !opts.roshChodesh) continue;
-      if (isLedavid && !opts.ledavidSeason) continue;
-      hOut.push(hp[i]);
-      if (ep[i]) eOut.push(ep[i]);
-    }
-    return { hebrew: hOut.join('\n\n'), english: eOut.join('\n\n') };
-  }
-
-  return { hebrew, english };
+  return applyShacharitContentSets(sectionKey, hebrew, english, buildShacharitGateCtx(date));
 }

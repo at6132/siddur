@@ -10,7 +10,7 @@
  */
 
 import { JewishCalendarService } from '../../core/calendar/JewishCalendar';
-import type { PrayerTextSegment } from '../../services/SefariaService';
+import type { PrayerTextSegment } from './prayerTextTypes';
 
 export type AmidahSlot = 'shacharit' | 'mincha' | 'maariv';
 
@@ -34,8 +34,8 @@ export type AmidahSeasonalCatalogEntry = {
   when: string;
   gate: string;
   /**
-   * true = only on certain days (highlight the whole insert when present).
-   * false = year-round swap of a short phrase (no highlight box — always one of two).
+   * true = only on certain days (highlight the insert / swapped chatima when present).
+   * false = year-round swap of a short phrase (still highlighted so the active wording is obvious).
    */
   dayOnlyInsert: boolean;
   /** Which Amidah slots may show this insert */
@@ -304,7 +304,12 @@ export function trimYaalehVeyavoToTodaysPhrase(hebrew: string, date: Date = new 
 
 type Span = { start: number; end: number; kind: AmidahSeasonalKind; label: string };
 
-function findBlockSpans(hebrew: string, date: Date, slot: AmidahSlot): Span[] {
+function findBlockSpans(
+  hebrew: string,
+  date: Date,
+  slot: AmidahSlot,
+  isIsrael?: boolean
+): Span[] {
   const { flat, orig } = buildDenikkudMap(hebrew);
   const spans: Span[] = [];
 
@@ -313,6 +318,35 @@ function findBlockSpans(hebrew: string, date: Date, slot: AmidahSlot): Span[] {
     const [start, end] = mapSpan(orig, startFlat, endFlat, hebrew.length);
     if (end > start) spans.push({ start, end, kind, label });
   };
+
+  // Year-round seasonal swaps: highlight whichever short phrase the pipeline kept.
+  {
+    const mashivNeedle = 'משיב הרוח ומוריד הגשם';
+    const talNeedle = 'מוריד הטל';
+    if (JewishCalendarService.isMashivHaruach(date)) {
+      const i = flat.indexOf(mashivNeedle);
+      if (i !== -1) pushIf(i, i + mashivNeedle.length, 'gevuros_swap', 'משיב הרוח');
+    } else {
+      const i = flat.indexOf(talNeedle);
+      if (i !== -1) pushIf(i, i + talNeedle.length, 'gevuros_swap', 'מוריד הטל');
+    }
+  }
+  {
+    const winterNeedle = 'ותן טל ומטר';
+    const summerNeedle = 'ותן ברכה';
+    const useWinter = JewishCalendarService.isVtenTalUmatar(date, isIsrael === true);
+    if (useWinter) {
+      const i = flat.indexOf(winterNeedle);
+      if (i !== -1) {
+        let end = i + winterNeedle.length;
+        if (flat.slice(end, end + 6).startsWith(' לברכה')) end += 6;
+        pushIf(i, end, 'birkas_hashanim_swap', 'ותן טל ומטר');
+      }
+    } else {
+      const i = flat.indexOf(summerNeedle);
+      if (i !== -1) pushIf(i, i + summerNeedle.length, 'birkas_hashanim_swap', 'ותן ברכה');
+    }
+  }
 
   if (JewishCalendarService.isYaalehVyavoDay(date)) {
     let iStart = flat.indexOf('יעלה ויבא');
@@ -392,19 +426,35 @@ function findBlockSpans(hebrew: string, date: Date, slot: AmidahSlot): Span[] {
   }
 
   if (JewishCalendarService.isAseretYemeiTeshuva(date)) {
-    for (const { needle, label } of [
-      { needle: 'זכרנו לחיים', label: 'זכרנו לחיים' },
-      { needle: 'מי כמוך אב הרחמן', label: 'מי כמוך אב הרחמן' },
-      { needle: 'וכתוב לחיים', label: 'וכתוב לחיים' },
-      { needle: 'המלך הקדוש', label: 'המלך הקדוש' },
-      { needle: 'המלך המשפט', label: 'המלך המשפט' },
-    ] as const) {
+    for (const { needle, label, kind } of [
+      { needle: 'זכרנו לחיים', label: 'זכרנו לחיים', kind: 'aseret_insertions' as const },
+      { needle: 'מי כמוך אב הרחמן', label: 'מי כמוך אב הרחמן', kind: 'aseret_insertions' as const },
+      { needle: 'מי כמוך אב הרחמים', label: 'מי כמוך אב הרחמים', kind: 'aseret_insertions' as const },
+      { needle: 'וכתוב לחיים', label: 'וכתוב לחיים', kind: 'aseret_insertions' as const },
+      { needle: 'בספר חיים', label: 'בספר חיים', kind: 'aseret_insertions' as const },
+      { needle: 'המלך הקדוש', label: 'המלך הקדוש', kind: 'aseret_chatimot' as const },
+      { needle: 'המלך המשפט', label: 'המלך המשפט', kind: 'aseret_chatimot' as const },
+      { needle: 'עשה השלום', label: 'עשה השלום', kind: 'aseret_chatimot' as const },
+    ]) {
       let pos = 0;
       while (true) {
         const i = flat.indexOf(needle, pos);
         if (i === -1) break;
-        pushIf(i, i + needle.length, 'aseret_insertions', label);
+        pushIf(i, i + needle.length, kind, label);
         pos = i + needle.length;
+      }
+    }
+
+    // Pesukei D'Zimra — Psalm 130 (ממעמקים) after Yishtabach
+    {
+      const startNeedle = 'שיר המעלות ממעמקים';
+      const endNeedle = 'עונותיו';
+      const iStart = flat.indexOf(startNeedle);
+      if (iStart !== -1) {
+        let iEnd = flat.indexOf(endNeedle, iStart);
+        if (iEnd !== -1) iEnd += endNeedle.length;
+        else iEnd = Math.min(flat.length, iStart + 600);
+        pushIf(iStart, iEnd, 'aseret_insertions', 'ממעמקים');
       }
     }
   }
@@ -432,7 +482,7 @@ export function segmentHebrewWithSeasonalHighlights(
 ): PrayerTextSegment[] {
   if (!hebrew.trim()) return [{ text: '', italic: false }];
   const slot: AmidahSlot = opts?.amidahSlot ?? 'mincha';
-  const spans = findBlockSpans(hebrew, date, slot);
+  const spans = findBlockSpans(hebrew, date, slot, opts?.isIsrael);
   if (spans.length === 0) return [{ text: hebrew, italic: false }];
 
   const segs: PrayerTextSegment[] = [];

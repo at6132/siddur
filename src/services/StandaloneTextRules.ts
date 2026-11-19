@@ -3,7 +3,7 @@
  * Birkat Hamazon calendar/trim stays in SiddurReaderScreen.trimBirkatHamazon.
  */
 
-import type { PrayerTextSegment } from './SefariaService';
+import type { PrayerTextSegment } from '../content/siddur/prayerTextTypes';
 
 function stripNikkud(s: string): string {
   return s.replace(/[\u0591-\u05C7]/g, '');

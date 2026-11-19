@@ -7,13 +7,12 @@
 export const SHACHARIT_OFFLINE_META = {
   "nusach": "ashkenaz",
   "service": "shacharit",
-  "builtAt": "2026-08-12T14:49:29.891Z",
+  "builtAt": "2026-11-17T19:12:48.791Z",
   "source": "Sefaria",
   "attribution": "Texts provided by Sefaria (sefaria.org) under CC-BY-SA — Siddur Ashkenaz",
   "sections": [
     "tallit",
     "tefillin",
-    "preparatory",
     "birchot_hashachar",
     "korbanot",
     "pesukei_dzimra",
@@ -22,8 +21,8 @@ export const SHACHARIT_OFFLINE_META = {
     "amidah",
     "tachanun",
     "ashrei",
-    "concluding",
-    "torah_reading"
+    "torah_reading",
+    "concluding"
   ],
   "sources": {
     "tallit": [
@@ -32,7 +31,7 @@ export const SHACHARIT_OFFLINE_META = {
     "tefillin": [
       "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Tefillin"
     ],
-    "preparatory": [
+    "birchot_hashachar": [
       "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Modeh Ani",
       "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Netilat Yadayim",
       "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Asher Yatzar",
@@ -42,9 +41,7 @@ export const SHACHARIT_OFFLINE_META = {
       "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Torah Study",
       "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Ma Tovu",
       "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Adon Olam",
-      "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Yigdal"
-    ],
-    "birchot_hashachar": [
+      "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Yigdal",
       "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Morning Blessings",
       "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Akedah",
       "Siddur Ashkenaz, Weekday, Shacharit, Preparatory Prayers, Sovereignty of Heaven"
@@ -123,12 +120,6 @@ export const SHACHARIT_OFFLINE_META = {
       "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Lamenatze'ach",
       "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Uva Letzion"
     ],
-    "concluding": [
-      "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Alenu",
-      "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Song of the Day",
-      "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Barchi Nafshi",
-      "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, LeDavid"
-    ],
     "torah_reading": [
       "Siddur Ashkenaz, Weekday, Shacharit, Torah Reading, Removing the Torah from Ark, El Erech Appayim",
       "Siddur Ashkenaz, Weekday, Shacharit, Torah Reading, Removing the Torah from Ark, Vayehi Binsoa",
@@ -142,6 +133,17 @@ export const SHACHARIT_OFFLINE_META = {
       "Siddur Ashkenaz, Weekday, Shacharit, Torah Reading, Returning Sefer to Aron, Yehalelu",
       "Siddur Ashkenaz, Weekday, Shacharit, Torah Reading, Returning Sefer to Aron, LeDavid Mizmor",
       "Siddur Ashkenaz, Weekday, Shacharit, Torah Reading, Returning Sefer to Aron, Uvenucho Yomar"
+    ],
+    "concluding": [
+      "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Alenu",
+      "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Song of the Day",
+      "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Barchi Nafshi",
+      "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, LeDavid",
+      "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Korbanot (Israel), Ein Kelohenu",
+      "Siddur Ashkenaz, Weekday, Shacharit, Concluding Prayers, Korbanot (Israel), Pitum HaKetoret",
+      "Siddur Ashkenaz, Weekday, Shacharit, Post Service, Six Remembrances",
+      "Siddur Ashkenaz, Weekday, Shacharit, Post Service, Ten Commandments",
+      "Siddur Ashkenaz, Weekday, Shacharit, Post Service, Thirteen Principles"
     ]
   }
 } as const;

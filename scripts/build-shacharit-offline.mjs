@@ -140,26 +140,43 @@ function stripNikkud(s) {
 }
 
 function splitSefardShema(hebrew, english) {
-  const paras = hebrew.split(/\n\s*\n/);
-  const eng = english.split(/\n\s*\n/);
-  let idx = -1;
-  for (let i = 0; i < paras.length; i++) {
-    const st = stripNikkud(paras[i].trim());
-    if (/^שמע\s+ישראל/.test(st) || st.startsWith('שמע ישראל')) {
-      idx = i;
-      break;
-    }
+  // Sfard "The Shema" leaf is one continuous blob. Prefer יחיד אומר / אל מלך נאמן —
+  // earliest שמע ישראל can be instructional "ואומר שמע ישראל".
+  const flat = stripNikkud(hebrew);
+  const preferred = ['יחיד אומר', 'אל מלך נאמן'];
+  let cutFlat = -1;
+  for (const m of preferred) {
+    const i = flat.indexOf(m);
+    if (i !== -1 && (cutFlat === -1 || i < cutFlat)) cutFlat = i;
   }
-  if (idx < 0) {
+  if (cutFlat < 0) {
+    const i = flat.indexOf('שמע ישראל');
+    if (i !== -1) cutFlat = i;
+  }
+  if (cutFlat < 0) {
     return { yotzerHebrew: hebrew, yotzerEnglish: english, shemaHebrew: '', shemaEnglish: '' };
   }
-  const ei = Math.min(idx, eng.length);
-  return {
-    yotzerHebrew: paras.slice(0, idx).join('\n\n').trim(),
-    yotzerEnglish: eng.slice(0, ei).join('\n\n').trim(),
-    shemaHebrew: paras.slice(idx).join('\n\n').trim(),
-    shemaEnglish: eng.slice(ei).join('\n\n').trim(),
-  };
+  const toOrig = [];
+  for (let i = 0; i < hebrew.length; i++) {
+    if (!/[\u0591-\u05C7]/.test(hebrew[i])) toOrig.push(i);
+  }
+  const cutOrig = toOrig[Math.min(cutFlat, toOrig.length - 1)] ?? cutFlat;
+  let yotzerHebrew = hebrew.slice(0, cutOrig).replace(/\n{3,}/g, '\n\n').trim();
+  const shemaHebrew = hebrew.slice(cutOrig).replace(/\n{3,}/g, '\n\n').trim();
+  const vaomer = yotzerHebrew.search(/ו[ְ]?א[וֹֹ]?מ[ֵ]?ר[\s\S]{0,12}ש[ׁ]?מ[ַ]?ע[\s\S]{0,8}י[ִ]?ש[ׂ]?ר[ָ]?א[ֵ]?ל/);
+  if (vaomer > 80) {
+    yotzerHebrew = yotzerHebrew.slice(0, vaomer).replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  let yotzerEnglish = english || '';
+  let shemaEnglish = '';
+  let engCut = yotzerEnglish.search(/\n\(?Almighty, faithful King\)?/i);
+  if (engCut < 80) engCut = yotzerEnglish.search(/Hear,?\s+Israel|Hear\s+O\s+Israel/i);
+  if (engCut > 80) {
+    shemaEnglish = yotzerEnglish.slice(engCut).trim();
+    yotzerEnglish = yotzerEnglish.slice(0, engCut).trim();
+  }
+  return { yotzerHebrew, yotzerEnglish, shemaHebrew, shemaEnglish };
 }
 
 const ASH_PREFIX = 'Siddur Ashkenaz, Weekday, Shacharit, ';
@@ -167,7 +184,7 @@ const ASH_PREFIX = 'Siddur Ashkenaz, Weekday, Shacharit, ';
 const ASHKENAZ_GROUPS = {
   tallit: ['Preparatory Prayers, Tallit'],
   tefillin: ['Preparatory Prayers, Tefillin'],
-  preparatory: [
+  birchot_hashachar: [
     'Preparatory Prayers, Modeh Ani',
     'Preparatory Prayers, Netilat Yadayim',
     'Preparatory Prayers, Asher Yatzar',
@@ -178,8 +195,6 @@ const ASHKENAZ_GROUPS = {
     'Preparatory Prayers, Ma Tovu',
     'Preparatory Prayers, Adon Olam',
     'Preparatory Prayers, Yigdal',
-  ],
-  birchot_hashachar: [
     'Preparatory Prayers, Morning Blessings',
     'Preparatory Prayers, Akedah',
     'Preparatory Prayers, Sovereignty of Heaven',
@@ -255,12 +270,6 @@ const ASHKENAZ_GROUPS = {
     "Concluding Prayers, Lamenatze'ach",
     'Concluding Prayers, Uva Letzion',
   ],
-  concluding: [
-    'Concluding Prayers, Alenu',
-    'Concluding Prayers, Song of the Day',
-    'Concluding Prayers, Barchi Nafshi',
-    'Concluding Prayers, LeDavid',
-  ],
   torah_reading: [
     'Torah Reading, Removing the Torah from Ark, El Erech Appayim',
     'Torah Reading, Removing the Torah from Ark, Vayehi Binsoa',
@@ -271,9 +280,21 @@ const ASHKENAZ_GROUPS = {
     'Torah Reading, Reading from Sefer, Birkat HaTorah',
     'Torah Reading, Reading from Sefer, Birkat Hagomel',
     'Torah Reading, Reading from Sefer, Raising the Torah',
+    'Torah Reading, Reading from Sefer, Prayers for Welfare of the People',
     'Torah Reading, Returning Sefer to Aron, Yehalelu',
     'Torah Reading, Returning Sefer to Aron, LeDavid Mizmor',
     'Torah Reading, Returning Sefer to Aron, Uvenucho Yomar',
+  ],
+  concluding: [
+    'Concluding Prayers, Alenu',
+    'Concluding Prayers, Song of the Day',
+    'Concluding Prayers, Barchi Nafshi',
+    'Concluding Prayers, LeDavid',
+    'Concluding Prayers, Korbanot (Israel), Ein Kelohenu',
+    'Concluding Prayers, Korbanot (Israel), Pitum HaKetoret',
+    'Post Service, Six Remembrances',
+    'Post Service, Ten Commandments',
+    'Post Service, Thirteen Principles',
   ],
 };
 
@@ -313,8 +334,10 @@ async function buildSefard() {
   const groups = {
     tallit: [`${P}Upon Arising, Tallit`],
     tefillin: [`${P}Upon Arising, Tefilin`],
-    preparatory: [`${P}Upon Arising, Modeh Ani`, `${P}Upon Arising, Upon Entering Synagogue`],
     birchot_hashachar: [
+      `${P}Upon Arising, Modeh Ani`,
+      `${P}Upon Arising, Introductory Prayers`,
+      `${P}Upon Arising, Upon Entering Synagogue`,
       `${P}Weekday Shacharit, Morning Blessings`,
       `${P}Weekday Shacharit, Blessings on Torah`,
       `${P}Weekday Shacharit, Morning Prayer`,

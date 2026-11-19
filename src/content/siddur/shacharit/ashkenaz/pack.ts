@@ -14,7 +14,6 @@ export const SHACHARIT_ASHKENAZ_PACK: ShacharitOfflinePack = {
   sections: {
     tallit: sec('tallit'),
     tefillin: sec('tefillin'),
-    preparatory: sec('preparatory'),
     birchot_hashachar: sec('birchot_hashachar'),
     korbanot: sec('korbanot'),
     pesukei_dzimra: sec('pesukei_dzimra'),

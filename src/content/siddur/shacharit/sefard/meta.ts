@@ -7,23 +7,22 @@
 export const SHACHARIT_OFFLINE_META = {
   "nusach": "sfard",
   "service": "shacharit",
-  "builtAt": "2026-08-12T14:49:30.920Z",
+  "builtAt": "2026-11-17T19:13:13.294Z",
   "source": "Sefaria",
   "attribution": "Texts provided by Sefaria (sefaria.org) under CC-BY-SA — Siddur Sefard",
   "sections": [
     "tallit",
     "tefillin",
-    "preparatory",
     "birchot_hashachar",
     "korbanot",
     "pesukei_dzimra",
+    "yotzer_or",
+    "shema",
     "amidah",
     "tachanun",
     "ashrei",
     "concluding",
-    "torah_reading",
-    "yotzer_or",
-    "shema"
+    "torah_reading"
   ],
   "sources": {
     "tallit": [
@@ -32,11 +31,10 @@ export const SHACHARIT_OFFLINE_META = {
     "tefillin": [
       "Siddur Sefard, Upon Arising, Tefilin"
     ],
-    "preparatory": [
-      "Siddur Sefard, Upon Arising, Modeh Ani",
-      "Siddur Sefard, Upon Arising, Upon Entering Synagogue"
-    ],
     "birchot_hashachar": [
+      "Siddur Sefard, Upon Arising, Modeh Ani",
+      "Siddur Sefard, Upon Arising, Introductory Prayers",
+      "Siddur Sefard, Upon Arising, Upon Entering Synagogue",
       "Siddur Sefard, Weekday Shacharit, Morning Blessings",
       "Siddur Sefard, Weekday Shacharit, Blessings on Torah",
       "Siddur Sefard, Weekday Shacharit, Morning Prayer"

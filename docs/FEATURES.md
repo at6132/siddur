@@ -2,7 +2,7 @@
 
 Snapshot of every screen, route, feature, and user flow with its owning file. Stack: Expo / React Navigation (`src/navigation/AppNavigator.tsx`). Entry: `App.tsx`. No expo-router. No auth or paywall.
 
-Phase-1 note: Gemara, Nach, Mishna, Rambam, Chumash, Pirkei Avos, and Parsha screens exist but Library entry points route to Coming Soon via `src/feature/LibraryFeatureAccess.ts`. Live library: daily tefillos + Tehillim + Asher Yatzar / Bentching / Bedtime / Tefillas HaDerech.
+Phase-1 note: Gemara, Nach, Mishna, Rambam, Chumash, Pirkei Avos, and Parsha screens exist but Library entry points route to Coming Soon via `src/feature/LibraryFeatureAccess.ts`. Live library: daily tefillos + Tehillim + Modeh Ani / Asher Yatzar / Bentching / Bedtime / Tefillas HaDerech.
 
 ---
 
@@ -105,7 +105,7 @@ Phase-1 note: Gemara, Nach, Mishna, Rambam, Chumash, Pirkei Avos, and Parsha scr
 - Open Mincha → offline pack (korbanot / ashrei / amidah / aleinu…) — `src/content/siddur/mincha/` + `src/services/MinchaTextRules.ts`
 - Open Maariv → offline pack — `src/content/siddur/maariv/` + `src/services/MaarivTextRules.ts`
 - Amidah seasonal / Kedusha / Modim foldouts / Refuah names — `src/services/AmidahTextPipeline.ts` + `src/content/siddur/amidahSeasonal.ts`
-- Asher Yatzar / Bentching / Bedtime Shema / Tefillas HaDerech — `SiddurReader` services + `src/content/siddur/standalone/`
+- Modeh Ani / Asher Yatzar / Bentching / Bedtime Shema / Tefillas HaDerech — `SiddurReader` services + `src/content/siddur/standalone/`
 - Reader UX: autoscroll, text size, English toggle, section jump — `app/siddur/SiddurReaderScreen.tsx` + `components/reader/`
 - Mizrach compass during Amidah — `components/ui/MizrachCompass.tsx`
 - Phase-1 available services set — `src/feature/LibraryFeatureAccess.ts` (`AVAILABLE_SIDDUR_SERVICES`)

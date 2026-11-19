@@ -1,5 +1,5 @@
 /**
- * Weekday Shacharit — **ordered string pipelines** for siddur sections fetched in `SefariaService.fetchSiddurSection`,
+ * Weekday Shacharit — **ordered string pipelines** for offline pack sections (OfflineShacharitService),
  * mirroring the “one registry + stable step ids” pattern used for Mincha / Amidah (`AmidahTextPipeline.ts`).
  *
  * **English:** Steps still take/return `english` for API compatibility; we are not investing in English edits for now
@@ -84,6 +84,12 @@ export const SHACHARIT_SIDDUR_PIPELINE_STEPS: Partial<
         'Keep line break between הַמֵּכִין מִצְעֲדֵי גָבֶר: and בָּרוּךְ...שֶׁעָשָׂה לִי כָּל צָרְכִּי',
       apply: (h, e) => enforceBreakAfterHameichinMitzadeiGaverBeforeSheasaLiKolTzorki(h, e),
     },
+    {
+      id: 'remove_pre_tefillah_zohar_elimelech_bundle',
+      description:
+        'Drop Sefaria block תפילה קודם התפילה through עצה זו אינה מועילה…קריאת שמע (Noam Elimelech + Zohar tikkunim + kavanos + note)',
+      apply: (h, e) => removeShacharitPreparatoryPreTefillahZoharBundle(h, e),
+    },
   ],
   netilas_yadayim: [
     {
@@ -129,38 +135,6 @@ export const SHACHARIT_SIDDUR_PIPELINE_STEPS: Partial<
       description:
         'Keep paragraph break between וַאֲנִי אַבָרְכֵם: and אֵלּוּ דְבָרִים (force \\n\\n)',
       apply: (h, e) => enforceDoubleBreakAfterVaaniAvarchemBeforeEluDevarim(h, e),
-    },
-  ],
-  preparatory: [
-    {
-      id: 'move_modeh_ani_and_tzitzis_before_netilas',
-      description:
-        'Ensure מודה אני and ברכת ציצית are before על נטילת ידים when Sefaria places them in preparatory block',
-      apply: (h, e) => moveModehAniAndBirchasTzitzisBeforeNetilasYadayim(h, e),
-    },
-    {
-      id: 'remove_separator_after_hamachazir_before_laasok',
-      description:
-        'Remove thin separator artifact between ...מֵתִים: and ...לַעֲסֹק בְּדִבְרֵי תוֹרָה in preparatory flow',
-      apply: (h, e) => removeSeparatorAfterHamachazirNeshamotBeforeLaasok(h, e),
-    },
-    {
-      id: 'double_break_keneged_kulam_to_hanoten_lasechvi',
-      description:
-        'Keep paragraph break between כְּנֶגֶד כֻּלָּם: and בָּרוּךְ...הַנּוֹתֵן לַשֶּׂכְוִי in preparatory flow',
-      apply: (h, e) => enforceDoubleBreakAfterKenegedKulamBeforeHanotenLasechvi(h, e),
-    },
-    {
-      id: 'break_hameichin_mitzadei_gaver_to_sheasa_li_kol_tzorki',
-      description:
-        'Keep line break between הַמֵּכִין מִצְעֲדֵי גָבֶר: and בָּרוּךְ...שֶׁעָשָׂה לִי כָּל צָרְכִּי in preparatory flow',
-      apply: (h, e) => enforceBreakAfterHameichinMitzadeiGaverBeforeSheasaLiKolTzorki(h, e),
-    },
-    {
-      id: 'remove_pre_tefillah_zohar_elimelech_bundle',
-      description:
-        'Drop Sefaria block תפילה קודם התפילה through עצה זו אינה מועילה…קריאת שמע (Noam Elimelech + Zohar tikkunim + kavanos + note)',
-      apply: (h, e) => removeShacharitPreparatoryPreTefillahZoharBundle(h, e),
     },
   ],
   pesukei_dzimra: [

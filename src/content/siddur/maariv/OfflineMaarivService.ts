@@ -23,16 +23,16 @@ import {
   stripMaarivKaddishBlock,
   stripMaarivKnownInstructionParagraphs,
 } from '../../../services/MaarivTextRules';
-import type { PrayerTextData, PrayerTextSegment } from '../../../services/SefariaService';
+import type { PrayerTextData, PrayerTextSegment } from '../prayerTextTypes';
 import { JewishCalendarService } from '../../../core/calendar/JewishCalendar';
 import { UserPreferencesService } from '../../../storage/UserPreferences';
 import type { MaarivNusachId, MaarivOfflinePack, MaarivSectionKey } from './packTypes';
 import { getMaarivOfflinePack } from './resolvePack';
 import {
   getActiveAmidahDayOnlyInserts,
-  segmentHebrewWithSeasonalHighlights,
   trimYaalehVeyavoToTodaysPhrase,
 } from '../amidahSeasonal';
+import { prepareLibrarySeasonalText } from '../librarySeasonal';
 
 export type { MaarivSectionKey };
 
@@ -54,30 +54,46 @@ function segs(text: string): PrayerTextSegment[] {
   return [{ text, italic: false }];
 }
 
-function withSegments(hebrew: string, english: string, date?: Date): PrayerTextData {
-  const h = hebrew.replace(/\n{3,}/g, '\n\n').trim();
-  const e = (english || '').replace(/\n{3,}/g, '\n\n').trim();
-  const hebrewSegments = markSefataiParagraphSmall(
-    date != null
-      ? segmentHebrewWithSeasonalHighlights(h, date, { amidahSlot: 'maariv' })
-      : segs(h)
-  );
+function withSegments(
+  hebrew: string,
+  english: string,
+  date?: Date,
+  isIsrael?: boolean
+): PrayerTextData {
+  if (date == null) {
+    const h = hebrew.replace(/\n{3,}/g, '\n\n').trim();
+    const e = (english || '').replace(/\n{3,}/g, '\n\n').trim();
+    return {
+      hebrew: h,
+      english: e,
+      hebrewSegments: markSefataiParagraphSmall(segs(h)),
+      englishSegments: markSefataiParagraphSmall(segs(e)),
+    };
+  }
+  const prepared = prepareLibrarySeasonalText(hebrew, english, date, {
+    amidahSlot: 'maariv',
+    isIsrael,
+  });
   return {
-    hebrew: h,
-    english: e,
-    hebrewSegments,
-    englishSegments: markSefataiParagraphSmall(segs(e)),
+    hebrew: prepared.hebrew,
+    english: prepared.english,
+    hebrewSegments: markSefataiParagraphSmall(prepared.hebrewSegments),
+    englishSegments: markSefataiParagraphSmall(segs(prepared.english)),
   };
 }
 
-function markPiece(hebrew: string | undefined, date?: Date): PrayerTextSegment[] | undefined {
+function markPiece(
+  hebrew: string | undefined,
+  date?: Date,
+  isIsrael?: boolean
+): PrayerTextSegment[] | undefined {
   if (!hebrew?.trim()) return undefined;
-  if (date != null) {
-    return markSefataiParagraphSmall(
-      segmentHebrewWithSeasonalHighlights(hebrew, date, { amidahSlot: 'maariv' })
-    );
-  }
-  return markSefataiParagraphSmall(segs(hebrew));
+  if (date == null) return markSefataiParagraphSmall(segs(hebrew));
+  const prepared = prepareLibrarySeasonalText(hebrew, '', date, {
+    amidahSlot: 'maariv',
+    isIsrael,
+  });
+  return markSefataiParagraphSmall(prepared.hebrewSegments);
 }
 
 export class OfflineMaarivService {
@@ -151,7 +167,7 @@ export class OfflineMaarivService {
       ledavidSeason: JewishCalendarService.isLedavidAfterTefillahSeason(date),
     });
     const spaced = ensureBaruchAtahParagraphBreaks(cal.hebrew, cal.english);
-    return withSegments(spaced.hebrew, spaced.english);
+    return withSegments(spaced.hebrew, spaced.english, date);
   }
 
   private static async getAmidah(date: Date, pack: MaarivOfflinePack): Promise<PrayerTextData> {
@@ -224,14 +240,18 @@ export class OfflineMaarivService {
     }
 
     hebrew = trimYaalehVeyavoToTodaysPhrase(hebrew, date);
-    const content = withSegments(hebrew, english, date);
+    const content = withSegments(hebrew, english, date, israelForRain);
     return {
       ...content,
       hebrewBeforeKedushaFoldout,
       englishBeforeKedushaFoldout: kedushaSplitKeepsAvos
         ? kedushaSplit.mainEnglishBeforeFoldout?.trim() || undefined
         : undefined,
-      hebrewBeforeKedushaFoldoutSegments: markPiece(hebrewBeforeKedushaFoldout, date),
+      hebrewBeforeKedushaFoldoutSegments: markPiece(
+        hebrewBeforeKedushaFoldout,
+        date,
+        israelForRain
+      ),
       kedushaFoldout:
         kedushaSplitKeepsAvos && kedushaSplit.kedushaHebrew?.trim()
           ? {
@@ -241,7 +261,11 @@ export class OfflineMaarivService {
           : undefined,
       hebrewBeforeModimDerabananFoldout,
       englishBeforeModimDerabananFoldout,
-      hebrewBeforeModimDerabananFoldoutSegments: markPiece(hebrewBeforeModimDerabananFoldout, date),
+      hebrewBeforeModimDerabananFoldoutSegments: markPiece(
+        hebrewBeforeModimDerabananFoldout,
+        date,
+        israelForRain
+      ),
       modimDerabananFoldout,
     };
   }
