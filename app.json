@@ -1,19 +1,20 @@
 {
   "expo": {
-    "name": "Siddur",
+    "name": "24/7",
     "slug": "siddur",
     "scheme": "siddur",
-    "version": "2.0.1",
+    "version": "2.2.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/icon-24-7.png",
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.siddur.app",
-      "buildNumber": "24",
+      "buildNumber": "27",
       "infoPlist": {
+        "CFBundleDisplayName": "24/7",
         "NSLocationWhenInUseUsageDescription": "Siddur uses your location while you use the app to calculate zmanim, schedule sunset-based reminders, and point Mizrach toward Jerusalem. Location stays on your device.",
         "NSUserNotificationsUsageDescription": "We'll send reminders for davening, zmanim, and the features you turn on.",
         "ITSAppUsesNonExemptEncryption": false
@@ -37,8 +38,8 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FAF9F7",
-          "image": "./assets/icon.png",
+          "backgroundColor": "#D4A5B8",
+          "image": "./assets/icon-24-7.png",
           "imageWidth": 200,
           "resizeMode": "contain"
         }
@@ -67,7 +68,11 @@
       "url": "https://u.expo.dev/44bb4af8-f301-486a-9a3a-d43ea10755dc"
     },
     "android": {
-      "versionCode": 24,
+      "versionCode": 27,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#D4A5B8"
+      },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"

@@ -469,12 +469,12 @@ const styles = StyleSheet.create({
     borderRadius: 100,
   },
   logoImage: {
-    width: 140,
-    height: 140,
+    width: 220,
+    height: 110,
   },
   logoImageCompact: {
-    width: 112,
-    height: 112,
+    width: 176,
+    height: 88,
   },
   sparkle: {
     position: 'absolute',

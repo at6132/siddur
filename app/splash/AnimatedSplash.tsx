@@ -32,8 +32,9 @@ export const AnimatedSplash: React.FC<AnimatedSplashProps> = ({
 }) => {
   const { theme } = useTheme();
   const { colors, tokens } = theme;
-  const logoSize = tokens.spacing['4xl'] * 2;
-  const glowSize = logoSize * GLOW_RATIO;
+  const logoWidth = tokens.spacing['4xl'] * 3.5;
+  const logoHeight = tokens.spacing['4xl'] * 1.75;
+  const glowSize = logoWidth * GLOW_RATIO;
   const reduceMotion = useReducedMotion();
 
   const logoScale = useSharedValue(reduceMotion ? 1 : 0.88);
@@ -143,13 +144,13 @@ export const AnimatedSplash: React.FC<AnimatedSplashProps> = ({
         <Animated.View
           style={[
             styles.logoContainer,
-            { width: logoSize, height: logoSize },
+            { width: logoWidth, height: logoHeight },
             logoStyle,
           ]}
         >
           <Image
             source={require('../../assets/logo.png')}
-            style={{ width: logoSize, height: logoSize }}
+            style={{ width: logoWidth, height: logoHeight }}
             accessible={false}
             resizeMode="contain"
           />

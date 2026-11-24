@@ -33,9 +33,11 @@ No separate SVG export yet; rely on `colors.primary.main` + `text.inverse` from 
 |----------------------------------------|----------------|
 | `assets/icon.png` | `brand_kit/assets/icon.png` |
 | `assets/logo.png` | `brand_kit/assets/logo.png` |
+| `assets/splash-icon.png` | `brand_kit/assets/splash-icon.png` |
+| `assets/adaptive-icon.png` | `brand_kit/assets/adaptive-icon.png` |
 | `assets/sounds/shabbos-alarm.wav` | `brand_kit/assets/sounds/shabbos-alarm.wav` |
 
-**Splash** (`app.json`): `splash.backgroundColor` → `#FAF9F7` (matches gradient first stop).
+**Splash** (`expo-splash-screen`): cream `#FAF9F7` + `splash-icon.png`. **Android adaptive:** rose `#D4A5B8` + `adaptive-icon.png`.
 
 **Vector gradient (design export):** `brand_kit/assets/vectors/screen-background-gradient.svg`
 

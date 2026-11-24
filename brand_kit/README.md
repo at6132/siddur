@@ -8,7 +8,9 @@ Human-readable source of truth for product look and feel. **Implementations live
 | Path                                            | Purpose                                                         |
 | ----------------------------------------------- | --------------------------------------------------------------- |
 | `assets/icon.png`                               | App icon (mirror of `assets/icon.png`; used by Expo `app.json`) |
-| `assets/logo.png`                               | In-app logo (splash / intro; mirror of `assets/logo.png`)       |
+| `assets/logo.png`                               | In-app logo (intro / settings / splash component)               |
+| `assets/splash-icon.png`                        | Native splash wordmark (`expo-splash-screen`)                   |
+| `assets/adaptive-icon.png`                      | Android adaptive foreground (rose `#D4A5B8` background)         |
 | `assets/sounds/shabbos-alarm.wav`               | Shabbos alarm sound (mirror of `assets/sounds/…`)               |
 | `assets/vectors/back-button.svg`                | **Spec** for global `← Back` control (see `COMPONENTS.md`)      |
 | `assets/vectors/screen-background-gradient.svg` | **Spec** for default screen background gradient                 |
