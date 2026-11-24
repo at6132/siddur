@@ -47,6 +47,8 @@ import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../componen
 import { ReaderToolbar } from '../../components/reader/ReaderToolbar';
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
 import { useAutoscroll } from '../../components/reader/useAutoscroll';
+import { useReaderBugReport } from '../../components/reader/useReaderBugReport';
+import { OmerCountAction } from '../../components/omer/OmerCountAction';
 import type { DisplayPreferences } from '../../src/types/preferences';
 
 /**
@@ -1370,6 +1372,13 @@ export const SiddurReaderScreen: React.FC = () => {
 
   const serviceTitle = SERVICE_TITLES[service] || { english: service, hebrew: '' };
   const styles = React.useMemo(() => createReaderStyles(theme), [theme]);
+  const { captureViewRef, chromeProps: bugChromeProps, modal: bugReportModal } = useReaderBugReport(
+    () => ({
+      source: 'siddur',
+      title: serviceTitle.english,
+      context: [service, effectiveSectionKey].filter(Boolean).join(' · '),
+    })
+  );
 
   const renderFullScrollContent = () => (
     <>
@@ -1382,6 +1391,7 @@ export const SiddurReaderScreen: React.FC = () => {
         onCompass={() => setShowCompassModal(true)}
         showHamburger
         onHamburger={() => setShowSectionMenu(true)}
+        {...bugChromeProps}
       >
         <ReaderToolbar
           textSize={textSize}
@@ -2139,6 +2149,7 @@ export const SiddurReaderScreen: React.FC = () => {
                             </>
                           );
                         })()}
+                        {section.key === 'maariv_omer' ? <OmerCountAction compact /> : null}
                       </>
                     );
                   })()}
@@ -2710,6 +2721,7 @@ export const SiddurReaderScreen: React.FC = () => {
             )}
           </>
         )}
+        {sk === 'maariv_omer' ? <OmerCountAction compact /> : null}
       </>
     );
   };
@@ -2726,6 +2738,7 @@ export const SiddurReaderScreen: React.FC = () => {
           titleHebrew={section?.hebrewTitle ?? serviceTitle.hebrew}
           onBack={() => navigation.goBack()}
           topInset={insets.top}
+          {...bugChromeProps}
         >
           <ReaderToolbar
             textSize={textSize}
@@ -2827,7 +2840,7 @@ export const SiddurReaderScreen: React.FC = () => {
   );
 
   return (
-    <View style={styles.container}>
+    <View ref={captureViewRef} style={styles.container} collapsable={false}>
       <LinearGradient
         colors={theme.backgroundGradient}
         style={StyleSheet.absoluteFill}
@@ -2837,6 +2850,7 @@ export const SiddurReaderScreen: React.FC = () => {
         : isFullScroll
           ? renderFullScrollContent()
           : renderDropdownMode()}
+      {bugReportModal}
     </View>
   );
 };

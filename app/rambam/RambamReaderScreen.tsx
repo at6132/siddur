@@ -19,6 +19,7 @@ import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../componen
 import { ReaderToolbar, HEBREW_FONT_SIZES, HEBREW_LINE_HEIGHTS } from '../../components/reader/ReaderToolbar';
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
 import { useAutoscroll } from '../../components/reader/useAutoscroll';
+import { useReaderBugReport } from '../../components/reader/useReaderBugReport';
 import { spacing } from '../../src/design/spacing';
 import { useTheme } from '../../src/design/theme';
 import {
@@ -126,9 +127,16 @@ export const RambamReaderScreen: React.FC = () => {
   const englishLineHeight = hebrewLineHeight * 0.85;
 
   const chromeTitle = params.rambamYomi ? "Today's Rambam Yomi" : (displayTitle ?? 'Mishneh Torah');
+  const { captureViewRef, chromeProps: bugChromeProps, modal: bugReportModal } = useReaderBugReport(
+    () => ({
+      source: 'rambam',
+      title: chromeTitle,
+      context: sefariaRef || displayTitle || undefined,
+    })
+  );
 
   return (
-    <View style={[styles.container, { direction: 'rtl' }]}>
+    <View ref={captureViewRef} style={[styles.container, { direction: 'rtl' }]} collapsable={false}>
       <LinearGradient
         colors={theme.backgroundGradient}
         style={StyleSheet.absoluteFill}
@@ -138,6 +146,7 @@ export const RambamReaderScreen: React.FC = () => {
         titleHebrew={displayTitle && displayTitle !== chromeTitle ? displayTitle : undefined}
         onBack={() => navigation.goBack()}
         topInset={insets.top}
+        {...bugChromeProps}
       >
         <ReaderToolbar textSize={textSize} onTextSizeChange={setTextSize} showEnglish={showEnglish} onShowEnglishChange={setShowEnglish} showEnglishToggle={true} />
       </ReaderChrome>
@@ -197,6 +206,7 @@ export const RambamReaderScreen: React.FC = () => {
         ) : null}
       </ScrollView>
       <ReaderAutoscrollBar playing={autoscrollPlaying} onPlayingChange={setAutoscrollPlaying} speed={autoscrollSpeed} onSpeedChange={setAutoscrollSpeed} bottomInset={insets.bottom} />
+      {bugReportModal}
     </View>
   );
 };

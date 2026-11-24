@@ -18,6 +18,7 @@ import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../componen
 import { ReaderToolbar, HEBREW_FONT_SIZES, HEBREW_LINE_HEIGHTS } from '../../components/reader/ReaderToolbar';
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
 import { useAutoscroll } from '../../components/reader/useAutoscroll';
+import { useReaderBugReport } from '../../components/reader/useReaderBugReport';
 import { spacing } from '../../src/design/spacing';
 import { useTheme } from '../../src/design/theme';
 import {
@@ -170,8 +171,16 @@ export const NachReaderScreen: React.FC = () => {
   const englishFontSize = hebrewFontSize * 0.85;
   const englishLineHeight = hebrewLineHeight * 0.85;
 
+  const { captureViewRef, chromeProps: bugChromeProps, modal: bugReportModal } = useReaderBugReport(
+    () => ({
+      source: 'nach',
+      title: chromeSubtitleEnglish || chromeTitleHebrew || 'Nach',
+      context: chromeTitleHebrew,
+    })
+  );
+
   return (
-    <View style={[styles.container, { direction: 'rtl' }]}>
+    <View ref={captureViewRef} style={[styles.container, { direction: 'rtl' }]} collapsable={false}>
       <LinearGradient
         colors={theme.backgroundGradient}
         style={StyleSheet.absoluteFill}
@@ -182,6 +191,7 @@ export const NachReaderScreen: React.FC = () => {
         subtitleEnglish={chromeSubtitleEnglish}
         onBack={() => navigation.goBack()}
         topInset={insets.top}
+        {...bugChromeProps}
       >
         <ReaderToolbar textSize={textSize} onTextSizeChange={setTextSize} showEnglish={showEnglish} onShowEnglishChange={setShowEnglish} showEnglishToggle={true} />
       </ReaderChrome>
@@ -225,6 +235,7 @@ export const NachReaderScreen: React.FC = () => {
         ) : null}
       </ScrollView>
       <ReaderAutoscrollBar playing={autoscrollPlaying} onPlayingChange={setAutoscrollPlaying} speed={autoscrollSpeed} onSpeedChange={setAutoscrollSpeed} bottomInset={insets.bottom} />
+      {bugReportModal}
     </View>
   );
 };

@@ -6,7 +6,7 @@
 import { AppState, AppStateStatus } from 'react-native';
 import { getFirstOpenAt, setFirstOpenAt, setLastSeenAt, getAnonymousId, getUserProfile } from './IdentityService';
 import { getTimezone } from './context';
-import { track, flush, loadAndFlush } from './AnalyticsClient';
+import { track, flush, startOfflineSync } from './AnalyticsClient';
 import { syncProfileToBackend } from './api';
 import { LIFECYCLE_EVENTS, RELIABILITY_EVENTS } from './types';
 
@@ -63,7 +63,8 @@ export async function bootstrapLifecycle(coldStartMs?: number): Promise<void> {
 
     AppState.addEventListener('change', onAppStateChange);
 
-    await loadAndFlush();
+    // Durable offline queue: load cache, flush if online, sync on reconnect.
+    await startOfflineSync();
 
     const anonymousId = await getAnonymousId();
     const profile = await getUserProfile();
@@ -97,7 +98,7 @@ function onAppStateChange(nextState: AppStateStatus): void {
   if (nextState === 'background') {
     track(LIFECYCLE_EVENTS.APP_BACKGROUND, {}).then(() => endSession());
   } else if (nextState === 'active') {
-    track(LIFECYCLE_EVENTS.APP_FOREGROUND, {});
+    track(LIFECYCLE_EVENTS.APP_FOREGROUND, {}).then(() => flush()).catch(() => {});
   }
 }
 

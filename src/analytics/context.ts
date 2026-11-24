@@ -33,11 +33,13 @@ function getDeviceModel(): string {
 
 export async function getNetworkType(): Promise<'wifi' | 'cellular' | 'offline' | 'unknown'> {
   try {
-    const { getNetworkStateAsync } = await import('expo-network');
-    const state = await getNetworkStateAsync();
-    if (!state.isConnected) return 'offline';
-    if (state.type === 1) return 'wifi'; // WIFI
-    if (state.type === 2 || state.type === 3) return 'cellular'; // CELLULAR
+    const Network = await import('expo-network');
+    const state = await Network.getNetworkStateAsync();
+    if (state.isConnected === false || state.type === Network.NetworkStateType.NONE) {
+      return 'offline';
+    }
+    if (state.type === Network.NetworkStateType.WIFI) return 'wifi';
+    if (state.type === Network.NetworkStateType.CELLULAR) return 'cellular';
     return 'unknown';
   } catch {
     return 'unknown';

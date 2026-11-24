@@ -18,6 +18,7 @@ import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../componen
 import { ReaderToolbar, HEBREW_FONT_SIZES, HEBREW_LINE_HEIGHTS } from '../../components/reader/ReaderToolbar';
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
 import { useAutoscroll } from '../../components/reader/useAutoscroll';
+import { useReaderBugReport } from '../../components/reader/useReaderBugReport';
 import { spacing } from '../../src/design/spacing';
 import { useTheme } from '../../src/design/theme';
 import {
@@ -175,8 +176,16 @@ export const MishnaReaderScreen: React.FC = () => {
   const englishFontSize = hebrewFontSize * 0.85;
   const englishLineHeight = hebrewLineHeight * 0.85;
 
+  const { captureViewRef, chromeProps: bugChromeProps, modal: bugReportModal } = useReaderBugReport(
+    () => ({
+      source: 'mishna',
+      title: chromeSubtitleEnglish || chromeTitleHebrew || 'Mishna',
+      context: chromeTitleHebrew,
+    })
+  );
+
   return (
-    <View style={[styles.container, { direction: 'rtl' }]}>
+    <View ref={captureViewRef} style={[styles.container, { direction: 'rtl' }]} collapsable={false}>
       <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
       <ReaderChrome
         title={chromeTitleHebrew}
@@ -184,6 +193,7 @@ export const MishnaReaderScreen: React.FC = () => {
         subtitleEnglish={chromeSubtitleEnglish}
         onBack={() => navigation.goBack()}
         topInset={insets.top}
+        {...bugChromeProps}
       >
         <ReaderToolbar
           textSize={textSize}
@@ -239,6 +249,7 @@ export const MishnaReaderScreen: React.FC = () => {
         onSpeedChange={setAutoscrollSpeed}
         bottomInset={insets.bottom}
       />
+      {bugReportModal}
     </View>
   );
 };

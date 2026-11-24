@@ -10,6 +10,7 @@ import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../componen
 import { ReaderToolbar, HEBREW_FONT_SIZES, HEBREW_LINE_HEIGHTS } from '../../components/reader/ReaderToolbar';
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
 import { useAutoscroll } from '../../components/reader/useAutoscroll';
+import { useReaderBugReport } from '../../components/reader/useReaderBugReport';
 import { Screen, GlassButton } from '../../components/ui';
 import { PracticeHeader } from '../../components/hub/PracticeKit';
 import { PressableScale } from '../../components/settings/SettingsKit';
@@ -280,15 +281,25 @@ export const TehillimReaderScreen: React.FC = () => {
         ? "Today's Tehillim"
         : "Outside today's cycle";
 
+  const { captureViewRef, chromeProps: bugChromeProps, modal: bugReportModal } = useReaderBugReport(
+    () => ({
+      source: 'tehillim',
+      title: chapter ? `Psalm ${chapter.number}` : `Psalm ${psalm}`,
+      context: campaignId ? `campaign ${campaignId}` : undefined,
+    })
+  );
+
   return (
     <Screen
       contentStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 0 }}
     >
       <GestureHandlerRootView style={{ flex: 1 }}>
+        <View ref={captureViewRef} style={{ flex: 1 }} collapsable={false}>
         <ReaderChrome
           title={chapter ? `Psalm ${chapter.number}` : `Psalm ${psalm}`}
           onBack={() => navigation.goBack()}
           topInset={insets.top}
+          {...bugChromeProps}
         >
           <ReaderToolbar
             textSize={textSize}
@@ -426,6 +437,8 @@ export const TehillimReaderScreen: React.FC = () => {
           onSpeedChange={setAutoscrollSpeed}
           bottomInset={insets.bottom}
         />
+        {bugReportModal}
+        </View>
       </GestureHandlerRootView>
     </Screen>
   );

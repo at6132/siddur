@@ -18,6 +18,7 @@ import { ReaderChrome, READER_CHROME_HEADER_HEIGHT_APPROX } from '../../componen
 import { ReaderToolbar, HEBREW_FONT_SIZES, HEBREW_LINE_HEIGHTS } from '../../components/reader/ReaderToolbar';
 import { ReaderAutoscrollBar } from '../../components/reader/ReaderAutoscrollBar';
 import { useAutoscroll } from '../../components/reader/useAutoscroll';
+import { useReaderBugReport } from '../../components/reader/useReaderBugReport';
 import { spacing } from '../../src/design/spacing';
 import { useTheme } from '../../src/design/theme';
 import {
@@ -155,14 +156,22 @@ export const ChumashReaderScreen: React.FC = () => {
   const englishLineHeight = hebrewLineHeight * 0.85;
 
   const title = parsha && aliyah ? `${parsha} • Aliyah ${aliyah}` : ref;
+  const { captureViewRef, chromeProps: bugChromeProps, modal: bugReportModal } = useReaderBugReport(
+    () => ({
+      source: 'chumash',
+      title,
+      context: ref,
+    })
+  );
 
   return (
-    <View style={[styles.container, { direction: 'rtl' }]}>
+    <View ref={captureViewRef} style={[styles.container, { direction: 'rtl' }]} collapsable={false}>
       <LinearGradient colors={theme.backgroundGradient} style={StyleSheet.absoluteFill} />
       <ReaderChrome
         title={title}
         onBack={() => navigation.goBack()}
         topInset={insets.top}
+        {...bugChromeProps}
       >
         <ReaderToolbar textSize={textSize} onTextSizeChange={setTextSize} showEnglish={showEnglish} onShowEnglishChange={setShowEnglish} showEnglishToggle={true} />
       </ReaderChrome>
@@ -235,6 +244,7 @@ export const ChumashReaderScreen: React.FC = () => {
         ) : null}
       </ScrollView>
       <ReaderAutoscrollBar playing={autoscrollPlaying} onPlayingChange={setAutoscrollPlaying} speed={autoscrollSpeed} onSpeedChange={setAutoscrollSpeed} bottomInset={insets.bottom} />
+      {bugReportModal}
     </View>
   );
 };

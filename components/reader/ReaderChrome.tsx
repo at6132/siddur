@@ -14,6 +14,7 @@ import { useTheme } from '../../src/design/theme';
 import { spacing } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { BackButton } from '../ui/BackButton';
+import { TourTarget } from '../tour/TourTarget';
 import type { AppTheme } from '../../src/design/theme';
 
 /** Approximate height of the chrome (back row + title + toolbar + padding) for content paddingTop. */
@@ -35,6 +36,9 @@ export interface ReaderChromeProps {
   /** Daily tefilos: show hamburger (section jump) button. */
   showHamburger?: boolean;
   onHamburger?: () => void;
+  /** Flag hard-to-read / incorrect / missing text (bug button). */
+  showBugReport?: boolean;
+  onBugReport?: () => void;
 }
 
 export function ReaderChrome({
@@ -49,6 +53,8 @@ export function ReaderChrome({
   onCompass,
   showHamburger,
   onHamburger,
+  showBugReport,
+  onBugReport,
 }: ReaderChromeProps) {
   const { theme } = useTheme();
   const styles = createStyles(theme);
@@ -109,11 +115,25 @@ export function ReaderChrome({
               </View>
             </TouchableOpacity>
           )}
+          {showBugReport && (
+            <TourTarget id="reader-bug">
+              <TouchableOpacity
+                onPress={onBugReport}
+                style={styles.iconButton}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                accessibilityLabel="Report a problem with this text"
+                accessibilityRole="button"
+              >
+                <Ionicons name="bug-outline" size={22} color={theme.colors.text.primary} />
+              </TouchableOpacity>
+            </TourTarget>
+          )}
           {showHamburger && (
             <TouchableOpacity
               onPress={onHamburger}
               style={styles.iconButton}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityLabel="Jump to section"
             >
               <Ionicons name="menu" size={22} color={theme.colors.text.primary} />
             </TouchableOpacity>

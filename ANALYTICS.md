@@ -24,6 +24,8 @@ Rebuild the app so the URL is baked in.
 
 ## 3. Admin dashboard
 
+Eruv Map uses the same base URL: `GET /api/eruvs` (status aggregated on Railway; set `ERUV_REFRESH_SECRET` for manual refresh).
+
 Open **`https://your-app.railway.app/dashboard`** in a browser. You get:
 
 - **DAU / WAU / MAU** (unique users, last 1 / 7 / 30 days)
@@ -90,3 +92,7 @@ trackFeatureAction('tehillim', 'mark_complete', { perek_number: 23 });
 ```
 
 All events include: `event_uuid`, `event_time_utc`, `anonymous_id`, `user_id` (if set), `session_id`, `app_version`, `platform`, `os_version`, `device_model`, `network_type`, `locale`, `timezone`, `environment`, `release_channel`, `screen_name`, and schema version. No emails, names, or phone numbers are sent.
+
+## Offline cache
+
+Events are written to a durable local queue (`AsyncStorage`) as soon as they are tracked. If the device is offline (or the ingest request fails), they stay cached (up to 500 events). When connectivity returns — or when the app comes to the foreground — the client flushes the queue in batches to `/api/events`. Idempotency uses `event_uuid` so retries are safe.
