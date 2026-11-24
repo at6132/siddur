@@ -412,6 +412,22 @@ export const HubOverviewScreen: React.FC = () => {
           onPress={() => (navigation as any).navigate('CreateSharedTehillim')}
         />
         <BrandGlassTile
+          title="Add choleh"
+          subtitle="Save a name for Refuah in Amidah"
+          icon="heart-outline"
+          tint="rose"
+          onPress={() =>
+            (navigation as any).navigate('Settings', { scrollTo: 'refuahNames', openAdd: true })
+          }
+        />
+        <BrandGlassTile
+          title="Eruv Map"
+          subtitle="US eruv areas and status"
+          icon="map-outline"
+          tint="sage"
+          onPress={() => (navigation as any).navigate('EruvMap')}
+        />
+        <BrandGlassTile
           title="Minyan finder"
           subtitle="Find nearby minyanim"
           icon="navigate-outline"
