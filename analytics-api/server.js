@@ -48,20 +48,125 @@ import {
   updateSupportRequest,
   getSupportStats,
 } from './db.js';
+import {
+  initContentBugTables,
+  createContentBugReport,
+  listContentBugReports,
+  getContentBugReport,
+  updateContentBugReport,
+  getContentBugStats,
+} from './contentBugStore.js';
+import {
+  listEruvs,
+  getEruvById,
+  getEruvDisclaimer,
+  listEruvBoundaries,
+  getEruvBoundary,
+} from './eruv/store.js';
+import {
+  refreshEruvStatuses,
+  startEruvWorker,
+  getEruvWorkerStatus,
+} from './eruv/worker.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '3mb' }));
 app.use(express.urlencoded({ extended: false, limit: '16kb' }));
 
 const PORT = process.env.PORT || 3333;
+const ERUV_REFRESH_SECRET = process.env.ERUV_REFRESH_SECRET || '';
 
 await initDb();
+await initContentBugTables();
+startEruvWorker();
 
 // Health for Railway
 app.get('/api/health', (req, res) => {
   res.json({ ok: true, service: 'siddur-analytics-api' });
+});
+
+// --- Eruv aggregator (US catalog + status; external fetches happen only on Railway) ---
+app.get('/api/eruvs', async (req, res) => {
+  try {
+    const country = typeof req.query.country === 'string' ? req.query.country : 'US';
+    const includeGeometry = req.query.includeGeometry === '1' || req.query.includeGeometry === 'true';
+    const eruvs = await listEruvs({ country });
+    const boundaries = await listEruvBoundaries();
+    const byId = new Map(boundaries.map((b) => [b.eruvId, b]));
+    const enriched = eruvs.map((e) => {
+      const b = byId.get(e.id);
+      const row = { ...e, hasExactBoundary: Boolean(b?.geometry) };
+      if (includeGeometry && b?.geometry) {
+        row.geometry = b.geometry;
+        row.boundarySourceUrl = b.sourceUrl;
+      }
+      return row;
+    });
+    res.set('Cache-Control', 'public, max-age=60');
+    res.json({
+      country,
+      disclaimer: getEruvDisclaimer(),
+      eruvs: enriched,
+      boundaryCount: boundaries.length,
+      worker: getEruvWorkerStatus(),
+    });
+  } catch (e) {
+    console.error('[analytics-api] GET /api/eruvs', e);
+    res.status(500).json({ error: 'Failed to list eruvs' });
+  }
+});
+
+app.get('/api/eruvs/boundaries', async (req, res) => {
+  try {
+    const boundaries = await listEruvBoundaries();
+    res.set('Cache-Control', 'public, max-age=300');
+    res.json({ boundaries });
+  } catch (e) {
+    console.error('[analytics-api] GET /api/eruvs/boundaries', e);
+    res.status(500).json({ error: 'Failed to list boundaries' });
+  }
+});
+
+app.get('/api/eruvs/:id', async (req, res) => {
+  try {
+    const eruv = await getEruvById(req.params.id);
+    if (!eruv) return res.status(404).json({ error: 'Eruv not found' });
+    const boundary = await getEruvBoundary(eruv.id);
+    res.set('Cache-Control', 'public, max-age=60');
+    res.json({
+      disclaimer: getEruvDisclaimer(),
+      eruv: {
+        ...eruv,
+        hasExactBoundary: Boolean(boundary?.geometry),
+        geometry: boundary?.geometry || null,
+        boundarySourceUrl: boundary?.sourceUrl || null,
+      },
+    });
+  } catch (e) {
+    console.error('[analytics-api] GET /api/eruvs/:id', e);
+    res.status(500).json({ error: 'Failed to load eruv' });
+  }
+});
+
+app.post('/api/eruvs/refresh', async (req, res) => {
+  try {
+    const secret = req.get('x-eruv-refresh-secret') || req.get('authorization')?.replace(/^Bearer\s+/i, '');
+    if (!ERUV_REFRESH_SECRET || secret !== ERUV_REFRESH_SECRET) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    // Full resync (catalog seed + status) unless ?statusOnly=1
+    const statusOnly =
+      req.query.statusOnly === '1' ||
+      req.query.statusOnly === 'true' ||
+      req.body?.statusOnly === true;
+    const result = await refreshEruvStatuses({ resyncCatalog: !statusOnly });
+    res.json(result);
+  } catch (e) {
+    console.error('[analytics-api] POST /api/eruvs/refresh', e);
+    res.status(500).json({ error: 'Failed to refresh eruv statuses' });
+  }
 });
 
 // Ingest events (batch)
@@ -500,6 +605,18 @@ app.get('/tehillim/:id', (req, res) => {
   res.redirect(302, `siddur://tehillim/${id}`);
 });
 
+// Redirect Refuah share link to app: GET /refuah/add?n=&m=&g= → siddur://refuah/add?...
+app.get('/refuah/add', (req, res) => {
+  const n = typeof req.query.n === 'string' ? req.query.n.trim() : '';
+  const m = typeof req.query.m === 'string' ? req.query.m.trim() : '';
+  const g = typeof req.query.g === 'string' ? req.query.g.trim().toLowerCase() : '';
+  if (!n || !m || (g !== 'male' && g !== 'female')) {
+    return res.status(400).send('Invalid Refuah share link');
+  }
+  const params = new URLSearchParams({ n, m, g });
+  res.redirect(302, `siddur://refuah/add?${params.toString()}`);
+});
+
 // --- Support inbox ---
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const supportHits = new Map();
@@ -598,6 +715,111 @@ app.post('/api/support/:id/status', async (req, res) => {
     }
     console.error('[analytics-api] POST /api/support/:id/status', e);
     res.status(500).json({ error: 'Failed to update support request' });
+  }
+});
+
+// --- Content bug reports (in-app reader bug button) ---
+const contentBugHits = new Map();
+function isContentBugRateLimited(ip) {
+  const now = Date.now();
+  const windowMs = 60 * 60 * 1000;
+  const hits = (contentBugHits.get(ip) || []).filter((t) => now - t < windowMs);
+  if (hits.length >= 20) {
+    contentBugHits.set(ip, hits);
+    return true;
+  }
+  hits.push(now);
+  contentBugHits.set(ip, hits);
+  return false;
+}
+
+app.post('/api/content-bugs', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const ip = clientIp(req);
+    if (isContentBugRateLimited(ip)) {
+      return res.status(429).json({ error: 'Too many reports. Please try again later.' });
+    }
+    const source = trimField(body.source, 40);
+    const title = trimField(body.title, 200);
+    const context = trimField(body.context, 300);
+    const category = trimField(body.category, 40) || 'other';
+    const note = trimField(body.note, 2000);
+    const appVersion = trimField(body.app_version, 40) || null;
+    const platform = trimField(body.platform, 40) || null;
+    let screenshotBase64 = typeof body.screenshot_base64 === 'string' ? body.screenshot_base64 : null;
+    if (screenshotBase64 && screenshotBase64.startsWith('data:')) {
+      const comma = screenshotBase64.indexOf(',');
+      screenshotBase64 = comma >= 0 ? screenshotBase64.slice(comma + 1) : screenshotBase64;
+    }
+    if (screenshotBase64 && screenshotBase64.length > 1_500_000) {
+      screenshotBase64 = screenshotBase64.slice(0, 1_500_000);
+    }
+    if (!source && !title && !note && !screenshotBase64) {
+      return res.status(400).json({ error: 'Add a note or screenshot.' });
+    }
+    const row = await createContentBugReport({
+      source: source || 'unknown',
+      title: title || 'Untitled',
+      context,
+      category,
+      note,
+      screenshotBase64,
+      screenshotMime: trimField(body.screenshot_mime, 40) || 'image/jpeg',
+      appVersion,
+      platform,
+    });
+    res.status(201).json({ ok: true, id: row.id });
+  } catch (e) {
+    console.error('[analytics-api] POST /api/content-bugs', e);
+    res.status(500).json({ error: 'Could not save the report.' });
+  }
+});
+
+app.get('/api/content-bugs', async (req, res) => {
+  try {
+    const status = req.query.status || undefined;
+    const limit = Math.min(parseInt(req.query.limit, 10) || 200, 500);
+    const offset = parseInt(req.query.offset, 10) || 0;
+    const includeScreenshots = req.query.include_screenshots === '1';
+    const [reports, stats] = await Promise.all([
+      listContentBugReports({ status, limit, offset, includeScreenshots }),
+      getContentBugStats(),
+    ]);
+    res.json({ reports, stats });
+  } catch (e) {
+    console.error('[analytics-api] GET /api/content-bugs', e);
+    res.status(500).json({ error: 'Failed to list content bug reports' });
+  }
+});
+
+app.get('/api/content-bugs/:id', async (req, res) => {
+  try {
+    const row = await getContentBugReport(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Report not found' });
+    res.json({ report: row });
+  } catch (e) {
+    if (e.message === 'Invalid id') return res.status(400).json({ error: e.message });
+    console.error('[analytics-api] GET /api/content-bugs/:id', e);
+    res.status(500).json({ error: 'Failed to load report' });
+  }
+});
+
+app.post('/api/content-bugs/:id/status', async (req, res) => {
+  try {
+    const { status, admin_notes } = req.body || {};
+    const row = await updateContentBugReport(req.params.id, {
+      status: status || undefined,
+      adminNotes: admin_notes != null ? admin_notes : undefined,
+    });
+    if (!row) return res.status(404).json({ error: 'Report not found' });
+    res.json({ report: row });
+  } catch (e) {
+    if (e.message === 'Invalid status' || e.message === 'Invalid id') {
+      return res.status(400).json({ error: e.message });
+    }
+    console.error('[analytics-api] POST /api/content-bugs/:id/status', e);
+    res.status(500).json({ error: 'Failed to update content bug report' });
   }
 });
 

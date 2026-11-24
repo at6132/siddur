@@ -3,11 +3,12 @@
  * Falls back to in-memory store if no DATABASE_URL (dev without DB).
  */
 import pg from 'pg';
+import { initEruvTables } from './eruv/store.js';
 const { Pool } = pg;
 
 const connectionString = process.env.DATABASE_URL;
 let pool = null;
-let memoryStore = { events: [], identities: [], supportRequests: [] };
+let memoryStore = { events: [], identities: [], supportRequests: [], contentBugReports: [] };
 
 export function getPool() {
   if (pool) return pool;
@@ -25,6 +26,7 @@ export async function initDb() {
   const p = getPool();
   if (!p) {
     console.warn('[analytics-api] No DATABASE_URL; using in-memory store (not persisted).');
+    await initEruvTables();
     return;
   }
   await p.query(`
@@ -78,6 +80,7 @@ export async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_support_created ON support_requests(created_at DESC);
   `);
   console.log('[analytics-api] Support tables initialized.');
+  await initEruvTables();
   console.log('[analytics-api] DB initialized.');
 }
 

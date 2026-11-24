@@ -371,6 +371,26 @@
       cursor: pointer;
     }
     .ticket-actions button:hover { background: rgba(212, 165, 184, 0.22); }
+    .ticket-shot {
+      display: block;
+      max-width: 100%;
+      max-height: 360px;
+      margin: 0 0 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: #faf7f8;
+      cursor: zoom-in;
+    }
+    .ticket-cat {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(165, 196, 212, 0.35);
+      color: #3d5a6c;
+      margin-right: 6px;
+    }
     .tab-count {
       display: inline-block;
       min-width: 1.3em;
@@ -427,6 +447,7 @@
         <button type="button" class="tab" data-tab="usage">App usage</button>
         <button type="button" class="tab" data-tab="tehillim">Tehillim</button>
         <button type="button" class="tab" data-tab="support">Support <span class="tab-count" id="supportTabCount">0</span></button>
+        <button type="button" class="tab" data-tab="bugs">Text bugs <span class="tab-count" id="bugsTabCount">0</span></button>
         <button type="button" class="tab" data-tab="users">Users & export</button>
       </div>
 
@@ -634,13 +655,40 @@
             <div class="label">Resolved</div>
           </div>
         </div>
-        <div class="support-filters">
+        <div class="support-filters" id="supportFilters">
           <button type="button" class="chip active" data-status="">All</button>
           <button type="button" class="chip" data-status="new">New</button>
           <button type="button" class="chip" data-status="in_progress">In progress</button>
           <button type="button" class="chip" data-status="resolved">Resolved</button>
         </div>
         <div id="supportList" class="loading">Loading…</div>
+      </div>
+
+      <!-- Tab: Content / text bugs -->
+      <div id="panel-bugs" class="tab-panel">
+        <h2 class="section-title">Text bug reports</h2>
+        <p class="section-desc">Flags from the in-app bug button on library readers (hard to read, incorrect, missing). Each report includes an area screenshot when available.</p>
+        <div class="cards-row">
+          <div class="stat-card">
+            <div class="value" id="bugsNew">–</div>
+            <div class="label">New</div>
+          </div>
+          <div class="stat-card">
+            <div class="value" id="bugsProgress">–</div>
+            <div class="label">In progress</div>
+          </div>
+          <div class="stat-card">
+            <div class="value" id="bugsResolved">–</div>
+            <div class="label">Resolved</div>
+          </div>
+        </div>
+        <div class="support-filters" id="bugsFilters">
+          <button type="button" class="chip active" data-status="">All</button>
+          <button type="button" class="chip" data-status="new">New</button>
+          <button type="button" class="chip" data-status="in_progress">In progress</button>
+          <button type="button" class="chip" data-status="resolved">Resolved</button>
+        </div>
+        <div id="bugsList" class="loading">Loading…</div>
       </div>
 
       <!-- Tab: Users & export -->
@@ -813,17 +861,27 @@
         this.classList.add('active');
         qs('panel-' + tab).classList.add('active');
         if (tab === 'support') loadSupport();
+        if (tab === 'bugs') loadBugs();
         if (tab === 'reminders' && lastDetailed) {
           renderReminders(lastDetailed.reminder_opt_ins || {}, lastDetailed.reminder_changes || []);
         }
       });
     });
-    document.querySelectorAll('.support-filters .chip').forEach(function(chip) {
+    document.querySelectorAll('#supportFilters .chip').forEach(function(chip) {
       chip.addEventListener('click', function() {
-        document.querySelectorAll('.support-filters .chip').forEach(function(c) { c.classList.remove('active'); });
+        document.querySelectorAll('#supportFilters .chip').forEach(function(c) { c.classList.remove('active'); });
         this.classList.add('active');
         supportFilter = this.getAttribute('data-status') || '';
         loadSupport();
+      });
+    });
+    var bugsFilter = '';
+    document.querySelectorAll('#bugsFilters .chip').forEach(function(chip) {
+      chip.addEventListener('click', function() {
+        document.querySelectorAll('#bugsFilters .chip').forEach(function(c) { c.classList.remove('active'); });
+        this.classList.add('active');
+        bugsFilter = this.getAttribute('data-status') || '';
+        loadBugs();
       });
     });
 
@@ -1493,6 +1551,97 @@
       }
     }
 
+    function categoryLabel(c) {
+      if (c === 'hard_to_read') return 'Hard to read';
+      if (c === 'incorrect') return 'Incorrect';
+      if (c === 'missing') return 'Missing';
+      return 'Other';
+    }
+
+    function applyBugStats(stats) {
+      var n = (stats && stats.new) || 0;
+      qs('bugsNew').textContent = n;
+      qs('bugsProgress').textContent = (stats && stats.in_progress) || 0;
+      qs('bugsResolved').textContent = (stats && stats.resolved) || 0;
+      qs('bugsTabCount').textContent = n;
+    }
+
+    async function setBugStatus(id, status) {
+      try {
+        await fetch(base + '/api/content-bugs/' + id + '/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: status })
+        });
+        loadBugs();
+      } catch (e) {
+        alert('Could not update this report.');
+        console.error(e);
+      }
+    }
+
+    async function loadBugs() {
+      var el = qs('bugsList');
+      el.className = 'loading';
+      el.textContent = 'Loading…';
+      try {
+        var data = await fetchJson('/api/content-bugs', {
+          status: bugsFilter || undefined,
+          limit: 200,
+          include_screenshots: '1'
+        });
+        applyBugStats(data.stats || {});
+        var rows = data.reports || [];
+        if (rows.length === 0) {
+          el.className = '';
+          el.innerHTML = '<p class="muted">No text bug reports in this filter.</p>';
+          return;
+        }
+        el.className = '';
+        el.innerHTML = rows.map(function(r) {
+          var actions = '';
+          if (r.status !== 'in_progress') actions += '<button type="button" data-bug-id="' + r.id + '" data-status="in_progress">Mark in progress</button>';
+          if (r.status !== 'resolved') actions += '<button type="button" data-bug-id="' + r.id + '" data-status="resolved">Mark resolved</button>';
+          if (r.status !== 'new') actions += '<button type="button" data-bug-id="' + r.id + '" data-status="new">Reopen</button>';
+          var shot = '';
+          if (r.screenshot_base64) {
+            var mime = r.screenshot_mime || 'image/jpeg';
+            shot = '<img class="ticket-shot" src="data:' + mime + ';base64,' + r.screenshot_base64 + '" alt="Area screenshot" loading="lazy" />';
+          } else if (r.has_screenshot) {
+            shot = '<p class="muted">Screenshot on file (reload with include_screenshots).</p>';
+          }
+          return '<article class="ticket">' +
+            '<div class="ticket-top"><p class="ticket-subject">' +
+            '<span class="ticket-cat">' + escapeHtml(categoryLabel(r.category)) + '</span>' +
+            escapeHtml(r.title || 'Untitled') + '</p>' +
+            '<span class="badge badge-' + escapeHtml(r.status) + '">' + statusLabel(r.status) + '</span></div>' +
+            '<p class="ticket-meta">' + escapeHtml(r.source || 'unknown') +
+            (r.context ? ' · ' + escapeHtml(r.context) : '') +
+            (r.app_version ? ' · v' + escapeHtml(r.app_version) : '') +
+            (r.platform ? ' · ' + escapeHtml(r.platform) : '') +
+            ' · ' + escapeHtml((r.created_at || '').slice(0, 19).replace('T', ' ')) + ' UTC</p>' +
+            shot +
+            (r.note ? '<p class="ticket-msg">' + escapeHtml(r.note) + '</p>' : '<p class="muted">No note</p>') +
+            '<div class="ticket-actions">' + actions + '</div>' +
+            '</article>';
+        }).join('');
+        el.querySelectorAll('button[data-bug-id]').forEach(function(b) {
+          b.addEventListener('click', function() {
+            setBugStatus(this.getAttribute('data-bug-id'), this.getAttribute('data-status'));
+          });
+        });
+        el.querySelectorAll('img.ticket-shot').forEach(function(img) {
+          img.addEventListener('click', function() {
+            window.open(this.src, '_blank');
+          });
+        });
+      } catch (e) {
+        el.className = 'error';
+        el.textContent = 'Could not load text bug reports.';
+        console.error(e);
+      }
+    }
+
     async function loadOverviewFeatures() {
       var el = qs('overviewFeatures');
       if (!el) return;
@@ -1524,6 +1673,7 @@
       loadRetention();
       loadEvents();
       loadSupport();
+      loadBugs();
       setTimeout(function() { updateOverviewSummary(window._lastDau, window._lastWau, window._lastMau, window._lastPriv, window._lastShared, window._lastPages); }, 400);
     }
 
