@@ -81,6 +81,12 @@ export class LocationRefreshService {
       const next: SavedLocation = { latitude, longitude, cityName };
       await UserPreferencesService.setLocation(next);
 
+      // Keep calendar zmanim window (today ±7) ready for offline use.
+      try {
+        const { ZmanimLocalCache } = await import('../core/zmanim/ZmanimLocalCache');
+        ZmanimLocalCache.warm(next).catch(() => {});
+      } catch {}
+
       if (locationChangedMeaningfully(prev, next)) {
         try {
           const { NotificationService } = await import('../notifications/NotificationService');
