@@ -49,10 +49,13 @@ import { ThemeProvider, useTheme } from './src/design/theme';
 import { bootstrapLifecycle } from './src/analytics/lifecycle';
 import { track, getPreviousScreenInfo, SCREEN_EVENTS, events } from './src/analytics';
 import { AnalyticsErrorBoundary } from './components/analytics/AnalyticsErrorBoundary';
+import { BrandLaunchScreen } from './components/ui/BrandLaunchScreen';
 import { parseCampaignIdFromLink } from './src/api/tehillimApi';
+import { parseRefuahShareLink } from './src/api/refuahShare';
 
 // Keep splash screen visible while loading fonts
 SplashScreen.preventAutoHideAsync();
+
 
 /** Used when the native module has not reported insets yet (web, first frame). */
 const SAFE_AREA_FALLBACK = {
@@ -70,6 +73,8 @@ const ROUTE_TO_FEATURE: Record<string, string> = {
   Gratitude: 'gratitude',
   AddGratitude: 'gratitude',
   GoalsHistory: 'goals_history',
+  EruvMap: 'eruv_map',
+  EruvDetail: 'eruv_map',
   Calendar: 'calendar',
   Library: 'library',
   LibraryHome: 'library',
@@ -208,7 +213,15 @@ function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
           setTimeout(doNav, 100);
           return;
         }
-        const hubScreens = ['Gratitude', 'AddGratitude', 'DailyGoals', 'GoalsHistory', 'HubOverview'];
+        const hubScreens = [
+          'Gratitude',
+          'AddGratitude',
+          'DailyGoals',
+          'GoalsHistory',
+          'HubOverview',
+          'EruvMap',
+          'EruvDetail',
+        ];
         if (screenName && hubScreens.includes(screenName)) {
           navigationRef.navigate('Main' as never, {
             screen: 'Hub',
@@ -297,10 +310,31 @@ function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
     }
   }, []);
 
-  // Deep link: siddur://tehillim/<id> or https://siddur24seven.com/tehillim/<id> → open SharedTehillimView
+  // Deep links: Tehillim campaigns + Refuah (choleh) share links
   useEffect(() => {
-    const navigateToTehillimCampaign = (url: string | null) => {
+    const handleIncomingUrl = (url: string | null) => {
       if (!url) return;
+
+      const refuah = parseRefuahShareLink(url);
+      if (refuah) {
+        const go = () => {
+          if (!navigationRef.isReady()) {
+            setTimeout(go, 100);
+            return;
+          }
+          navigationRef.navigate(
+            'AddRefuahFromLink' as never,
+            {
+              nameHebrew: refuah.nameHebrew,
+              motherNameHebrew: refuah.motherNameHebrew,
+              gender: refuah.gender,
+            } as never
+          );
+        };
+        go();
+        return;
+      }
+
       const campaignId = parseCampaignIdFromLink(url);
       if (!campaignId) return;
       const go = () => {
@@ -313,8 +347,8 @@ function AppContent({ onLayoutRootView }: { onLayoutRootView: () => void }) {
       go();
     };
 
-    Linking.getInitialURL().then((url) => navigateToTehillimCampaign(url ?? null));
-    const sub = Linking.addEventListener('url', ({ url }) => navigateToTehillimCampaign(url));
+    Linking.getInitialURL().then((url) => handleIncomingUrl(url ?? null));
+    const sub = Linking.addEventListener('url', ({ url }) => handleIncomingUrl(url));
     return () => sub.remove();
   }, []);
 
@@ -387,6 +421,15 @@ export default function App() {
         await NotificationService.initialize();
         // Fresh location on open — non-blocking so splash doesn't wait on GPS
         LocationRefreshService.refreshAndSave().catch(() => {});
+        // Warm today ±7 zmanim from last known location (works offline).
+        try {
+          const { UserPreferencesService } = await import('./src/storage/UserPreferences');
+          const prefs = await UserPreferencesService.getPreferences();
+          if (prefs?.location) {
+            const { ZmanimLocalCache } = await import('./src/core/zmanim/ZmanimLocalCache');
+            ZmanimLocalCache.warm(prefs.location).catch(() => {});
+          }
+        } catch {}
       } catch (e) {
         console.warn(e);
       } finally {
@@ -422,9 +465,10 @@ export default function App() {
     }
   }, [fontsLoaded, appIsReady]);
 
-  // Wait for fonts and app to be ready
+  // Wait for fonts and app to be ready — show brand launch so Expo Go
+  // (which mirrors the app icon for splash) never flashes a blank/old frame.
   if (!fontsLoaded || !appIsReady) {
-    return null;
+    return <BrandLaunchScreen />;
   }
 
   return (

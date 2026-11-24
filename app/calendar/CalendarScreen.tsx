@@ -18,6 +18,7 @@ import { textStyles, fonts } from '../../src/design/typography';
 import { CalendarEngine } from '../../src/core/calendar/CalendarEngine';
 import { JewishCalendarService } from '../../src/core/calendar/JewishCalendar';
 import { ZmanimService } from '../../src/core/zmanim/ZmanimService';
+import { ZmanimLocalCache } from '../../src/core/zmanim/ZmanimLocalCache';
 import { ExtendedZmanim } from '../../src/types/calendar';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
 import { LocationRefreshService } from '../../src/services/LocationRefreshService';
@@ -85,20 +86,25 @@ export const CalendarScreen: React.FC = () => {
   const loadContext = async () => {
     const preferences = await UserPreferencesService.getPreferences();
     const refreshed = await LocationRefreshService.refreshAndSave();
-    const currentLocation = refreshed ?? preferences?.location ?? null;
+    const nextLocation = refreshed ?? preferences?.location ?? null;
 
-    setCurrentLocation(currentLocation);
+    setCurrentLocation(nextLocation);
+
+    if (nextLocation) {
+      // Prefetch today ±7 days so calendar zmanim work offline / open instantly.
+      ZmanimLocalCache.warm(nextLocation).catch(() => {});
+    }
 
     if (preferences) {
       setContext({
         nusach: preferences.nusach,
-        location: currentLocation ?? undefined,
+        location: nextLocation ?? undefined,
         isIsrael: false,
       });
     } else {
       setContext({
         nusach: 'ashkenaz',
-        location: currentLocation ?? undefined,
+        location: nextLocation ?? undefined,
         isIsrael: false,
       });
     }
@@ -189,24 +195,8 @@ export const CalendarScreen: React.FC = () => {
   const loadZmanimForDay = async (day: CalendarDay) => {
     setZmanimLoading(true);
     try {
-      let location = currentLocation;
-      
-      const locationObj = location
-        ? {
-            coords: {
-              latitude: location.latitude,
-              longitude: location.longitude,
-              altitude: null,
-              accuracy: null,
-              altitudeAccuracy: null,
-              heading: null,
-              speed: null,
-            },
-            timestamp: Date.now(),
-          }
-        : null;
-
-      const zmanim = await ZmanimService.calculateExtendedZmanim(day.date, locationObj);
+      // Prefer durable ±7-day cache; calculate (and backfill) on miss.
+      const zmanim = await ZmanimLocalCache.getOrCalculate(day.date, currentLocation);
       setSelectedDayZmanim(zmanim);
     } catch (error) {
       console.error('Error loading zmanim:', error);

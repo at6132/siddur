@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,9 @@ import { useTheme } from '../../src/design/theme';
 import type { AppTheme } from '../../src/design/theme';
 import { fonts } from '../../src/design/typography';
 import { colorWithAlpha } from '../../src/design/colorAlpha';
+import { TourTarget } from '../tour/TourTarget';
+import { registerTourNavigation } from '../../src/tour/tourNavigation';
+import type { TourTargetId } from '../../src/tour/types';
 
 /**
  * Standard iOS-style floating Liquid Glass tab bar.
@@ -200,6 +203,23 @@ export const LiquidGlassTabBar: React.FC<LiquidGlassTabBarProps> = ({
     transform: [{ translateX: selectionX.value }],
   }));
 
+  useEffect(() => {
+    registerTourNavigation({
+      goToTab: (tab) => {
+        navigation.navigate(tab);
+      },
+      openLibraryReader: (service) => {
+        navigation.navigate('Library', {
+          screen: 'SiddurReader',
+          params: { service },
+        });
+      },
+      closeReaderToLibrary: () => {
+        navigation.navigate('Library', { screen: 'LibraryHome' });
+      },
+    });
+  }, [navigation]);
+
   const goToIndex = useCallback(
     (index: number) => {
       if (index < 0 || index >= tabCount) return;
@@ -257,16 +277,11 @@ export const LiquidGlassTabBar: React.FC<LiquidGlassTabBarProps> = ({
         const focused = state.index === index;
         const color = focused ? theme.colors.primary.dark : theme.colors.text.secondary;
         const IconComponent = TAB_ICONS[route.name] || HomeIcon;
+        const tourTargetId: TourTargetId | null =
+          route.name === 'Library' ? 'library-tab' : route.name === 'Hub' ? 'hub-tab' : null;
 
-        return (
-          <Pressable
-            key={route.key}
-            accessibilityRole="button"
-            accessibilityState={focused ? { selected: true } : {}}
-            accessibilityLabel={label}
-            onPress={() => goToIndex(index)}
-            style={[styles.tab, { width: tabWidth }]}
-          >
+        const tabInner = (
+          <>
             <IconComponent color={color} size={ICON_SIZE} />
             <Text
               style={[
@@ -280,6 +295,25 @@ export const LiquidGlassTabBar: React.FC<LiquidGlassTabBarProps> = ({
             >
               {label}
             </Text>
+          </>
+        );
+
+        return (
+          <Pressable
+            key={route.key}
+            accessibilityRole="button"
+            accessibilityState={focused ? { selected: true } : {}}
+            accessibilityLabel={label}
+            onPress={() => goToIndex(index)}
+            style={[styles.tab, { width: tabWidth }]}
+          >
+            {tourTargetId ? (
+              <TourTarget id={tourTargetId} style={styles.tabTarget}>
+                {tabInner}
+              </TourTarget>
+            ) : (
+              tabInner
+            )}
           </Pressable>
         );
       })}
@@ -382,6 +416,13 @@ function createTabBarStyles(theme: AppTheme) {
       justifyContent: 'center' as const,
       gap: 3,
       zIndex: 2,
+    },
+    tabTarget: {
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: 3,
+      paddingVertical: 4,
+      paddingHorizontal: 6,
     },
     label: {
       fontSize: 12,

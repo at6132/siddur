@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, DeviceEventEmitter } from 'react-native';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { IntroScreen } from '../../app/intro/IntroScreen';
 import { OnboardingScreen } from '../../app/onboarding/OnboardingScreen';
+import { BrandLaunchScreen } from '../../components/ui/BrandLaunchScreen';
 import { HomeScreen } from '../../app/home/HomeScreen';
 import { CalendarScreen } from '../../app/calendar/CalendarScreen';
 import { TehillimListScreen } from '../../app/tehillim/TehillimListScreen';
@@ -44,14 +45,20 @@ import { DailyGoalsScreen } from '../../app/hub/DailyGoalsScreen';
 import { GoalsHistoryScreen } from '../../app/hub/GoalsHistoryScreen';
 import { GratitudeScreen } from '../../app/hub/GratitudeScreen';
 import { AddGratitudeScreen } from '../../app/hub/AddGratitudeScreen';
+import { EruvMapScreen } from '../../app/hub/EruvMapScreen';
+import { EruvDetailScreen } from '../../app/hub/EruvDetailScreen';
 import { TzedakahScreen } from '../../app/tzedakah/TzedakahScreen';
 import { AddTzedakahScreen } from '../../app/tzedakah/AddTzedakahScreen';
 import { SettingsScreen } from '../../app/settings/SettingsScreen';
+import { AddRefuahFromLinkScreen } from '../../app/settings/AddRefuahFromLinkScreen';
 import { SearchScreen } from '../../app/search/SearchScreen';
 import { LiquidGlassTabBar } from '../../components/navigation/LiquidGlassTabBar';
+import { ProductTourOverlay } from '../../components/tour/ProductTourOverlay';
+import { TourProvider } from '../tour/TourContext';
 import { UserPreferencesService } from '../storage/UserPreferences';
 import { useTheme } from '../design/theme';
 import { textStyles } from '../design/typography';
+import { APP_RESET_EVENT } from './appEvents';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -66,6 +73,8 @@ function HubNavigator() {
       <HubStack.Screen name="GoalsHistory" component={GoalsHistoryScreen} />
       <HubStack.Screen name="Gratitude" component={GratitudeScreen} />
       <HubStack.Screen name="AddGratitude" component={AddGratitudeScreen} />
+      <HubStack.Screen name="EruvMap" component={EruvMapScreen} />
+      <HubStack.Screen name="EruvDetail" component={EruvDetailScreen} />
     </HubStack.Navigator>
   );
 }
@@ -126,9 +135,12 @@ function MainTabs() {
 /** Main tabs shell. Continue-reading MiniPlayer is hidden for now. */
 function MainWithChrome() {
   return (
-    <View style={styles.mainShell}>
-      <MainTabs />
-    </View>
+    <TourProvider>
+      <View style={styles.mainShell}>
+        <MainTabs />
+        <ProductTourOverlay />
+      </View>
+    </TourProvider>
   );
 }
 
@@ -153,6 +165,11 @@ export default function AppNavigator() {
 
   useEffect(() => {
     checkOnboardingStatus();
+    const sub = DeviceEventEmitter.addListener(APP_RESET_EVENT, () => {
+      setIsOnboardingComplete(false);
+      setShowIntro(true);
+    });
+    return () => sub.remove();
   }, []);
 
   const checkOnboardingStatus = async () => {
@@ -171,8 +188,7 @@ export default function AppNavigator() {
   };
 
   if (isOnboardingComplete === null) {
-    // Loading state - could add a splash screen here
-    return null;
+    return <BrandLaunchScreen />;
   }
 
   // Show intro screen first (before onboarding)
@@ -241,6 +257,11 @@ export default function AppNavigator() {
                 ...textStyles.h4,
               },
             }}
+          />
+          <Stack.Screen
+            name="AddRefuahFromLink"
+            component={AddRefuahFromLinkScreen}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="TehillimSettings"

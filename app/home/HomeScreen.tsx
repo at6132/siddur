@@ -22,6 +22,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { ErrorView } from '../../components/ui/ErrorView';
+import { TourTarget } from '../../components/tour/TourTarget';
 import { spacing, borderRadius } from '../../src/design/spacing';
 import { fonts } from '../../src/design/typography';
 import { colorWithAlpha } from '../../src/design/colorAlpha';
@@ -803,19 +804,21 @@ export const HomeScreen: React.FC = () => {
                       <Text style={[styles.editButtonText, styles.editButtonTextActive]}>Done</Text>
                     </TouchableOpacity>
                   ) : (
-                    <TouchableOpacity
-                      style={styles.menuButton}
-                      onPress={openHomeMenu}
-                      accessibilityRole="button"
-                      accessibilityLabel="Home menu"
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Ionicons
-                        name="ellipsis-horizontal"
-                        size={24}
-                        color={theme.colors.text.secondary}
-                      />
-                    </TouchableOpacity>
+                    <TourTarget id="settings-menu">
+                      <TouchableOpacity
+                        style={styles.menuButton}
+                        onPress={openHomeMenu}
+                        accessibilityRole="button"
+                        accessibilityLabel="Home menu"
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons
+                          name="ellipsis-horizontal"
+                          size={24}
+                          color={theme.colors.text.secondary}
+                        />
+                      </TouchableOpacity>
+                    </TourTarget>
                   )}
                 </View>
               </View>
