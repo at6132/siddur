@@ -245,11 +245,32 @@ export class UserPreferencesService {
   }
 
   static async markOnboardingComplete(): Promise<boolean> {
-    return this.savePreferences({ hasCompletedOnboarding: true });
+    return this.savePreferences({
+      hasCompletedOnboarding: true,
+      hasCompletedProductTour: false,
+    });
   }
 
   static async hasCompletedOnboarding(): Promise<boolean> {
     const prefs = await this.getPreferences();
     return prefs?.hasCompletedOnboarding ?? false;
+  }
+
+  static async markProductTourComplete(): Promise<boolean> {
+    return this.savePreferences({ hasCompletedProductTour: true });
+  }
+
+  static async resetProductTour(): Promise<boolean> {
+    return this.savePreferences({ hasCompletedProductTour: false });
+  }
+
+  static async hasCompletedProductTour(): Promise<boolean> {
+    const prefs = await this.getPreferences();
+    if (!prefs) return true;
+    if (typeof prefs.hasCompletedProductTour === 'boolean') {
+      return prefs.hasCompletedProductTour;
+    }
+    // Installed before the tour existed — do not surprise returning users
+    return true;
   }
 }

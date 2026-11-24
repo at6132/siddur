@@ -2,11 +2,14 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   Linking,
   Alert,
   Platform,
   ActionSheetIOS,
+  DeviceEventEmitter,
+  Share,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Slider from '@react-native-community/slider';
@@ -28,6 +31,9 @@ import {
   Hairline,
 } from '../../components/settings/SettingsKit';
 import { UserPreferencesService } from '../../src/storage/UserPreferences';
+import { StorageService } from '../../src/storage/StorageService';
+import { APP_RESET_EVENT } from '../../src/navigation/appEvents';
+import { PRODUCT_TOUR_RESTART_EVENT } from '../../src/tour/tourEvents';
 import { LEGAL, mailtoSupport } from '../../src/legal/links';
 import { NotificationService } from '../../src/notifications/NotificationService';
 import {
@@ -46,9 +52,11 @@ import {
   syncProfileToBackend,
   trackProduct,
 } from '../../src/analytics';
+import { buildRefuahShareLink, formatRefuahDisplayName } from '../../src/api/refuahShare';
 
 type SettingsRouteParams = {
-  scrollTo?: 'dailyGratitude' | 'shabbosAlarm' | 'tefillinReminder';
+  scrollTo?: 'dailyGratitude' | 'shabbosAlarm' | 'tefillinReminder' | 'refuahNames';
+  openAdd?: boolean;
 };
 
 type TimePickerKind =
@@ -187,6 +195,7 @@ export const SettingsScreen: React.FC = () => {
   const shabbosAlarmBlockRef = useRef<View>(null);
   const gratitudeBlockRef = useRef<View>(null);
   const tefillinReminderBlockRef = useRef<View>(null);
+  const refuahNamesBlockRef = useRef<View>(null);
   const [reminderMenuId, setReminderMenuId] = useState<string | null>(null);
   const [timePickerFor, setTimePickerFor] = useState<TimePickerKind | null>(null);
   const [daveningAddOnsExpanded, setDaveningAddOnsExpanded] = useState(false);
@@ -339,26 +348,32 @@ export const SettingsScreen: React.FC = () => {
     const st = route.params?.scrollTo;
     if (!st || loading) return;
 
-    setActiveTab('notifications');
+    const openAdd = route.params?.openAdd === true;
+    setActiveTab(st === 'refuahNames' ? 'general' : 'notifications');
 
     const clearScrollParam = () => {
-      (navigation as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({ scrollTo: undefined });
+      (navigation as unknown as { setParams: (p: Record<string, unknown>) => void }).setParams({
+        scrollTo: undefined,
+        openAdd: undefined,
+      });
     };
 
-    const scrollToBlock = (block: View | null, fallbackY: number) => {
-        const scroller = scrollViewRef.current;
-        if (block && scroller) {
-        block.measureInWindow((ex: number, ey: number) => {
-          (scroller as any).measureInWindow((sx: number, sy: number) => {
+    const scrollToBlock = (block: View | null, fallbackY: number, after?: () => void) => {
+      const scroller = scrollViewRef.current;
+      if (block && scroller) {
+        block.measureInWindow((_ex: number, ey: number) => {
+          (scroller as any).measureInWindow((_sx: number, sy: number) => {
             const y = Math.max(0, ey - sy - spacing.sm);
-              scroller.scrollTo({ y, animated: true });
-              clearScrollParam();
-            });
+            scroller.scrollTo({ y, animated: true });
+            clearScrollParam();
+            after?.();
           });
-        } else {
+        });
+      } else {
         scroller?.scrollTo({ y: fallbackY, animated: true });
-          clearScrollParam();
-        }
+        clearScrollParam();
+        after?.();
+      }
     };
 
     if (st === 'dailyGratitude') {
@@ -375,7 +390,25 @@ export const SettingsScreen: React.FC = () => {
       const t = setTimeout(() => scrollToBlock(shabbosAlarmBlockRef.current, 960), 500);
       return () => clearTimeout(t);
     }
-  }, [route.params?.scrollTo, loading, navigation, spacing.sm]);
+
+    if (st === 'refuahNames') {
+      const t = setTimeout(
+        () =>
+          scrollToBlock(refuahNamesBlockRef.current, 200, () => {
+            if (openAdd) {
+              setRefuahError(null);
+              setRefuahEditingId(null);
+              setRefuahDraftGender('male');
+              setRefuahDraftName('');
+              setRefuahDraftMother('');
+              setRefuahNameModalVisible(true);
+            }
+          }),
+        450
+      );
+      return () => clearTimeout(t);
+    }
+  }, [route.params?.scrollTo, route.params?.openAdd, loading, navigation, spacing.sm]);
 
   // Refresh when returning from Add Custom Reminder (or any sub-screen) so new reminders show
   useFocusEffect(
@@ -518,6 +551,25 @@ export const SettingsScreen: React.FC = () => {
     setRefuahNameModalVisible(true);
   };
 
+  const shareRefuahName = async (entry: {
+    nameHebrew: string;
+    motherNameHebrew: string;
+    gender: RefuahPersonalNameGender;
+  }) => {
+    const link = buildRefuahShareLink(entry);
+    const display = formatRefuahDisplayName(entry);
+    try {
+      await Share.share({
+        message: `Please say Refuah for ${display}\n${link}`,
+        title: 'Share choleh name',
+        url: link,
+      });
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch {
+      // User cancelled or share unavailable
+    }
+  };
+
   const saveRefuahNameModal = async () => {
     if (!preferences) return;
     const nm = refuahDraftName.trim();
@@ -536,6 +588,7 @@ export const SettingsScreen: React.FC = () => {
       nameHebrew: nm,
       motherNameHebrew: mo,
     };
+    const wasNew = !refuahEditingId;
     if (refuahEditingId) {
       const i = list.findIndex((x) => x.id === refuahEditingId);
       if (i >= 0) list[i] = row;
@@ -547,6 +600,17 @@ export const SettingsScreen: React.FC = () => {
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setRefuahNameModalVisible(false);
     loadPreferences();
+    if (wasNew) {
+      Alert.alert('Name saved', 'Share a link so others can add this choleh to their list?', [
+        { text: 'Not now', style: 'cancel' },
+        {
+          text: 'Share',
+          onPress: () => {
+            void shareRefuahName(row);
+          },
+        },
+      ]);
+    }
   };
 
   const deleteRefuahName = async (id: string) => {
@@ -554,6 +618,13 @@ export const SettingsScreen: React.FC = () => {
     const list = (preferences.refuahPersonalNames ?? []).filter((x) => x.id !== id);
     await UserPreferencesService.setRefuahPersonalNames(list);
     loadPreferences();
+  };
+
+  const handleReplayTour = async () => {
+    void Haptics.selectionAsync();
+    await UserPreferencesService.resetProductTour();
+    (navigation as any).navigate('Main', { screen: 'Home' });
+    DeviceEventEmitter.emit(PRODUCT_TOUR_RESTART_EVENT);
   };
 
   const handleResetOnboarding = async () => {
@@ -566,12 +637,13 @@ export const SettingsScreen: React.FC = () => {
           text: 'Reset',
           style: 'destructive',
           onPress: async () => {
-            // Clear all preferences
-            await UserPreferencesService.savePreferences({
-              hasCompletedOnboarding: false,
-            } as any);
-            // Force reload
-            loadPreferences();
+            try {
+              await NotificationService.cancelAll();
+            } catch {
+              // Best-effort; still clear local data
+            }
+            await StorageService.clearAll();
+            DeviceEventEmitter.emit(APP_RESET_EVENT);
           },
         },
       ]
@@ -1033,46 +1105,55 @@ export const SettingsScreen: React.FC = () => {
               />
             </Section>
 
-            <Section
-              title="Refuah names"
-              footer={'Optional in רְפָאֵנוּ. After "רְפוּאָה שְׁלֵמָה לְכָל מַכּוֹתֵינוּ" in the Amidah, a short paragraph is added for each person you list (Hebrew names only). Choose male (בן) or female (בת), then enter the choleh\'s name and the mother\'s name.'}
-            >
-              {refuahNames.map((entry) => (
-                <View key={entry.id} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <PressableScale
-                    onPress={() => openRefuahNameModal(entry)}
-                    pressedScale={0.99}
-                    accessibilityLabel={`Edit ${entry.nameHebrew}`}
-                    style={{ flex: 1, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, minHeight: 44 }}
-                  >
-                    <Text style={[hebrewBody, { color: theme.colors.text.primary, alignSelf: 'flex-start' }]}>
-                      {entry.gender === 'female'
-                        ? `${entry.nameHebrew} בת ${entry.motherNameHebrew}`
-                        : `${entry.nameHebrew} בן ${entry.motherNameHebrew}`}
-                    </Text>
-                    <Text
-                      style={[
-                        type.textStyles.caption,
-                        { color: theme.colors.text.secondary, marginTop: spacing['2xs'] },
-                      ]}
+            <View ref={refuahNamesBlockRef} collapsable={false}>
+              <Section
+                title="Refuah names"
+                footer={'Optional in רְפָאֵנוּ. After "רְפוּאָה שְׁלֵמָה לְכָל מַכּוֹתֵינוּ" in the Amidah, a short paragraph is added for each person you list (Hebrew names only). Choose male (בן) or female (בת), then enter the choleh\'s name and the mother\'s name. Share a link so others can add the same name.'}
+              >
+                {refuahNames.map((entry) => (
+                  <View key={entry.id} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <PressableScale
+                      onPress={() => openRefuahNameModal(entry)}
+                      pressedScale={0.99}
+                      accessibilityLabel={`Edit ${entry.nameHebrew}`}
+                      style={{ flex: 1, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, minHeight: 44 }}
                     >
-                      {entry.gender === 'female' ? 'Female (בת)' : 'Male (בן)'}
-                    </Text>
-                  </PressableScale>
-                  <IconButton
-                    name="trash-outline"
-                    label={`Delete ${entry.nameHebrew}`}
-                    tone="danger"
-                    onPress={() => deleteRefuahName(entry.id)}
-                  />
-                </View>
-              ))}
-              <ListRow
-                title="Add name"
-                leading={<Ionicons name="add" size={type.fontSize.xl} color={theme.colors.primary.dark} />}
-                onPress={() => openRefuahNameModal()}
-              />
-            </Section>
+                      <Text style={[hebrewBody, { color: theme.colors.text.primary, alignSelf: 'flex-start' }]}>
+                        {entry.gender === 'female'
+                          ? `${entry.nameHebrew} בת ${entry.motherNameHebrew}`
+                          : `${entry.nameHebrew} בן ${entry.motherNameHebrew}`}
+                      </Text>
+                      <Text
+                        style={[
+                          type.textStyles.caption,
+                          { color: theme.colors.text.secondary, marginTop: spacing['2xs'] },
+                        ]}
+                      >
+                        {entry.gender === 'female' ? 'Female (בת)' : 'Male (בן)'}
+                      </Text>
+                    </PressableScale>
+                    <IconButton
+                      name="share-outline"
+                      label={`Share ${entry.nameHebrew}`}
+                      onPress={() => {
+                        void shareRefuahName(entry);
+                      }}
+                    />
+                    <IconButton
+                      name="trash-outline"
+                      label={`Delete ${entry.nameHebrew}`}
+                      tone="danger"
+                      onPress={() => deleteRefuahName(entry.id)}
+                    />
+                  </View>
+                ))}
+                <ListRow
+                  title="Add name"
+                  leading={<Ionicons name="add" size={type.fontSize.xl} color={theme.colors.primary.dark} />}
+                  onPress={() => openRefuahNameModal()}
+                />
+              </Section>
+            </View>
 
             <Section title="Display">
               <View
@@ -1173,17 +1254,23 @@ export const SettingsScreen: React.FC = () => {
             </Section>
 
             <Section>
-              <View style={{ paddingHorizontal: spacing.xs }}>
+              <View style={{ paddingHorizontal: spacing.xs, gap: spacing.sm }}>
+                <TextAction label="Replay app tour" onPress={handleReplayTour} />
                 <TextAction label="Reset app" tone="danger" onPress={handleResetOnboarding} />
               </View>
             </Section>
 
             <View style={{ alignItems: 'center', paddingVertical: spacing.lg }}>
-              <Text style={[type.textStyles.h3, { color: theme.colors.text.primary }]}>24/7</Text>
+              <Image
+                source={require('../../assets/logo.png')}
+                style={{ width: 140, height: 70 }}
+                resizeMode="contain"
+                accessibilityLabel="24/7 logo"
+              />
               <Text style={[type.textStyles.caption, { color: theme.colors.text.tertiary, marginTop: spacing.xs }]}>
                 With you, when you choose.
-                  </Text>
-                </View>
+              </Text>
+            </View>
         </>
         )}
       </ScrollView>

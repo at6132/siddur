@@ -163,6 +163,11 @@ export interface UserPreferences {
     cityName?: string;
   };
   hasCompletedOnboarding: boolean;
+  /**
+   * First-run spotlight tour (Library / Hub / Settings / bug button).
+   * `undefined` = legacy install (treat as completed). `false` = show tour.
+   */
+  hasCompletedProductTour?: boolean;
   /** Autoscroll speed multiplier (0.5–2) for siddur reader */
   autoscrollSpeed?: number;
   /** Hebrew birthday for countdown widget: day (1-30) and month (1-13 hebcal) */
