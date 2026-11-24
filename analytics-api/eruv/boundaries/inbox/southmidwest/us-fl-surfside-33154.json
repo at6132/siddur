@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-fl-surfside-33154",
+  "status": "pending_digitize",
+  "sourceType": "pdf",
+  "sourceUrl": "https://eruvstat.us/33154",
+  "googleMyMapsMid": "1XhSNBTYm0pkAkbe7SfBZnTkULJ3G3r0U",
+  "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: No post-split Surfside/Bal Harbour/Bay Harbor-only vector found. Same unaffiliated mid=1XhSNBTYm0pkAkbe7SfBZnTkULJ3G3r0U is combined pre-split — do not use. Status page eruvstat.us/33154 has no KML.",
+  "checkedAt": "2026-11-20T15:53:56.653Z",
+  "geometry": null
+}

@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-dc-shepherd-park",
+  "status": "pending_digitize",
+  "sourceType": "pdf",
+  "sourceUrl": "https://www.wsat.org/wp-content/uploads/2019/11/SHEPHERD_PARK_WOODSIDE_ERUV_NOV_2019.pdf",
+  "googleMyMapsMid": null,
+  "notes": "Best source: 2019 combined PDF (wsat.org / ohevdc.org). Also raster JPG on wsat.org/eruv (2025/07/eruv_map_with_markings). MoCo 2010 KMZ Woodside layer is pre-combined/incomplete. mikeolkin leaflet KML is Longmeadow, not SP. No My Maps mid / GeoJSON.",
+  "checkedAt": "2026-11-20T15:53:28.211Z",
+  "geometry": null
+}

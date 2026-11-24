@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-oh-beachwood-east",
+  "status": "pending_digitize",
+  "sourceType": "image",
+  "sourceUrl": "https://www.bees-eruv.org/map-and-supervision",
+  "googleMyMapsMid": null,
+  "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: BEES street bounds Richmond/Cedar/I-271/Shaker only; Wix image map, no KML/My Maps.",
+  "checkedAt": "2026-11-20T15:53:56.653Z",
+  "geometry": null
+}

@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-ny-washington-heights",
+  "status": "skipped_contested",
+  "sourceType": "none",
+  "sourceUrl": "https://eruv.nyc/",
+  "googleMyMapsMid": null,
+  "notes": "Lower Washington Heights / YU eruv often treated as separate/contested relative to broader Manhattan Eruv; no reliable standalone official polygon source found",
+  "geometry": null,
+  "checkedAt": "2026-11-20T15:21:23.136Z"
+}

@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-mi-detroit",
+  "status": "pending_digitize",
+  "sourceType": "image",
+  "sourceUrl": "http://www.frummichigan.com/images/eruv-large.jpg",
+  "googleMyMapsMid": "1NZzCc9LzaJY87iTRVX-uDDTV_Dk",
+  "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: Full Oak Park/Southfield Project Eruv is raster only (frummichigan.com/images/eruv-large.jpg; YIOP links same). My Maps mid=1NZzCc9LzaJY87iTRVX-uDDTV_Dk remains Southfield-only stub — not promoted.",
+  "checkedAt": "2026-11-20T15:53:56.653Z",
+  "geometry": null
+}

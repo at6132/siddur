@@ -1,0 +1,66 @@
+{
+  "batch": "southmidwest",
+  "checkedAt": "2026-11-20T15:40:42.462Z",
+  "results": [
+    {
+      "eruvId": "us-fl-hollywood",
+      "verdict": "CONFIRMED",
+      "reason": "Post-strip-fix MultiPolygon matches Hollywood Community Eruv: My Maps borders labeled Griffin Rd / Turnpike / I-95 / South (Pembroke) align with shulofhollywood.org written bounds (I-95–Turnpike, Griffin–Pembroke).",
+      "officialUrl": "https://shulofhollywood.org/eruv-in-hollywood/"
+    },
+    {
+      "eruvId": "us-fl-miami-beach",
+      "verdict": "WRONG",
+      "reason": "Geometry is the combined pre-split 'Miami Beach/Bal Harbour Eruv' placemark (S≈25.77–N≈25.90), spanning south of and north of 73rd St (~25.86). As of 2025-09-12 Miami Beach Eruv Council only manages south of 73rd; north is separate. Official site also labels the South Florida Google Map unaffiliated/not endorsed.",
+      "officialUrl": "https://www.miamibeacheruv.org/eruv-map"
+    },
+    {
+      "eruvId": "us-fl-surfside-33154",
+      "verdict": "WRONG",
+      "reason": "Identical combined MB/Bal Harbour polygon as miami-beach — includes all of Miami Beach south to ~South Beach, not 33154-only Surfside/Bal Harbour/Bay Harbor. Post-2025-09-12 split requires the north-of-73rd eruv only.",
+      "officialUrl": "https://www.miamibeacheruv.org/news/surfside-eruv-separation"
+    },
+    {
+      "eruvId": "us-il-chicago-lakeview",
+      "verdict": "CONFIRMED",
+      "reason": "Named Lakeview 'Eruv boundaries' polygon from eruvstat/ASBI Jack Strulowitz Lakefront Eruv My Maps; bbox Fullerton–Irving Park / lake–Ashland matches the Lakeview community eruv (not WRP/Skokie).",
+      "officialUrl": "https://eruvstat.us/lakeview"
+    },
+    {
+      "eruvId": "us-oh-cincinnati",
+      "verdict": "SUSPECT",
+      "reason": "Polygon matches official cincinnatieruv.org Leaflet #map-data and sits in the Roselawn/Golf Manor community. Site itself says the shaded web map is approximate and the downloadable PDF is authoritative — edge streets need PDF cross-check.",
+      "officialUrl": "https://www.cincinnatieruv.org/"
+    },
+    {
+      "eruvId": "us-oh-cleveland",
+      "verdict": "CONFIRMED",
+      "reason": "Named 'Expanded CLE Eruv' polygon over Beachwood/Cleveland Hts/University Hts/South Euclid with Green Road Synagogue and other east-side shuls — matches Cleveland Eruv Society / Green Road map (not downtown Cleveland; BEES east of Richmond is a separate pending eruv).",
+      "officialUrl": "https://greenroadsynagogue.com/eruv.html"
+    },
+    {
+      "eruvId": "us-oh-columbus",
+      "verdict": "CONFIRMED",
+      "reason": "Named 'Columbus Eruv' polygon (plus Expansion/Upgrade layers) from the CJNews-linked My Maps; bbox ~Bexley/Berwick/Eastmoor with ~2×3.6 mi extent matches published Columbus eruv expansion coverage.",
+      "officialUrl": "https://www.columbusjewishnews.com/news/local_news/columbus-eruv-expansion-refurbish-complete-after-18-months/article_4bc7c42f-fb67-4916-b67a-0d9a1bf5f0a6.html"
+    },
+    {
+      "eruvId": "us-tx-dallas-south",
+      "verdict": "CONFIRMED",
+      "reason": "Exact DOJLife/DRC My Maps placemark 'South of Forest Eruv' (121 pts, Forest Ln / Preston Hollow area). Correctly scoped as that eruv — not city-wide Dallas (Far North/North/Plano/Richardson are separate layers).",
+      "officialUrl": "https://www.dallasrabbinicalcouncil.org/rabbinic-services/eruvin/"
+    },
+    {
+      "eruvId": "us-tx-houston",
+      "verdict": "WRONG",
+      "reason": "Geometry is only the Young Israel/Beth Rambam/Chabad Northfield neighborhood eruv (~1–2 mi). Houston also has distinct Meyerland and UOS eruvs; eruvId us-tx-houston sells a partial neighborhood as city-wide.",
+      "officialUrl": "https://www.resourcehouston.com/eruv-maps"
+    },
+    {
+      "eruvId": "us-wi-bayside",
+      "verdict": "CONFIRMED",
+      "reason": "Named 'Bayside Eruv' polygon from Milwaukee Jewish Community My Maps; bbox matches Bayside (Green Tree / Fairy Chasm / I-43 area). Not the same-map 'Milwaukee East Side Eruv (PROPOSED)' layer.",
+      "officialUrl": "https://www.shulcenter.org/templates/articlecco_cdo/aid/953716/jewish/Community-Eiruv.htm"
+    }
+  ]
+}

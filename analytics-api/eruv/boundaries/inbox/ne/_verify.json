@@ -1,0 +1,96 @@
+{
+  "batch": "ne",
+  "checkedAt": "2026-11-20T15:45:00.000Z",
+  "results": [
+    {
+      "eruvId": "us-nj-cherry-hill-west",
+      "verdict": "WRONG",
+      "reason": "My Maps title matches Cherry Hill West, but extracted geometry is only three tiny exclusion polygons (stream/water), not the line-string eruv border.",
+      "officialUrl": "https://eruvstat.us/cherryhillwest"
+    },
+    {
+      "eruvId": "us-nj-englewood",
+      "verdict": "CONFIRMED",
+      "reason": "My Maps titled Englewood/Tenafly Eruv 2025 with a full Eruv Coverage polygon whose bbox matches Englewood–Tenafly.",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1r_PmdS0s-jcJd3JQ9xK5u2vTiulr2d8"
+    },
+    {
+      "eruvId": "us-nj-fair-lawn",
+      "verdict": "CONFIRMED",
+      "reason": "Official fairlawneruv.com My Maps titled Current Fair Lawn Eruv Map; geometry extent matches the source border lines.",
+      "officialUrl": "https://www.fairlawneruv.com/"
+    },
+    {
+      "eruvId": "us-nj-highland-park",
+      "verdict": "CONFIRMED",
+      "reason": "Official hperuv.org My Maps titled Highland Park - New Brunswick Eruv; shared HP/Edison/NB border geometry is the correct community source.",
+      "officialUrl": "https://hperuv.org/"
+    },
+    {
+      "eruvId": "us-nj-new-brunswick",
+      "verdict": "CONFIRMED",
+      "reason": "Same official Highland Park - New Brunswick Eruv My Maps (includes New Brunswick Eruv Boundry layer); intentional shared community map.",
+      "officialUrl": "https://hperuv.org/"
+    },
+    {
+      "eruvId": "us-nj-passaic-clifton",
+      "verdict": "WRONG",
+      "reason": "My Maps title Passaic Clifton Eruv 2024 is correct, but geometry is only small interior polygons, missing the line-string outer border.",
+      "officialUrl": "https://eruvstat.us/pceruv"
+    },
+    {
+      "eruvId": "us-ny-far-rockaway",
+      "verdict": "WRONG",
+      "reason": "My Maps title Far Rockaway - Lawrence Eruv matches, but extracted polygons are only Excluded Karfef holes, not the border lines.",
+      "officialUrl": "https://www.farrockawaylawrenceeruv.org/"
+    },
+    {
+      "eruvId": "us-ny-five-towns",
+      "verdict": "CONFIRMED",
+      "reason": "Official fivetownseruv.org My Maps titled Five Towns Eruv Map-Public; geometry bbox matches the full source border.",
+      "officialUrl": "https://www.fivetownseruv.org/"
+    },
+    {
+      "eruvId": "us-ny-flatbush",
+      "verdict": "WRONG",
+      "reason": "My Maps title is Brooklyn Eruv Maps and geometry merges Williamsburg, Boro Park, Park Slope, and other non-Flatbush layers.",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1VLdHiyP0wgl5KO5i_HEiKe2IDvA"
+    },
+    {
+      "eruvId": "us-ny-forest-hills",
+      "verdict": "CONFIRMED",
+      "reason": "My Maps titled Forest Hills Eruv Map; geometry extent matches Forest Hills / Rego Park source border.",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1_eQDwge-W-S5RpyvQCMDLAUarfhIlJI-"
+    },
+    {
+      "eruvId": "us-ny-kew-gardens",
+      "verdict": "CONFIRMED",
+      "reason": "Official kgrheruv.org My Maps titled KGRH Eruv; geometry matches Kew Gardens / Richmond Hill border extent.",
+      "officialUrl": "https://kgrheruv.org/"
+    },
+    {
+      "eruvId": "us-ny-manhattan",
+      "verdict": "CONFIRMED",
+      "reason": "My Maps titled Manhattan Eruv Map with Manhattan Eruv Boundary plus published Harlem/Downtown extensions; geometry matches source extent.",
+      "officialUrl": "https://eruv.nyc/"
+    },
+    {
+      "eruvId": "us-ny-monsey",
+      "verdict": "CONFIRMED",
+      "reason": "Official eiruvofmonsey.org My Maps TheMonseyEruvMap2022; large MultiPolygon matches greater Monsey coverage.",
+      "officialUrl": "https://eiruvofmonsey.org/boundaries/"
+    },
+    {
+      "eruvId": "us-ny-riverdale",
+      "verdict": "CONFIRMED",
+      "reason": "My Maps titled Riverdale Eruv with a single coverage polygon whose bbox matches Riverdale.",
+      "officialUrl": "https://www.google.com/maps/d/viewer?mid=1S_PRTvgXtfvN0KwXEq6-WYKC1UM"
+    },
+    {
+      "eruvId": "us-ny-rochester",
+      "verdict": "CONFIRMED",
+      "reason": "eruvstat.us/rochester My Maps titled Rochester Eruv; coarse Brighton-area polygon matches the official source exactly.",
+      "officialUrl": "https://eruvstat.us/rochester"
+    }
+  ]
+}

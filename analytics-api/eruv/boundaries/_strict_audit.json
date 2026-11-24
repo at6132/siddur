@@ -1,0 +1,1010 @@
+[
+  {
+    "eruvId": "us-az-phoenix",
+    "batch": "west",
+    "name": "Phoenix / Scottsdale Community Eruv",
+    "city": "Phoenix",
+    "state": "AZ",
+    "mid": "198udD8a6H525a7TJd_d6jx4BNFDnVzg",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=198udD8a6H525a7TJd_d6jx4BNFDnVzg&forcekml=1",
+    "notes": "Phoenix Community Eruv My Maps linked from bjcphoenix.org/eruv (mirrors phoenixeruv.com). Separate Valley Eruv Project (Scottsdale/Paradise Valley) is at arizonaeruv.org / ahavastorah.org mid=1pat6fNK_mQpkmCx_6ctNQ7PK2OVor2c",
+    "stats": {
+      "diagKm": 8.1,
+      "uniq": 83,
+      "polys": 15,
+      "verts": 109
+    },
+    "kml": {
+      "bytes": 20872,
+      "lines": 18,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 8.1
+    },
+    "verdict": "DEMOTE",
+    "reasons": [
+      "line-border KML (20872b) collapsed to 83 unique verts"
+    ]
+  },
+  {
+    "eruvId": "us-co-east-denver",
+    "batch": "west",
+    "name": "East Denver Eruv",
+    "city": "Denver",
+    "state": "CO",
+    "mid": "1WdPzgayYC7uWHzcXWmQ1pnZkaW-b5Ws",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1WdPzgayYC7uWHzcXWmQ1pnZkaW-b5Ws&forcekml=1",
+    "notes": "Official denvereruv.org/denver-eruv-map Google My Maps embed",
+    "stats": {
+      "diagKm": 7.9,
+      "uniq": 614,
+      "polys": 11,
+      "verts": 627
+    },
+    "kml": {
+      "bytes": 39460,
+      "lines": 11,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 7.9
+    },
+    "verdict": "DEMOTE",
+    "reasons": [
+      "source KML is line-heavy (lines=11, polys=0) but stored area is only 7.9km"
+    ]
+  },
+  {
+    "eruvId": "us-ny-forest-hills",
+    "batch": "ne",
+    "name": "Forest Hills / Rego Park Eruv",
+    "city": "Queens",
+    "state": "NY",
+    "mid": "1_eQDwge-W-S5RpyvQCMDLAUarfhIlJI-",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1_eQDwge-W-S5RpyvQCMDLAUarfhIlJI-&forcekml=1",
+    "notes": "Forest Hills / Rego Park eruv Google My Maps (eruvstatus / YIFH)",
+    "stats": {
+      "diagKm": 5.4,
+      "uniq": 340,
+      "polys": 39,
+      "verts": 404
+    },
+    "kml": {
+      "bytes": 45324,
+      "lines": 57,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 5.4
+    },
+    "verdict": "DEMOTE",
+    "reasons": [
+      "source KML is line-heavy (lines=57, polys=0) but stored area is only 5.4km"
+    ]
+  },
+  {
+    "eruvId": "us-ny-kew-gardens",
+    "batch": "ne",
+    "name": "Kew Gardens / Richmond Hill Eruv",
+    "city": "Queens",
+    "state": "NY",
+    "mid": "1oWKPUjOgkbaCCDO3LihQNsoElZuBB_4",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1oWKPUjOgkbaCCDO3LihQNsoElZuBB_4&forcekml=1",
+    "notes": "Official Kew Gardens / Richmond Hill eruv My Maps on kgrheruv.org",
+    "stats": {
+      "diagKm": 3.1,
+      "uniq": 197,
+      "polys": 37,
+      "verts": 264
+    },
+    "kml": {
+      "bytes": 23534,
+      "lines": 40,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 3.1
+    },
+    "verdict": "DEMOTE",
+    "reasons": [
+      "source KML is line-heavy (lines=40, polys=0) but stored area is only 3.1km"
+    ]
+  },
+  {
+    "eruvId": "us-pa-main-line",
+    "batch": "midatlantic",
+    "name": "Main Line Eruv",
+    "city": "Lower Merion",
+    "state": "PA",
+    "mid": "1NWCpAovU1JuNAzd0KuSbWjzu7ou0-OwU",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1NWCpAovU1JuNAzd0KuSbWjzu7ou0-OwU&forcekml=1",
+    "notes": "Main Line Eruv My Maps from eruvstat.us/mainline (Lower Merion site also embeds combined map mid=1SaMJDaGuBq1fHZun3FyKUHFYsu0aYms)",
+    "stats": {
+      "diagKm": 5.6,
+      "uniq": 65,
+      "polys": 14,
+      "verts": 90
+    },
+    "kml": {
+      "bytes": 15765,
+      "lines": 16,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 5.6
+    },
+    "verdict": "DEMOTE",
+    "reasons": [
+      "source KML is line-heavy (lines=16, polys=0) but stored area is only 5.6km"
+    ]
+  },
+  {
+    "eruvId": "us-ri-providence",
+    "batch": "midatlantic",
+    "name": "Providence Eruv",
+    "city": "Providence",
+    "state": "RI",
+    "mid": "1FHEmDXbpqmeEsTanli57RZvobN0",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1FHEmDXbpqmeEsTanli57RZvobN0&forcekml=1",
+    "notes": "Providence Eruv Google My Maps (eruvhomes.com / community map); image also at providenceeastside.com",
+    "stats": {
+      "diagKm": 5.6,
+      "uniq": 355,
+      "polys": 10,
+      "verts": 370
+    },
+    "kml": {
+      "bytes": 17968,
+      "lines": 10,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 5.6
+    },
+    "verdict": "DEMOTE",
+    "reasons": [
+      "source KML is line-heavy (lines=10, polys=0) but stored area is only 5.6km"
+    ]
+  },
+  {
+    "eruvId": "us-tx-dallas-south",
+    "batch": "southmidwest",
+    "name": "Dallas (South) Eruv",
+    "city": "Dallas",
+    "state": "TX",
+    "mid": "1kvC5HfJE52YOsXau-DUcIARzuhbKPTa2",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.dallasrabbinicalcouncil.org/rabbinic-services/eruvin/",
+    "notes": "Named polygon \"South of Forest Eruv\" from Dallas Rabbinical Council multi-eruv My Maps",
+    "stats": {
+      "diagKm": 4.3,
+      "uniq": 120,
+      "polys": 1,
+      "verts": 121
+    },
+    "kml": {
+      "bytes": 71502,
+      "lines": 55,
+      "polys": 2,
+      "lineHeavy": true,
+      "liveDiag": 15.5
+    },
+    "verdict": "DEMOTE",
+    "reasons": [
+      "source KML is line-heavy (lines=55, polys=2) but stored area is only 4.3km"
+    ]
+  },
+  {
+    "eruvId": "us-wa-seward-park",
+    "batch": "west",
+    "name": "Seward Park Eruv",
+    "city": "Seattle",
+    "state": "WA",
+    "mid": "1vw5JQNxAruOYY1jW5eU23UWCZp7UCj6z",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1vw5JQNxAruOYY1jW5eU23UWCZp7UCj6z&forcekml=1",
+    "notes": "Map embedded on eruvstat.us/sewardpark (Seward Park Eruv)",
+    "stats": {
+      "diagKm": 4,
+      "uniq": 366,
+      "polys": 29,
+      "verts": 406
+    },
+    "kml": {
+      "bytes": 39206,
+      "lines": 34,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 4
+    },
+    "verdict": "DEMOTE",
+    "reasons": [
+      "source KML is line-heavy (lines=34, polys=0) but stored area is only 4.0km"
+    ]
+  },
+  {
+    "eruvId": "us-ct-stamford",
+    "batch": "midatlantic",
+    "name": "Stamford Eruv",
+    "city": "Stamford",
+    "state": "CT",
+    "mid": null,
+    "sourceType": "web_map",
+    "sourceUrl": "http://www.nusion.com/youngisrael/StamfordEruv.html",
+    "notes": "Boundary polylines from Young Israel / community interactive map page (original + NW + NE extensions closed into rings)",
+    "stats": {
+      "diagKm": 6.9,
+      "uniq": 113,
+      "polys": 3,
+      "verts": 119
+    },
+    "kml": null,
+    "verdict": "REVIEW",
+    "reasons": [
+      "no easy My Maps KML — manual confirm needed"
+    ]
+  },
+  {
+    "eruvId": "us-ca-eastbayshore",
+    "batch": "west",
+    "name": "Eastbayshore Eruv",
+    "city": "Berkeley",
+    "state": "CA",
+    "mid": "1RssDcMoyCeRmWSl0h_FOa1hbaFeEmzQ",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1RssDcMoyCeRmWSl0h_FOa1hbaFeEmzQ&forcekml=1",
+    "notes": "Official berkeleyeruv.org/boundaries Google My Maps embed (updated Feb 2024)",
+    "stats": {
+      "diagKm": 5.2,
+      "uniq": 75,
+      "polys": 1,
+      "verts": 76
+    },
+    "kml": {
+      "bytes": 14257,
+      "lines": 1,
+      "polys": 1,
+      "lineHeavy": false,
+      "liveDiag": 5.2
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-ca-los-angeles",
+    "batch": "west",
+    "name": "Los Angeles Community Eruv",
+    "city": "Los Angeles",
+    "state": "CA",
+    "mid": "zYmwzOmdimqc.kGkzVPziAJ4o",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=zYmwzOmdimqc.kGkzVPziAJ4o&forcekml=1",
+    "notes": "Official laeruv.com/boundaries Google My Maps embed",
+    "stats": {
+      "diagKm": 21.4,
+      "uniq": 102,
+      "polys": 1,
+      "verts": 103
+    },
+    "kml": {
+      "bytes": 6053,
+      "lines": 0,
+      "polys": 1,
+      "lineHeavy": false,
+      "liveDiag": 21.4
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-ca-valley",
+    "batch": "west",
+    "name": "Valley Eruv",
+    "city": "Los Angeles",
+    "state": "CA",
+    "mid": "1mUbjy7DgsP3-4k18Ckj1_klutXi1EQs",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1mUbjy7DgsP3-4k18Ckj1_klutXi1EQs&forcekml=1",
+    "notes": "Official valleyeruv.org/boundaries Google My Maps embed",
+    "stats": {
+      "diagKm": 15.3,
+      "uniq": 36,
+      "polys": 1,
+      "verts": 37
+    },
+    "kml": {
+      "bytes": 8852,
+      "lines": 0,
+      "polys": 1,
+      "lineHeavy": false,
+      "liveDiag": 15.3
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-ct-west-hartford",
+    "batch": "midatlantic",
+    "name": "West Hartford Eruv",
+    "city": "West Hartford",
+    "state": "CT",
+    "mid": "1W0CR67FxQwa0-ofIsHiSqEaH9VY3Berj",
+    "sourceType": "kml",
+    "sourceUrl": "https://images.shulcloud.com/628/uploads/Images/West-Hartford-Eruv-61318.kml",
+    "notes": "Official KML from Young Israel of West Hartford; also available as Google My Maps",
+    "stats": {
+      "diagKm": 8.1,
+      "uniq": 156,
+      "polys": 4,
+      "verts": 163
+    },
+    "kml": {
+      "bytes": 8396,
+      "lines": 6,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 8.1
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-dc-kesher",
+    "batch": "midatlantic",
+    "name": "Rabbi Philip Rabinowitz Memorial Eruv",
+    "city": "Washington",
+    "state": "DC",
+    "mid": "14Acvpswpk_Q2Q7z_AO0e1SPd1WHwk7M",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=14Acvpswpk_Q2Q7z_AO0e1SPd1WHwk7M&forcekml=1",
+    "notes": "Official map from kesher.org/eruv (Rabbi Philip Rabinowitz Memorial Eruv); kmlBytes=84837",
+    "stats": {
+      "diagKm": 19,
+      "uniq": 1498,
+      "polys": 87,
+      "verts": 1659
+    },
+    "kml": {
+      "bytes": 84837,
+      "lines": 92,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 19
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-fl-hollywood",
+    "batch": "southmidwest",
+    "name": "Hollywood Community Eruv",
+    "city": "Hollywood",
+    "state": "FL",
+    "mid": "1t9xuHT25PAvglbzCeDCCSW9aJ2hhVig",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1t9xuHT25PAvglbzCeDCCSW9aJ2hhVig&forcekml=1",
+    "notes": "AUDIT fixed: full My Maps MultiPolygon (kmlBytes=28163). Hollywood Community Eruv; verify vs shulofhollywood.org PDF.",
+    "stats": {
+      "diagKm": 9.8,
+      "uniq": 289,
+      "polys": 23,
+      "verts": 321
+    },
+    "kml": {
+      "bytes": 28163,
+      "lines": 32,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 9.8
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-il-chicago-lakeview",
+    "batch": "southmidwest",
+    "name": "Jack Strulowitz Lakefront Eruv",
+    "city": "Chicago",
+    "state": "IL",
+    "mid": "1-6QgrQuHyjPyi_HwtdEZ-SEGGRDdovw",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://eruvstat.us/lakeview",
+    "notes": "Eruvstat.us/lakeview Jack Strulowitz Lakefront Eruv My Maps",
+    "stats": {
+      "diagKm": 5.5,
+      "uniq": 342,
+      "polys": 1,
+      "verts": 343
+    },
+    "kml": {
+      "bytes": 32383,
+      "lines": 0,
+      "polys": 1,
+      "lineHeavy": false,
+      "liveDiag": 5.5
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-ma-cambridge-somerville",
+    "batch": "midatlantic",
+    "name": "Cambridge / Somerville Eruv",
+    "city": "Cambridge",
+    "state": "MA",
+    "mid": "1ynXKlATF8_9gQ_ZHaPoeDfVHigI",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1ynXKlATF8_9gQ_ZHaPoeDfVHigI&forcekml=1",
+    "notes": "North Charles Community Eruv My Maps embed from eruvstat.us/camberville",
+    "stats": {
+      "diagKm": 9.8,
+      "uniq": 242,
+      "polys": 17,
+      "verts": 273
+    },
+    "kml": {
+      "bytes": 19017,
+      "lines": 18,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 9.8
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-ma-greater-boston",
+    "batch": "midatlantic",
+    "name": "Greater Boston Eruv",
+    "city": "Brookline",
+    "state": "MA",
+    "mid": "1tvzN1lm0vi9vmObe9_SVpnxCOmc",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1tvzN1lm0vi9vmObe9_SVpnxCOmc&forcekml=1",
+    "notes": "Greater Boston Eruv main boundary My Maps from bostoneruv.org/bound.htm",
+    "stats": {
+      "diagKm": 13.7,
+      "uniq": 801,
+      "polys": 35,
+      "verts": 864
+    },
+    "kml": {
+      "bytes": 57842,
+      "lines": 35,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 13.7
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-ma-longmeadow",
+    "batch": "midatlantic",
+    "name": "Longmeadow Springfield Eruv",
+    "city": "Longmeadow",
+    "state": "MA",
+    "mid": null,
+    "sourceType": "kml",
+    "sourceUrl": "https://www.springfielderuv.org/eruv/EruvBounds.kml",
+    "notes": "Official EruvBounds.kml from springfielderuv.org leaflet map",
+    "stats": {
+      "diagKm": 6,
+      "uniq": 560,
+      "polys": 56,
+      "verts": 661
+    },
+    "kml": null,
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-ma-malden",
+    "batch": "midatlantic",
+    "name": "Malden Eruv",
+    "city": "Malden",
+    "state": "MA",
+    "mid": "1AS_cN2Re915Y9NCXqjV32sI7f9vC4FQ",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1AS_cN2Re915Y9NCXqjV32sI7f9vC4FQ&forcekml=1",
+    "notes": "Malden Eruv My Maps from bethisraelmalden.org / eruvstat.us / bostoneruv.org",
+    "stats": {
+      "diagKm": 2.8,
+      "uniq": 122,
+      "polys": 2,
+      "verts": 126
+    },
+    "kml": {
+      "bytes": 23766,
+      "lines": 2,
+      "polys": 0,
+      "lineHeavy": false,
+      "liveDiag": 2.8
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-ma-sharon",
+    "batch": "midatlantic",
+    "name": "Sharon Community Eruv",
+    "city": "Sharon",
+    "state": "MA",
+    "mid": null,
+    "sourceType": "web_map",
+    "sourceUrl": "https://www.sharoneruv.org/data/eruv_geojson_v208.js",
+    "notes": "Official GeoJSON from sharoneruv.org map (v208); printable PDF also at site",
+    "stats": {
+      "diagKm": 5,
+      "uniq": 302,
+      "polys": 1,
+      "verts": 304
+    },
+    "kml": null,
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-md-baltimore",
+    "batch": "midatlantic",
+    "name": "Eruv of Baltimore",
+    "city": "Baltimore",
+    "state": "MD",
+    "mid": "1eLRnHBNpeHtJxk1VOBLO_NZ2SmA",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1eLRnHBNpeHtJxk1VOBLO_NZ2SmA&forcekml=1",
+    "notes": "Google My Maps linked from eruv.org / ThereIsKosher; official also publishes PDF on eruvstat.us",
+    "stats": {
+      "diagKm": 8.5,
+      "uniq": 46,
+      "polys": 6,
+      "verts": 52
+    },
+    "kml": {
+      "bytes": 8742,
+      "lines": 13,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 8.5
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-md-silver-spring",
+    "batch": "midatlantic",
+    "name": "Silver Spring Eruv",
+    "city": "Silver Spring",
+    "state": "MD",
+    "mid": "1WvS7elEjWZFUEvMUpoCtDuMWZqo",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1WvS7elEjWZFUEvMUpoCtDuMWZqo&forcekml=1",
+    "notes": "Silver Spring Eruv Association My Maps from wp.yise.org/eruv",
+    "stats": {
+      "diagKm": 10.2,
+      "uniq": 146,
+      "polys": 19,
+      "verts": 168
+    },
+    "kml": {
+      "bytes": 21762,
+      "lines": 25,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 10.2
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-nj-englewood",
+    "batch": "ne",
+    "name": "Englewood Eruv",
+    "city": "Englewood",
+    "state": "NJ",
+    "mid": "1r_PmdS0s-jcJd3JQ9xK5u2vTiulr2d8",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1r_PmdS0s-jcJd3JQ9xK5u2vTiulr2d8&forcekml=1",
+    "notes": "Englewood eruv Google My Maps (eruvstatus / Ahavath Torah listing)",
+    "stats": {
+      "diagKm": 10.7,
+      "uniq": 139,
+      "polys": 1,
+      "verts": 140
+    },
+    "kml": {
+      "bytes": 10252,
+      "lines": 0,
+      "polys": 1,
+      "lineHeavy": false,
+      "liveDiag": 10.7
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-nj-fair-lawn",
+    "batch": "ne",
+    "name": "Fair Lawn Eruv",
+    "city": "Fair Lawn",
+    "state": "NJ",
+    "mid": "1iF-7pT11IJHL9EPtOWFo0aYljwk",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1iF-7pT11IJHL9EPtOWFo0aYljwk&forcekml=1",
+    "notes": "Embedded Google My Maps on fairlawneruv.com",
+    "stats": {
+      "diagKm": 7.2,
+      "uniq": 172,
+      "polys": 2,
+      "verts": 175
+    },
+    "kml": {
+      "bytes": 8717,
+      "lines": 2,
+      "polys": 0,
+      "lineHeavy": false,
+      "liveDiag": 7.2
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-nj-highland-park",
+    "batch": "ne",
+    "name": "Highland Park / Edison Eruv",
+    "city": "Highland Park",
+    "state": "NJ",
+    "mid": "1xoVjPr-xjEdWLns4l5rdxSEoxJ4",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1xoVjPr-xjEdWLns4l5rdxSEoxJ4&forcekml=1",
+    "notes": "Shared Highland Park / Edison / New Brunswick map from hperuv.org",
+    "stats": {
+      "diagKm": 6.8,
+      "uniq": 384,
+      "polys": 3,
+      "verts": 390
+    },
+    "kml": {
+      "bytes": 110175,
+      "lines": 4,
+      "polys": 0,
+      "lineHeavy": false,
+      "liveDiag": 6.8
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-nj-new-brunswick",
+    "batch": "ne",
+    "name": "New Brunswick Eruv",
+    "city": "New Brunswick",
+    "state": "NJ",
+    "mid": "1xoVjPr-xjEdWLns4l5rdxSEoxJ4",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1xoVjPr-xjEdWLns4l5rdxSEoxJ4&forcekml=1",
+    "notes": "Same official hperuv.org My Maps as Highland Park / Edison (shared eruv map)",
+    "stats": {
+      "diagKm": 6.8,
+      "uniq": 384,
+      "polys": 3,
+      "verts": 390
+    },
+    "kml": {
+      "bytes": 110175,
+      "lines": 4,
+      "polys": 0,
+      "lineHeavy": false,
+      "liveDiag": 6.8
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-ny-five-towns",
+    "batch": "ne",
+    "name": "Five Towns Eruv",
+    "city": "Woodmere",
+    "state": "NY",
+    "mid": "1uh_hbGmyful743HBD5E7HNj7fc4",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1uh_hbGmyful743HBD5E7HNj7fc4&forcekml=1",
+    "notes": "Official Five Towns Eruv Google My Maps embed on fivetownseruv.org",
+    "stats": {
+      "diagKm": 9.4,
+      "uniq": 1114,
+      "polys": 31,
+      "verts": 1171
+    },
+    "kml": {
+      "bytes": 347535,
+      "lines": 35,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 9.4
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-ny-manhattan",
+    "batch": "ne",
+    "name": "Manhattan Eruv",
+    "city": "New York",
+    "state": "NY",
+    "mid": "1AJc3ptGTXtSJvLlCmLfmFMCT0To",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/viewer?mid=1AJc3ptGTXtSJvLlCmLfmFMCT0To",
+    "notes": "Manhattan Eruv Map My Maps (Mechon LHoyroa / YU Stern guidance). Cross-check eruv.nyc PDF for latest contested edge cases",
+    "stats": {
+      "diagKm": 12.1,
+      "uniq": 122,
+      "polys": 5,
+      "verts": 128
+    },
+    "kml": {
+      "bytes": 18777,
+      "lines": 5,
+      "polys": 0,
+      "lineHeavy": true,
+      "liveDiag": 12.1
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-ny-monsey",
+    "batch": "ne",
+    "name": "Eruv of Monsey",
+    "city": "Monsey",
+    "state": "NY",
+    "mid": "1lUGTE1wAI3l5hS4ei6ZttsC5Got25bqY",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1lUGTE1wAI3l5hS4ei6ZttsC5Got25bqY&forcekml=1",
+    "notes": "Official Eiruv of Monsey Google My Maps",
+    "stats": {
+      "diagKm": 21.9,
+      "uniq": 1564,
+      "polys": 28,
+      "verts": 1849
+    },
+    "kml": {
+      "bytes": 111338,
+      "lines": 0,
+      "polys": 28,
+      "lineHeavy": false,
+      "liveDiag": 21.9
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-ny-riverdale",
+    "batch": "ne",
+    "name": "Riverdale Eruv",
+    "city": "Bronx",
+    "state": "NY",
+    "mid": "1S_PRTvgXtfvN0KwXEq6-WYKC1UM",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1S_PRTvgXtfvN0KwXEq6-WYKC1UM&forcekml=1",
+    "notes": "Riverdale eruv Google My Maps (eruvstatus map_url)",
+    "stats": {
+      "diagKm": 5.6,
+      "uniq": 179,
+      "polys": 1,
+      "verts": 180
+    },
+    "kml": {
+      "bytes": 27387,
+      "lines": 0,
+      "polys": 1,
+      "lineHeavy": false,
+      "liveDiag": 5.6
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-ny-rochester",
+    "batch": "ne",
+    "name": "Rochester Eruv",
+    "city": "Rochester",
+    "state": "NY",
+    "mid": "1NG81ulYTbCuUSORzytk9xVU62x9_Ts8",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1NG81ulYTbCuUSORzytk9xVU62x9_Ts8&forcekml=1",
+    "notes": "Rochester / Brighton eruv Google My Maps (eruvstatus)",
+    "stats": {
+      "diagKm": 5.1,
+      "uniq": 16,
+      "polys": 2,
+      "verts": 20
+    },
+    "kml": {
+      "bytes": 3137,
+      "lines": 2,
+      "polys": 0,
+      "lineHeavy": false,
+      "liveDiag": 5.1
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-oh-cleveland",
+    "batch": "southmidwest",
+    "name": "Cleveland Eruv",
+    "city": "Beachwood",
+    "state": "OH",
+    "mid": "1ZlbNMnkJ7l6QI9OKCchHPvCDYsW_snk7",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/viewer?mid=1ZlbNMnkJ7l6QI9OKCchHPvCDYsW_snk7",
+    "notes": "Cleveland Eruv Google My Maps (community-circulated CLE eruv map)",
+    "stats": {
+      "diagKm": 10.2,
+      "uniq": 79,
+      "polys": 1,
+      "verts": 80
+    },
+    "kml": {
+      "bytes": 18078,
+      "lines": 1,
+      "polys": 0,
+      "lineHeavy": false,
+      "liveDiag": 10.2
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-oh-columbus",
+    "batch": "southmidwest",
+    "name": "Columbus Eruv",
+    "city": "Columbus",
+    "state": "OH",
+    "mid": "1IaLhyrMViDIPpCJKO-7WkbqUphxL3QSV",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1IaLhyrMViDIPpCJKO-7WkbqUphxL3QSV&forcekml=1",
+    "notes": "Columbus Eruv My Maps via rebrand.ly/742600 (CJNews expansion coverage map)",
+    "stats": {
+      "diagKm": 6.7,
+      "uniq": 92,
+      "polys": 1,
+      "verts": 93
+    },
+    "kml": {
+      "bytes": 14460,
+      "lines": 0,
+      "polys": 4,
+      "lineHeavy": false,
+      "liveDiag": 6.7
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-pa-center-city",
+    "batch": "midatlantic",
+    "name": "Center City Eruv",
+    "city": "Philadelphia",
+    "state": "PA",
+    "mid": null,
+    "sourceType": "web_map",
+    "sourceUrl": "https://www.centercityeruv.com/map-data.geojson",
+    "notes": "centercityeruv.com map-data.geojson official boundary segments stitched per site JS",
+    "stats": {
+      "diagKm": 8.3,
+      "uniq": 180,
+      "polys": 1,
+      "verts": 182
+    },
+    "kml": null,
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-pa-pittsburgh",
+    "batch": "midatlantic",
+    "name": "Pittsburgh Eruv",
+    "city": "Pittsburgh",
+    "state": "PA",
+    "mid": "1KD0vKCWyj_9EY32n_h2rbdfyYyekMWby",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1KD0vKCWyj_9EY32n_h2rbdfyYyekMWby&forcekml=1",
+    "notes": "Vaad PGH status-map Google My Maps; stitched open LineString boundary segments + polygon extension into MultiPolygon",
+    "stats": {
+      "diagKm": 8.9,
+      "uniq": 198,
+      "polys": 2,
+      "verts": 201
+    },
+    "kml": {
+      "bytes": 14776,
+      "lines": 9,
+      "polys": 1,
+      "lineHeavy": true,
+      "liveDiag": 0.4
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-pa-university-city",
+    "batch": "midatlantic",
+    "name": "University City Eruv",
+    "city": "Philadelphia",
+    "state": "PA",
+    "mid": "1PfS1qLpjM4WYW7eQITxRA8vlrs2LdROs",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1PfS1qLpjM4WYW7eQITxRA8vlrs2LdROs&forcekml=1",
+    "notes": "University City Eruv My Maps embed from pennocp.org/eruv",
+    "stats": {
+      "diagKm": 3.1,
+      "uniq": 105,
+      "polys": 2,
+      "verts": 108
+    },
+    "kml": {
+      "bytes": 10297,
+      "lines": 2,
+      "polys": 0,
+      "lineHeavy": false,
+      "liveDiag": 3.1
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-va-fairfax",
+    "batch": "midatlantic",
+    "name": "Fairfax Community Eruv",
+    "city": "Fairfax",
+    "state": "VA",
+    "mid": "1yYn4rwutUyPgw-X6Ypy4Q1AJPul3ZefU",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1yYn4rwutUyPgw-X6Ypy4Q1AJPul3ZefU&forcekml=1",
+    "notes": "Lead seed from Google My Maps KML export",
+    "stats": {
+      "diagKm": 10,
+      "uniq": 240,
+      "polys": 2,
+      "verts": 243
+    },
+    "kml": {
+      "bytes": 26181,
+      "lines": 0,
+      "polys": 2,
+      "lineHeavy": false,
+      "liveDiag": 10
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  },
+  {
+    "eruvId": "us-wi-bayside",
+    "batch": "southmidwest",
+    "name": "Bayside Community Eiruv",
+    "city": "Bayside",
+    "state": "WI",
+    "mid": "1a-dkKWmPhOmTQzLBNUnouqHK9GRRDKkN",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/viewer?mid=1a-dkKWmPhOmTQzLBNUnouqHK9GRRDKkN",
+    "notes": "Named polygon \"Bayside Eruv\" from Milwaukee Jewish Community My Maps",
+    "stats": {
+      "diagKm": 5.2,
+      "uniq": 50,
+      "polys": 1,
+      "verts": 51
+    },
+    "kml": {
+      "bytes": 50448,
+      "lines": 0,
+      "polys": 5,
+      "lineHeavy": false,
+      "liveDiag": 23.4
+    },
+    "verdict": "KEEP",
+    "reasons": []
+  }
+]

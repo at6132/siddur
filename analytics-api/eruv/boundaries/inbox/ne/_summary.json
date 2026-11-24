@@ -1,0 +1,38 @@
+{
+  "batch": "ne",
+  "ready": 23,
+  "pending_digitize": 2,
+  "not_found": 0,
+  "skipped_contested": 2,
+  "eruvIdsReady": [
+    "us-nj-cherry-hill-west",
+    "us-nj-englewood",
+    "us-nj-fair-lawn",
+    "us-nj-highland-park",
+    "us-nj-new-brunswick",
+    "us-nj-passaic-clifton",
+    "us-nj-teaneck",
+    "us-nj-west-orange",
+    "us-ny-far-rockaway",
+    "us-ny-five-towns",
+    "us-ny-flatbush",
+    "us-ny-forest-hills",
+    "us-ny-great-neck",
+    "us-ny-kew-gardens",
+    "us-ny-kgh",
+    "us-ny-manhattan",
+    "us-ny-monsey",
+    "us-ny-riverdale",
+    "us-ny-rochester",
+    "us-ny-sephardic-brooklyn",
+    "us-ny-west-hempstead",
+    "us-ny-white-plains",
+    "us-ny-willowbrook"
+  ],
+  "eruvIdsPending": [
+    "us-ny-hillcrest",
+    "us-ny-rockland"
+  ],
+  "checkedAt": "2026-11-20T15:56:30.099Z",
+  "total": 27
+}

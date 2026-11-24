@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-ct-new-haven",
+  "status": "pending_digitize",
+  "sourceType": "pdf",
+  "sourceUrl": "http://www.nheruv.net/wp-content/uploads/2015/05/eruvannot1.pdf",
+  "googleMyMapsMid": null,
+  "notes": "Best source: annotated PDF on nheruv.net/eruv-maps (also combined Yale/NH PDF). Eruv Homes: no mapped boundary / no mid. No My Maps, KML, leaflet, or GeoJSON found.",
+  "checkedAt": "2026-11-20T15:53:28.211Z",
+  "geometry": null
+}

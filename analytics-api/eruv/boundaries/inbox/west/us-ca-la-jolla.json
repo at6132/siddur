@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-ca-la-jolla",
+  "status": "pending_digitize",
+  "sourceType": "pdf",
+  "sourceUrl": "https://images.shulcloud.com/14939/uploads/Eruv/LaJollaEruvMap.pdf",
+  "googleMyMapsMid": null,
+  "notes": "HARD HUNT 2026-11-20: Official Adat Yeshurun map is ShulCloud PDF (raster boundary + hotspot images LaJollaEruvoverviewmapandinfo.jpg / LaJollaEruvMaphotspotsandinfo.jpg). PDF has no My Maps mid, KML, or GeoJSON; no public Google My Maps / KML found via eruv.org, eruvstatus.org, eruvfinder, GitHub, or web search. Leave pending_digitize until vector exists.",
+  "checkedAt": "2026-11-20T15:55:00.000Z",
+  "geometry": null
+}

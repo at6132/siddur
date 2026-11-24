@@ -1,0 +1,202 @@
+[
+  {
+    "id": "us-nj-lakewood",
+    "batch": "ne",
+    "status": "skipped_contested",
+    "sourceUrl": "https://www.google.com/maps/d/viewer?mid=10Z4OwQcnyTbiplJerWnR31SxRoIWcxJd",
+    "sourceType": "google_my_maps",
+    "mid": "10Z4OwQcnyTbiplJerWnR31SxRoIWcxJd",
+    "notes": "No single communal Lakewood eruv; neighborhood maps (e.g. Eiruv Mehudar mid) exist but reliance is contested by local rabbonim; skip rather than publish as authoritative | REPROCESS 2026-11-20T15:46:03.993Z: Polygon pts=43 diag=4.7km outcome=skip",
+    "kind": "contested"
+  },
+  {
+    "id": "us-ny-hillcrest",
+    "batch": "ne",
+    "status": "pending_digitize",
+    "sourceUrl": "http://yihillcrest.org/wp-content/uploads/2023/06/Eruv-Map-Queens-2023.pdf",
+    "sourceType": "pdf",
+    "mid": null,
+    "notes": "HARD-HUNT 2026-11-20T15:54:19.276Z: YI Hillcrest Eruv-Map-Queens-2023.pdf only. eruvhomes.com/eruv/hillcrest-eruv lists no mid/boundary. Remains pending digitize.",
+    "kind": "pdf"
+  },
+  {
+    "id": "us-ny-rockland",
+    "batch": "ne",
+    "status": "pending_digitize",
+    "sourceUrl": "https://www.rocklanderuv.org/copy-of-about-us",
+    "sourceType": "image",
+    "mid": null,
+    "notes": "HARD-HUNT 2026-11-20T15:54:19.276Z: rocklanderuv.org map imagery / bmcsmonsey download; eruvhomes.com/eruv/rockland-eruv--monsey has no mid. Remains pending digitize.",
+    "kind": "image"
+  },
+  {
+    "id": "us-ny-washington-heights",
+    "batch": "ne",
+    "status": "skipped_contested",
+    "sourceUrl": "https://eruv.nyc/",
+    "sourceType": "none",
+    "mid": null,
+    "notes": "Lower Washington Heights / YU eruv often treated as separate/contested relative to broader Manhattan Eruv; no reliable standalone official polygon source found",
+    "kind": "contested"
+  },
+  {
+    "id": "us-ct-new-haven",
+    "batch": "midatlantic",
+    "status": "pending_digitize",
+    "sourceUrl": "http://www.nheruv.net/wp-content/uploads/2015/05/eruvannot1.pdf",
+    "sourceType": "pdf",
+    "mid": null,
+    "notes": "Best source: annotated PDF on nheruv.net/eruv-maps (also combined Yale/NH PDF). Eruv Homes: no mapped boundary / no mid. No My Maps, KML, leaflet, or GeoJSON found.",
+    "kind": "pdf"
+  },
+  {
+    "id": "us-dc-shepherd-park",
+    "batch": "midatlantic",
+    "status": "pending_digitize",
+    "sourceUrl": "https://www.wsat.org/wp-content/uploads/2019/11/SHEPHERD_PARK_WOODSIDE_ERUV_NOV_2019.pdf",
+    "sourceType": "pdf",
+    "mid": null,
+    "notes": "Best source: 2019 combined PDF (wsat.org / ohevdc.org). Also raster JPG on wsat.org/eruv (2025/07/eruv_map_with_markings). MoCo 2010 KMZ Woodside layer is pre-combined/incomplete. mikeolkin leaflet KML is Longmeadow, not SP. No My Maps mid / GeoJSON.",
+    "kind": "pdf"
+  },
+  {
+    "id": "us-pa-germantown",
+    "batch": "midatlantic",
+    "status": "pending_digitize",
+    "sourceUrl": "https://germantownjewishcentre.org/wp-content/uploads/2024/05/boundary042523_wo-ZIP.pdf",
+    "sourceType": "pdf",
+    "mid": null,
+    "notes": "Best source: official GJC Map PDF. Philly Legistar 240282 attachments are bill text (street table), no map exhibit/GIS. No My Maps / KML / leaflet / GeoJSON found.",
+    "kind": "pdf"
+  },
+  {
+    "id": "us-fl-miami-beach",
+    "batch": "southmidwest",
+    "status": "pending_digitize",
+    "sourceUrl": "https://www.miamibeacheruv.org/_files/ugd/ec5ef5_3f2f706d83ac471d9d5054e9a1c933cd.pdf",
+    "sourceType": "pdf",
+    "mid": "1XhSNBTYm0pkAkbe7SfBZnTkULJ3G3r0U",
+    "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: No post-2025-09-12 separate south-of-73rd vector found. Official PDF https://www.miamibeacheruv.org/_files/ugd/ec5ef5_3f2f706d83ac471d9d5054e9a1c933cd.pdf. Unaffiliated My Maps mid=1XhSNBTYm0pkAkbe7SfBZnTkULJ3G3r0U still has combined \"Miami Beach/Bal Harbour Eruv\" — do not use.",
+    "kind": "pdf"
+  },
+  {
+    "id": "us-fl-surfside-33154",
+    "batch": "southmidwest",
+    "status": "pending_digitize",
+    "sourceUrl": "https://eruvstat.us/33154",
+    "sourceType": "pdf",
+    "mid": "1XhSNBTYm0pkAkbe7SfBZnTkULJ3G3r0U",
+    "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: No post-split Surfside/Bal Harbour/Bay Harbor-only vector found. Same unaffiliated mid=1XhSNBTYm0pkAkbe7SfBZnTkULJ3G3r0U is combined pre-split — do not use. Status page eruvstat.us/33154 has no KML.",
+    "kind": "pdf"
+  },
+  {
+    "id": "us-il-buffalo-grove",
+    "batch": "southmidwest",
+    "status": "pending_digitize",
+    "sourceUrl": "https://www.bgeruv.com/uploads/1/5/4/3/1543621/buffalo-grove-eruv-map-web-8-5-x-11-3_orig.png",
+    "sourceType": "image",
+    "mid": null,
+    "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: Still image-only at bgeruv.com PNG. Eruv Homes has no boundary. No My Maps/KML found.",
+    "kind": "image"
+  },
+  {
+    "id": "us-il-chicago-south-side",
+    "batch": "southmidwest",
+    "status": "pending_digitize",
+    "sourceUrl": "https://eruvstat.us/sites/default/files/inline-images/Screenshot%202023-08-09%20103521.jpg",
+    "sourceType": "image",
+    "mid": null,
+    "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: eruvstat.us/southside still screenshot-only (street bounds N 43rd / W Rock Island Metra / S 67th / E Lake Park). No mid/KML.",
+    "kind": "image"
+  },
+  {
+    "id": "us-il-west-rogers-park",
+    "batch": "southmidwest",
+    "status": "pending_digitize",
+    "sourceUrl": "https://www.crcweb.org/eruv%20maps.pdf",
+    "sourceType": "pdf",
+    "mid": null,
+    "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: cRc PDF https://www.crcweb.org/eruv%20maps.pdf + chicagoeruv.tripod.com raster. Street bounds known (Channel/Yellow Line/UP-N/Peterson–Lincoln) but no My Maps/KML.",
+    "kind": "pdf"
+  },
+  {
+    "id": "us-mi-detroit",
+    "batch": "southmidwest",
+    "status": "pending_digitize",
+    "sourceUrl": "http://www.frummichigan.com/images/eruv-large.jpg",
+    "sourceType": "image",
+    "mid": "1NZzCc9LzaJY87iTRVX-uDDTV_Dk",
+    "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: Full Oak Park/Southfield Project Eruv is raster only (frummichigan.com/images/eruv-large.jpg; YIOP links same). My Maps mid=1NZzCc9LzaJY87iTRVX-uDDTV_Dk remains Southfield-only stub — not promoted.",
+    "kind": "image"
+  },
+  {
+    "id": "us-mn-st-louis-park",
+    "batch": "southmidwest",
+    "status": "pending_digitize",
+    "sourceUrl": "https://www.darcheinoammn.org/eruv-map",
+    "sourceType": "image",
+    "mid": null,
+    "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: darcheinoammn.org/eruv-map is Wix image map (Sep 2025 update). No My Maps/KML/leaflet #map-data.",
+    "kind": "image"
+  },
+  {
+    "id": "us-nc-durham",
+    "batch": "southmidwest",
+    "status": "pending_digitize",
+    "sourceUrl": "https://durhameruv.org/map",
+    "sourceType": "web_map",
+    "mid": null,
+    "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: durhameruv.org/map has no extractable mid/KML/#map-data/geojson in HTML. Still needs digitize from site map.",
+    "kind": "hunt"
+  },
+  {
+    "id": "us-oh-beachwood-east",
+    "batch": "southmidwest",
+    "status": "pending_digitize",
+    "sourceUrl": "https://www.bees-eruv.org/map-and-supervision",
+    "sourceType": "image",
+    "mid": null,
+    "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: BEES street bounds Richmond/Cedar/I-271/Shaker only; Wix image map, no KML/My Maps.",
+    "kind": "image"
+  },
+  {
+    "id": "us-tx-houston",
+    "batch": "southmidwest",
+    "status": "pending_digitize",
+    "sourceUrl": "https://www.resourcehouston.com/eruv-maps",
+    "sourceType": "google_my_maps",
+    "mid": "1DIepzYQLngMdTUpZjKduUZMB1JJsiy0",
+    "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: City-wide id. Only public My Maps is Northfield (YI/Beth Rambam/Chabad) mid=1DIepzYQLngMdTUpZjKduUZMB1JJsiy0. Meyerland/UOS on resourcehouston.com + kollelhouston.org are image maps only — no separate My Maps mids found. Keep pending (do not promote Northfield as city-wide).",
+    "kind": "has_mid"
+  },
+  {
+    "id": "us-wi-milwaukee-east",
+    "batch": "southmidwest",
+    "status": "pending_digitize",
+    "sourceUrl": "https://eruvstat.us/milwaukee",
+    "sourceType": "google_my_maps",
+    "mid": "1a-dkKWmPhOmTQzLBNUnouqHK9GRRDKkN",
+    "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: Layer still labeled \"Milwaukee East Side Eruv (PROPOSED)\" — skip promote.",
+    "kind": "has_mid"
+  },
+  {
+    "id": "us-ca-la-jolla",
+    "batch": "west",
+    "status": "pending_digitize",
+    "sourceUrl": "https://images.shulcloud.com/14939/uploads/Eruv/LaJollaEruvMap.pdf",
+    "sourceType": "pdf",
+    "mid": null,
+    "notes": "HARD HUNT 2026-11-20: Official Adat Yeshurun map is ShulCloud PDF (raster boundary + hotspot images LaJollaEruvoverviewmapandinfo.jpg / LaJollaEruvMaphotspotsandinfo.jpg). PDF has no My Maps mid, KML, or GeoJSON; no public Google My Maps / KML found via eruv.org, eruvstatus.org, eruvfinder, GitHub, or web search. Leave pending_digitize until vector exists.",
+    "kind": "pdf"
+  },
+  {
+    "id": "us-or-portland",
+    "batch": "west",
+    "status": "pending_digitize",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1wPq14FvCOpx3gH2elbTKE3UO4v0&forcekml=1",
+    "sourceType": "google_my_maps",
+    "mid": "1wPq14FvCOpx3gH2elbTKE3UO4v0",
+    "notes": "HARD HUNT 2026-11-20: portlanderuv.com/boundaries still states the public My Maps (mid=1wPq14FvCOpx3gH2elbTKE3UO4v0) is a generalized overview, not updated with actual boundaries, must not be relied on for Shabbos, and detailed boundaries are not posted publicly. No alternate community-authoritative vector found. Do not promote. | prior REPROCESS MultiPolygon pts=156 diag=5.4km outcome=skip",
+    "kind": "has_mid"
+  }
+]

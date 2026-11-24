@@ -1,0 +1,123 @@
+[
+  {
+    "id": "us-nj-cherry-hill-west",
+    "mid": "1Lc9bhHT4Z2wImel5vsh7qTjynQpupw4X",
+    "kmlBytes": 47378,
+    "innerBoundaryCount": 0,
+    "exclCount": 4,
+    "exclNames": [
+      "Stream/tunnel is excluded",
+      "Water are",
+      "Water area",
+      "Lake Section"
+    ]
+  },
+  {
+    "id": "us-nj-highland-park",
+    "mid": "1xoVjPr-xjEdWLns4l5rdxSEoxJ4",
+    "kmlBytes": 110175,
+    "innerBoundaryCount": 0,
+    "exclCount": 5,
+    "exclNames": [
+      "Plainfield and Jefferson -- Not in Eruv",
+      "Valentine Sidewalk -- Outside of Eruv",
+      "Baldwin Street - Outside Eruv",
+      "Anshe Emeth Memorial Temple - Reform (Outside of Eruv)",
+      "Rabbi Jacob Joseph School - Outside of Eruv"
+    ]
+  },
+  {
+    "id": "us-nj-new-brunswick",
+    "mid": "1xoVjPr-xjEdWLns4l5rdxSEoxJ4",
+    "kmlBytes": 110175,
+    "innerBoundaryCount": 0,
+    "exclCount": 5,
+    "exclNames": [
+      "Plainfield and Jefferson -- Not in Eruv",
+      "Valentine Sidewalk -- Outside of Eruv",
+      "Baldwin Street - Outside Eruv",
+      "Anshe Emeth Memorial Temple - Reform (Outside of Eruv)",
+      "Rabbi Jacob Joseph School - Outside of Eruv"
+    ]
+  },
+  {
+    "id": "us-ny-five-towns",
+    "mid": "1uh_hbGmyful743HBD5E7HNj7fc4",
+    "kmlBytes": 347535,
+    "innerBoundaryCount": 0,
+    "exclCount": 1,
+    "exclNames": [
+      "Grant Pond"
+    ]
+  },
+  {
+    "id": "us-ny-far-rockaway",
+    "mid": "1Qdx7LIutQIuAc1YXUUY1zSuFvaFCYvkd",
+    "kmlBytes": 43368,
+    "innerBoundaryCount": 0,
+    "exclCount": 13,
+    "exclNames": [
+      "Shared Border--Bayswater Eruv",
+      "Excluded Karfef",
+      "Excluded Karfef",
+      "Excluded Karfef",
+      "Excluded Karfef",
+      "Excluded Karfef",
+      "Excluded Karfef",
+      "Excluded Karfef",
+      "Sutton Park Karfef",
+      "Excluded Karfef",
+      "Excluded Karfef",
+      "Excluded Karfef"
+    ]
+  },
+  {
+    "id": "us-ny-monsey",
+    "mid": "1lUGTE1wAI3l5hS4ei6ZttsC5Got25bqY",
+    "kmlBytes": 111338,
+    "innerBoundaryCount": 1,
+    "exclCount": 0,
+    "exclNames": []
+  },
+  {
+    "id": "us-il-chicago-lakeview",
+    "mid": "1-6QgrQuHyjPyi_HwtdEZ-SEGGRDdovw",
+    "kmlBytes": 32383,
+    "innerBoundaryCount": 0,
+    "exclCount": 2,
+    "exclNames": [
+      "Path along lake",
+      "The lake"
+    ]
+  },
+  {
+    "id": "us-il-skokie",
+    "mid": "1ICYNI4wKe-2f-OPXVq3sImaTrhWoNr7i",
+    "kmlBytes": 32524,
+    "innerBoundaryCount": 0,
+    "exclCount": 1,
+    "exclNames": [
+      "The SE corner, NE corner, and NW corner of the Golf Road and Kostner intersection are NOT in the Eruv."
+    ]
+  },
+  {
+    "id": "us-wi-bayside",
+    "mid": "1a-dkKWmPhOmTQzLBNUnouqHK9GRRDKkN",
+    "kmlBytes": 50448,
+    "innerBoundaryCount": 0,
+    "exclCount": 1,
+    "exclNames": [
+      "Lake Park Synagogue"
+    ]
+  },
+  {
+    "id": "us-ma-malden",
+    "mid": "1AS_cN2Re915Y9NCXqjV32sI7f9vC4FQ",
+    "kmlBytes": 23766,
+    "innerBoundaryCount": 0,
+    "exclCount": 1,
+    "exclNames": [
+      "Pond ice skating and hockey"
+    ]
+  }
+]

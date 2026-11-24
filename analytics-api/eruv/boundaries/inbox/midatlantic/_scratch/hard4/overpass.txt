@@ -1,0 +1,10 @@
+﻿[out:json][timeout:60];
+(
+  way["name"~"Eruv|eruv"](38.9,-77.3,39.15,-76.9);
+  relation["name"~"Eruv|eruv"](38.9,-77.3,39.15,-76.9);
+  way["name"~"Eruv|eruv"](41.25,-73.0,41.4,-72.85);
+  relation["name"~"Eruv|eruv"](41.25,-73.0,41.4,-72.85);
+  way["name"~"Eruv|eruv"](40.0,-75.25,40.12,-75.15);
+  relation["name"~"Eruv|eruv"](40.0,-75.25,40.12,-75.15);
+);
+out tags center;

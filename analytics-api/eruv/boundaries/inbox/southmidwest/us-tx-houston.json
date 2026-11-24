@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-tx-houston",
+  "status": "pending_digitize",
+  "sourceType": "google_my_maps",
+  "sourceUrl": "https://www.resourcehouston.com/eruv-maps",
+  "googleMyMapsMid": "1DIepzYQLngMdTUpZjKduUZMB1JJsiy0",
+  "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: City-wide id. Only public My Maps is Northfield (YI/Beth Rambam/Chabad) mid=1DIepzYQLngMdTUpZjKduUZMB1JJsiy0. Meyerland/UOS on resourcehouston.com + kollelhouston.org are image maps only — no separate My Maps mids found. Keep pending (do not promote Northfield as city-wide).",
+  "checkedAt": "2026-11-20T15:53:56.653Z",
+  "geometry": null
+}

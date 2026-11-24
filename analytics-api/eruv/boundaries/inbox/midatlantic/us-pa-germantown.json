@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-pa-germantown",
+  "status": "pending_digitize",
+  "sourceType": "pdf",
+  "sourceUrl": "https://germantownjewishcentre.org/wp-content/uploads/2024/05/boundary042523_wo-ZIP.pdf",
+  "googleMyMapsMid": null,
+  "notes": "Best source: official GJC Map PDF. Philly Legistar 240282 attachments are bill text (street table), no map exhibit/GIS. No My Maps / KML / leaflet / GeoJSON found.",
+  "checkedAt": "2026-11-20T15:53:28.211Z",
+  "geometry": null
+}

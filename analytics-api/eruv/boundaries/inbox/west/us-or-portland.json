@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-or-portland",
+  "status": "pending_digitize",
+  "sourceType": "google_my_maps",
+  "sourceUrl": "https://www.google.com/maps/d/kml?mid=1wPq14FvCOpx3gH2elbTKE3UO4v0&forcekml=1",
+  "googleMyMapsMid": "1wPq14FvCOpx3gH2elbTKE3UO4v0",
+  "notes": "HARD HUNT 2026-11-20: portlanderuv.com/boundaries still states the public My Maps (mid=1wPq14FvCOpx3gH2elbTKE3UO4v0) is a generalized overview, not updated with actual boundaries, must not be relied on for Shabbos, and detailed boundaries are not posted publicly. No alternate community-authoritative vector found. Do not promote. | prior REPROCESS MultiPolygon pts=156 diag=5.4km outcome=skip",
+  "checkedAt": "2026-11-20T15:55:00.000Z",
+  "geometry": null
+}

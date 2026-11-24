@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-nj-lakewood",
+  "status": "skipped_contested",
+  "sourceType": "google_my_maps",
+  "sourceUrl": "https://www.google.com/maps/d/viewer?mid=10Z4OwQcnyTbiplJerWnR31SxRoIWcxJd",
+  "googleMyMapsMid": "10Z4OwQcnyTbiplJerWnR31SxRoIWcxJd",
+  "notes": "No single communal Lakewood eruv; neighborhood maps (e.g. Eiruv Mehudar mid) exist but reliance is contested by local rabbonim; skip rather than publish as authoritative | REPROCESS 2026-11-20T15:46:03.993Z: Polygon pts=43 diag=4.7km outcome=skip",
+  "geometry": null,
+  "checkedAt": "2026-11-20T15:46:03.993Z"
+}

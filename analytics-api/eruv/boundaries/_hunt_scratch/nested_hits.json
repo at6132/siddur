@@ -1,0 +1,243 @@
+[
+  {
+    "id": "us-nj-passaic-clifton",
+    "holesAttached": 0,
+    "nestedCandidates": 3,
+    "samples": [
+      {
+        "name": "Polygon 21",
+        "pts": 5,
+        "areaRatio": 0.0858
+      },
+      {
+        "name": "Polygon 22",
+        "pts": 6,
+        "areaRatio": 0.372
+      },
+      {
+        "name": "Polygon 23",
+        "pts": 5,
+        "areaRatio": 0.353
+      }
+    ]
+  },
+  {
+    "id": "us-ny-flatbush",
+    "holesAttached": 0,
+    "nestedCandidates": 7,
+    "samples": [
+      {
+        "name": "Williamsburg Eruv",
+        "pts": 14,
+        "areaRatio": 0.2053
+      },
+      {
+        "name": "Brooklyn Heights/Gowanus/Cobble Hill/Boerum Hill Eruv",
+        "pts": 27,
+        "areaRatio": 0.318
+      },
+      {
+        "name": "Kol Israel Eruv",
+        "pts": 9,
+        "areaRatio": 0.0408
+      },
+      {
+        "name": "Boro Park Eruv",
+        "pts": 20,
+        "areaRatio": 0.3323
+      },
+      {
+        "name": "Marine Park Eruv",
+        "pts": 8,
+        "areaRatio": 0.1573
+      },
+      {
+        "name": "Manhattan Beach Eruv",
+        "pts": 43,
+        "areaRatio": 0.0722
+      },
+      {
+        "name": "Brower Park Eruv",
+        "pts": 6,
+        "areaRatio": 0.0248
+      }
+    ]
+  },
+  {
+    "id": "us-ny-monsey",
+    "holesAttached": 1,
+    "nestedCandidates": 22,
+    "samples": [
+      {
+        "name": "Scotland Hill Eruv Section - 6",
+        "pts": 37,
+        "areaRatio": 0.0611
+      },
+      {
+        "name": "Chestnut Ridge Eruv",
+        "pts": 28,
+        "areaRatio": 0.0217
+      },
+      {
+        "name": "New Square Eruv",
+        "pts": 37,
+        "areaRatio": 0.0345
+      },
+      {
+        "name": "Airmont Beatrix Eruv Section - 3",
+        "pts": 71,
+        "areaRatio": 0.2533
+      },
+      {
+        "name": "Montebello Eruv",
+        "pts": 30,
+        "areaRatio": 0.0838
+      },
+      {
+        "name": "Montebello Eruv",
+        "pts": 30,
+        "areaRatio": 0.2406
+      },
+      {
+        "name": "Hillcrest eruv Section - 20",
+        "pts": 40,
+        "areaRatio": 0.2241
+      },
+      {
+        "name": "Pearl River Eruv Section - 9",
+        "pts": 30,
+        "areaRatio": 0.0443
+      },
+      {
+        "name": "Nanuet Eruv Section - 16",
+        "pts": 23,
+        "areaRatio": 0.0165
+      },
+      {
+        "name": "Rambams Eruv Section",
+        "pts": 57,
+        "areaRatio": 0.1666
+      }
+    ]
+  },
+  {
+    "id": "us-ny-sephardic-brooklyn",
+    "holesAttached": 0,
+    "nestedCandidates": 7,
+    "samples": [
+      {
+        "name": "Williamsburg Eruv",
+        "pts": 14,
+        "areaRatio": 0.2053
+      },
+      {
+        "name": "Brooklyn Heights/Gowanus/Cobble Hill/Boerum Hill Eruv",
+        "pts": 27,
+        "areaRatio": 0.318
+      },
+      {
+        "name": "Kol Israel Eruv",
+        "pts": 9,
+        "areaRatio": 0.0408
+      },
+      {
+        "name": "Boro Park Eruv",
+        "pts": 20,
+        "areaRatio": 0.3323
+      },
+      {
+        "name": "Marine Park Eruv",
+        "pts": 8,
+        "areaRatio": 0.1573
+      },
+      {
+        "name": "Manhattan Beach Eruv",
+        "pts": 43,
+        "areaRatio": 0.0722
+      },
+      {
+        "name": "Brower Park Eruv",
+        "pts": 6,
+        "areaRatio": 0.0248
+      }
+    ]
+  },
+  {
+    "id": "us-ny-willowbrook",
+    "holesAttached": 0,
+    "nestedCandidates": 2,
+    "samples": [
+      {
+        "name": "YISI Playground",
+        "pts": 4,
+        "areaRatio": 0.3231
+      },
+      {
+        "name": "Play Ground",
+        "pts": 5,
+        "areaRatio": 0.0878
+      }
+    ]
+  },
+  {
+    "id": "us-fl-boca",
+    "holesAttached": 0,
+    "nestedCandidates": 3,
+    "samples": [
+      {
+        "name": "East Boca Community Eruv",
+        "pts": 29,
+        "areaRatio": 0.0297
+      },
+      {
+        "name": "Chabad of West Boynton Eruv",
+        "pts": 8,
+        "areaRatio": 0.2722
+      },
+      {
+        "name": "Chabad of East Boca Eruv",
+        "pts": 58,
+        "areaRatio": 0.0706
+      }
+    ]
+  },
+  {
+    "id": "us-oh-columbus",
+    "holesAttached": 0,
+    "nestedCandidates": 3,
+    "samples": [
+      {
+        "name": "Main Upgrade",
+        "pts": 46,
+        "areaRatio": 0.0957
+      },
+      {
+        "name": "(unnamed)",
+        "pts": 43,
+        "areaRatio": 0.118
+      },
+      {
+        "name": "(unnamed)",
+        "pts": 22,
+        "areaRatio": 0.1296
+      }
+    ]
+  },
+  {
+    "id": "us-wi-bayside",
+    "holesAttached": 0,
+    "nestedCandidates": 2,
+    "samples": [
+      {
+        "name": "Bayside Eruv",
+        "pts": 51,
+        "areaRatio": 0.237
+      },
+      {
+        "name": "Milwaukee West Side Eruv",
+        "pts": 15,
+        "areaRatio": 0.0772
+      }
+    ]
+  }
+]

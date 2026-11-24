@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cincinnati Eruv — Map, Status &amp; Support</title>
+    <meta name="description" content="The Cincinnati Eruv — community boundary map, live status, and support.">
+    <meta property="og:title" content="Cincinnati Eruv — Map, Status &amp; Support">
+    <meta property="og:description" content="The Cincinnati Eruv — community boundary map, live status, and support.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.cincinnatieruv.org">
+    <meta name="theme-color" content="#16307a">
+    <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="assets/img/favicon.svg">
+    <link rel="stylesheet" href="assets/css/styles.css?v=1790874630">
+    </head>
+<body class="">
+<a class="skip-link" href="#main">Skip to content</a>
+<header class="site-header" id="top">
+    <div class="wrap header-inner">
+        <a class="brand" href="index.php" aria-label="Cincinnati Eruv home">
+            <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+                <rect x="2" y="2" width="28" height="28" rx="6" fill="none"
+                      stroke="currentColor" stroke-width="2.5"
+                      stroke-dasharray="6 3"/>
+                <circle cx="16" cy="16" r="3.5" fill="currentColor"/>
+            </svg>
+            <span class="brand-text">Cincinnati&nbsp;Eruv</span>
+        </a>
+        <button class="nav-toggle" aria-expanded="false" aria-controls="nav"
+                aria-label="Toggle menu">
+            <span></span><span></span><span></span>
+        </button>
+        <nav class="site-nav" id="nav">
+            <a href="index.php#map">Map</a>
+            <a href="index.php#about">About</a>
+            <a href="index.php#contact">Contact</a>
+            <a class="nav-cta" href="index.php#donate">Donate</a>
+        </nav>
+    </div>
+</header>
+<main id="main">
+    
+<!-- ===================== HERO + LIVE STATUS ===================== -->
+<section class="hero">
+    <div class="wrap hero-inner">
+        <div class="hero-copy">
+            <p class="eyebrow">Serving the Cincinnati Jewish community</p>
+            <h1>The Cincinnati Eruv</h1>
+            <p class="lede">An eruv transforms our neighborhood into a single private domain, permitting carrying on Shabbos within its boundaries. Check the map, see the latest status, and help keep it standing.</p>
+            <div class="hero-actions">
+                <a class="btn btn-primary" href="#map">View the map</a>
+                <a class="btn btn-ghost" href="#donate">Support the eruv</a>
+            </div>
+        </div>
+
+                <aside class="status-card is-unknown" id="status">
+            <div class="status-dot" aria-hidden="true"></div>
+            <p class="status-kicker">Current status</p>
+            <p class="status-headline">Awaiting this week’s check</p>
+                            <p class="status-for">for Shabbos Parshas Vayetzei</p>
+                                        <p class="status-meta">
+                    Last reported up                    <strong>6 days ago</strong><br>
+                    <span class="status-when">Friday, November 13, 2026 1:31 PM</span>
+                </p>
+                <p class="status-link">
+                    <a href="https://status.cincinnatieruv.org">Status history &rarr;</a>
+                </p>
+                                        <p class="status-caveat">Status is reported by our volunteer checkers.</p>
+                    </aside>
+            </div>
+</section>
+
+<!-- ===================== THIS WEEK (PARSHA) ===================== -->
+<section class="shabbat-bar">
+    <div class="wrap shabbat-inner">
+                    <div class="shabbat-item">
+                <span class="shabbat-label">This week</span>
+                <span class="shabbat-value">Parshas Vayetzei</span>
+            </div>
+                            <div class="shabbat-item">
+                <span class="shabbat-label">Candle lighting</span>
+                <span class="shabbat-value">5:00 PM</span>
+            </div>
+                            <div class="shabbat-item">
+                <span class="shabbat-label">Havdalah</span>
+                <span class="shabbat-value">6:02 PM</span>
+            </div>
+                            <!-- One info affordance covering both times. Native Popover API:
+                 the card renders in the top layer, so it is never clipped by the
+                 wrapping/centered .shabbat-inner flex row. Static text only. -->
+            <div class="shabbat-item shabbat-info">
+                <button type="button" class="shabbat-info__btn"
+                        id="shabbat-times-info-btn"
+                        popovertarget="shabbat-times-info">
+                    <svg class="shabbat-info__icon" viewBox="0 0 20 20"
+                         aria-hidden="true" focusable="false">
+                        <circle cx="10" cy="10" r="9" fill="none"
+                                stroke="currentColor" stroke-width="2"/>
+                        <circle cx="10" cy="5.6" r="1.25" fill="currentColor"/>
+                        <rect x="8.9" y="8.4" width="2.2" height="6.6" rx="1.1"
+                              fill="currentColor"/>
+                    </svg>
+                    <span class="shabbat-info__sr">About these candle
+                        lighting and havdalah times</span>
+                </button>
+                <div id="shabbat-times-info" class="shabbat-info__popout"
+                     popover="auto" role="note"
+                     aria-labelledby="shabbat-info-title">
+                    <p id="shabbat-info-title" class="shabbat-info__title">
+                        About these times
+                    </p>
+                    <p>Pulled automatically from Hebcal. Candle lighting is 20 minutes before sunset. Times are for guidance, always confirm through local resources.</p>
+                    <button type="button" class="shabbat-info__close"
+                            popovertarget="shabbat-times-info"
+                            popovertargetaction="hide">Close</button>
+                </div>
+            </div>
+                    </div>
+</section>
+
+<!-- ===================== MAP ===================== -->
+<section class="section" id="map">
+    <div class="wrap">
+        <header class="section-head">
+            <h2>Eruv boundary map</h2>
+            <p>The shaded area shows the eruv&#039;s approximate boundary. When in doubt near an edge, err on the side of caution. The downloadable PDF is the authoritative reference.</p>
+        </header>
+        <div class="map-shell">
+            <div id="eruv-map" role="application"
+                 aria-label="Interactive map of the Cincinnati eruv boundary"></div>
+            <div class="map-legend">
+                <span><i class="swatch swatch-line"></i> Eruv boundary</span>
+                <span><i class="swatch swatch-fill"></i> Inside the eruv</span>
+                <span><i class="swatch swatch-excl"></i> Excluded (construction)</span>
+            </div>
+        </div>
+                        <div class="map-institutions">
+            <h3 class="map-institutions__title">Community institutions</h3>
+            <ul class="inst-key">
+                                <li>
+                    <span class="inst-key__num">1</span>
+                    <span class="inst-key__name">Mesivta</span>
+                </li>
+                                <li>
+                    <span class="inst-key__num">2</span>
+                    <span class="inst-key__name">Chabad</span>
+                </li>
+                                <li>
+                    <span class="inst-key__num">3</span>
+                    <span class="inst-key__name">Atara / CHDS</span>
+                </li>
+                                <li>
+                    <span class="inst-key__num">4</span>
+                    <span class="inst-key__name">CHDS</span>
+                </li>
+                                <li>
+                    <span class="inst-key__num">5</span>
+                    <span class="inst-key__name">Yeshivas Lubavitch</span>
+                </li>
+                                <li>
+                    <span class="inst-key__num">6</span>
+                    <span class="inst-key__name">Kollel</span>
+                </li>
+                                <li>
+                    <span class="inst-key__num">7</span>
+                    <span class="inst-key__name">Golf Manor Synagogue</span>
+                </li>
+                                <li>
+                    <span class="inst-key__num">8</span>
+                    <span class="inst-key__name">Shaarei Torah</span>
+                </li>
+                                <li>
+                    <span class="inst-key__num">9</span>
+                    <span class="inst-key__name">CZE</span>
+                </li>
+                                <li>
+                    <span class="inst-key__num">10</span>
+                    <span class="inst-key__name">Mikveh</span>
+                </li>
+                                <li>
+                    <span class="inst-key__num">11</span>
+                    <span class="inst-key__name">Adath Israel</span>
+                </li>
+                            </ul>
+        </div>
+                <div class="map-actions">
+            <a class="btn btn-primary" href="download.php">⬇ Download the PDF map</a>
+            <p class="map-disclaimer">Map boundary &amp; institution markers are approximate and shown for orientation. Always rely on the official PDF.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== ABOUT ===================== -->
+<section class="section section--alt" id="about">
+    <div class="wrap about-grid">
+        <div>
+            <h2>What is an eruv?</h2>
+            <p>On Shabbos, Jewish law prohibits transferring objects between a private domain and a public domain, and carrying within a public domain. An <em>eruv</em> is a boundary — using existing walls, fences, and specially prepared poles and wires — that halachically merges an area into one private domain, permitting carrying within it on Shabbos and Yom Kippur.</p><p>The Cincinnati Eruv encloses the neighborhoods where our community lives, so families can carry keys, bring food to one another, and push strollers and wheelchairs to shul on Shabbos.</p><p>Even with an eruv, it is important that we and our children learn the laws of carrying on Shabbos — the eruv&#039;s validity can never be fully guaranteed, and not every community is enclosed by one.</p>        </div>
+        <div>
+            <h2>Rabbinic oversight</h2>
+            <p>The eruv is endorsed by <strong>Rabbi Moshe Heinemann</strong> (administrator of Star-K), who conducts a personal survey roughly every ten years, under the oversight of the <strong>Cincinnati Beis Din</strong> (Rabbi Ezra Goldschmiedt, Rabbi Stuart Lavenda, Rabbi David Spetner &amp; Rabbi Avrohom Weinrib).</p>            <ul class="check-list"><li><strong>Weekly</strong> checks by Rabbi Michoel Stern</li><li><strong>Monthly</strong> maintenance by Rabbi Baruch Berger</li><li><strong>Quarterly</strong> thorough checks by David Alden, Rabbi Chaim Heinemann &amp; Izy Newmark</li><li><strong>As needed</strong> repairs by David Alden</li></ul>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== FAQ ===================== -->
+<section class="section" id="faq">
+    <div class="wrap">
+        <header class="section-head">
+            <h2>Good to know</h2>
+        </header>
+        <div class="faq-grid">
+                        <details>
+                <summary>Can I always rely on the eruv?</summary>
+                <p>The eruv is checked regularly, but its status can change due to weather, construction, or utility work. Validity can never be fully guaranteed — check the status above (or call the hotline) before relying on it each Shabbos.</p>            </details>
+                        <details>
+                <summary>What about apartment buildings?</summary>
+                <p>The eruv works for residents of apartment buildings. That said, buildings with two or more Jewish households should also make a small eruv of their own (without a blessing) — a backup that keeps the building&#039;s common areas covered in the unlikely event the community eruv is down. It is far simpler to make than the communal one; your rav can help.</p>            </details>
+                        <details>
+                <summary>Does the eruv permit everything on Shabbos?</summary>
+                <p>No. The eruv only addresses the prohibition of carrying. All other Shabbos laws and the sanctity of the day remain fully in force. Athletic activities in particular often involve other prohibitions and run counter to the restful spirit of Shabbos — discuss specific activities with your rav.</p>            </details>
+                        <details>
+                <summary>How do I get status alerts?</summary>
+                <p>Weekly status is posted to the CincinnatiShuls listserv, and a hotline is available at (513) 351-3788. To join the automated call list, email <a href="/cdn-cgi/l/email-protection#3f5c50514b5e5c4b7f5c56515c5651515e4b565a4d4a4911504d58"><span class="__cf_email__" data-cfemail="660509081207051226050f08050f080807120f0314131048091401">[email&#160;protected]</span></a>.</p>            </details>
+                        <details>
+                <summary>Is this a &quot;good eruv&quot;? Why don&#039;t some people use it?</summary>
+                <p>Much effort has gone into satisfying a number of relatively strict minority opinions, and the eruv certainly meets the standard of mainstream Orthodox communities. Still, no eruv can meet every standard, and some choose not to rely on it. Those who use the eruv and those who don&#039;t should respect each other&#039;s approach — so that the eruv truly unifies our community.</p>            </details>
+                        <details>
+                <summary>We just had a major storm — is the eruv still up?</summary>
+                <p>In all the years of the eruv&#039;s existence, bad weather has never invalidated it. After the weekly check, you may assume the eruv is up, even during or following a storm.</p>            </details>
+                    </div>
+    </div>
+</section>
+
+<!-- ===================== DONATE ===================== -->
+<section class="section section--donate" id="donate">
+    <div class="wrap donate-inner">
+        <div class="donate-copy">
+            <h2>Support the eruv</h2>
+            <p>The eruv costs roughly <strong>$10,000 a year</strong> to inspect, maintain, and repair. It runs entirely on community support.</p><p>A gift of <strong>$54</strong> sponsors a Shabbos in honor of a loved one or a simcha. Every contribution helps keep the eruv standing.</p>        </div>
+        <div class="donate-action">
+            <div class="donate-card">
+                <p class="donate-amount">$54</p>
+                <p class="donate-amount-label">Sponsor a Shabbos</p>
+                <a class="btn btn-primary btn-block" href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&amp;business=rasfrankel@gmail.com&amp;lc=US&amp;item_name=Cincinnati+Eruv+Donation&amp;no_note=0&amp;cn=&amp;currency_code=USD&amp;bn=PP-DonationsBF:btn_donateCC_LG.gif:NonHosted"
+                   target="_blank" rel="noopener">Donate via PayPal</a>
+                <p class="donate-fine">Tax-deductible. Mail checks to<br>
+PO Box 37303, Cincinnati, OH 45202</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================== CONTACT / BOARD ===================== -->
+<section class="section section--alt" id="contact">
+    <div class="wrap contact-grid">
+        <div>
+            <h2>Contact</h2>
+            <ul class="contact-list">
+                <li><span>Hotline</span>
+                    <a href="tel:5133513788">(513) 351-3788</a></li>
+                <li><span>Email</span>
+                    <a href="/cdn-cgi/l/email-protection#caa9a5a4beaba9be8aa9a3a4a9a3a4a4abbea3afb8bfbce4a5b8ad"><span class="__cf_email__" data-cfemail="73101c1d0712100733101a1d101a1d1d12071a160106055d1c0114">[email&#160;protected]</span></a></li>
+                <li><span>Mail</span> PO Box 37303, Cincinnati, OH 45202</li>
+                <li><span>Matzah box</span> Rabbi Avrohom Weinrib&#039;s office, Congregation Zichron Eliezer, 2455A Section Road, Cincinnati, OH 45237. This communally shared matzah is what halachically joins the eruv&#039;s households into a single private domain.</li>
+            </ul>
+        </div>
+        <div>
+            <h2>Board members</h2>
+                        <ul class="board-list"><li>David Alden</li><li>Steven Klein</li><li>Rabbi Baruch Berger</li><li>Izy Newmark</li><li>Rabbi Dovid Tzvi Meissner</li><li>Rabbi Chaim Heinemann</li></ul>
+                    </div>
+    </div>
+</section>
+
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script id="map-data" type="application/json">
+{"center":[39.19625,-84.45056],"zoom":14,"boundary":[[-84.436197,39.212702],[-84.434934,39.212574],[-84.434428,39.211436],[-84.433156,39.210948],[-84.433204,39.210437],[-84.428455,39.210032],[-84.428647,39.210549],[-84.427084,39.210415],[-84.427362,39.20432],[-84.427645,39.203608],[-84.430502,39.200026],[-84.43067,39.199517],[-84.430594,39.193671],[-84.43014,39.192175],[-84.430044,39.190635],[-84.430454,39.190233],[-84.43051,39.190029],[-84.430189,39.189151],[-84.428995,39.186819],[-84.427445,39.184686],[-84.427278,39.182632],[-84.42889,39.182306],[-84.429008,39.182206],[-84.42894,39.181897],[-84.429058,39.181797],[-84.430013,39.18156],[-84.430193,39.181563],[-84.430439,39.181825],[-84.432756,39.180846],[-84.43275,39.18059],[-84.432439,39.180122],[-84.433091,39.179777],[-84.433515,39.179939],[-84.433933,39.179845],[-84.435401,39.181054],[-84.436249,39.181379],[-84.441961,39.181905],[-84.442369,39.181401],[-84.44303,39.181414],[-84.45163,39.182307],[-84.452591,39.182327],[-84.45394,39.183584],[-84.45442,39.183594],[-84.454727,39.183857],[-84.458227,39.187312],[-84.458355,39.187673],[-84.458181,39.187926],[-84.458187,39.188182],[-84.459601,39.189647],[-84.460151,39.190068],[-84.462277,39.191188],[-84.46258,39.191297],[-84.464926,39.191549],[-84.465274,39.191044],[-84.465754,39.191054],[-84.468461,39.191365],[-84.471118,39.192085],[-84.471124,39.192342],[-84.470721,39.193051],[-84.470634,39.194485],[-84.470286,39.194991],[-84.469719,39.196415],[-84.469311,39.196919],[-84.466375,39.199679],[-84.464976,39.201445],[-84.463778,39.201523],[-84.462289,39.202005],[-84.460975,39.202286],[-84.454562,39.202566],[-84.453248,39.202847],[-84.452314,39.203956],[-84.452217,39.204928],[-84.448236,39.209205],[-84.447997,39.209251],[-84.447813,39.209093],[-84.447573,39.209089],[-84.446934,39.209998],[-84.446253,39.211676],[-84.444449,39.211486],[-84.444278,39.211892],[-84.442114,39.211695],[-84.440749,39.212333],[-84.440841,39.211156],[-84.439818,39.211033],[-84.439651,39.211593],[-84.436256,39.212652]],"exclusion":[[-84.470771,39.192642],[-84.470453,39.19443],[-84.469653,39.196157],[-84.46948,39.196461],[-84.469364,39.196613],[-84.469188,39.196814],[-84.464971,39.20124],[-84.464853,39.20134],[-84.461331,39.202089],[-84.461151,39.202085],[-84.461135,39.201418],[-84.461599,39.192968],[-84.462527,39.191603],[-84.462643,39.191452],[-84.462702,39.191402],[-84.465581,39.191358],[-84.466662,39.19138],[-84.46841,39.191723],[-84.469739,39.192109],[-84.470464,39.192329],[-84.470585,39.192382],[-84.47077,39.192591]],"institutions":[{"n":1,"name":"Mesivta","lat":39.1978111,"lng":-84.4554676},{"n":2,"name":"Chabad","lat":39.1976105,"lng":-84.45438},{"n":3,"name":"Atara / CHDS","lat":39.193853,"lng":-84.450074},{"n":4,"name":"CHDS","lat":39.1920235,"lng":-84.4505915},{"n":5,"name":"Yeshivas Lubavitch","lat":39.196779,"lng":-84.4543773},{"n":6,"name":"Kollel","lat":39.1907358,"lng":-84.4499605},{"n":7,"name":"Golf Manor Synagogue","lat":39.189626,"lng":-84.450459},{"n":8,"name":"Shaarei Torah","lat":39.198972,"lng":-84.444456},{"n":9,"name":"CZE","lat":39.196194,"lng":-84.444539},{"n":10,"name":"Mikveh","lat":39.1958463,"lng":-84.444115},{"n":11,"name":"Adath Israel","lat":39.2094802,"lng":-84.4246039}]}</script>
+<!-- map.js lazy-loads Leaflet (CSS + JS) when the map nears the viewport. -->
+<script src="assets/js/map.js?v=1790874630" defer></script>
+
+</main>
+<footer class="site-footer">
+    <div class="wrap footer-grid">
+        <div>
+            <div class="brand brand--footer">
+                <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+                    <rect x="2" y="2" width="28" height="28" rx="6" fill="none"
+                          stroke="currentColor" stroke-width="2.5"
+                          stroke-dasharray="6 3"/>
+                    <circle cx="16" cy="16" r="3.5" fill="currentColor"/>
+                </svg>
+                <span class="brand-text">Cincinnati Eruv</span>
+            </div>
+            <p class="footer-note">Maintaining the eruv that serves the Cincinnati Jewish community.</p>
+        </div>
+        <div>
+            <h3>Contact</h3>
+            <ul class="footer-list">
+                <li><a href="/cdn-cgi/l/email-protection#caa9a5a4beaba9be8aa9a3a4a9a3a4a4abbea3afb8bfbce4a5b8ad"><span class="__cf_email__" data-cfemail="7e1d11100a1f1d0a3e1d17101d1710101f0a171b0c0b0850110c19">[email&#160;protected]</span></a></li>
+                <li><a href="tel:5133513788">
+                    (513) 351-3788</a> (hotline)</li>
+                <li>PO Box 37303, Cincinnati, OH 45202</li>
+            </ul>
+        </div>
+        <div>
+            <h3>Links</h3>
+            <ul class="footer-list">
+                <li><a href="download.php">Download PDF map</a></li>
+                                <li><a href="https://status.cincinnatieruv.org">Eruv status</a></li>
+                                <li><a href="index.php#donate">Donate</a></li>
+            </ul>
+        </div>
+    </div>
+    <div class="wrap footer-bottom">
+        <span>&copy; 2026 Cincinnati Eruv. All rights reserved.</span>
+        <a href="admin-login.php">Admin</a>
+    </div>
+</footer>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script src="assets/js/site.js?v=1790874630" defer></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a5d89abbbdf744ce',t:'MTc5NTE4OTc2NA=='};var l=window.parent.location,o;try{o=new URL(l.origin).origin}catch(e){try{o=new URL(new URL(l.href).origin).origin}catch(e){o=''}}var u='/cdn-cgi/challenge-platform/scripts/jsd/main.js?ray=a5d89abbbdf744ce',a=document.createElement('script');a.src=o?new URL(u,o).href:u;document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"106a707895e8455b9ea3af65cedaf1a7","r":1,"spa":2}' crossorigin="anonymous"></script>
+</body>
+</html>
+    

@@ -1,0 +1,37 @@
+{
+  "batch": "southmidwest",
+  "ready": 13,
+  "pending_digitize": 11,
+  "not_found": 0,
+  "skipped_contested": 0,
+  "eruvIdsReady": [
+    "us-fl-boca",
+    "us-fl-hollywood",
+    "us-ga-atlanta",
+    "us-il-chicago-lakeview",
+    "us-il-lincolnwood",
+    "us-il-skokie",
+    "us-la-new-orleans",
+    "us-oh-cincinnati",
+    "us-oh-cleveland",
+    "us-oh-columbus",
+    "us-tx-dallas-south",
+    "us-tx-plano",
+    "us-wi-bayside"
+  ],
+  "eruvIdsPending": [
+    "us-fl-miami-beach",
+    "us-fl-surfside-33154",
+    "us-il-buffalo-grove",
+    "us-il-chicago-south-side",
+    "us-il-west-rogers-park",
+    "us-mi-detroit",
+    "us-mn-st-louis-park",
+    "us-nc-durham",
+    "us-oh-beachwood-east",
+    "us-tx-houston",
+    "us-wi-milwaukee-east"
+  ],
+  "checkedAt": "2026-11-20T15:56:30.114Z",
+  "total": 24
+}

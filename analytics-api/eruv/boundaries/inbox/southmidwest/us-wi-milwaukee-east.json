@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-wi-milwaukee-east",
+  "status": "pending_digitize",
+  "sourceType": "google_my_maps",
+  "sourceUrl": "https://eruvstat.us/milwaukee",
+  "googleMyMapsMid": "1a-dkKWmPhOmTQzLBNUnouqHK9GRRDKkN",
+  "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: Layer still labeled \"Milwaukee East Side Eruv (PROPOSED)\" — skip promote.",
+  "checkedAt": "2026-11-20T15:53:56.653Z",
+  "geometry": null
+}

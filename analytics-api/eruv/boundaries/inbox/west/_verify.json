@@ -1,0 +1,48 @@
+{
+  "batch": "west",
+  "checkedAt": "2026-11-20T15:42:00.000Z",
+  "results": [
+    {
+      "eruvId": "us-az-phoenix",
+      "verdict": "CONFIRMED",
+      "reason": "Inbox MultiPolygon bbox (~15th Ave–16th St, Highland canal–Northern) matches published Phoenix Community Eruv street box and BJC/phoenixeruv My Maps; mid in central Phoenix near Beth Joseph, not the separate Valley Eruv Project.",
+      "officialUrl": "https://www.bjcphoenix.org/eruv"
+    },
+    {
+      "eruvId": "us-ca-eastbayshore",
+      "verdict": "CONFIRMED",
+      "reason": "Geometry matches berkeleyeruv.org/boundaries Google My Maps labeled Eastbayshore Eruv (Berkeley/Albany) as of February 2024; mid in west Berkeley/Albany corridor.",
+      "officialUrl": "https://berkeleyeruv.org/boundaries"
+    },
+    {
+      "eruvId": "us-ca-los-angeles",
+      "verdict": "CONFIRMED",
+      "reason": "Huge LA Community Eruv bbox ~-118.48..-118.31, 34.03..34.16 matches laeruv.com/boundaries description (10 / 405 / 101 / Western); mid in Beverly Hills–West Hollywood corridor.",
+      "officialUrl": "https://laeruv.com/boundaries/"
+    },
+    {
+      "eruvId": "us-ca-valley",
+      "verdict": "CONFIRMED",
+      "reason": "Official valleyeruv.org/boundaries My Maps (Valley Eruv Map 2026); bbox aligns with 101/405/118/170 freeway nest; mid NW of Valley Village matches site note that Orthodox community sits in SE corner of a ~27 sq mi eruv.",
+      "officialUrl": "https://valleyeruv.org/boundaries/"
+    },
+    {
+      "eruvId": "us-co-east-denver",
+      "verdict": "CONFIRMED",
+      "reason": "Matches denvereruv.org printable East Denver map: ~Colorado Blvd/Josephine west, Yosemite east, 14th Ave north, Florida Ave south; mid in Hilltop/Cranmer Park area with EDOS/BMH-BJ/YI dens.",
+      "officialUrl": "https://denvereruv.org/denver-eruv-map"
+    },
+    {
+      "eruvId": "us-or-portland",
+      "verdict": "SUSPECT",
+      "reason": "portlanderuv.com/boundaries states the published My Maps is a generalized overview, not precise or updated, and must not be relied on for Shabbos; geometry is SW Portland (Hillsdale/Multnomah) but accuracy unverifiable from public source.",
+      "officialUrl": "https://portlanderuv.com/boundaries"
+    },
+    {
+      "eruvId": "us-wa-seward-park",
+      "verdict": "CONFIRMED",
+      "reason": "Matches eruvstat.us/sewardpark public My Maps (Seward Park peninsula); includes 55th/Othello sidewalk cutout notes consistent with BCMH/EruvStatus cautions; mid at Seward Park.",
+      "officialUrl": "https://eruvstat.us/sewardpark"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-mn-st-louis-park",
+  "status": "pending_digitize",
+  "sourceType": "image",
+  "sourceUrl": "https://www.darcheinoammn.org/eruv-map",
+  "googleMyMapsMid": null,
+  "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: darcheinoammn.org/eruv-map is Wix image map (Sep 2025 update). No My Maps/KML/leaflet #map-data.",
+  "checkedAt": "2026-11-20T15:53:56.653Z",
+  "geometry": null
+}

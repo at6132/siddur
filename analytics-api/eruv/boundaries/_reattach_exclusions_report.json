@@ -1,0 +1,453 @@
+[
+  {
+    "id": "us-ct-stamford",
+    "action": "normalize-only",
+    "holes": 0
+  },
+  {
+    "id": "us-ct-west-hartford",
+    "batch": "midatlantic",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-dc-kesher",
+    "batch": "midatlantic",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ma-cambridge-somerville",
+    "batch": "midatlantic",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ma-greater-boston",
+    "batch": "midatlantic",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ma-longmeadow",
+    "action": "normalize-only",
+    "holes": 0
+  },
+  {
+    "id": "us-ma-malden",
+    "batch": "midatlantic",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ma-sharon",
+    "action": "normalize-only",
+    "holes": 0
+  },
+  {
+    "id": "us-md-baltimore",
+    "batch": "midatlantic",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-md-potomac",
+    "action": "normalize-only",
+    "holes": 0
+  },
+  {
+    "id": "us-md-silver-spring",
+    "batch": "midatlantic",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-pa-center-city",
+    "action": "normalize-only",
+    "holes": 0
+  },
+  {
+    "id": "us-pa-main-line",
+    "batch": "midatlantic",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-pa-pittsburgh",
+    "batch": "midatlantic",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-pa-university-city",
+    "batch": "midatlantic",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ri-providence",
+    "batch": "midatlantic",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-va-fairfax",
+    "batch": "midatlantic",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-nj-cherry-hill-west",
+    "batch": "ne",
+    "action": "holes",
+    "holesBefore": 1,
+    "holesAfter": 1,
+    "exclRings": 2
+  },
+  {
+    "id": "us-nj-englewood",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-nj-fair-lawn",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-nj-highland-park",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-nj-new-brunswick",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-nj-passaic-clifton",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-nj-teaneck",
+    "action": "normalize-only",
+    "holes": 0
+  },
+  {
+    "id": "us-nj-west-orange",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-far-rockaway",
+    "batch": "ne",
+    "action": "holes",
+    "holesBefore": 6,
+    "holesAfter": 6,
+    "exclRings": 6
+  },
+  {
+    "id": "us-ny-five-towns",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-flatbush",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-forest-hills",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-great-neck",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-kew-gardens",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-kgh",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-manhattan",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-monsey",
+    "batch": "ne",
+    "action": "holes",
+    "holesBefore": 1,
+    "holesAfter": 1,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-riverdale",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-rochester",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-sephardic-brooklyn",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-west-hempstead",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-white-plains",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ny-willowbrook",
+    "batch": "ne",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-fl-boca",
+    "batch": "southmidwest",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-fl-hollywood",
+    "batch": "southmidwest",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ga-atlanta",
+    "batch": "southmidwest",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-il-chicago-lakeview",
+    "batch": "southmidwest",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-il-lincolnwood",
+    "batch": "southmidwest",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-il-skokie",
+    "batch": "southmidwest",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-la-new-orleans",
+    "batch": "southmidwest",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-oh-cincinnati",
+    "action": "normalize-only",
+    "holes": 1
+  },
+  {
+    "id": "us-oh-cleveland",
+    "batch": "southmidwest",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-oh-columbus",
+    "batch": "southmidwest",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-tx-dallas-south",
+    "batch": "southmidwest",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-tx-plano",
+    "batch": "southmidwest",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-wi-bayside",
+    "batch": "southmidwest",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-az-phoenix",
+    "batch": "west",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ca-eastbayshore",
+    "batch": "west",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ca-los-angeles",
+    "batch": "west",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-ca-valley",
+    "batch": "west",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-co-east-denver",
+    "batch": "west",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  },
+  {
+    "id": "us-wa-seward-park",
+    "batch": "west",
+    "action": "no-holes",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "exclRings": 0
+  }
+]

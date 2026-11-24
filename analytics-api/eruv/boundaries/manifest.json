@@ -1,0 +1,740 @@
+{
+  "updatedAt": "2026-11-20T17:24:59.262Z",
+  "entries": {
+    "us-va-fairfax": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1yYn4rwutUyPgw-X6Ypy4Q1AJPul3ZefU&forcekml=1",
+      "googleMyMapsMid": "1yYn4rwutUyPgw-X6Ypy4Q1AJPul3ZefU",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=26181. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=26181. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=10.0",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-fl-miami-beach": {
+      "status": "pending_digitize",
+      "sourceType": "pdf",
+      "sourceUrl": "https://www.miamibeacheruv.org/_files/ugd/ec5ef5_3f2f706d83ac471d9d5054e9a1c933cd.pdf",
+      "googleMyMapsMid": "1XhSNBTYm0pkAkbe7SfBZnTkULJ3G3r0U",
+      "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: No post-2025-09-12 separate south-of-73rd vector found. Official PDF https://www.miamibeacheruv.org/_files/ugd/ec5ef5_3f2f706d83ac471d9d5054e9a1c933cd.pdf. Unaffiliated My Maps mid=1XhSNBTYm0pkAkbe7SfBZnTkULJ3G3r0U still has combined \"Miami Beach/Bal Harbour Eruv\" — do not use.",
+      "checkedAt": "2026-11-20T15:53:56.653Z",
+      "hasGeometry": false
+    },
+    "us-tx-houston": {
+      "status": "pending_digitize",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.resourcehouston.com/eruv-maps",
+      "googleMyMapsMid": "1DIepzYQLngMdTUpZjKduUZMB1JJsiy0",
+      "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: City-wide id. Only public My Maps is Northfield (YI/Beth Rambam/Chabad) mid=1DIepzYQLngMdTUpZjKduUZMB1JJsiy0. Meyerland/UOS on resourcehouston.com + kollelhouston.org are image maps only — no separate My Maps mids found. Keep pending (do not promote Northfield as city-wide).",
+      "checkedAt": "2026-11-20T15:53:56.653Z",
+      "hasGeometry": false
+    },
+    "us-nj-cherry-hill-west": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1Lc9bhHT4Z2wImel5vsh7qTjynQpupw4X&forcekml=1",
+      "googleMyMapsMid": "1Lc9bhHT4Z2wImel5vsh7qTjynQpupw4X",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 1→1 exclRings=2 kmlBytes=47378. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 1→0 exclRings=0 kmlBytes=47378. | RESTORE 2026-11-20T17:13:00.767Z: outer=line-stitch holes=1 (was 1) diag=4.2km ",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-nj-englewood": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1r_PmdS0s-jcJd3JQ9xK5u2vTiulr2d8&forcekml=1",
+      "googleMyMapsMid": "1r_PmdS0s-jcJd3JQ9xK5u2vTiulr2d8",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=10252. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=10252. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=10.7",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-nj-highland-park": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1xoVjPr-xjEdWLns4l5rdxSEoxJ4&forcekml=1",
+      "googleMyMapsMid": "1xoVjPr-xjEdWLns4l5rdxSEoxJ4",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=110175. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=110175. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=6.8",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-nj-new-brunswick": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1xoVjPr-xjEdWLns4l5rdxSEoxJ4&forcekml=1",
+      "googleMyMapsMid": "1xoVjPr-xjEdWLns4l5rdxSEoxJ4",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=110175. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=110175. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=6.8",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-five-towns": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1uh_hbGmyful743HBD5E7HNj7fc4&forcekml=1",
+      "googleMyMapsMid": "1uh_hbGmyful743HBD5E7HNj7fc4",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=347535. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=347535. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=9.4",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-forest-hills": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1_eQDwge-W-S5RpyvQCMDLAUarfhIlJI-&forcekml=1",
+      "googleMyMapsMid": "1_eQDwge-W-S5RpyvQCMDLAUarfhIlJI-",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=45324. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=45324. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=5.4k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-riverdale": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1S_PRTvgXtfvN0KwXEq6-WYKC1UM&forcekml=1",
+      "googleMyMapsMid": "1S_PRTvgXtfvN0KwXEq6-WYKC1UM",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=27387. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=27387. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=5.6k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-rochester": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1NG81ulYTbCuUSORzytk9xVU62x9_Ts8&forcekml=1",
+      "googleMyMapsMid": "1NG81ulYTbCuUSORzytk9xVU62x9_Ts8",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=3137. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=3137. | EXCLUSIONS 2026-11-20T16:08:03.734Z: mid reprocess holes=0 (was 0) kmlBytes=3137",
+      "checkedAt": "2026-11-20T16:08:03.734Z",
+      "hasGeometry": true
+    },
+    "us-az-phoenix": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=198udD8a6H525a7TJd_d6jx4BNFDnVzg&forcekml=1",
+      "googleMyMapsMid": "198udD8a6H525a7TJd_d6jx4BNFDnVzg",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=20872. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=20872. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=8.1k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ca-eastbayshore": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1RssDcMoyCeRmWSl0h_FOa1hbaFeEmzQ&forcekml=1",
+      "googleMyMapsMid": "1RssDcMoyCeRmWSl0h_FOa1hbaFeEmzQ",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=14257. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=14257. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=5.2k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ca-los-angeles": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=zYmwzOmdimqc.kGkzVPziAJ4o&forcekml=1",
+      "googleMyMapsMid": "zYmwzOmdimqc.kGkzVPziAJ4o",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=6053. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=6053. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=21.4k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ca-valley": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1mUbjy7DgsP3-4k18Ckj1_klutXi1EQs&forcekml=1",
+      "googleMyMapsMid": "1mUbjy7DgsP3-4k18Ckj1_klutXi1EQs",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=8852. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=8852. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=15.3k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-co-east-denver": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1WdPzgayYC7uWHzcXWmQ1pnZkaW-b5Ws&forcekml=1",
+      "googleMyMapsMid": "1WdPzgayYC7uWHzcXWmQ1pnZkaW-b5Ws",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=39460. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=39460. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=7.9k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-or-portland": {
+      "status": "pending_digitize",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1wPq14FvCOpx3gH2elbTKE3UO4v0&forcekml=1",
+      "googleMyMapsMid": "1wPq14FvCOpx3gH2elbTKE3UO4v0",
+      "notes": "HARD HUNT 2026-11-20: portlanderuv.com/boundaries still states the public My Maps (mid=1wPq14FvCOpx3gH2elbTKE3UO4v0) is a generalized overview, not updated with actual boundaries, must not be relied on for Shabbos, and detailed boundaries are not posted publicly. No alternate community-authoritative vector found. Do not promote. | prior REPROCESS MultiPolygon pts=156 diag=5.4km outcome=skip",
+      "checkedAt": "2026-11-20T15:55:00.000Z",
+      "hasGeometry": false
+    },
+    "us-wa-seward-park": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1vw5JQNxAruOYY1jW5eU23UWCZp7UCj6z&forcekml=1",
+      "googleMyMapsMid": "1vw5JQNxAruOYY1jW5eU23UWCZp7UCj6z",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=39206. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=39206. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=3.8k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-nj-fair-lawn": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1iF-7pT11IJHL9EPtOWFo0aYljwk&forcekml=1",
+      "googleMyMapsMid": "1iF-7pT11IJHL9EPtOWFo0aYljwk",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=8717. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=8717. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=7.2km",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-nj-passaic-clifton": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1i1k6AOCv68pODbvRirBdwd-egTEq5GlY&forcekml=1",
+      "googleMyMapsMid": "1i1k6AOCv68pODbvRirBdwd-egTEq5GlY",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=41416. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=41416. | RESTORE 2026-11-20T17:13:00.767Z: outer=line-stitch holes=0 (was 0) diag=4.4km ",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-far-rockaway": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1Qdx7LIutQIuAc1YXUUY1zSuFvaFCYvkd&forcekml=1",
+      "googleMyMapsMid": "1Qdx7LIutQIuAc1YXUUY1zSuFvaFCYvkd",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 6→6 exclRings=6 kmlBytes=43368. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 6→6 exclRings=6 kmlBytes=43368. | RESTORE 2026-11-20T17:13:00.767Z: outer=line-stitch holes=6 (was 6) diag=5.2km ",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-kew-gardens": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1oWKPUjOgkbaCCDO3LihQNsoElZuBB_4&forcekml=1",
+      "googleMyMapsMid": "1oWKPUjOgkbaCCDO3LihQNsoElZuBB_4",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=23534. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=23534. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=3.1k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-monsey": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1lUGTE1wAI3l5hS4ei6ZttsC5Got25bqY&forcekml=1",
+      "googleMyMapsMid": "1lUGTE1wAI3l5hS4ei6ZttsC5Got25bqY",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 1→1 exclRings=0 kmlBytes=111338. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 1→0 exclRings=0 kmlBytes=111338. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=1 (was 1) diag=21.",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-willowbrook": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=10KAGOR4hur5Txk7AdQm8-PkzVmk&forcekml=1",
+      "googleMyMapsMid": "10KAGOR4hur5Txk7AdQm8-PkzVmk",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=24069. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=24069. | RESTORE 2026-11-20T17:13:00.767Z: outer=line-stitch holes=0 (was 0) diag=4.8km ",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-fl-surfside-33154": {
+      "status": "pending_digitize",
+      "sourceType": "pdf",
+      "sourceUrl": "https://eruvstat.us/33154",
+      "googleMyMapsMid": "1XhSNBTYm0pkAkbe7SfBZnTkULJ3G3r0U",
+      "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: No post-split Surfside/Bal Harbour/Bay Harbor-only vector found. Same unaffiliated mid=1XhSNBTYm0pkAkbe7SfBZnTkULJ3G3r0U is combined pre-split — do not use. Status page eruvstat.us/33154 has no KML.",
+      "checkedAt": "2026-11-20T15:53:56.653Z",
+      "hasGeometry": false
+    },
+    "us-ga-atlanta": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1wM-p5MvwdiEFf8dLPBfIVdF7mU2uoTM&forcekml=1",
+      "googleMyMapsMid": "1wM-p5MvwdiEFf8dLPBfIVdF7mU2uoTM",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=66446. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=66446. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=7.3k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-il-buffalo-grove": {
+      "status": "pending_digitize",
+      "sourceType": "image",
+      "sourceUrl": "https://www.bgeruv.com/uploads/1/5/4/3/1543621/buffalo-grove-eruv-map-web-8-5-x-11-3_orig.png",
+      "googleMyMapsMid": null,
+      "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: Still image-only at bgeruv.com PNG. Eruv Homes has no boundary. No My Maps/KML found.",
+      "checkedAt": "2026-11-20T15:53:56.653Z",
+      "hasGeometry": false
+    },
+    "us-il-chicago-lakeview": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1-6QgrQuHyjPyi_HwtdEZ-SEGGRDdovw&forcekml=1",
+      "googleMyMapsMid": "1-6QgrQuHyjPyi_HwtdEZ-SEGGRDdovw",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=32383. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=32383. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=5.5k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-il-chicago-south-side": {
+      "status": "pending_digitize",
+      "sourceType": "image",
+      "sourceUrl": "https://eruvstat.us/sites/default/files/inline-images/Screenshot%202023-08-09%20103521.jpg",
+      "googleMyMapsMid": null,
+      "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: eruvstat.us/southside still screenshot-only (street bounds N 43rd / W Rock Island Metra / S 67th / E Lake Park). No mid/KML.",
+      "checkedAt": "2026-11-20T15:53:56.653Z",
+      "hasGeometry": false
+    },
+    "us-il-lincolnwood": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1O4dLqogvldY3dp-NW4KoqObnX6ZxgrU&forcekml=1",
+      "googleMyMapsMid": "1O4dLqogvldY3dp-NW4KoqObnX6ZxgrU",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=69113. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=69113. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=8.3k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-il-skokie": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1ICYNI4wKe-2f-OPXVq3sImaTrhWoNr7i&forcekml=1",
+      "googleMyMapsMid": "1ICYNI4wKe-2f-OPXVq3sImaTrhWoNr7i",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=32524. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=32524. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=5.5k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-il-west-rogers-park": {
+      "status": "pending_digitize",
+      "sourceType": "pdf",
+      "sourceUrl": "https://www.crcweb.org/eruv%20maps.pdf",
+      "googleMyMapsMid": null,
+      "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: cRc PDF https://www.crcweb.org/eruv%20maps.pdf + chicagoeruv.tripod.com raster. Street bounds known (Channel/Yellow Line/UP-N/Peterson–Lincoln) but no My Maps/KML.",
+      "checkedAt": "2026-11-20T15:53:56.653Z",
+      "hasGeometry": false
+    },
+    "us-la-new-orleans": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1bjOBig28euJQUMwzMHybRwDaj4UM9gDj&forcekml=1",
+      "googleMyMapsMid": "1bjOBig28euJQUMwzMHybRwDaj4UM9gDj",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=9383. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=9383. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=9.3km",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-mi-detroit": {
+      "status": "pending_digitize",
+      "sourceType": "image",
+      "sourceUrl": "http://www.frummichigan.com/images/eruv-large.jpg",
+      "googleMyMapsMid": "1NZzCc9LzaJY87iTRVX-uDDTV_Dk",
+      "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: Full Oak Park/Southfield Project Eruv is raster only (frummichigan.com/images/eruv-large.jpg; YIOP links same). My Maps mid=1NZzCc9LzaJY87iTRVX-uDDTV_Dk remains Southfield-only stub — not promoted.",
+      "checkedAt": "2026-11-20T15:53:56.653Z",
+      "hasGeometry": false
+    },
+    "us-oh-beachwood-east": {
+      "status": "pending_digitize",
+      "sourceType": "image",
+      "sourceUrl": "https://www.bees-eruv.org/map-and-supervision",
+      "googleMyMapsMid": null,
+      "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: BEES street bounds Richmond/Cedar/I-271/Shaker only; Wix image map, no KML/My Maps.",
+      "checkedAt": "2026-11-20T15:53:56.653Z",
+      "hasGeometry": false
+    },
+    "us-oh-cincinnati": {
+      "status": "ready",
+      "sourceType": "web_map",
+      "sourceUrl": "https://www.cincinnatieruv.org/",
+      "googleMyMapsMid": null,
+      "notes": "HARD HUNT 2026-11-20: Official #map-data on cincinnatieruv.org (pts=110 diag=5.3km, holes=1).",
+      "checkedAt": "2026-11-20T15:52:16.383Z",
+      "hasGeometry": true
+    },
+    "us-oh-cleveland": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1ZlbNMnkJ7l6QI9OKCchHPvCDYsW_snk7&forcekml=1",
+      "googleMyMapsMid": "1ZlbNMnkJ7l6QI9OKCchHPvCDYsW_snk7",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=18078. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=18078. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=10.2",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-tx-dallas-south": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1kvC5HfJE52YOsXau-DUcIARzuhbKPTa2&forcekml=1",
+      "googleMyMapsMid": "1kvC5HfJE52YOsXau-DUcIARzuhbKPTa2",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=71502. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=71502. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=15.5",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-tx-plano": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=12yEKzWq8a1kuGu31nZt_ldthzg4&forcekml=1",
+      "googleMyMapsMid": "12yEKzWq8a1kuGu31nZt_ldthzg4",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=3355. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=3355. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=6.4km",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-wi-bayside": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1a-dkKWmPhOmTQzLBNUnouqHK9GRRDKkN&forcekml=1",
+      "googleMyMapsMid": "1a-dkKWmPhOmTQzLBNUnouqHK9GRRDKkN",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=50448. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=50448. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=23.4",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-wi-milwaukee-east": {
+      "status": "pending_digitize",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://eruvstat.us/milwaukee",
+      "googleMyMapsMid": "1a-dkKWmPhOmTQzLBNUnouqHK9GRRDKkN",
+      "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: Layer still labeled \"Milwaukee East Side Eruv (PROPOSED)\" — skip promote.",
+      "checkedAt": "2026-11-20T15:53:56.653Z",
+      "hasGeometry": false
+    },
+    "us-ca-la-jolla": {
+      "status": "pending_digitize",
+      "sourceType": "pdf",
+      "sourceUrl": "https://images.shulcloud.com/14939/uploads/Eruv/LaJollaEruvMap.pdf",
+      "googleMyMapsMid": null,
+      "notes": "HARD HUNT 2026-11-20: Official Adat Yeshurun map is ShulCloud PDF (raster boundary + hotspot images LaJollaEruvoverviewmapandinfo.jpg / LaJollaEruvMaphotspotsandinfo.jpg). PDF has no My Maps mid, KML, or GeoJSON; no public Google My Maps / KML found via eruv.org, eruvstatus.org, eruvfinder, GitHub, or web search. Leave pending_digitize until vector exists.",
+      "checkedAt": "2026-11-20T15:55:00.000Z",
+      "hasGeometry": false
+    },
+    "us-ct-new-haven": {
+      "status": "pending_digitize",
+      "sourceType": "pdf",
+      "sourceUrl": "http://www.nheruv.net/wp-content/uploads/2015/05/eruvannot1.pdf",
+      "googleMyMapsMid": null,
+      "notes": "Best source: annotated PDF on nheruv.net/eruv-maps (also combined Yale/NH PDF). Eruv Homes: no mapped boundary / no mid. No My Maps, KML, leaflet, or GeoJSON found.",
+      "checkedAt": "2026-11-20T15:53:28.211Z",
+      "hasGeometry": false
+    },
+    "us-ct-stamford": {
+      "status": "ready",
+      "sourceType": "web_map",
+      "sourceUrl": "http://www.nusion.com/youngisrael/StamfordEruv.html",
+      "googleMyMapsMid": null,
+      "notes": "Boundary polylines from Young Israel / community interactive map page (original + NW + NE extensions closed into rings)",
+      "checkedAt": "2026-11-20T15:21:41.630Z",
+      "hasGeometry": true
+    },
+    "us-ct-west-hartford": {
+      "status": "ready",
+      "sourceType": "kml",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1W0CR67FxQwa0-ofIsHiSqEaH9VY3Berj&forcekml=1",
+      "googleMyMapsMid": "1W0CR67FxQwa0-ofIsHiSqEaH9VY3Berj",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=8396. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=8396. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=8.1km",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-dc-kesher": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=14Acvpswpk_Q2Q7z_AO0e1SPd1WHwk7M&forcekml=1",
+      "googleMyMapsMid": "14Acvpswpk_Q2Q7z_AO0e1SPd1WHwk7M",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=84837. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=84837. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=19.0",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-dc-shepherd-park": {
+      "status": "pending_digitize",
+      "sourceType": "pdf",
+      "sourceUrl": "https://www.wsat.org/wp-content/uploads/2019/11/SHEPHERD_PARK_WOODSIDE_ERUV_NOV_2019.pdf",
+      "googleMyMapsMid": null,
+      "notes": "Best source: 2019 combined PDF (wsat.org / ohevdc.org). Also raster JPG on wsat.org/eruv (2025/07/eruv_map_with_markings). MoCo 2010 KMZ Woodside layer is pre-combined/incomplete. mikeolkin leaflet KML is Longmeadow, not SP. No My Maps mid / GeoJSON.",
+      "checkedAt": "2026-11-20T15:53:28.211Z",
+      "hasGeometry": false
+    },
+    "us-ma-cambridge-somerville": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1ynXKlATF8_9gQ_ZHaPoeDfVHigI&forcekml=1",
+      "googleMyMapsMid": "1ynXKlATF8_9gQ_ZHaPoeDfVHigI",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=19017. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=19017. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=9.8k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ma-greater-boston": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1tvzN1lm0vi9vmObe9_SVpnxCOmc&forcekml=1",
+      "googleMyMapsMid": "1tvzN1lm0vi9vmObe9_SVpnxCOmc",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=57842. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=57842. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=10.1",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ma-longmeadow": {
+      "status": "ready",
+      "sourceType": "kml",
+      "sourceUrl": "https://www.springfielderuv.org/eruv/EruvBounds.kml",
+      "googleMyMapsMid": null,
+      "notes": "Official EruvBounds.kml from springfielderuv.org leaflet map",
+      "checkedAt": "2026-11-20T15:21:41.630Z",
+      "hasGeometry": true
+    },
+    "us-ma-malden": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1AS_cN2Re915Y9NCXqjV32sI7f9vC4FQ&forcekml=1",
+      "googleMyMapsMid": "1AS_cN2Re915Y9NCXqjV32sI7f9vC4FQ",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=23766. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=23766. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=2.8k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ma-sharon": {
+      "status": "ready",
+      "sourceType": "web_map",
+      "sourceUrl": "https://www.sharoneruv.org/data/eruv_geojson_v208.js",
+      "googleMyMapsMid": null,
+      "notes": "Official GeoJSON from sharoneruv.org map (v208); printable PDF also at site",
+      "checkedAt": "2026-11-20T15:21:41.630Z",
+      "hasGeometry": true
+    },
+    "us-md-baltimore": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1eLRnHBNpeHtJxk1VOBLO_NZ2SmA&forcekml=1",
+      "googleMyMapsMid": "1eLRnHBNpeHtJxk1VOBLO_NZ2SmA",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=8742. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=8742. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=8.5km",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-md-potomac": {
+      "status": "ready",
+      "sourceType": "kml",
+      "sourceUrl": "https://maps.google.com/maps/ms?ie=UTF8&msa=0&output=kml&msid=114741809335544004305.0004930b5864817250f67",
+      "googleMyMapsMid": null,
+      "notes": "Potomac Eruv polygon from classic Google Maps KMZ (msid=114741809335544004305.0004930b5864817250f67) linked from blog.historian4hire.net/2010/10/20/mapping-moco-eruvim (Oct 2010 MoCo eruvim compilation). Matches YIEIP triangle (I-270 / Falls / Bells Mill / Democracy / Westlake). Eruv Homes lists no mapped boundary / no mid. YIEIP notes later local tweaks; no newer My Maps/GeoJSON found. KMZ re-verified.",
+      "checkedAt": "2026-11-20T15:53:28.211Z",
+      "hasGeometry": true
+    },
+    "us-md-silver-spring": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1WvS7elEjWZFUEvMUpoCtDuMWZqo&forcekml=1",
+      "googleMyMapsMid": "1WvS7elEjWZFUEvMUpoCtDuMWZqo",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=21762. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=21762. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=10.2",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-pa-center-city": {
+      "status": "ready",
+      "sourceType": "web_map",
+      "sourceUrl": "https://www.centercityeruv.com/map-data.geojson",
+      "googleMyMapsMid": null,
+      "notes": "centercityeruv.com map-data.geojson official boundary segments stitched per site JS",
+      "checkedAt": "2026-11-20T15:22:27.649Z",
+      "hasGeometry": true
+    },
+    "us-pa-germantown": {
+      "status": "pending_digitize",
+      "sourceType": "pdf",
+      "sourceUrl": "https://germantownjewishcentre.org/wp-content/uploads/2024/05/boundary042523_wo-ZIP.pdf",
+      "googleMyMapsMid": null,
+      "notes": "Best source: official GJC Map PDF. Philly Legistar 240282 attachments are bill text (street table), no map exhibit/GIS. No My Maps / KML / leaflet / GeoJSON found.",
+      "checkedAt": "2026-11-20T15:53:28.211Z",
+      "hasGeometry": false
+    },
+    "us-pa-main-line": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1NWCpAovU1JuNAzd0KuSbWjzu7ou0-OwU&forcekml=1",
+      "googleMyMapsMid": "1NWCpAovU1JuNAzd0KuSbWjzu7ou0-OwU",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=15765. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=15765. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=5.6k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-pa-pittsburgh": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1KD0vKCWyj_9EY32n_h2rbdfyYyekMWby&forcekml=1",
+      "googleMyMapsMid": "1KD0vKCWyj_9EY32n_h2rbdfyYyekMWby",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=14776. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=14776. | EXCLUSIONS 2026-11-20T16:08:03.734Z: mid reprocess holes=0 (was 0) kmlBytes=147",
+      "checkedAt": "2026-11-20T16:08:03.734Z",
+      "hasGeometry": true
+    },
+    "us-pa-university-city": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1PfS1qLpjM4WYW7eQITxRA8vlrs2LdROs&forcekml=1",
+      "googleMyMapsMid": "1PfS1qLpjM4WYW7eQITxRA8vlrs2LdROs",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=10297. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=10297. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=3.1k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ri-providence": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1FHEmDXbpqmeEsTanli57RZvobN0&forcekml=1",
+      "googleMyMapsMid": "1FHEmDXbpqmeEsTanli57RZvobN0",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=17968. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=17968. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=5.6k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-nj-lakewood": {
+      "status": "skipped_contested",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/viewer?mid=10Z4OwQcnyTbiplJerWnR31SxRoIWcxJd",
+      "googleMyMapsMid": "10Z4OwQcnyTbiplJerWnR31SxRoIWcxJd",
+      "notes": "No single communal Lakewood eruv; neighborhood maps (e.g. Eiruv Mehudar mid) exist but reliance is contested by local rabbonim; skip rather than publish as authoritative | REPROCESS 2026-11-20T15:46:03.993Z: Polygon pts=43 diag=4.7km outcome=skip",
+      "checkedAt": "2026-11-20T15:46:03.993Z",
+      "hasGeometry": false
+    },
+    "us-nj-teaneck": {
+      "status": "ready",
+      "sourceType": "official_xml",
+      "sourceUrl": "https://www.tberuv.org/eruvData.xml",
+      "googleMyMapsMid": null,
+      "notes": "HARD-HUNT 2026-11-20T15:54:19.276Z: Extracted North+South eruv Polygon paths from tberuv.org/eruvData.xml (loaded by Map.html google.maps.Polygon). rings=2",
+      "checkedAt": "2026-11-20T15:54:19.276Z",
+      "hasGeometry": true
+    },
+    "us-nj-west-orange": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1Wh8Ac_wB2LRT933JCWImUiX7cdy1uBWb&forcekml=1",
+      "googleMyMapsMid": "1Wh8Ac_wB2LRT933JCWImUiX7cdy1uBWb",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=36537. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=36537. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=12.7",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-flatbush": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1VLdHiyP0wgl5KO5i_HEiKe2IDvA&forcekml=1",
+      "googleMyMapsMid": "1VLdHiyP0wgl5KO5i_HEiKe2IDvA",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=24021. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=24021. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders+hint:flatbush eruv holes=",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-great-neck": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1G5xK1KP8fw99aI6PudKpAb-JJhj-zOE&forcekml=1",
+      "googleMyMapsMid": "1G5xK1KP8fw99aI6PudKpAb-JJhj-zOE",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=34607. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=34607. | RESTORE 2026-11-20T17:13:00.767Z: outer=line-stitch holes=0 (was 0) diag=8.2km ",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-hillcrest": {
+      "status": "pending_digitize",
+      "sourceType": "pdf",
+      "sourceUrl": "http://yihillcrest.org/wp-content/uploads/2023/06/Eruv-Map-Queens-2023.pdf",
+      "googleMyMapsMid": null,
+      "notes": "HARD-HUNT 2026-11-20T15:54:19.276Z: YI Hillcrest Eruv-Map-Queens-2023.pdf only. eruvhomes.com/eruv/hillcrest-eruv lists no mid/boundary. Remains pending digitize.",
+      "checkedAt": "2026-11-20T15:54:19.276Z",
+      "hasGeometry": false
+    },
+    "us-ny-kgh": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1biE2l51qVq-PW3ov7cTT55SVIYg&forcekml=1",
+      "googleMyMapsMid": "1biE2l51qVq-PW3ov7cTT55SVIYg",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=3418. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=3418. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=4.2km",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-manhattan": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1AJc3ptGTXtSJvLlCmLfmFMCT0To&forcekml=1",
+      "googleMyMapsMid": "1AJc3ptGTXtSJvLlCmLfmFMCT0To",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=18777. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=18777. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=12.1",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-rockland": {
+      "status": "pending_digitize",
+      "sourceType": "image",
+      "sourceUrl": "https://www.rocklanderuv.org/copy-of-about-us",
+      "googleMyMapsMid": null,
+      "notes": "HARD-HUNT 2026-11-20T15:54:19.276Z: rocklanderuv.org map imagery / bmcsmonsey download; eruvhomes.com/eruv/rockland-eruv--monsey has no mid. Remains pending digitize.",
+      "checkedAt": "2026-11-20T15:54:19.276Z",
+      "hasGeometry": false
+    },
+    "us-ny-sephardic-brooklyn": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1VLdHiyP0wgl5KO5i_HEiKe2IDvA&forcekml=1",
+      "googleMyMapsMid": "1VLdHiyP0wgl5KO5i_HEiKe2IDvA",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=24021. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=24021. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders+hint:sepharadi holes=0 (w",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-washington-heights": {
+      "status": "skipped_contested",
+      "sourceType": "none",
+      "sourceUrl": "https://eruv.nyc/",
+      "googleMyMapsMid": null,
+      "notes": "Lower Washington Heights / YU eruv often treated as separate/contested relative to broader Manhattan Eruv; no reliable standalone official polygon source found",
+      "checkedAt": "2026-11-20T15:21:23.136Z",
+      "hasGeometry": false
+    },
+    "us-ny-west-hempstead": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1HiUdjPCu1itXXN6T81KmI0iOtdM&forcekml=1",
+      "googleMyMapsMid": "1HiUdjPCu1itXXN6T81KmI0iOtdM",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=14242. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=14242. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=5.0k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-ny-white-plains": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1GBWC9472ubRfNqSXXos4h5gVB00&forcekml=1",
+      "googleMyMapsMid": "1GBWC9472ubRfNqSXXos4h5gVB00",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=23060. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=23060. | RESTORE 2026-11-20T17:13:00.767Z: outer=line-stitch holes=0 (was 0) diag=7.1km ",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-fl-boca": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1u2KYZZZVl03cS8hsl5jclDl_pPWxIHSg&forcekml=1",
+      "googleMyMapsMid": "1u2KYZZZVl03cS8hsl5jclDl_pPWxIHSg",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=27900. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=27900. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders+hint:east boca community ",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-fl-orlando": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1t9xuHT25PAvglbzCeDCCSW9aJ2hhVig&forcekml=1",
+      "googleMyMapsMid": "1t9xuHT25PAvglbzCeDCCSW9aJ2hhVig",
+      "notes": "Hollywood Community Eruv My Maps from shuloforlando.org (catalog id us-fl-orlando)",
+      "checkedAt": "2026-11-20T15:24:26.982Z",
+      "hasGeometry": true
+    },
+    "us-mn-st-louis-park": {
+      "status": "pending_digitize",
+      "sourceType": "image",
+      "sourceUrl": "https://www.darcheinoammn.org/eruv-map",
+      "googleMyMapsMid": null,
+      "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: darcheinoammn.org/eruv-map is Wix image map (Sep 2025 update). No My Maps/KML/leaflet #map-data.",
+      "checkedAt": "2026-11-20T15:53:56.653Z",
+      "hasGeometry": false
+    },
+    "us-nc-durham": {
+      "status": "pending_digitize",
+      "sourceType": "web_map",
+      "sourceUrl": "https://durhameruv.org/map",
+      "googleMyMapsMid": null,
+      "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: durhameruv.org/map has no extractable mid/KML/#map-data/geojson in HTML. Still needs digitize from site map.",
+      "checkedAt": "2026-11-20T15:53:56.653Z",
+      "hasGeometry": false
+    },
+    "us-oh-columbus": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1IaLhyrMViDIPpCJKO-7WkbqUphxL3QSV&forcekml=1",
+      "googleMyMapsMid": "1IaLhyrMViDIPpCJKO-7WkbqUphxL3QSV",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=14460. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=14460. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=6.7k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    },
+    "us-fl-newark": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1t9xuHT25PAvglbzCeDCCSW9aJ2hhVig&forcekml=1",
+      "googleMyMapsMid": "1t9xuHT25PAvglbzCeDCCSW9aJ2hhVig",
+      "notes": "Assigned id us-fl-newark; Hollywood FL Community Eruv My Maps from shulofhollywood.org/eruv-in-hollywood",
+      "checkedAt": "2026-11-20T15:24:26.982Z",
+      "hasGeometry": true
+    },
+    "us-fl-hollywood": {
+      "status": "ready",
+      "sourceType": "google_my_maps",
+      "sourceUrl": "https://www.google.com/maps/d/kml?mid=1t9xuHT25PAvglbzCeDCCSW9aJ2hhVig&forcekml=1",
+      "googleMyMapsMid": "1t9xuHT25PAvglbzCeDCCSW9aJ2hhVig",
+      "notes": "REATTACH_HOLES 2026-11-20T17:24:49.829Z: holes 0→0 exclRings=0 kmlBytes=28163. | REATTACH_HOLES 2026-11-20T17:23:05.154Z: holes 0→0 exclRings=0 kmlBytes=28163. | RESTORE 2026-11-20T17:13:00.767Z: outer=preferBorders holes=0 (was 0) diag=9.4k",
+      "checkedAt": "2026-11-20T17:13:00.767Z",
+      "hasGeometry": true
+    }
+  },
+  "counts": {
+    "ready": 59,
+    "pending_digitize": 18,
+    "other": 2,
+    "entries": 81
+  }
+}

@@ -1,0 +1,368 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html xmlns="http://www.w3.org/1999/xhtml"
+	  xmlns:v="urn:schemas-microsoft-com:vml">
+	<head>
+		<meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+		<title>Map of the Teaneck-Bergenfield Area Eruv</title>
+		<style type="text/css">
+			v\:* {
+				behavior:url(#default#VML)
+			}
+
+			html, body {
+				width:100%; 
+				height:100%;
+			}
+
+			html {
+				overflow: hidden;
+			}
+
+			body {
+				margin:0px 0px 0px 0px;
+				padding:0px;
+			}
+
+			#map {
+				margin-right:302px;
+				height: 100%
+			}
+
+			#rightpanel {
+				position: absolute;
+				right: 0px;
+				top: 0px;
+				width: 300px;
+				height: 100%;
+				overflow: auto;
+				background-color: #FFFFFF;
+				font-family: Arial, Helvetica, sans-serif;
+				font-size: 11px;
+				border-left: 2px solid black;
+				padding: 10px 5px 0px 10px;
+			}
+
+            #search {
+				size: 40;
+			}
+		</style>
+		<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDtJ0Epk-MZIHuotgDv9NKB6qX8N2mxCz4"></script>		
+		
+		<script>
+			function downloadUrl(url, callback) {
+				var status = -1;
+				var request = createXmlHttpRequest();
+				if (!request) {
+					return false;
+				}
+
+				request.onreadystatechange = function() {
+					if (request.readyState == 4) {
+						try {
+							status = request.status;
+						} catch (e) {
+							// Usually indicates request timed out in FF.
+						}
+						if (status == 200) {
+							callback(request.responseXML, request.status);
+							request.onreadystatechange = function() {};
+						}
+					}
+				}
+				request.open('GET', url, true);
+				try {
+					request.send(null);
+				} catch (e) {
+					changeStatus(e);
+				}
+			};
+
+			/**
+			* Returns an XMLHttp instance to use for asynchronous
+			* downloading. This method will never throw an exception, but will
+			* return NULL if the browser does not support XmlHttp for any reason.
+			* @return {XMLHttpRequest|Null}
+			*/
+			function createXmlHttpRequest() {
+				try {
+					if (typeof ActiveXObject != 'undefined') {
+						return new ActiveXObject('Microsoft.XMLHTTP');
+					} else if (window["XMLHttpRequest"]) {
+						return new XMLHttpRequest();
+					}
+				} catch (e) {
+					changeStatus(e);
+				}
+				return null;
+			};
+	</script>
+
+		
+	</head>
+
+	<body>
+		<div id="map"></div>
+		<div id="rightpanel">
+			<img src="eruvSmall.gif" width="180px" />
+			<br />
+			<br />
+			The Teaneck-Bergenfield Area Eruv consists of two connected <i>Eruvin</i>.
+			The North <i>Eruv</i> is delineated in <font color="#0000FF">Blue</font>, 
+			and the South <i>Eruv</i> in <font color="#FF0000">Red</font>.
+			<br />
+			There are five (5) crossovers between the two sides.
+			<br />
+			It is <b>generally not permissible</b> to carry on any street designated as a border of the <i>Eruv</i>.
+			Moreover, Route 4 crossovers must be utilized with care.
+			<br />
+			One <b>must</b> contact his/her Rabbi regarding the utilization of all border streets and all crossovers.
+			<br />
+			<br />
+<!-- 			<form name="checkForm" action="">
+				<strong>Legend / Toggles</strong> - select box to display<br />
+				<img src="rcbc_shulSmIcon.png" width="25" height="33" />
+				<input type="checkbox" name="rcbcBox" id="rcbcBox" onclick="Markers('rcbcBox')" checked="checked" />
+				RCBC-Affiliated Shuls<br />
+				<img src="shulSmIcon.png" width="25" height="33" />
+				<input type="checkbox" name="shulsBox" id="shulsBox" onclick="Markers('shulsBox')" checked="checked" />
+				Other Shuls / Jewish Institutions<br />
+				<img src="arrowSmIcon.png" width="25" height="33" />
+				<input type="checkbox" name="crossBox" id="crossBox" onclick="Markers('crossBox')" checked="checked" />
+				Crossovers<br />
+			</form>
+ -->
+			<br />
+			<strong>Locate an Address</strong>
+			<br />
+			<form name="addressForm" onsubmit="showAddress(); return false" >
+				<input id="search" type="text" value="">
+				<br />
+				<select id="city">
+					<option value=", Bergenfield, NJ">Bergenfield</option>
+					<option value=", Bogota, NJ">Bogota</option>
+					<option value=", Teaneck, NJ" selected="selected">Teaneck</option>
+					<option value=", New Milford, NJ">New Milford</option>
+				</select>
+				<input type="submit" value="Plot">
+			</form>
+			<br />
+			<br />
+			Have a comment or a suggestion?<br>Send us an email at <a href="mailto:info@tberuv.org">info@tberuv.org</a>.
+		</div>
+		<script type="text/javascript">
+			//<![CDATA[
+
+			// Global Variables
+			var shulList = [];
+			var shulCount = 0;
+			var rcbcList = [];
+			var rcbcCount = 0;
+			var crossoverList = [];
+			var coCount = 0;
+
+
+			var myStyles = [
+				{
+					featureType: "poi",
+					elementType: "labels",
+					stylers: [
+						{visibility: "off"}
+					]
+				}
+			];
+			var map = new google.maps.Map(document.getElementById('map'), {
+				center: new google.maps.LatLng(40.900085, -74.014592),
+				zoom: 13,
+				mapTypeId: google.maps.MapTypeId.ROADMAP,
+				streetViewControl: false,
+				styles: myStyles
+			});
+			
+			var infoPanel = document.getElementById('info-panel');
+
+//				// Monitor the window resize event and let the map know when it occurs 
+//				if (window.attachEvent) { 
+//					window.attachEvent("onresize", function() {this.map.onResize()} ); 
+//				} else { 
+//					window.addEventListener("resize", function() {this.map.onResize()} , false); 
+//				}
+
+//				map.addControl(new GLargeMapControl());
+//				map.addControl(new GMapTypeControl());
+//				map.addControl(new GScaleControl());
+//				map.setCenter(new GLatLng(40.900085, -74.014592), 13);
+
+				// Read XML File
+				downloadUrl("eruvData.xml", function(data) {
+
+						// Draw North and South Eruvs
+						var eruvs = data.documentElement.getElementsByTagName("eruv");
+						for (var eruv=0; eruv < eruvs.length; eruv++) {
+							var color = eruvs[eruv].getAttribute("color");
+							var width = parseInt(eruvs[eruv].getAttribute("width"));
+							var description = eruvs[eruv].getAttribute("description");
+							var lechis = eruvs[eruv].getElementsByTagName("lechi");
+
+							var points = [];
+							for (var lechi = 0; lechi < lechis.length; lechi++) {
+								var lat = parseFloat(lechis[lechi].getAttribute("latitude"));
+								var lng = parseFloat(lechis[lechi].getAttribute("longitude"));
+								points[lechi] = new google.maps.LatLng(lat, lng);
+							}
+							var newEruv = new google.maps.Polygon({
+								path: points, 
+								strokeColor: color, 
+								strokeWeight: width, 
+								strokeOpacity: "0.5", 
+								fillColor: color, 
+								fillOpacity: "0.25"
+							});
+							newEruv.setMap(map);
+						}
+
+
+						// Add markers for Shuls
+						function createMarker(lat, lng, msg, name, type, imageFile) {
+							var point = new google.maps.LatLng(lat, lng);
+//							var imageFile = "";
+							var newMarker = new google.maps.Marker({
+								icon: imageFile,
+								position: point,
+								title: name
+							});
+							
+							var infowindow = new google.maps.InfoWindow({
+								content: msg,
+							});
+							
+							newMarker.addListener('click', () => {
+								infowindow.open({
+									anchor: newMarker,
+									map,
+									shouldFocus: false
+								});
+							});
+
+								
+//							google.maps.event.addListener(marker, "click", function() {
+//								marker.openInfoWindow(msg);
+//							});
+							return newMarker;
+						}
+
+						var markers = data.documentElement.getElementsByTagName("markers");
+						var places = markers[0].getElementsByTagName("place");
+						for (var place = 0; place < places.length; place++) {
+							var type = places[place].getAttribute("type");
+							var lat = parseFloat(places[place].getAttribute("latitude"));
+							var lng = parseFloat(places[place].getAttribute("longitude"));
+							var name = places[place].getAttribute("name");
+							var affil = places[place].getAttribute("affiliation");
+							var scsAddress = places[place].getAttribute("scsAddress");
+							var phone = places[place].getAttribute("phone");
+							var url = places[place].getAttribute("url");
+							var description = places[place].getAttribute("description");
+							if (affil != null) {
+								var msg = "<b>" + name + "<\/b>" + " - " + affil;							
+							} else {
+								var msg = "<b>" + name + "<\/b>";
+							}
+							if (scsAddress != null) {
+								msg += "<br>" + scsAddress;
+							}
+							if (description != null) {
+								msg += "<br>" + description;							
+							}
+							if (phone != null) {
+								msg += "<br>" + phone;
+							}
+							if (url != null) {
+								msg += "<br><a href=http://" + url + ">" + url + "</a>";
+							}
+							if (type == "shul") {
+								shulList[shulCount] = createMarker(lat, lng, msg, name, type, 'shul.png');
+								shulList[shulCount].setMap(map);
+								shulCount++;
+							} else if (type == "RCBC"){
+								rcbcList[rcbcCount] = createMarker(lat, lng, msg, name, type, 'rcbc_shul.png');
+								rcbcList[rcbcCount].setMap(map);
+								rcbcCount++;
+							} else if (type == "crossover") {
+								var arrowNumber = coCount + 1;
+								var arrowFile = 'arrow_' + arrowNumber + '.png';
+								crossoverList[coCount] = createMarker(lat, lng, msg, name, type, arrowFile);
+								crossoverList[coCount].setMap(map);
+								coCount++;
+							} else {
+								createMarker(lat, lng, msg, type).setMap(map);
+							}
+							
+						}
+//						document.getElementById("rcbcBox").checked = true;
+//						document.getElementById("shulsBox").checked = true;
+//						document.getElementById("crossBox").checked = true;
+					})
+
+			// Create a Client Geocoder
+			var GCdr = new google.maps.Geocoder();
+
+			function geocode_result_handler(result, status) {
+			  if (status != google.maps.GeocoderStatus.OK) {
+				alert('Geocoding failed. ' + status);
+			  } else {
+					var marker_title = result[0].formatted_address
+					marker = new google.maps.Marker({
+						position: result[0].geometry.location,
+						title: marker_title,
+						map: map
+					});
+			  }
+			}
+
+			function showAddress() {
+				var city = document.getElementById("city");
+				var search = document.getElementById("search").value + city.options[city.selectedIndex].value;
+
+				// Perform the Geocoding
+				GCdr.geocode({'address': search}, geocode_result_handler)
+			}
+
+			function Markers(type) {
+				map.getInfoWindow().hide();
+				if (document.getElementById(type).checked == false) {
+					if (type == "rcbcBox") {
+						for (var i=0; i <= rcbcCount; i++) {
+							map.removeOverlay(rcbcList[i]);
+						}
+					} else if (type == "shulsBox") {
+						for (var i=0; i <= shulCount; i++) {
+							map.removeOverlay(shulList[i]);
+						}
+					} else if (type == "crossBox") {
+						for (var i=0; i <= coCount; i++) {
+							map.removeOverlay(crossoverList[i]);
+						}
+					}
+				} else {
+					if (type == "rcbcBox") {
+						for (var i=0; i <= rcbcCount; i++) {
+							map.addOverlay(rcbcList[i]);
+						}
+					} else if (type == "shulsBox") {
+						for (var i=0; i <= shulCount; i++) {
+							map.addOverlay(shulList[i]);
+						}
+					} else if (type == "crossBox") {
+						for (var i=0; i <= coCount; i++) {
+							map.addOverlay(crossoverList[i]);
+						}
+					}
+				}
+			}
+			
+
+			//]]>           
+		</script>
+	</body>
+</html>

@@ -1,0 +1,121 @@
+[
+  {
+    "id": "us-nj-cherry-hill-west",
+    "outcome": "promoted",
+    "diag": 4.231776199848725,
+    "n": 130,
+    "dist": 1.6806839056278304
+  },
+  {
+    "id": "us-nj-lakewood",
+    "outcome": "skipped_policy",
+    "diag": 4.71908611729588,
+    "n": 43,
+    "dist": 2.3094478381477597
+  },
+  {
+    "id": "us-nj-passaic-clifton",
+    "outcome": "promoted",
+    "diag": 1.7314077629026805,
+    "n": 50,
+    "dist": 1.6368861274453914
+  },
+  {
+    "id": "us-ny-far-rockaway",
+    "outcome": "promoted",
+    "diag": 5.2117616431217355,
+    "n": 504,
+    "dist": 1.2370114769669627
+  },
+  {
+    "id": "us-ny-flatbush",
+    "outcome": "promoted",
+    "diag": 8.18310403636311,
+    "n": 55,
+    "dist": 1.9932673932546054
+  },
+  {
+    "id": "us-ny-great-neck",
+    "outcome": "still_tiny",
+    "diag": 0.010293573667000561,
+    "n": 4,
+    "dist": 2.192987898820903
+  },
+  {
+    "id": "us-fl-miami-beach",
+    "outcome": "promoted",
+    "diag": 21.69279023932306,
+    "n": 797,
+    "dist": 7.876906935875972
+  },
+  {
+    "id": "us-fl-surfside-33154",
+    "outcome": "promoted",
+    "diag": 15.184445007353833,
+    "n": 359,
+    "dist": 5.195100808968803
+  },
+  {
+    "id": "us-ga-atlanta",
+    "outcome": "promoted",
+    "diag": 7.335585196359358,
+    "n": 391,
+    "dist": 0.5394101943241462
+  },
+  {
+    "id": "us-il-lincolnwood",
+    "outcome": "promoted",
+    "diag": 8.258089044604382,
+    "n": 214,
+    "dist": 1.0669519915454684
+  },
+  {
+    "id": "us-il-skokie",
+    "outcome": "promoted",
+    "diag": 5.510059411974371,
+    "n": 225,
+    "dist": 0.7614821929443206
+  },
+  {
+    "id": "us-la-new-orleans",
+    "outcome": "promoted",
+    "diag": 9.271284002103089,
+    "n": 42,
+    "dist": 2.9173112598616338
+  },
+  {
+    "id": "us-mi-detroit",
+    "outcome": "skipped_policy",
+    "diag": 3.530055933238745,
+    "n": 84,
+    "dist": 7.833557999472528
+  },
+  {
+    "id": "us-tx-houston",
+    "outcome": "promoted",
+    "diag": 3.292140599352824,
+    "n": 114,
+    "dist": 4.794359650879074
+  },
+  {
+    "id": "us-tx-plano",
+    "outcome": "promoted",
+    "diag": 6.4161392111082,
+    "n": 31,
+    "dist": 5.64381503656006
+  },
+  {
+    "id": "us-wi-milwaukee-east",
+    "outcome": "skipped_policy",
+    "diag": 23.43765882149093,
+    "n": 133,
+    "dist": 11.221907949346395
+  },
+  {
+    "id": "us-or-portland",
+    "outcome": "skipped_policy",
+    "diag": 5.421561900844871,
+    "n": 156,
+    "dist": 4.96789896442399
+  }
+]

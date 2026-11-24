@@ -1,0 +1,603 @@
+[
+  {
+    "id": "us-ct-stamford",
+    "action": "skip-no-mid",
+    "holes": 0
+  },
+  {
+    "id": "us-ct-west-hartford",
+    "batch": "midatlantic",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 8.08,
+    "afterDiag": 8.08,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-dc-kesher",
+    "batch": "midatlantic",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 18.96,
+    "afterDiag": 18.96,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ma-cambridge-somerville",
+    "batch": "midatlantic",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 9.81,
+    "afterDiag": 9.81,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ma-greater-boston",
+    "batch": "midatlantic",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 10.07,
+    "afterDiag": 10.07,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ma-longmeadow",
+    "action": "skip-no-mid",
+    "holes": 0
+  },
+  {
+    "id": "us-ma-malden",
+    "batch": "midatlantic",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 2.83,
+    "afterDiag": 2.83,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ma-sharon",
+    "action": "skip-no-mid",
+    "holes": 0
+  },
+  {
+    "id": "us-md-baltimore",
+    "batch": "midatlantic",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 8.52,
+    "afterDiag": 8.52,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-md-potomac",
+    "action": "skip-no-mid",
+    "holes": 0
+  },
+  {
+    "id": "us-md-silver-spring",
+    "batch": "midatlantic",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 10.22,
+    "afterDiag": 10.22,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-pa-center-city",
+    "action": "skip-no-mid",
+    "holes": 0
+  },
+  {
+    "id": "us-pa-main-line",
+    "batch": "midatlantic",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 5.55,
+    "afterDiag": 5.55,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-pa-pittsburgh",
+    "action": "keep-previous-bad-extract",
+    "strategy": "preferBorders",
+    "beforeDiag": 0.4349998103160877,
+    "afterDiag": 0.4349998103160877,
+    "holesBefore": 0
+  },
+  {
+    "id": "us-pa-university-city",
+    "batch": "midatlantic",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 3.07,
+    "afterDiag": 3.07,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ri-providence",
+    "batch": "midatlantic",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 5.56,
+    "afterDiag": 5.56,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-va-fairfax",
+    "batch": "midatlantic",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 9.99,
+    "afterDiag": 9.99,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-nj-cherry-hill-west",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "line-stitch",
+    "holesBefore": 1,
+    "holesAfter": 1,
+    "beforeDiag": 4.23,
+    "afterDiag": 4.23,
+    "exclCandidates": 1
+  },
+  {
+    "id": "us-nj-englewood",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 10.7,
+    "afterDiag": 10.7,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-nj-fair-lawn",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 7.24,
+    "afterDiag": 7.24,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-nj-highland-park",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 6.82,
+    "afterDiag": 6.82,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-nj-new-brunswick",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 6.82,
+    "afterDiag": 6.82,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-nj-passaic-clifton",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "line-stitch",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 1.73,
+    "afterDiag": 4.36,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-nj-teaneck",
+    "action": "skip-no-mid",
+    "holes": 0
+  },
+  {
+    "id": "us-nj-west-orange",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 12.74,
+    "afterDiag": 12.74,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ny-far-rockaway",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "line-stitch",
+    "holesBefore": 6,
+    "holesAfter": 6,
+    "beforeDiag": 5.21,
+    "afterDiag": 5.21,
+    "exclCandidates": 6
+  },
+  {
+    "id": "us-ny-five-towns",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 9.36,
+    "afterDiag": 9.36,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ny-flatbush",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders+hint:flatbush eruv",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 8.04,
+    "afterDiag": 8.04,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ny-forest-hills",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 5.42,
+    "afterDiag": 5.42,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ny-great-neck",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "line-stitch",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 8.17,
+    "afterDiag": 8.17,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ny-kew-gardens",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 3.15,
+    "afterDiag": 3.15,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ny-kgh",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 4.17,
+    "afterDiag": 4.17,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ny-manhattan",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 12.13,
+    "afterDiag": 12.13,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ny-monsey",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 1,
+    "holesAfter": 1,
+    "beforeDiag": 21.89,
+    "afterDiag": 21.89,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ny-riverdale",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 5.65,
+    "afterDiag": 5.65,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ny-rochester",
+    "action": "keep-previous-bad-extract",
+    "strategy": "preferBorders",
+    "beforeDiag": 1.5264172303030796,
+    "afterDiag": 1.5264172303030796,
+    "holesBefore": 0
+  },
+  {
+    "id": "us-ny-sephardic-brooklyn",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders+hint:sepharadi",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 5.92,
+    "afterDiag": 5.92,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ny-west-hempstead",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 5.01,
+    "afterDiag": 5.01,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ny-white-plains",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "line-stitch",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 7.08,
+    "afterDiag": 7.08,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ny-willowbrook",
+    "batch": "ne",
+    "action": "restored",
+    "strategy": "line-stitch",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 0.38,
+    "afterDiag": 4.84,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-fl-boca",
+    "batch": "southmidwest",
+    "action": "restored",
+    "strategy": "preferBorders+hint:east boca community",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 2.55,
+    "afterDiag": 2.55,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-fl-hollywood",
+    "batch": "southmidwest",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 9.4,
+    "afterDiag": 9.4,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ga-atlanta",
+    "batch": "southmidwest",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 7.34,
+    "afterDiag": 7.34,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-il-chicago-lakeview",
+    "batch": "southmidwest",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 5.45,
+    "afterDiag": 5.45,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-il-lincolnwood",
+    "batch": "southmidwest",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 8.26,
+    "afterDiag": 8.26,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-il-skokie",
+    "batch": "southmidwest",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 5.51,
+    "afterDiag": 5.51,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-la-new-orleans",
+    "batch": "southmidwest",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 9.27,
+    "afterDiag": 9.27,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-oh-cincinnati",
+    "action": "skip-no-mid",
+    "holes": 1
+  },
+  {
+    "id": "us-oh-cleveland",
+    "batch": "southmidwest",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 10.23,
+    "afterDiag": 10.23,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-oh-columbus",
+    "batch": "southmidwest",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 6.74,
+    "afterDiag": 6.74,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-tx-dallas-south",
+    "batch": "southmidwest",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 15.53,
+    "afterDiag": 15.53,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-tx-plano",
+    "batch": "southmidwest",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 6.42,
+    "afterDiag": 6.42,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-wi-bayside",
+    "batch": "southmidwest",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 23.44,
+    "afterDiag": 23.44,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-az-phoenix",
+    "batch": "west",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 8.13,
+    "afterDiag": 8.13,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ca-eastbayshore",
+    "batch": "west",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 5.19,
+    "afterDiag": 5.19,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ca-los-angeles",
+    "batch": "west",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 21.36,
+    "afterDiag": 21.36,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-ca-valley",
+    "batch": "west",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 15.35,
+    "afterDiag": 15.35,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-co-east-denver",
+    "batch": "west",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 7.94,
+    "afterDiag": 7.94,
+    "exclCandidates": 0
+  },
+  {
+    "id": "us-wa-seward-park",
+    "batch": "west",
+    "action": "restored",
+    "strategy": "preferBorders",
+    "holesBefore": 0,
+    "holesAfter": 0,
+    "beforeDiag": 3.78,
+    "afterDiag": 3.78,
+    "exclCandidates": 0
+  }
+]

@@ -1,0 +1,33 @@
+{
+  "batch": "midatlantic",
+  "ready": 17,
+  "pending_digitize": 3,
+  "not_found": 0,
+  "skipped_contested": 0,
+  "eruvIdsReady": [
+    "us-ct-stamford",
+    "us-ct-west-hartford",
+    "us-dc-kesher",
+    "us-ma-cambridge-somerville",
+    "us-ma-greater-boston",
+    "us-ma-longmeadow",
+    "us-ma-malden",
+    "us-ma-sharon",
+    "us-md-baltimore",
+    "us-md-potomac",
+    "us-md-silver-spring",
+    "us-pa-center-city",
+    "us-pa-main-line",
+    "us-pa-pittsburgh",
+    "us-pa-university-city",
+    "us-ri-providence",
+    "us-va-fairfax"
+  ],
+  "eruvIdsPending": [
+    "us-ct-new-haven",
+    "us-dc-shepherd-park",
+    "us-pa-germantown"
+  ],
+  "checkedAt": "2026-11-20T15:56:30.109Z",
+  "total": 20
+}

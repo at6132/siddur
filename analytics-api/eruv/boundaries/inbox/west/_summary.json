@@ -1,0 +1,21 @@
+{
+  "batch": "west",
+  "ready": 6,
+  "pending_digitize": 2,
+  "not_found": 0,
+  "skipped_contested": 0,
+  "eruvIdsReady": [
+    "us-az-phoenix",
+    "us-ca-eastbayshore",
+    "us-ca-los-angeles",
+    "us-ca-valley",
+    "us-co-east-denver",
+    "us-wa-seward-park"
+  ],
+  "eruvIdsPending": [
+    "us-ca-la-jolla",
+    "us-or-portland"
+  ],
+  "checkedAt": "2026-11-20T15:56:30.116Z",
+  "total": 8
+}

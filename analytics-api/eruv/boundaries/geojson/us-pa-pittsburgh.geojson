@@ -1,0 +1,43 @@
+{
+  "type": "Feature",
+  "properties": {
+    "eruvId": "us-pa-pittsburgh",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1KD0vKCWyj_9EY32n_h2rbdfyYyekMWby&forcekml=1"
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -79.9158602,
+          40.4406696
+        ],
+        [
+          -79.9154311,
+          40.4384649
+        ],
+        [
+          -79.9151414,
+          40.4385588
+        ],
+        [
+          -79.9149966,
+          40.4380852
+        ],
+        [
+          -79.9131083,
+          40.4380729
+        ],
+        [
+          -79.9126148,
+          40.4411065
+        ],
+        [
+          -79.9158602,
+          40.4406696
+        ]
+      ]
+    ]
+  }
+}

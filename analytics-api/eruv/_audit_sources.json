@@ -1,0 +1,634 @@
+[
+    {
+        "id":  "us-az-phoenix",
+        "name":  "Phoenix / Scottsdale Community Eruv",
+        "city":  "Phoenix",
+        "state":  "AZ",
+        "mapUrl":  "https://phoenixeruv.com/",
+        "statusSourceUrl":  "https://phoenixeruv.com/"
+    },
+    {
+        "id":  "us-ca-eastbayshore",
+        "name":  "Eastbayshore Eruv",
+        "city":  "Berkeley",
+        "state":  "CA",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ca-los-angeles",
+        "name":  "Los Angeles Community Eruv",
+        "city":  "Los Angeles",
+        "state":  "CA",
+        "mapUrl":  "https://laeruv.com/",
+        "statusSourceUrl":  "https://laeruv.com/"
+    },
+    {
+        "id":  "us-ca-valley",
+        "name":  "Valley Eruv",
+        "city":  "Los Angeles",
+        "state":  "CA",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ca-la-jolla",
+        "name":  "La Jolla Eruv",
+        "city":  "San Diego",
+        "state":  "CA",
+        "mapUrl":  "https://www.adatyeshurun.org/eruv",
+        "statusSourceUrl":  "https://www.adatyeshurun.org/eruv"
+    },
+    {
+        "id":  "us-co-east-denver",
+        "name":  "East Denver Eruv",
+        "city":  "Denver",
+        "state":  "CO",
+        "mapUrl":  "https://denvereruv.org/",
+        "statusSourceUrl":  "https://denvereruv.org/"
+    },
+    {
+        "id":  "us-ct-new-haven",
+        "name":  "New Haven Eruv",
+        "city":  "New Haven",
+        "state":  "CT",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ct-stamford",
+        "name":  "Stamford Eruv",
+        "city":  "Stamford",
+        "state":  "CT",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ct-west-hartford",
+        "name":  "West Hartford Eruv",
+        "city":  "West Hartford",
+        "state":  "CT",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-dc-kesher",
+        "name":  "Rabbi Philip Rabinowitz Memorial Eruv",
+        "city":  "Washington",
+        "state":  "DC",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-dc-shepherd-park",
+        "name":  "Shepherd Park / Woodside Community Eruv",
+        "city":  "Washington",
+        "state":  "DC",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-fl-boca",
+        "name":  "Boca Raton Community Eruv",
+        "city":  "Boca Raton",
+        "state":  "FL",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-fl-hollywood",
+        "name":  "Hollywood Community Eruv",
+        "city":  "Hollywood",
+        "state":  "FL",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-fl-miami-beach",
+        "name":  "Miami Beach Eruv",
+        "city":  "Miami Beach",
+        "state":  "FL",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-fl-surfside-33154",
+        "name":  "Bal Harbour / Bay Harbor / Surfside Eruv",
+        "city":  "Surfside",
+        "state":  "FL",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/33154"
+    },
+    {
+        "id":  "us-ga-atlanta",
+        "name":  "Atlanta Eruv (Toco Hills)",
+        "city":  "Atlanta",
+        "state":  "GA",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-il-buffalo-grove",
+        "name":  "Buffalo Grove Eruv",
+        "city":  "Buffalo Grove",
+        "state":  "IL",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-il-chicago-south-side",
+        "name":  "Chicago South Side Eruv",
+        "city":  "Chicago",
+        "state":  "IL",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/southside"
+    },
+    {
+        "id":  "us-il-chicago-lakeview",
+        "name":  "Jack Strulowitz Lakefront Eruv",
+        "city":  "Chicago",
+        "state":  "IL",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/lakeview"
+    },
+    {
+        "id":  "us-il-west-rogers-park",
+        "name":  "West Rogers Park Eruv",
+        "city":  "Chicago",
+        "state":  "IL",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-il-lincolnwood",
+        "name":  "Lincolnwood / Peterson Park Eruv",
+        "city":  "Lincolnwood",
+        "state":  "IL",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/lincolnwood"
+    },
+    {
+        "id":  "us-il-skokie",
+        "name":  "Skokie Eruv",
+        "city":  "Skokie",
+        "state":  "IL",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/skokie"
+    },
+    {
+        "id":  "us-la-new-orleans",
+        "name":  "New Orleans Eruv",
+        "city":  "New Orleans",
+        "state":  "LA",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/neworleans"
+    },
+    {
+        "id":  "us-ma-greater-boston",
+        "name":  "Greater Boston Eruv",
+        "city":  "Brookline",
+        "state":  "MA",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ma-cambridge-somerville",
+        "name":  "Cambridge / Somerville Eruv",
+        "city":  "Cambridge",
+        "state":  "MA",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/camberville"
+    },
+    {
+        "id":  "us-ma-longmeadow",
+        "name":  "Longmeadow Springfield Eruv",
+        "city":  "Longmeadow",
+        "state":  "MA",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ma-malden",
+        "name":  "Malden Eruv",
+        "city":  "Malden",
+        "state":  "MA",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/malden"
+    },
+    {
+        "id":  "us-ma-sharon",
+        "name":  "Sharon Community Eruv",
+        "city":  "Sharon",
+        "state":  "MA",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-md-baltimore",
+        "name":  "Eruv of Baltimore",
+        "city":  "Baltimore",
+        "state":  "MD",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/baltimore"
+    },
+    {
+        "id":  "us-md-potomac",
+        "name":  "Potomac Eruv",
+        "city":  "Potomac",
+        "state":  "MD",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-md-silver-spring",
+        "name":  "Silver Spring Eruv",
+        "city":  "Silver Spring",
+        "state":  "MD",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-mi-detroit",
+        "name":  "Detroit Eruv",
+        "city":  "Oak Park",
+        "state":  "MI",
+        "mapUrl":  "https://www.detroiteruv.org/",
+        "statusSourceUrl":  "https://www.detroiteruv.org/"
+    },
+    {
+        "id":  "us-mn-st-louis-park",
+        "name":  "St. Louis Park / Minneapolis Eruv",
+        "city":  "St. Louis Park",
+        "state":  "MN",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-nc-durham",
+        "name":  "Durham Eruv",
+        "city":  "Durham",
+        "state":  "NC",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-nj-cherry-hill-west",
+        "name":  "Cherry Hill West Eruv",
+        "city":  "Cherry Hill",
+        "state":  "NJ",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/cherryhillwest"
+    },
+    {
+        "id":  "us-nj-englewood",
+        "name":  "Englewood Eruv",
+        "city":  "Englewood",
+        "state":  "NJ",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-nj-fair-lawn",
+        "name":  "Fair Lawn Eruv",
+        "city":  "Fair Lawn",
+        "state":  "NJ",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-nj-highland-park",
+        "name":  "Highland Park / Edison Eruv",
+        "city":  "Highland Park",
+        "state":  "NJ",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-nj-lakewood",
+        "name":  "Lakewood Eruv",
+        "city":  "Lakewood",
+        "state":  "NJ",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-nj-new-brunswick",
+        "name":  "New Brunswick Eruv",
+        "city":  "New Brunswick",
+        "state":  "NJ",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-nj-passaic-clifton",
+        "name":  "Passaic Clifton Eruv",
+        "city":  "Passaic",
+        "state":  "NJ",
+        "mapUrl":  "https://www.pceruv.com/",
+        "statusSourceUrl":  "https://eruvstat.us/pceruv"
+    },
+    {
+        "id":  "us-nj-teaneck",
+        "name":  "Teaneck-Bergenfield Area Eruv",
+        "city":  "Teaneck",
+        "state":  "NJ",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-nj-west-orange",
+        "name":  "West Orange Eruv",
+        "city":  "West Orange",
+        "state":  "NJ",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ny-riverdale",
+        "name":  "Riverdale Eruv",
+        "city":  "Bronx",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ny-flatbush",
+        "name":  "Flatbush Eruv",
+        "city":  "Brooklyn",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ny-sephardic-brooklyn",
+        "name":  "Sephardic Brooklyn Community Erub",
+        "city":  "Brooklyn",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ny-far-rockaway",
+        "name":  "Far Rockaway and Lawrence Eruv",
+        "city":  "Far Rockaway",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ny-great-neck",
+        "name":  "Great Neck Eiruv",
+        "city":  "Great Neck",
+        "state":  "NY",
+        "mapUrl":  "https://greatneckeiruv.org/",
+        "statusSourceUrl":  "https://greatneckeiruv.org/"
+    },
+    {
+        "id":  "us-ny-monsey",
+        "name":  "Eruv of Monsey",
+        "city":  "Monsey",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ny-rockland",
+        "name":  "Rockland Eruv (Monsey)",
+        "city":  "Monsey",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ny-washington-heights",
+        "name":  "Lower Washington Heights / YU Eruv",
+        "city":  "New York",
+        "state":  "NY",
+        "mapUrl":  "https://eruv.nyc/",
+        "statusSourceUrl":  "https://eruv.nyc/"
+    },
+    {
+        "id":  "us-ny-manhattan",
+        "name":  "Manhattan Eruv",
+        "city":  "New York",
+        "state":  "NY",
+        "mapUrl":  "https://eruv.nyc/",
+        "statusSourceUrl":  "https://eruv.nyc/"
+    },
+    {
+        "id":  "us-ny-forest-hills",
+        "name":  "Forest Hills / Rego Park Eruv",
+        "city":  "Queens",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ny-hillcrest",
+        "name":  "Hillcrest / Central Queens Eruv",
+        "city":  "Queens",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ny-kgh",
+        "name":  "Kew Gardens Hills Eruv",
+        "city":  "Queens",
+        "state":  "NY",
+        "mapUrl":  "https://kgheruv.com/",
+        "statusSourceUrl":  "https://kgheruv.com/"
+    },
+    {
+        "id":  "us-ny-kew-gardens",
+        "name":  "Kew Gardens / Richmond Hill Eruv",
+        "city":  "Queens",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ny-rochester",
+        "name":  "Rochester Eruv",
+        "city":  "Rochester",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/rochester"
+    },
+    {
+        "id":  "us-ny-willowbrook",
+        "name":  "Willowbrook Eruv",
+        "city":  "Staten Island",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ny-west-hempstead",
+        "name":  "West Hempstead Eruv",
+        "city":  "West Hempstead",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ny-white-plains",
+        "name":  "White Plains / Scarsdale Eruv",
+        "city":  "White Plains",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-ny-five-towns",
+        "name":  "Five Towns Eruv",
+        "city":  "Woodmere",
+        "state":  "NY",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-oh-beachwood-east",
+        "name":  "Beachwood East Eruv (BEES)",
+        "city":  "Beachwood",
+        "state":  "OH",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-oh-cleveland",
+        "name":  "Cleveland Eruv",
+        "city":  "Beachwood",
+        "state":  "OH",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-oh-cincinnati",
+        "name":  "Cincinnati Eruv",
+        "city":  "Cincinnati",
+        "state":  "OH",
+        "mapUrl":  "https://www.cincinnatieruv.org/",
+        "statusSourceUrl":  "https://status.cincinnatieruv.org/"
+    },
+    {
+        "id":  "us-oh-columbus",
+        "name":  "Columbus Eruv",
+        "city":  "Columbus",
+        "state":  "OH",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-or-portland",
+        "name":  "Portland Eruv",
+        "city":  "Portland",
+        "state":  "OR",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-pa-main-line",
+        "name":  "Main Line Eruv",
+        "city":  "Lower Merion",
+        "state":  "PA",
+        "mapUrl":  "https://lowermerioneruv.org/",
+        "statusSourceUrl":  "https://eruvstat.us/mainline"
+    },
+    {
+        "id":  "us-pa-center-city",
+        "name":  "Center City Eruv",
+        "city":  "Philadelphia",
+        "state":  "PA",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-pa-germantown",
+        "name":  "Germantown Jewish Centre Eruv",
+        "city":  "Philadelphia",
+        "state":  "PA",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-pa-university-city",
+        "name":  "University City Eruv",
+        "city":  "Philadelphia",
+        "state":  "PA",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-pa-pittsburgh",
+        "name":  "Pittsburgh Eruv",
+        "city":  "Pittsburgh",
+        "state":  "PA",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://vaadpgh.org/"
+    },
+    {
+        "id":  "us-ri-providence",
+        "name":  "Providence Eruv",
+        "city":  "Providence",
+        "state":  "RI",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-tx-dallas-south",
+        "name":  "Dallas (South) Eruv",
+        "city":  "Dallas",
+        "state":  "TX",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/southdallas"
+    },
+    {
+        "id":  "us-tx-houston",
+        "name":  "Houston Eruv",
+        "city":  "Houston",
+        "state":  "TX",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-tx-plano",
+        "name":  "Plano Eruv",
+        "city":  "Plano",
+        "state":  "TX",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/plano"
+    },
+    {
+        "id":  "us-va-fairfax",
+        "name":  "Fairfax Community Eruv",
+        "city":  "Fairfax",
+        "state":  "VA",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-wa-seward-park",
+        "name":  "Seward Park Eruv",
+        "city":  "Seattle",
+        "state":  "WA",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/sewardpark"
+    },
+    {
+        "id":  "us-wi-bayside",
+        "name":  "Bayside Community Eiruv",
+        "city":  "Bayside",
+        "state":  "WI",
+        "mapUrl":  null,
+        "statusSourceUrl":  null
+    },
+    {
+        "id":  "us-wi-milwaukee-east",
+        "name":  "Milwaukee East Side Eruv",
+        "city":  "Milwaukee",
+        "state":  "WI",
+        "mapUrl":  null,
+        "statusSourceUrl":  "https://eruvstat.us/milwaukee"
+    }
+]

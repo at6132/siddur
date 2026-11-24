@@ -1,0 +1,31 @@
+{
+  "type": "Feature",
+  "properties": {
+    "eruvId": "us-ny-rochester",
+    "sourceType": "google_my_maps",
+    "sourceUrl": "https://www.google.com/maps/d/kml?mid=1NG81ulYTbCuUSORzytk9xVU62x9_Ts8&forcekml=1"
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [
+          -77.590008,
+          43.131742
+        ],
+        [
+          -77.592926,
+          43.125729
+        ],
+        [
+          -77.576018,
+          43.126042
+        ],
+        [
+          -77.590008,
+          43.131742
+        ]
+      ]
+    ]
+  }
+}

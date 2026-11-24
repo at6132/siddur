@@ -1,0 +1,10 @@
+{
+  "eruvId": "us-nc-durham",
+  "status": "pending_digitize",
+  "sourceType": "web_map",
+  "sourceUrl": "https://durhameruv.org/map",
+  "googleMyMapsMid": null,
+  "notes": "HARD HUNT 2026-11-20T15:53:56.653Z: durhameruv.org/map has no extractable mid/KML/#map-data/geojson in HTML. Still needs digitize from site map.",
+  "checkedAt": "2026-11-20T15:53:56.653Z",
+  "geometry": null
+}

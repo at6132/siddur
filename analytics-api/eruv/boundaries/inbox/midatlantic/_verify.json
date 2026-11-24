@@ -1,0 +1,102 @@
+{
+  "batch": "midatlantic",
+  "checkedAt": "2026-11-20T15:45:00.000Z",
+  "results": [
+    {
+      "eruvId": "us-ct-stamford",
+      "verdict": "CONFIRMED",
+      "reason": "Young Israel Stamford interactive map (nusion) titled Eruv of Stamford, CT; geometry sits in Stamford with original+NW+NE rings.",
+      "officialUrl": "http://www.nusion.com/youngisrael/StamfordEruv.html"
+    },
+    {
+      "eruvId": "us-ct-west-hartford",
+      "verdict": "CONFIRMED",
+      "reason": "youngisraelwh.org eruv page embeds mid 1W0CR67FxQwa0-ofIsHiSqEaH9VY3Berj; official ShulCloud KML matches that My Maps bbox.",
+      "officialUrl": "https://www.youngisraelwh.org/the-west-hartford-eruv.html"
+    },
+    {
+      "eruvId": "us-dc-kesher",
+      "verdict": "CONFIRMED",
+      "reason": "kesher.org/eruv embeds mid 14Acvpswpk_Q2Q7z_AO0e1SPd1WHwk7M (Downtown/Arlington Eruv), matching Rabbi Philip Rabinowitz Memorial Eruv.",
+      "officialUrl": "https://www.kesher.org/eruv"
+    },
+    {
+      "eruvId": "us-ma-cambridge-somerville",
+      "verdict": "CONFIRMED",
+      "reason": "eruvstat.us/camberville embeds North Charles Community Eruv mid 1ynXKlATF8_9gQ_ZHaPoeDfVHigI; centroid in Cambridge/Somerville.",
+      "officialUrl": "https://eruvstat.us/camberville"
+    },
+    {
+      "eruvId": "us-ma-greater-boston",
+      "verdict": "CONFIRMED",
+      "reason": "bostoneruv.org/bound.htm embeds main-boundary mid 1tvzN1lm0vi9vmObe9_SVpnxCOmc titled Greater Boston Eruv.",
+      "officialUrl": "https://bostoneruv.org/bound.htm"
+    },
+    {
+      "eruvId": "us-ma-longmeadow",
+      "verdict": "CONFIRMED",
+      "reason": "Official EruvBounds.kml hosted on springfielderuv.org leaflet map; geometry covers Longmeadow/Springfield area.",
+      "officialUrl": "https://www.springfielderuv.org/eruv/EruvBounds.kml"
+    },
+    {
+      "eruvId": "us-ma-malden",
+      "verdict": "CONFIRMED",
+      "reason": "eruvstat.us/malden and bostoneruv.org embed mid 1AS_cN2Re915Y9NCXqjV32sI7f9vC4FQ titled Malden Eruv Map.",
+      "officialUrl": "https://eruvstat.us/malden"
+    },
+    {
+      "eruvId": "us-ma-sharon",
+      "verdict": "CONFIRMED",
+      "reason": "sharoneruv.org serves official eruv_geojson_v208.js FeatureCollection used by the site map.",
+      "officialUrl": "https://www.sharoneruv.org/"
+    },
+    {
+      "eruvId": "us-md-baltimore",
+      "verdict": "CONFIRMED",
+      "reason": "eruv.org Baltimore map goo.gl/67voaD resolves to mid 1eLRnHBNpeHtJxk1VOBLO_NZ2SmA (Baltimore MD Eruv); NW/Pikesville coverage vs downtown catalog point is expected.",
+      "officialUrl": "https://www.eruv.org/eruv-directory/223/baltimore-eruv/"
+    },
+    {
+      "eruvId": "us-md-silver-spring",
+      "verdict": "CONFIRMED",
+      "reason": "wp.yise.org/eruv embeds Silver Spring Eruv Association mid 1WvS7elEjWZFUEvMUpoCtDuMWZqo.",
+      "officialUrl": "https://wp.yise.org/eruv"
+    },
+    {
+      "eruvId": "us-pa-center-city",
+      "verdict": "CONFIRMED",
+      "reason": "centercityeruv.com/map-data.geojson is the site's official boundary segment data; geometry in Center City Philadelphia.",
+      "officialUrl": "https://www.centercityeruv.com/"
+    },
+    {
+      "eruvId": "us-pa-main-line",
+      "verdict": "CONFIRMED",
+      "reason": "eruvstat.us/mainline embeds mid 1NWCpAovU1JuNAzd0KuSbWjzu7ou0-OwU for Main Line (Wynnewood/Penn Wynne); Lower Merion remap mid 1SaMJDa… is a separate community map.",
+      "officialUrl": "https://eruvstat.us/mainline"
+    },
+    {
+      "eruvId": "us-pa-pittsburgh",
+      "verdict": "CONFIRMED",
+      "reason": "vaadpgh.org/eruv/status-map embeds mid 1KD0vKCWyj_9EY32n_h2rbdfyYyekMWby (New eruv map) including extension; Squirrel Hill centroid matches.",
+      "officialUrl": "https://www.vaadpgh.org/eruv/status-map"
+    },
+    {
+      "eruvId": "us-pa-university-city",
+      "verdict": "CONFIRMED",
+      "reason": "pennocp.org/eruv embeds mid 1PfS1qLpjM4WYW7eQITxRA8vlrs2LdROs (Eruv Borders Public / Main Eruv); University City bbox matches.",
+      "officialUrl": "https://www.pennocp.org/eruv"
+    },
+    {
+      "eruvId": "us-ri-providence",
+      "verdict": "CONFIRMED",
+      "reason": "My Maps mid 1FHEmDXbpqmeEsTanli57RZvobN0 titled Line Version 1.8 Providence Eruv Map is the boundary source used by eruvhomes Providence page (proveruv.org currently unreachable).",
+      "officialUrl": "https://eruvhomes.com/eruv/providence-eruv"
+    },
+    {
+      "eruvId": "us-va-fairfax",
+      "verdict": "CONFIRMED",
+      "reason": "fairfaxeruv.org/map.php embeds mid 1yYn4rwutUyPgw-X6Ypy4Q1AJPul3ZefU titled Fairfax Eruv / Central Fairfax Jewish Community.",
+      "officialUrl": "https://www.fairfaxeruv.org/map.php"
+    }
+  ]
+}
