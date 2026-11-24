@@ -64,10 +64,21 @@ ok('packMarkers.ts exists', exists('src/content/siddur/packMarkers.ts'));
 ok('librarySeasonal uses applyPackMarkers', read('src/content/siddur/librarySeasonal.ts').includes('applyPackMarkers'));
 ok('no findLibraryDayOnlySpans (phrase hunt)', !read('src/content/siddur/librarySeasonal.ts').includes('findLibraryDayOnlySpans'));
 ok('amidahSeasonal exists', exists('src/content/siddur/amidahSeasonal.ts'));
-ok('shacharitContentSets exists', exists('src/content/siddur/shacharit/shacharitContentSets.ts'));
-const contentSets = read('src/content/siddur/shacharit/shacharitContentSets.ts');
-ok('content sets strip rubrics', contentSets.includes('stripLibrarySeasonalRubrics'));
-ok('content sets aseret / tachanun gates', /aseret|tachanun|Aseret/i.test(contentSets));
+ok('no dead shacharitContentSets', !exists('src/content/siddur/shacharit/shacharitContentSets.ts'));
+const ashConcluding = read('src/content/siddur/shacharit/ashkenaz/raw.ts');
+ok('ashkenaz pack has aseret/tachanun gates', /gate:aseret|gate:tachanun/.test(ashConcluding));
+ok(
+  'ashkenaz song-of-day weekday gates',
+  /gate:sunday/.test(ashConcluding) &&
+    /gate:monday/.test(ashConcluding) &&
+    /gate:tuesday/.test(ashConcluding) &&
+    /gate:friday/.test(ashConcluding)
+);
+ok(
+  'sefard song-of-day weekday gates',
+  /gate:sunday/.test(read('src/content/siddur/shacharit/sefard/raw.ts'))
+);
+ok('packMarkers weekday gates', /sunday|monday|tuesday/.test(read('src/content/siddur/packMarkers.ts')));
 ok('editor gate wrap', read('tools/content-editor/public/index.html').includes('gate-wrap'));
 ok('editor fold wrap', read('tools/content-editor/public/index.html').includes('fold-wrap'));
 
@@ -107,16 +118,20 @@ for (const [label, rel] of [
 ]) {
   const src = read(rel);
   ok(`${label} → prayerTextTypes`, src.includes("from '../prayerTextTypes'"));
-  ok(`${label} → prepareLibrarySeasonalText`, src.includes('prepareLibrarySeasonalText'));
+  ok(
+    `${label} → resolveMarkedPrayerText`,
+    src.includes('resolveMarkedPrayerText') || src.includes('prepareLibrarySeasonalText')
+  );
   ok(`${label} no Sefaria type import`, !src.includes("from '../../../services/SefariaService'"));
   ok(`${label} no stripSefariaInstructionLines`, !src.includes('stripSefariaInstructionLines'));
 }
 
 const shach = read('src/content/siddur/shacharit/OfflineShacharitService.ts');
 ok('Shacharit yotzer/shema split helper', shach.includes('splitYotzerOrAndShemaIfNeeded'));
-ok('Shacharit birchot expansion foldout', shach.includes('birchosHashacharExpansionFoldout') || shach.includes('extractBirchosHashacharExpansionFoldout'));
-ok('Shacharit content sets apply', shach.includes('applyShacharitContentSets'));
-ok('Shacharit amidah pipeline', shach.includes('applyWeekdayAmidahTextPipeline'));
+ok('Shacharit resolveMarkedPrayerText', shach.includes('resolveMarkedPrayerText'));
+ok('Shacharit song of day via gates (not runtime picker)', !shach.includes('applySongOfTheDayToConcluding'));
+ok('Shacharit layout pipeline', shach.includes('applyShacharitSiddurSectionPipeline'));
+ok('Shacharit korbanot foldout attach', shach.includes('korbanotFoldout'));
 
 console.log('\n=== 5. Pack raw content present ===');
 const packs = [

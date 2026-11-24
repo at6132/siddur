@@ -1,38 +1,20 @@
 /**
  * Offline weekday Maariv (client-only).
- * resolvePack(nusach) → calendar gates + Amidah shared pipeline → reader
+ * resolvePack(nusach) → {{gate}}/{{fold}} markers → reader
+ * maariv_omer: tonight’s count only (OmerCalculator), not the 49-day pack dump.
  */
 
-import { applyWeekdayAmidahTextPipeline } from '../../../services/AmidahTextPipeline';
-import {
-  AMIDAH_BRACHA_TITLES,
-  ensureBaruchAtahParagraphBreaks,
-  extractAmidahKedushaFoldout,
-  extractModimDerabananFoldout,
-  markSefataiParagraphSmall,
-  removeParagraphTitles,
-  splitMinchaAmidahBeforeStandaloneAleinu,
-  stripAmidahEpilogueKaddishLedavid,
-  stripFullKaddishShalemBeforeAleinu,
-  trimAlHanissimInsertionByCalendar,
-} from '../../../services/MinchaTextRules';
-import {
-  applyMaarivSectionCalendarGates,
-  removeMaarivHavdalahAtahChonantanuUnlessSaturday,
-  stripMaarivInstructionLines,
-  stripMaarivKaddishBlock,
-  stripMaarivKnownInstructionParagraphs,
-} from '../../../services/MaarivTextRules';
-import type { PrayerTextData, PrayerTextSegment } from '../prayerTextTypes';
+import type { LocationObject } from 'expo-location';
+import type { PrayerTextData } from '../prayerTextTypes';
 import { JewishCalendarService } from '../../../core/calendar/JewishCalendar';
+import { OmerCalculator } from '../../../core/omer/OmerCalculator';
+import { ZmanimService } from '../../../core/zmanim/ZmanimService';
 import { UserPreferencesService } from '../../../storage/UserPreferences';
-import type { MaarivNusachId, MaarivOfflinePack, MaarivSectionKey } from './packTypes';
+import { buildMaarivOmerLiturgy } from '../../omer/maarivOmerLiturgy';
+import type { MaarivNusachId, MaarivSectionKey } from './packTypes';
 import { getMaarivOfflinePack } from './resolvePack';
-import {
-  getActiveAmidahDayOnlyInserts,
-  trimYaalehVeyavoToTodaysPhrase,
-} from '../amidahSeasonal';
-import { prepareLibrarySeasonalText } from '../librarySeasonal';
+import { getActiveAmidahDayOnlyInserts } from '../amidahSeasonal';
+import { resolveMarkedPrayerText } from '../resolveMarkedText';
 
 export type { MaarivSectionKey };
 
@@ -50,50 +32,22 @@ function isLikelyIsraelLocation(loc?: { latitude: number; longitude: number }): 
   return lat >= 29.3 && lat <= 33.5 && lon >= 34.05 && lon <= 35.9;
 }
 
-function segs(text: string): PrayerTextSegment[] {
-  return [{ text, italic: false }];
-}
-
-function withSegments(
-  hebrew: string,
-  english: string,
-  date?: Date,
-  isIsrael?: boolean
-): PrayerTextData {
-  if (date == null) {
-    const h = hebrew.replace(/\n{3,}/g, '\n\n').trim();
-    const e = (english || '').replace(/\n{3,}/g, '\n\n').trim();
-    return {
-      hebrew: h,
-      english: e,
-      hebrewSegments: markSefataiParagraphSmall(segs(h)),
-      englishSegments: markSefataiParagraphSmall(segs(e)),
-    };
-  }
-  const prepared = prepareLibrarySeasonalText(hebrew, english, date, {
-    amidahSlot: 'maariv',
-    isIsrael,
-  });
+function prefsLocationToObject(
+  loc?: { latitude: number; longitude: number } | null
+): LocationObject | null {
+  if (!loc) return null;
   return {
-    hebrew: prepared.hebrew,
-    english: prepared.english,
-    hebrewSegments: markSefataiParagraphSmall(prepared.hebrewSegments),
-    englishSegments: markSefataiParagraphSmall(segs(prepared.english)),
-  };
-}
-
-function markPiece(
-  hebrew: string | undefined,
-  date?: Date,
-  isIsrael?: boolean
-): PrayerTextSegment[] | undefined {
-  if (!hebrew?.trim()) return undefined;
-  if (date == null) return markSefataiParagraphSmall(segs(hebrew));
-  const prepared = prepareLibrarySeasonalText(hebrew, '', date, {
-    amidahSlot: 'maariv',
-    isIsrael,
-  });
-  return markSefataiParagraphSmall(prepared.hebrewSegments);
+    coords: {
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      altitude: null,
+      accuracy: null,
+      altitudeAccuracy: null,
+      heading: null,
+      speed: null,
+    },
+    timestamp: Date.now(),
+  } as LocationObject;
 }
 
 export class OfflineMaarivService {
@@ -111,11 +65,14 @@ export class OfflineMaarivService {
   ): { key: string; title: string; hebrewTitle: string }[] {
     const pack = getMaarivOfflinePack(nusach);
     const motzaei = date.getDay() === 6;
-    const omer = JewishCalendarService.isOmerPeriod(date);
+    const omer = JewishCalendarService.isOmerPeriod(date) || OmerCalculator.isOmerPeriod(date);
     return CORE_SECTIONS.filter((s) => {
+      if (s.key === 'maariv_omer') {
+        if (!omer) return false;
+        return true;
+      }
       if (!pack.sections[s.key]?.hebrew?.trim()) return false;
       if (s.key === 'maariv_motzaei' && !motzaei) return false;
-      if (s.key === 'maariv_omer' && !omer) return false;
       return true;
     });
   }
@@ -126,147 +83,60 @@ export class OfflineMaarivService {
   ): Promise<PrayerTextData | null> {
     const date = options?.date ?? new Date();
     let nusach: MaarivNusachId = options?.nusach ?? 'ashkenaz';
+    let prefsLoc: { latitude: number; longitude: number } | undefined;
     if (options?.nusach == null) {
       try {
         const prefs = await UserPreferencesService.getPreferences();
         if (prefs?.nusach === 'sfard' || prefs?.nusach === 'ashkenaz') nusach = prefs.nusach;
+        prefsLoc = prefs?.location;
       } catch {
         /* default */
       }
+    } else {
+      try {
+        const prefs = await UserPreferencesService.getPreferences();
+        prefsLoc = prefs?.location;
+      } catch {
+        /* ignore */
+      }
     }
+
+    if (sectionKey === 'maariv_omer') {
+      return this.getOmerSection(date, prefsLoc);
+    }
+
     const pack = getMaarivOfflinePack(nusach);
     const raw = pack.sections[sectionKey as MaarivSectionKey];
     if (!raw?.hebrew?.trim()) return null;
 
-    if (sectionKey === 'maariv_amidah') {
-      return this.getAmidah(date, pack);
-    }
+    const israel = isLikelyIsraelLocation(prefsLoc);
 
-    let hebrew = raw.hebrew;
-    let english = raw.english ?? '';
-    const strippedNotes = stripMaarivInstructionLines(hebrew, english);
-    hebrew = strippedNotes.hebrew;
-    english = strippedNotes.english;
-    const known = stripMaarivKnownInstructionParagraphs(hebrew, english);
-    hebrew = known.hebrew;
-    english = known.english;
-
-    if (sectionKey === 'maariv_shema' || sectionKey === 'maariv_aleinu') {
-      const noKaddish =
-        sectionKey === 'maariv_aleinu'
-          ? stripFullKaddishShalemBeforeAleinu(hebrew, english)
-          : stripMaarivKaddishBlock(hebrew, english);
-      hebrew = noKaddish.hebrew;
-      english = noKaddish.english;
-      const trailing = stripMaarivKaddishBlock(hebrew, english);
-      hebrew = trailing.hebrew;
-      english = trailing.english;
-    }
-
-    const cal = applyMaarivSectionCalendarGates(sectionKey, hebrew, english, date, {
-      ledavidSeason: JewishCalendarService.isLedavidAfterTefillahSeason(date),
+    const resolved = resolveMarkedPrayerText(raw.hebrew, raw.english ?? '', {
+      date,
+      isIsrael: israel,
     });
-    const spaced = ensureBaruchAtahParagraphBreaks(cal.hebrew, cal.english);
-    return withSegments(spaced.hebrew, spaced.english, date);
+    const { folds: _folds, ...content } = resolved;
+    return content;
   }
 
-  private static async getAmidah(date: Date, pack: MaarivOfflinePack): Promise<PrayerTextData> {
-    let israelForRain = false;
-    try {
-      const prefs = await UserPreferencesService.getPreferences();
-      israelForRain = isLikelyIsraelLocation(prefs?.location);
-    } catch {
-      /* diaspora */
-    }
-    const raw = pack.sections.maariv_amidah!;
-    const notes = stripMaarivInstructionLines(raw.hebrew, raw.english ?? '');
-    const titles = removeParagraphTitles(notes.hebrew, notes.english, AMIDAH_BRACHA_TITLES);
-    const noHavdalah = removeMaarivHavdalahAtahChonantanuUnlessSaturday(
-      titles.hebrew,
-      titles.english,
-      date
-    );
-    const piped = applyWeekdayAmidahTextPipeline(noHavdalah.hebrew, noHavdalah.english, {
-      date,
-      israelForRainInsertion: israelForRain,
-      amidahSlot: 'maariv',
-      policy: pack.policy,
-    });
-
-    let hebrew = trimYaalehVeyavoToTodaysPhrase(piped.hebrew, date);
-    let english = piped.english;
-    const kedushaSplit = extractAmidahKedushaFoldout(hebrew, english);
-    const avosBlob = `${kedushaSplit.mainHebrewBeforeFoldout || ''}\n${kedushaSplit.mainHebrew || ''}`;
-    const kedushaSplitKeepsAvos = /מגן\s+אברהם/.test(avosBlob.replace(/[\u0591-\u05C7]/g, ''));
-    if (kedushaSplitKeepsAvos) {
-      hebrew = kedushaSplit.mainHebrew;
-      english = kedushaSplit.mainEnglish;
-    }
-    const epilogued = stripAmidahEpilogueKaddishLedavid(hebrew, english, date);
-    hebrew = epilogued.hebrew;
-    english = epilogued.english;
-    const noAleinu = splitMinchaAmidahBeforeStandaloneAleinu(hebrew, english);
-    hebrew = noAleinu.hebrew;
-    english = noAleinu.english;
-    const noKaddish = stripMaarivKaddishBlock(hebrew, english);
-    hebrew = noKaddish.hebrew;
-    english = noKaddish.english;
-
-    let hebrewBeforeKedushaFoldout = kedushaSplitKeepsAvos
-      ? kedushaSplit.mainHebrewBeforeFoldout?.trim() || undefined
-      : undefined;
-    if (hebrewBeforeKedushaFoldout) {
-      hebrewBeforeKedushaFoldout = trimYaalehVeyavoToTodaysPhrase(hebrewBeforeKedushaFoldout, date);
-    }
-
-    let hebrewBeforeModimDerabananFoldout: string | undefined;
-    let englishBeforeModimDerabananFoldout: string | undefined;
-    let modimDerabananFoldout: PrayerTextData | undefined;
-    const modimSplit = extractModimDerabananFoldout(hebrew, english);
-    if (modimSplit.foldoutHebrew?.trim()) {
-      const prefixTrim = trimAlHanissimInsertionByCalendar(
-        modimSplit.prefixHebrew,
-        modimSplit.prefixEnglish ?? '',
-        date
-      );
-      hebrewBeforeModimDerabananFoldout = trimYaalehVeyavoToTodaysPhrase(prefixTrim.hebrew, date);
-      englishBeforeModimDerabananFoldout = prefixTrim.english;
-      modimDerabananFoldout = {
-        hebrew: modimSplit.foldoutHebrew.trim(),
-        english: modimSplit.foldoutEnglish?.trim() ?? '',
-      };
-      hebrew = modimSplit.suffixHebrew.trim();
-      english = modimSplit.suffixEnglish.trim();
-    }
-
-    hebrew = trimYaalehVeyavoToTodaysPhrase(hebrew, date);
-    const content = withSegments(hebrew, english, date, israelForRain);
+  /** Tonight’s blessing + count + Harachaman (same wording source as Omer practice). */
+  private static async getOmerSection(
+    date: Date,
+    prefsLoc?: { latitude: number; longitude: number }
+  ): Promise<PrayerTextData | null> {
+    const locationObj = prefsLocationToObject(prefsLoc ?? null);
+    const ext = await ZmanimService.calculateExtendedZmanim(date, locationObj);
+    const sunset =
+      ext.sunset instanceof Date && !Number.isNaN(ext.sunset.getTime()) ? ext.sunset : null;
+    const tzeis =
+      ext.tzeis instanceof Date && !Number.isNaN(ext.tzeis.getTime()) ? ext.tzeis : null;
+    const omerDay = OmerCalculator.getOmerNightToCount(date, sunset, tzeis);
+    if (omerDay == null) return null;
+    const liturgy = buildMaarivOmerLiturgy(omerDay);
+    if (!liturgy) return null;
     return {
-      ...content,
-      hebrewBeforeKedushaFoldout,
-      englishBeforeKedushaFoldout: kedushaSplitKeepsAvos
-        ? kedushaSplit.mainEnglishBeforeFoldout?.trim() || undefined
-        : undefined,
-      hebrewBeforeKedushaFoldoutSegments: markPiece(
-        hebrewBeforeKedushaFoldout,
-        date,
-        israelForRain
-      ),
-      kedushaFoldout:
-        kedushaSplitKeepsAvos && kedushaSplit.kedushaHebrew?.trim()
-          ? {
-              hebrew: kedushaSplit.kedushaHebrew.trim(),
-              english: kedushaSplit.kedushaEnglish?.trim() ?? '',
-            }
-          : undefined,
-      hebrewBeforeModimDerabananFoldout,
-      englishBeforeModimDerabananFoldout,
-      hebrewBeforeModimDerabananFoldoutSegments: markPiece(
-        hebrewBeforeModimDerabananFoldout,
-        date,
-        israelForRain
-      ),
-      modimDerabananFoldout,
+      hebrew: liturgy.hebrew,
+      english: liturgy.english,
     };
   }
 }

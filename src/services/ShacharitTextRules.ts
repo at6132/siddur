@@ -2,13 +2,13 @@
  * String transforms used only by Shacharit siddur section pipelines (`ShacharitSectionPipelines.ts`).
  * Mincha / Maariv paths do not import this module.
  *
- * Day omit / foldout behavior lives in `src/content/siddur/shacharit/shacharitContentSets.ts`.
+ * Day omit / foldout / song-of-day: pack `{{gate}}`/`{{fold}}` markers + OfflineShacharitService.
  */
 
-import {
-  applyShacharitContentSets,
-  buildShacharitGateCtx,
-} from '../content/siddur/shacharit/shacharitContentSets';
+export {
+  pickSongOfTheDay,
+  pickSongOfTheDayEnglish,
+} from '../content/siddur/shacharit/songOfTheDay';
 
 const stripHtml = (s: string) => s.replace(/<[^>]*>/g, '');
 const stripHtmlKeepLineBreaks = (s: string) => stripHtml(s.replace(/<br\s*\/?>/gi, '\n'));
@@ -397,103 +397,15 @@ function splitParas(s: string): string[] {
   return s.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
 }
 
-function keepParas(hebrew: string, english: string, keep: boolean[]): { hebrew: string; english: string } {
-  const hp = splitParas(hebrew);
-  const ep = splitParas(english);
-  const hOut: string[] = [];
-  const eOut: string[] = [];
-  for (let i = 0; i < hp.length; i++) {
-    if (keep[i] !== false) {
-      hOut.push(hp[i]);
-      if (ep[i]) eOut.push(ep[i]);
-    }
-  }
-  return { hebrew: hOut.join('\n\n'), english: eOut.join('\n\n') };
-}
-
-const WEEKDAY_SONG_LABELS = [
-  'יום ראשון',
-  'יום שני',
-  'יום שלישי',
-  'יום רביעי',
-  'יום חמישי',
-  'יום ששי',
-  'יום שישי',
-] as const;
-
 /**
- * Keep only today's שיר של יום when the blob contains weekday labels.
- */
-export function pickSongOfTheDay(hebrew: string, date: Date): string {
-  const st = stripNik(hebrew);
-  const today = [
-    'יום ראשון',
-    'יום שני',
-    'יום שלישי',
-    'יום רביעי',
-    'יום חמישי',
-    'יום שישי',
-    'שבת',
-  ][date.getDay()];
-  if (!today || today === 'שבת') return hebrew;
-  const hits: { label: string; index: number }[] = [];
-  for (const label of WEEKDAY_SONG_LABELS) {
-    const i = st.indexOf(label);
-    if (i !== -1) hits.push({ label, index: i });
-  }
-  hits.sort((a, b) => a.index - b.index);
-  if (hits.length < 2) return hebrew;
-  const want = today === 'יום שישי' ? ['יום ששי', 'יום שישי'] : [today];
-  const startHit = hits.find((h) => want.includes(h.label));
-  if (!startHit) return hebrew;
-  const next = hits.find((h) => h.index > startHit.index);
-  // Map stripped span back approximately via original (nikkud) by slicing from first matching label in original.
-  const origLabel = hebrew.search(new RegExp(startHit.label.replace(/ /g, '[\\s\\u05BE]+')));
-  if (origLabel === -1) return hebrew;
-  const nextOrig =
-    next != null ? hebrew.search(new RegExp(next.label.replace(/ /g, '[\\s\\u05BE]+'))) : -1;
-  const slice = hebrew.slice(origLabel, nextOrig !== -1 && nextOrig > origLabel ? nextOrig : hebrew.length);
-  return slice.trim() || hebrew;
-}
-
-const ENG_WEEKDAY_SONG_LABELS = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-] as const;
-
-/** English parallel to `pickSongOfTheDay` when the translation lists weekday song blocks. */
-export function pickSongOfTheDayEnglish(english: string, date: Date): string {
-  if (!english?.trim()) return english;
-  const day = date.getDay();
-  if (day === 6) return english;
-  const today = ENG_WEEKDAY_SONG_LABELS[day];
-  const hits: { label: string; index: number }[] = [];
-  for (const label of ENG_WEEKDAY_SONG_LABELS) {
-    const re = new RegExp(`\\b(?:On\\s+)?${label}\\b|\\b${label}\\s*(?:'s)?\\s*(?:Psalm|Song)`, 'i');
-    const m = english.match(re);
-    if (m?.index != null) hits.push({ label, index: m.index });
-  }
-  hits.sort((a, b) => a.index - b.index);
-  if (hits.length < 2) return english;
-  const startHit = hits.find((h) => h.label === today);
-  if (!startHit) return english;
-  const next = hits.find((h) => h.index > startHit.index);
-  return english.slice(startHit.index, next ? next.index : english.length).trim() || english;
-}
-
-/**
- * @deprecated Prefer `applyShacharitContentSets` in `shacharitContentSets.ts`.
- * Kept as a thin wrapper so older call sites keep working.
+ * @deprecated Calendar omit/swap now lives in pack markers + OfflineShacharitService.
+ * Pass-through kept for any stray callers.
  */
 export function applyShacharitSectionCalendarGates(
-  sectionKey: string,
+  _sectionKey: string,
   hebrew: string,
   english: string,
-  date: Date,
+  _date: Date,
   _opts: {
     tachanun: boolean;
     aseret: boolean;
@@ -503,5 +415,5 @@ export function applyShacharitSectionCalendarGates(
     mondayThursday: boolean;
   }
 ): { hebrew: string; english: string } {
-  return applyShacharitContentSets(sectionKey, hebrew, english, buildShacharitGateCtx(date));
+  return { hebrew, english };
 }

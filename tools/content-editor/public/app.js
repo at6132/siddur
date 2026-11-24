@@ -512,7 +512,7 @@
     const defaults = kind === 'gate' ? 'aseret' : 'birchot_expansion';
     const id = prompt(
       kind === 'gate'
-        ? 'Gate id (aseret|tachanun|fast_or_aseret|rosh_chodesh|ledavid|monday_thursday|yaaleh|al_hanissim|omer|motzaei_shabbat):'
+        ? 'Gate id (aseret|tachanun|…|sunday|monday|tuesday|wednesday|thursday|friday|year_round):'
         : 'Fold id (e.g. birchot_expansion):',
       defaults
     );

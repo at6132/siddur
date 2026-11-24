@@ -30,3 +30,15 @@ while (n < 20) {
   pos = j + 1;
   n++;
 }
+
+const start = s.indexOf('בחזרת');
+console.log('\nkedusha instruction at', start);
+pos = start;
+n = 0;
+while (n < 10) {
+  const i = s.indexOf('לדור ודור', pos);
+  if (i === -1) break;
+  console.log('ledor', i, 'delta', i - start, JSON.stringify(s.slice(i - 20, i + 40)));
+  pos = i + 1;
+  n++;
+}

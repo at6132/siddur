@@ -2448,7 +2448,8 @@ export function injectRefuahMiShebeirachAfterShleimaMakos(
   hebrew: string,
   names: RefuahPersonalName[]
 ): string {
-  const cleaned = stripRefuahCholehInstructionAndPlaceholderTechinah(hebrew, '').hebrew;
+  // Normalize Sefard ארוכה… → רפואה שלמה, then strip פלוני placeholders.
+  const cleaned = removeRefuahAruchaUmarpeClause(hebrew, '').hebrew;
   if (!names?.length) return flattenRefuahJoinPoints(cleaned);
   const block = buildRefuahMiShebeirachInsertionBlock(names);
   if (!block) return flattenRefuahJoinPoints(cleaned);
@@ -2742,6 +2743,17 @@ export function injectRefuahMiShebeirachIntoHebrewSegments(
   return { hebrew: newHebrew, segments: rebuildHighlighted() };
 }
 
+/**
+ * Normalize רפאנו for name injection: Sefard ארוכה ומרפא → רפואה שלמה לכל מכותינו,
+ * then drop מי שרוצה / פלוני placeholder techinah.
+ */
+function normalizeRefuahForPersonalNames(
+  hebrew: string,
+  english: string = ''
+): { hebrew: string; english: string } {
+  return removeRefuahAruchaUmarpeClause(hebrew, english);
+}
+
 export function injectRefuahIntoAmidahPrayerTextData<T extends {
   hebrew: string;
   english?: string;
@@ -2751,11 +2763,9 @@ export function injectRefuahIntoAmidahPrayerTextData<T extends {
   hebrewBeforeModimDerabananFoldout?: string;
   hebrewBeforeModimDerabananFoldoutSegments?: HebrewInstructionSegment[];
 }>(data: T, names: RefuahPersonalName[]): T {
-  // Always strip instruction + פלוני placeholders (even with no saved names).
-  const strippedMain = stripRefuahCholehInstructionAndPlaceholderTechinah(
-    data.hebrew,
-    data.english ?? ''
-  );
+  // Always normalize + strip placeholders (even with no saved names) so Sefard
+  // gets the רפואה שלמה anchor and פלוני never shows.
+  const strippedMain = normalizeRefuahForPersonalNames(data.hebrew, data.english ?? '');
   let next: T = {
     ...data,
     hebrew: strippedMain.hebrew,
@@ -2763,17 +2773,11 @@ export function injectRefuahIntoAmidahPrayerTextData<T extends {
   } as T;
 
   if (next.hebrewBeforeKedushaFoldout) {
-    const s = stripRefuahCholehInstructionAndPlaceholderTechinah(
-      next.hebrewBeforeKedushaFoldout,
-      ''
-    );
+    const s = normalizeRefuahForPersonalNames(next.hebrewBeforeKedushaFoldout, '');
     next = { ...next, hebrewBeforeKedushaFoldout: s.hebrew };
   }
   if (next.hebrewBeforeModimDerabananFoldout) {
-    const s = stripRefuahCholehInstructionAndPlaceholderTechinah(
-      next.hebrewBeforeModimDerabananFoldout,
-      ''
-    );
+    const s = normalizeRefuahForPersonalNames(next.hebrewBeforeModimDerabananFoldout, '');
     next = { ...next, hebrewBeforeModimDerabananFoldout: s.hebrew };
   }
 

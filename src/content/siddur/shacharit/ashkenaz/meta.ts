@@ -108,8 +108,8 @@ export const SHACHARIT_OFFLINE_META = {
       "Siddur Ashkenaz, Weekday, Shacharit, Amidah, Concluding Passage"
     ],
     "tachanun": [
-      "Siddur Ashkenaz, Weekday, Shacharit, Post Amidah, Vidui and 13 Middot",
       "Siddur Ashkenaz, Weekday, Shacharit, Post Amidah, Avinu Malkenu",
+      "Siddur Ashkenaz, Weekday, Shacharit, Post Amidah, Vidui and 13 Middot",
       "Siddur Ashkenaz, Weekday, Shacharit, Post Amidah, Tachanun, For Monday and Thursday",
       "Siddur Ashkenaz, Weekday, Shacharit, Post Amidah, Tachanun, Nefilat Apayim",
       "Siddur Ashkenaz, Weekday, Shacharit, Post Amidah, Tachanun, God of Israel",

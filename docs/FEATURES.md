@@ -104,7 +104,7 @@ Phase-1 note: Gemara, Nach, Mishna, Rambam, Chumash, Pirkei Avos, and Parsha scr
 - Open Shacharis from Library → full-scroll offline reader — `app/siddur/SiddurReaderScreen.tsx` + `src/content/siddur/shacharit/` + `src/services/ShacharitTextRules.ts`
 - Open Mincha → offline pack (korbanot / ashrei / amidah / aleinu…) — `src/content/siddur/mincha/` + `src/services/MinchaTextRules.ts`
 - Open Maariv → offline pack — `src/content/siddur/maariv/` + `src/services/MaarivTextRules.ts`
-- Amidah seasonal / Kedusha / Modim foldouts / Refuah names — `src/services/AmidahTextPipeline.ts` + `src/content/siddur/amidahSeasonal.ts`
+- Amidah seasonal / Kedusha / Modim foldouts — pack `{{gate}}` / `{{fold}}` via `src/content/siddur/packMarkers.ts` + `resolveMarkedText.ts` (catalog: `amidahSeasonal.ts`). Refuah names still injected in the reader.
 - Modeh Ani / Asher Yatzar / Bentching / Bedtime Shema / Tefillas HaDerech — `SiddurReader` services + `src/content/siddur/standalone/`
 - Reader UX: autoscroll, text size, English toggle, section jump — `app/siddur/SiddurReaderScreen.tsx` + `components/reader/`
 - Mizrach compass during Amidah — `components/ui/MizrachCompass.tsx`
@@ -140,6 +140,7 @@ Phase-1 note: Gemara, Nach, Mishna, Rambam, Chumash, Pirkei Avos, and Parsha scr
 - Tzedakah history → add gift — `app/tzedakah/` + `src/storage/TzedakahTracker.ts`
 - Omer count after tzeit + post-omer liturgy — `app/omer/OmerScreen.tsx` + `src/core/omer/OmerCalculator.ts` + `src/content/omer/postOmerLiturgy.ts`
 - Streaks (Tehillim / davening) — `src/storage/DailyTehillimTracker.ts`, `DaveningStreakService.ts`, `StreakService.ts`
+- Hub Eruv Map (USA standard map + status colors + detail sheet; Explore under Shared Tehillim) — `app/hub/EruvMapScreen.tsx` + `EruvDetailScreen.tsx` + `src/api/eruvApi.ts` (Railway `/api/eruvs`)
 - Hub “coming soon” cards (Minyan Finder, Kosher Restaurants) — `app/hub/HubOverviewScreen.tsx`
 
 ### Calendar / location / zmanim
