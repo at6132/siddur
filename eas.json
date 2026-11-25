@@ -10,6 +10,13 @@
         "simulator": true
       }
     },
+    "simulator": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": true
+      },
+      "channel": "preview"
+    },
     "preview": {
       "distribution": "store",
       "ios": {

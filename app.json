@@ -1,9 +1,9 @@
 {
   "expo": {
-    "name": "24/7",
+    "name": "Siddur 24Seven",
     "slug": "siddur",
     "scheme": "siddur",
-    "version": "2.2.0",
+    "version": "2.2.1",
     "orientation": "portrait",
     "icon": "./assets/icon-24-7.png",
     "assetBundlePatterns": [
@@ -12,7 +12,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.siddur.app",
-      "buildNumber": "27",
+      "buildNumber": "29",
       "infoPlist": {
         "CFBundleDisplayName": "24/7",
         "NSLocationWhenInUseUsageDescription": "Siddur uses your location while you use the app to calculate zmanim, schedule sunset-based reminders, and point Mizrach toward Jerusalem. Location stays on your device.",
@@ -45,7 +45,147 @@
         }
       ],
       "@react-native-community/datetimepicker",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-widgets",
+        {
+          "bundleIdentifier": "com.siddur.app.ExpoWidgetsTarget",
+          "groupIdentifier": "group.com.siddur.app",
+          "enableAndroid": false,
+          "widgets": [
+            {
+              "name": "NextZmanWidget",
+              "displayName": "Next Zman",
+              "description": "Countdown to the next zman",
+              "ios": {
+                "contentMarginsDisabled": true,
+                "supportedFamilies": ["systemSmall"],
+                "initialLayout": "widgets/NextZmanWidget.tsx"
+              }
+            },
+            {
+              "name": "HebrewDateWidget",
+              "displayName": "Hebrew Date",
+              "description": "Today's Hebrew date and day badge",
+              "ios": {
+                "contentMarginsDisabled": true,
+                "supportedFamilies": ["systemSmall"],
+                "initialLayout": "widgets/HebrewDateWidget.tsx"
+              }
+            },
+            {
+              "name": "TehillimStreakWidget",
+              "displayName": "Tehillim Streak",
+              "description": "Your Tehillim streak and today's progress",
+              "ios": {
+                "contentMarginsDisabled": true,
+                "supportedFamilies": ["systemSmall"],
+                "initialLayout": "widgets/TehillimStreakWidget.tsx"
+              }
+            },
+            {
+              "name": "CandlesWidget",
+              "displayName": "Candles",
+              "description": "Candle lighting or Havdalah countdown",
+              "ios": {
+                "contentMarginsDisabled": true,
+                "supportedFamilies": ["systemSmall"],
+                "initialLayout": "widgets/CandlesWidget.tsx"
+              }
+            },
+            {
+              "name": "OmerBrachosWidget",
+              "displayName": "Omer / Brachos",
+              "description": "Omer day in season, or brachos count",
+              "ios": {
+                "contentMarginsDisabled": true,
+                "supportedFamilies": ["systemSmall"],
+                "initialLayout": "widgets/OmerBrachosWidget.tsx"
+              }
+            },
+            {
+              "name": "DailyInspirationWidget",
+              "displayName": "Daily Inspiration",
+              "description": "Today's Torah quote in Hebrew and English",
+              "ios": {
+                "contentMarginsDisabled": true,
+                "supportedFamilies": ["systemMedium"],
+                "initialLayout": "widgets/DailyInspirationWidget.tsx"
+              }
+            },
+            {
+              "name": "ZmanimStripWidget",
+              "displayName": "Today's Zmanim",
+              "description": "Sunrise, Sof Zman Shema, and sunset",
+              "ios": {
+                "contentMarginsDisabled": true,
+                "supportedFamilies": ["systemMedium"],
+                "initialLayout": "widgets/ZmanimStripWidget.tsx"
+              }
+            },
+            {
+              "name": "DaveningNoteWidget",
+              "displayName": "Davening Note",
+              "description": "Hallel, Tachanun, and other davening changes",
+              "ios": {
+                "contentMarginsDisabled": true,
+                "supportedFamilies": ["systemMedium"],
+                "initialLayout": "widgets/DaveningNoteWidget.tsx"
+              }
+            },
+            {
+              "name": "TehillimTodayWidget",
+              "displayName": "Tehillim Today",
+              "description": "Today's Tehillim progress and next perek",
+              "ios": {
+                "contentMarginsDisabled": true,
+                "supportedFamilies": ["systemMedium"],
+                "initialLayout": "widgets/TehillimTodayWidget.tsx"
+              }
+            },
+            {
+              "name": "ShabbosTimesWidget",
+              "displayName": "Shabbos Times",
+              "description": "Candle lighting, Havdalah, and this week's parsha",
+              "ios": {
+                "contentMarginsDisabled": true,
+                "supportedFamilies": ["systemMedium"],
+                "initialLayout": "widgets/ShabbosTimesWidget.tsx"
+              }
+            },
+            {
+              "name": "DaySheetWidget",
+              "displayName": "Day Sheet",
+              "description": "Full day overview with zmanim and davening notes",
+              "ios": {
+                "contentMarginsDisabled": true,
+                "supportedFamilies": ["systemLarge"],
+                "initialLayout": "widgets/DaySheetWidget.tsx"
+              }
+            },
+            {
+              "name": "PracticeHubWidget",
+              "displayName": "Practice Hub",
+              "description": "Tehillim, davening streak, brachos, and goals",
+              "ios": {
+                "contentMarginsDisabled": true,
+                "supportedFamilies": ["systemLarge"],
+                "initialLayout": "widgets/PracticeHubWidget.tsx"
+              }
+            },
+            {
+              "name": "SeasonalBoardWidget",
+              "displayName": "Shabbos / Fast / Omer",
+              "description": "Context-aware Shabbos, fast day, or Omer board",
+              "ios": {
+                "contentMarginsDisabled": true,
+                "supportedFamilies": ["systemLarge"],
+                "initialLayout": "widgets/SeasonalBoardWidget.tsx"
+              }
+            }
+          ]
+        }
+      ]
     ],
     "extra": {
       "eas": {
@@ -68,7 +208,7 @@
       "url": "https://u.expo.dev/44bb4af8-f301-486a-9a3a-d43ea10755dc"
     },
     "android": {
-      "versionCode": 27,
+      "versionCode": 29,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#D4A5B8"

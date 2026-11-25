@@ -430,6 +430,10 @@ export default function App() {
             ZmanimLocalCache.warm(prefs.location).catch(() => {});
           }
         } catch {}
+        // iOS home widgets — no-op in Expo Go / non-iOS
+        import('./src/widgets/refreshHomeWidgets')
+          .then(({ refreshHomeWidgets }) => refreshHomeWidgets())
+          .catch(() => {});
       } catch (e) {
         console.warn(e);
       } finally {
@@ -446,6 +450,9 @@ export default function App() {
     const sub = AppState.addEventListener('change', (nextState) => {
       if (appState.match(/inactive|background/) && nextState === 'active') {
         LocationRefreshService.refreshAndSave().catch(() => {});
+        import('./src/widgets/refreshHomeWidgets')
+          .then(({ refreshHomeWidgets }) => refreshHomeWidgets())
+          .catch(() => {});
       }
       appState = nextState;
     });

@@ -1,6 +1,6 @@
 {
   "name": "siddur",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "main": "expo/AppEntry.js",
   "scripts": {
     "start": "expo start --tunnel",
@@ -22,6 +22,7 @@
     "@expo-google-fonts/frank-ruhl-libre": "^0.4.1",
     "@expo-google-fonts/nunito": "^0.4.2",
     "@expo/metro-runtime": "~58.0.17",
+    "@expo/ui": "~58.0.29",
     "@expo/vector-icons": "^15.0.2",
     "@hebcal/core": "^6.0.8",
     "@react-native-async-storage/async-storage": "2.2.0",
@@ -44,6 +45,7 @@
     "expo-status-bar": "~58.0.4",
     "expo-symbols": "~58.0.4",
     "expo-updates": "~58.0.21",
+    "expo-widgets": "~58.0.29",
     "magvar": "^2.2.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",

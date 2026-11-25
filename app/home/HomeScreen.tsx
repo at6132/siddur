@@ -546,6 +546,9 @@ export const HomeScreen: React.FC = () => {
       loadMishnaYomi();
       loadRambamYomi();
       loadTzedakahTotal();
+      import('../../src/widgets/refreshHomeWidgets')
+        .then(({ refreshHomeWidgets }) => refreshHomeWidgets())
+        .catch(() => {});
     } catch (err) {
       console.error('Error loading day info:', err);
       setError('Failed to load day information');
